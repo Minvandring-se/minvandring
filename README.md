@@ -1,4 +1,4 @@
-# MinVandring
+# Min Vandring
 
 Planera. Packa. Upplev. Planera vandringen tillsammans: packning, mat och rutt på ett ställe.
 

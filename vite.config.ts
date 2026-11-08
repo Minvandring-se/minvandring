@@ -13,8 +13,8 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['favicon.png', 'apple-touch-icon.png'],
       manifest: {
-        name: 'MinVandring',
-        short_name: 'MinVandring',
+        name: 'Min Vandring',
+        short_name: 'Min Vandring',
         description: 'Planera vandringen tillsammans. Packning, mat och rutt på ett ställe.',
         lang: 'sv',
         dir: 'ltr',
