@@ -5,6 +5,7 @@ import { useSession } from '@/hooks/useSession'
 import { GaMed } from '@/pages/GaMed'
 import { LoggaIn } from '@/pages/LoggaIn'
 import { MinaTurer } from '@/pages/MinaTurer'
+import { Profil } from '@/pages/Profil'
 import { Start } from '@/pages/Start'
 import { TurSida } from '@/pages/Tur'
 
@@ -25,6 +26,7 @@ export default function App() {
         <Route path="/logga-in" element={<LoggaIn />} />
         <Route path="/ga-med/:kod" element={<GaMed />} />
         <Route path="/turer" element={<Inloggad><MinaTurer /></Inloggad>} />
+        <Route path="/profil" element={<Inloggad><Profil /></Inloggad>} />
         <Route path="/tur/:id" element={<Inloggad><TurSida /></Inloggad>} />
         <Route
           path="*"
