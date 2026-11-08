@@ -1,0 +1,26 @@
+# Håller Supabase-projektet vaket. Gratisprojekt pausas efter en tid utan aktivitet.
+# URL och nyckel läggs som Secrets i repot (SUPABASE_URL och SUPABASE_ANON_KEY), aldrig i koden.
+name: Håll Supabase vaket
+
+on:
+  schedule:
+    - cron: '0 6 */2 * *'
+  workflow_dispatch:
+
+permissions: {}
+
+jobs:
+  ping:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Pinga Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_ANON_KEY: ${{ secrets.SUPABASE_ANON_KEY }}
+        run: |
+          if [ -z "$SUPABASE_URL" ] || [ -z "$SUPABASE_ANON_KEY" ]; then
+            echo "Secrets saknas än, hoppar över."
+            exit 0
+          fi
+          curl -s -o /dev/null -w '%{http_code}\n' --retry 3 -H "apikey: $SUPABASE_ANON_KEY" "${SUPABASE_URL%/}/auth/v1/health"
