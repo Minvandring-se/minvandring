@@ -6,7 +6,9 @@
   --color-foreground: #1f2a24;
   --color-card: #fffdf8;
   --color-card-foreground: #1f2a24;
-  --color-primary: #356854;
+  /* Samma gröna som logotypen. primary-hover är ljusare, för hover och fokus. */
+  --color-primary: #1f3d2e;
+  --color-primary-hover: #2e5945;
   --color-primary-foreground: #ffffff;
   --color-primary-soft: #dcebe3;
   --color-muted: #ece8de;
@@ -14,9 +16,11 @@
   --color-accent: #e8a33d;
   --color-accent-soft: #fff2cc;
   --color-sand: #e8dcc4;
+  /* Fyllda ytor i illustrationerna. Ljusare än primary så att detaljerna syns mot de mörka konturerna. */
+  --color-illustration: #356854;
   --color-destructive: #c0392b;
   --color-border: #ddd7ca;
-  --color-ring: #356854;
+  --color-ring: #2e5945;
 
   --radius-md: 0.875rem;
   --radius-lg: 1.25rem;

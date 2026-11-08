@@ -69,7 +69,9 @@ Vid prioritering: 1) planera en vandring 2) planera tillsammans 3) packning och 
 - Mobile first: tryckytor minst 44 px höga, tydlig navigation, enkla formulär, få steg. Inga breda tabeller som kräver sidscroll.
 - Sökvägar skrivs utan å/ä/ö (t.ex. `ga-med`, `logga-in`).
 - Skandinavisk, lugn, naturnära och professionell. Undvik plottriga dashboards, för många färger, onödiga animationer och generisk AI/SaaS-stil.
-- Färger: skogsgrönt primär, sand/beige komplement, ljus off-white bakgrund, mörkgrå text, diskret accent.
+- Namnet skrivs MinVandring, i ett ord, överallt där det syns.
+- Färger: skogsgrönt primär (`#1F3D2E`, samma som logotypen, `primary-hover` för hover och fokus), sand/beige komplement, ljus off-white bakgrund, mörkgrå text, diskret accent.
+- Logotypen är komponenten `Logotyp` med symbolerna i `public/brand/`. Källan ligger i `design/logo/`.
 - Tillgänglighet: labels på formulär, god kontrast, semantisk HTML, synligt fokus.
 - Använd inte tankstreck som paus i synliga texter.
 - Lova inte funktioner i appens texter som inte finns ännu.

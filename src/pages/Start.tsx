@@ -44,7 +44,7 @@ export function Start() {
       <header className="absolute inset-x-0 top-0 z-20">
         <nav aria-label="Huvudmeny" className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link to="/" className={`flex min-h-11 items-center rounded-md text-card ${fokusPaBild}`}>
-            <Logotyp className="text-xl" />
+            <Logotyp yta="mork" className="text-xl" />
           </Link>
           <Link
             to="/logga-in"
@@ -127,7 +127,7 @@ export function Start() {
       </main>
 
       <footer className="border-t border-border px-4 py-10 text-center">
-        <Logotyp className="justify-center text-xl text-primary" />
+        <Logotyp className="justify-center text-xl" />
         <p className="mt-2 text-muted-foreground">För vandringar tillsammans.</p>
         <p className="mt-4 text-sm text-muted-foreground">
           Foton:{' '}

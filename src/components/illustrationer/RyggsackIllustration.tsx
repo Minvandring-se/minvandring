@@ -19,8 +19,8 @@ export function RyggsackIllustration({ className }: { className?: string }) {
 
         {/* Ryggsäck */}
         <path d="M164 58 C 164 47, 182 47, 182 58" className="fill-none" />
-        <path d="M134 170 V98 C 134 72, 150 58, 173 58 C 196 58, 212 72, 212 98 V170 Z" className="fill-primary" />
-        <path d="M139 96 C 139 76, 154 66, 173 66 C 192 66, 207 76, 207 96 C 192 103, 154 103, 139 96 Z" className="fill-primary" />
+        <path d="M134 170 V98 C 134 72, 150 58, 173 58 C 196 58, 212 72, 212 98 V170 Z" className="fill-illustration" />
+        <path d="M139 96 C 139 76, 154 66, 173 66 C 192 66, 207 76, 207 96 C 192 103, 154 103, 139 96 Z" className="fill-illustration" />
         <path d="M139 96 C 154 103, 192 103, 207 96" className="fill-none stroke-card/60" strokeWidth="1.5" />
         <rect x="168" y="96" width="10" height="9" rx="2" className="fill-accent" />
         <rect x="149" y="120" width="48" height="40" rx="11" className="fill-primary-soft" />

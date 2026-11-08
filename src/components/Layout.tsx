@@ -15,7 +15,7 @@ export function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="mx-auto flex min-h-dvh max-w-3xl flex-col px-4 pb-10">
       <header className="flex items-center justify-between py-4">
-        <Link to="/" className="flex min-h-11 items-center text-primary">
+        <Link to="/" className="flex min-h-11 items-center">
           <Logotyp />
         </Link>
         {session && (

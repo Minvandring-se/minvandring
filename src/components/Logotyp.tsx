@@ -1,11 +1,25 @@
-import { Mountain } from 'lucide-react'
 import { cn } from '@/lib/utils'
 
-/** "MinVandring" med fjällikonen. Färgen ärvs, så den fungerar både på ljus bakgrund och på bild. */
-export function Logotyp({ className }: { className?: string }) {
+const symboler = {
+  ljus: '/brand/minvandring-symbol-green.svg',
+  mork: '/brand/minvandring-symbol-cream.svg',
+}
+
+/**
+ * Symbolen och namnet. yta="mork" på mörka ytor och bilder (ljus symbol), annars grön symbol.
+ * Storleken följer textstorleken, så className="text-xl" gör hela logotypen större.
+ */
+export function Logotyp({ yta = 'ljus', className }: { yta?: 'ljus' | 'mork'; className?: string }) {
   return (
-    <span className={cn('flex items-center gap-2 font-heading text-lg font-semibold tracking-tight', className)}>
-      <Mountain className="size-6" aria-hidden />
+    <span
+      className={cn(
+        'flex items-center gap-[0.45em] font-heading text-lg font-semibold tracking-tight',
+        yta === 'mork' ? 'text-card' : 'text-primary',
+        className,
+      )}
+    >
+      {/* SVG-filen är kvadratisk med luft runt symbolen. Den negativa marginalen tar bort luften på sidorna. */}
+      <img src={symboler[yta]} alt="" aria-hidden className="-mx-[0.18em] size-[2.1em] shrink-0" />
       MinVandring
     </span>
   )

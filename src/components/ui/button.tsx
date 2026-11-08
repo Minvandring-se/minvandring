@@ -7,7 +7,7 @@ const knapp = cva(
   {
     variants: {
       variant: {
-        default: 'bg-primary text-primary-foreground hover:bg-primary/90',
+        default: 'bg-primary text-primary-foreground hover:bg-primary-hover',
         outline: 'border border-border bg-card hover:bg-muted',
         ghost: 'hover:bg-muted',
       },
