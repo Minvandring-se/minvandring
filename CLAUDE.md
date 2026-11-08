@@ -10,6 +10,7 @@ Byggs av Andreas och Oscar. Version 1 beskrivs i `docs/version-1.md`. Bygg inget
 - Mobilen först: appen används i telefonen när man packar och på fjället. Tryckytor minst 44 px höga, inga breda tabeller som kräver sidscroll.
 - Nycklar ligger i `.env.local`, aldrig i koden. Nya miljövariabler läggs till i både `.env.example` och `src/vite-env.d.ts`.
 - Jobba på en egen branch och öppna en pull request, aldrig direkt på main. Små commits med beskrivande meddelanden på svenska.
+- Databasändringar körs med Supabase CLI mot det riktiga projektet: `npx supabase db push --remote` (utan `--remote` försöker den nå en lokal databas).
 - Supabase: varje ny tabell får RLS och policies i samma migration. Allt som hör till en tur skyddas med `public.ar_medlem(tur_id)`. Nya migrationer läggs i `supabase/migrations/` med datum först i filnamnet. Ändra aldrig en migration som redan körts, skriv en ny.
 - Beräkningar (vikt, mat, kalorier, tider) skrivs som rena funktioner i `src/lib/` med tester bredvid (`*.test.ts`). Komponenterna ska bara visa och spara.
 - Kör `npm run build`, `npm test` och `npm run lint` innan du säger att något är klart.
@@ -30,10 +31,10 @@ Byggs av Andreas och Oscar. Version 1 beskrivs i `docs/version-1.md`. Bygg inget
 
 ## Datamodell (version 1)
 
-Se `supabase/migrations/20261108000000_grund.sql`.
+Se `supabase/migrations/`. Åtkomstkontrollen testas i `supabase/rls.test.ts` (Postgres i minnet via PGlite). Ny policy eller tabell = nytt test där.
 
 - `turer`: namn, destination, datum, dagar, reservdagar, inbjudningskod
-- `deltagare`: personer och hundar i en tur. `user_id` är tomt för hundar och för den som inte gått med själv. `matandel` tom = dela lika.
+- `deltagare`: personer och hundar i en tur. `roll` är `owner` (ägare), `editor` (redigerare) eller `viewer` (läsare). Skaparen blir owner, den som går med via länk blir editor. Regler: `public.kan_andra(tur_id)` för owner och editor, `public.ar_agare(tur_id)` för owner. Viewer får bara bocka av sin egen packning. `user_id` är tomt för hundar och för den som inte gått med själv. `matandel` tom = dela lika.
 - `packrader` och `packstatus`: packlistan. `alla = true` betyder att varje person har en egen. `typ` är `ryggsack`, `kropp` eller `forbrukas`.
 - `varor`, `ratter`, `ingredienser`, `maltider`: maten. En vara (med kcal) finns en gång per tur och används av recepten.
 
