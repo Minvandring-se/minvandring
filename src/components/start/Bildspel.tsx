@@ -1,14 +1,16 @@
-import { useEffect, useState } from 'react'
+import { useEffect, useState, type CSSProperties } from 'react'
 import { cn } from '@/lib/utils'
 
-// fokus = object-position, så att det viktiga syns när bilden beskärs.
-// På breda skärmar beskärs bilderna uppifrån och nerifrån, då styr den andra siffran vad som syns.
+// Bildfokus (object-position) så att det viktiga syns när bilden beskärs.
+// fokusMobil: i stående format beskärs bilden från sidorna, så den första siffran styr.
+// fokus (dator): på breda skärmar beskärs bilden uppifrån och nerifrån, så den andra siffran styr.
+// Utsiktsbilden är mörkast och ligger därför sist.
 const bilder = [
-  { namn: '1-grupp', alt: 'En grupp vandrare på en stig genom en fjälldal på hösten', fokus: '60% 75%' },
-  { namn: '2-sommarfjall', alt: 'En vandrare med packning på en stig i sommarfjällen', fokus: '70% 70%' },
-  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokus: '40% 60%' },
-  { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokus: '25% 78%' },
-  { namn: '5-norrsken', alt: 'Norrsken över fjäll och sjö', fokus: '50% 90%' },
+  { namn: '1-grupp', alt: 'En grupp vandrare på en stig genom en fjälldal på hösten', fokusMobil: '60% 50%', fokus: '60% 75%' },
+  { namn: '2-sommarfjall', alt: 'En vandrare med packning på en stig i sommarfjällen', fokusMobil: '70% 50%', fokus: '70% 70%' },
+  { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokusMobil: '20% 50%', fokus: '25% 78%' },
+  { namn: '5-norrsken', alt: 'Norrsken över fjäll och sjö', fokusMobil: '30% 50%', fokus: '50% 90%' },
+  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokusMobil: '45% 50%', fokus: '40% 60%' },
 ]
 
 /** Hur länge varje bild syns. Övertoningen (0,8 s) ligger i klassen duration-800. */
@@ -98,9 +100,9 @@ export function Bildspel() {
             fetchPriority={i === 0 ? 'high' : 'low'}
             decoding="async"
             onLoad={() => laddad(i)}
-            style={{ objectPosition: bild.fokus }}
+            style={{ '--fokus-mobil': bild.fokusMobil, '--fokus': bild.fokus } as CSSProperties}
             className={cn(
-              'absolute inset-0 size-full object-cover',
+              'absolute inset-0 size-full object-cover [object-position:var(--fokus-mobil)] md:[object-position:var(--fokus)]',
               // Den nya bilden tonar in ovanpå. Den gamla ligger kvar helt synlig under tills övergången är klar.
               synlig && 'z-10 opacity-100 transition-opacity duration-800 ease-out',
               under && 'z-0 opacity-100',
@@ -111,10 +113,11 @@ export function Bildspel() {
           />
         )
       })}
-      {/* Neutral skugga: lätt överst bakom menyn, mörkare bakom texten och i nederkant. Bilderna behåller sina färger. */}
-      <div className="absolute inset-0 z-20 bg-linear-to-b from-black/45 via-transparent via-30% to-transparent" />
-      <div className="absolute inset-0 z-20 bg-[radial-gradient(ellipse_65%_45%_at_50%_50%,rgb(0_0_0/0.5),transparent)]" />
-      <div className="absolute inset-0 z-20 bg-linear-to-t from-black/65 via-black/15 via-25% to-transparent to-45%" />
+      {/* Neutral skugga så att bilderna behåller sina färger: lätt överst bakom menyn, mörkare bakom texten och i nederkant.
+          Lagren är i procent av ytan. I stående format blir de därför lättare och smalare, annars täcker de nästan hela bilden. */}
+      <div className="absolute inset-0 z-20 bg-linear-to-b from-black/30 via-transparent via-20% to-transparent md:from-black/45 md:via-30%" />
+      <div className="absolute inset-0 z-20 bg-[radial-gradient(ellipse_75%_28%_at_50%_42%,rgb(0_0_0/0.38),transparent)] md:bg-[radial-gradient(ellipse_65%_45%_at_50%_50%,rgb(0_0_0/0.5),transparent)]" />
+      <div className="absolute inset-0 z-20 bg-linear-to-t from-black/60 via-black/10 via-15% to-transparent to-30% md:from-black/65 md:via-black/15 md:via-25% md:to-45%" />
     </div>
   )
 }

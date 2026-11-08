@@ -56,8 +56,8 @@ export function Start() {
       </header>
 
       <main>
-        {/* Mobil: 80 % av skärmhöjden. Dator: höjden följer bredden (2:1) så att breda skärmar inte beskär bort landskapet, men lämnar plats för nästa rubrik. */}
-        <section aria-labelledby="start-rubrik" className="relative isolate flex h-[80svh] min-h-[36rem] flex-col text-card md:h-[clamp(36rem,50vw,calc(100svh-8rem))]">
+        {/* Mobil och dator: 80 % av skärmhöjden. Riktigt breda skärmar (bredare än 2:1) får lite högre bildspel så att bilderna beskärs mindre, men nästa rubrik får alltid plats. */}
+        <section aria-labelledby="start-rubrik" className="relative isolate flex h-[80svh] min-h-[36rem] flex-col text-card md:h-[80svh] md:max-h-[64rem] md:[@media(min-aspect-ratio:2/1)]:h-[calc(100svh-8rem)]">
           <Bildspel />
 
           <div className="relative flex flex-1 flex-col items-center justify-center px-4 pt-20 pb-6 text-center [text-shadow:0_1px_14px_rgb(0_0_0/0.35)] sm:pt-24">
