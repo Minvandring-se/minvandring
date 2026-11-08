@@ -1,47 +1,88 @@
-# Min Vandring
+# CLAUDE.md – MinVandring.se
 
-Svensk webbapp (minvandring.se) för att planera vandringar tillsammans: vem som följer med, packning med vikt per ryggsäck, mat med inköpslista, rutt och säkerhet. Vi bygger inte en egen ledguide. Leder hittar man i Naturkartan och liknande. Vår styrka är planeringen i gruppen.
+Svara alltid på svenska. All synlig text i appen ska vara på svenska.
 
-Byggs av Andreas och Oscar. Version 1 beskrivs i `docs/version-1.md`. Bygg inget utanför version 1 utan att fråga.
+## Om projektet
+MinVandring.se är en svensk, mobilanpassad webbapp där vänner planerar flerdagsvandringar tillsammans: vandring, deltagare, packning, mat och lärdomar till nästa gång. Slogan: "Planera. Packa. Upplev."
 
-## Regler
+Två grundare utvecklar med Cursor och Claude Code. Långsiktig vision finns i `docs/vision.md`. Läs den vid behov, men bygg bara det som hör till nuvarande mål.
 
-- All text i appen är på svenska. Sökvägar skrivs utan å/ä/ö (t.ex. `ga-med`, `logga-in`).
-- Mobilen först: appen används i telefonen när man packar och på fjället. Tryckytor minst 44 px höga, inga breda tabeller som kräver sidscroll.
-- Nycklar ligger i `.env.local`, aldrig i koden. Nya miljövariabler läggs till i både `.env.example` och `src/vite-env.d.ts`.
-- Jobba på en egen branch och öppna en pull request, aldrig direkt på main. Små commits med beskrivande meddelanden på svenska.
-- Supabase: varje ny tabell får RLS och policies i samma migration. Allt som hör till en tur skyddas med `public.ar_medlem(tur_id)`. Nya migrationer läggs i `supabase/migrations/` med datum först i filnamnet. Ändra aldrig en migration som redan körts, skriv en ny.
-- Beräkningar (vikt, mat, kalorier, tider) skrivs som rena funktioner i `src/lib/` med tester bredvid (`*.test.ts`). Komponenterna ska bara visa och spara.
-- Kör `npm run build`, `npm test` och `npm run lint` innan du säger att något är klart.
+**Nuvarande mål:** en stabil beta där riktiga svenska vandrare kan planera en riktig vandring tillsammans. Nästa steg baseras på faktisk användning.
 
-## Texter och ton
+## Teknik (faktisk, ändra inte utan att fråga)
+- React + Vite + TypeScript + Tailwind CSS v4 + lucide-react
+- Tailwind v4 via `@tailwindcss/vite`, ingen `tailwind.config`. Färger och skuggor ligger som variabler i `src/index.css`. Använd dem (`bg-primary`, `text-muted-foreground`) i stället för Tailwinds egna färger.
+- Komponenter i shadcn-stil ligger i `src/components/ui/` (`Button`, `Input`, `Card`).
+- React Router (paketet `react-router`). PWA via `vite-plugin-pwa`.
+- Tester med Vitest, lint med oxlint.
+- Supabase: Auth (inloggning med mejllänk), Postgres, Row Level Security, Realtime, projekt i eu-north-1 (Stockholm)
+- Hosting: Vercel, kopplat till GitHub-repot Minvandring-se/minvandring. Merge till main publiceras automatiskt.
+- Domän: www.minvandring.se är huvudadress, minvandring.se omdirigerar dit.
+- Detta är INTE ett Next.js-projekt. Föreslå inte byte av ramverk.
 
-- Korta meningar på vardaglig svenska. Inga tankstreck (– eller —) som paus i synliga texter.
-- Bindestreck i ord och intervall (t.ex. "1–4 personer") är okej.
+## Miljövariabler
+- `VITE_SUPABASE_URL` och `VITE_SUPABASE_ANON_KEY` (Supabase publishable key) i `.env.local` och i Vercel.
+- Nya miljövariabler läggs till i både `.env.example` och `src/vite-env.d.ts`.
+- `.env.local` får aldrig committas.
+- Secret- eller service_role-nycklar får aldrig användas i klientkoden.
 
-## Teknik
+## Supabase och databas
+- Tabeller just nu: `profiler`, `turer`, `deltagare`, `packrader`, `packstatus`, `varor`, `ratter`, `ingredienser`, `maltider`.
+- "Automatically expose new tables" är avstängt och automatisk RLS är påslagen.
+- Varje migrering som skapar en tabell måste därför innehålla GRANT till rollen `authenticated` (till `anon` bara om det verkligen behövs) och RLS-policyer som begränsar åtkomsten till rätt användare. Allt som hör till en tur skyddas med `public.ar_medlem(tur_id)`.
+- Alla schemaändringar görs som migreringsfiler i `supabase/migrations` och körs med Supabase CLI. Inga ändringar för hand i SQL Editor.
+- Migreringar får datum och tid först i filnamnet, t.ex. `20261108000000_grund.sql`. Ändra aldrig en migrering som redan körts, skriv en ny.
+- Visa SQL för en migrering och vänta på ok innan den körs mot databasen.
+- Bara en av grundarna kör migreringar åt gången.
+- Tabell- och kolumnnamn: följ det som redan finns i `supabase/migrations`. Byt inte namn på befintliga tabeller utan att fråga.
 
-- Vite + React + TypeScript, React Router (paketet `react-router`)
-- Tailwind CSS v4 (via `@tailwindcss/vite`, ingen `tailwind.config`). Färger och skuggor ligger som variabler i `src/index.css`. Använd dem (`bg-primary`, `text-muted-foreground`, `shadow-soft`) i stället för Tailwinds egna färger.
-- Enkla komponenter i shadcn-stil i `src/components/ui/` (`Button`, `Input`, `Card`). Ikoner från `lucide-react`.
-- Supabase (`src/lib/supabase.ts`) för databas, inloggning med mejllänk och realtid. `supabase` är `null` när nycklarna saknas, så appen startar ändå.
-- PWA via `vite-plugin-pwa` (manifestet i `vite.config.ts`, ikonerna i `public/`).
-- Driftsätts på Vercel. `vercel.json` skickar alla sökvägar till `index.html`.
+## Säkerhet
+Frontend-kontroller räcker aldrig. Behörighet ska garanteras av RLS. Testa särskilt att:
+- användare A inte kan läsa eller ändra användare B:s vandring
+- inbjudna deltagare bara får sin roll (ägare, redigerare, läsare)
+- en borttagen deltagare förlorar åtkomst
+- privata anteckningar förblir privata
+- inbjudningslänkar kan återkallas
 
-## Datamodell (version 1)
+## MVP-prioritet
+**P0:** registrering, inloggning, profil, skapa/redigera/se mina vandringar, bjuda in deltagare, deltagarroller, mobilanpassat gränssnitt.
 
-Se `supabase/migrations/20261108000000_grund.sql`.
+**P1:** dagsetapper, packlista, viktberäkning (basvikt, förbrukning, total startvikt, vikt per deltagare), gemensam utrustning, enkel matplanering, inköpslista, anteckningar, "Kom ihåg till nästa vandring".
 
-- `turer`: namn, destination, datum, dagar, reservdagar, inbjudningskod
-- `deltagare`: personer och hundar i en tur. `user_id` är tomt för hundar och för den som inte gått med själv. `matandel` tom = dela lika.
-- `packrader` och `packstatus`: packlistan. `alla = true` betyder att varje person har en egen. `typ` är `ryggsack`, `kropp` eller `forbrukas`.
-- `varor`, `ratter`, `ingredienser`, `maltider`: maten. En vara (med kcal) finns en gång per tur och används av recepten.
+**P2:** GPX-import, karta, platser längs rutten, hundinformation.
 
-## Viktlogik
+**Inte MVP:** AI-planering, native-app, offlinekartor, e-handel, affiliate, community, social feed, betalvägg.
 
-`src/lib/vikt.ts` (från kalkylarket som appen ersätter):
+Vid prioritering: 1) planera en vandring 2) planera tillsammans 3) packning och vikt 4) mat 5) lärdomar 6) karta 7) upptäcka vandringar 8) community 9) AI 10) handel.
 
-- Basvikt = saker i ryggsäcken. Kläder på kroppen och förbrukningsvaror räknas för sig.
-- "Alla"-saker räknas för varje person men inte för hundar.
-- Maten delas efter `matandel`. Hundar bär sin egen hundmat.
-- Bränsle bärs av den som bär köket (kommer i version 1).
+## Arkitektur och kod
+- Håll det enkelt. Ingen onödig abstraktion eller förtida optimering.
+- Affärslogik (t.ex. vikt- och matberäkningar) som rena funktioner i `src/lib`, med tester bredvid (`*.test.ts`). Komponenterna ska bara visa och spara. Gemensamma typer i `src/types`.
+- Små, fokuserade komponenter och funktioner. Undvik `any` och duplicerad logik.
+- Validera data vid systemgränser och hantera fel.
+- Kommentarer bara när de tillför något.
+- Gör inga stora refaktoreringar samtidigt som en ny funktion.
+
+## Design och UX
+- Mobile first: tryckytor minst 44 px höga, tydlig navigation, enkla formulär, få steg. Inga breda tabeller som kräver sidscroll.
+- Sökvägar skrivs utan å/ä/ö (t.ex. `ga-med`, `logga-in`).
+- Skandinavisk, lugn, naturnära och professionell. Undvik plottriga dashboards, för många färger, onödiga animationer och generisk AI/SaaS-stil.
+- Färger: skogsgrönt primär, sand/beige komplement, ljus off-white bakgrund, mörkgrå text, diskret accent.
+- Tillgänglighet: labels på formulär, god kontrast, semantisk HTML, synligt fokus.
+- Använd inte tankstreck som paus i synliga texter.
+- Lova inte funktioner i appens texter som inte finns ännu.
+- Varje funktion ska svara ja på: gör detta det enklare att planera en riktig vandring?
+
+## Arbetssätt
+1. Hämta senaste ändringarna från GitHub innan arbete börjar.
+2. Jobba i en egen branch och skapa en pull request. Pusha inte direkt till main utan att fråga.
+3. Läs relevant kod först och förstå nuvarande lösning.
+4. Vid större ändringar: beskriv kort planen och vänta på ok.
+5. Bygg minsta rimliga lösning.
+6. Kör `npm run build`, `npm test` och `npm run lint` innan du säger att något är klart.
+7. Avsluta med en kort sammanfattning och hur ändringen testas.
+
+Om ett viktigt produktbeslut är oklart: beskriv alternativen kort och rekommendera det enklaste. Fråga inte om små tekniska detaljer som har en etablerad lösning.
+
+## Tester
+Prioritera tester för behörigheter, deltagarroller, inbjudningar, vikt- och matberäkningar och datavalidering. Visuella detaljer behöver inte testas.
