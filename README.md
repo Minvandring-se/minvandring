@@ -12,7 +12,19 @@ npm run dev
 
 ## Databasen
 
-Kör `supabase/migrations/20261108000000_grund.sql` i Supabase (SQL Editor → New query → klistra in → Run).
+Migreringarna i `supabase/migrations/` körs med Supabase CLI. Första gången:
+
+```bash
+npx supabase login
+npx supabase link --project-ref psvuzkkauiqhimnhtjep
+```
+
+Se vilka migreringar som är körda och kör de nya:
+
+```bash
+npx supabase migration list
+npx supabase db push --remote
+```
 
 ## Kommandon
 

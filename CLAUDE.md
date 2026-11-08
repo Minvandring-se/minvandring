@@ -27,10 +27,12 @@ Två grundare utvecklar med Cursor och Claude Code. Långsiktig vision finns i `
 - Secret- eller service_role-nycklar får aldrig användas i klientkoden.
 
 ## Supabase och databas
-- Tabeller just nu: `profiler`, `turer`, `deltagare`, `packrader`, `packstatus`, `varor`, `ratter`, `ingredienser`, `maltider`.
+- Tabeller just nu (efter `grund` och `roller`): `profiler`, `turer`, `deltagare` (med `roll`), `packrader`, `packstatus`, `varor`, `ratter`, `ingredienser`, `maltider`.
+- `deltagare.roll` är `owner` (ägare), `editor` (redigerare) eller `viewer` (läsare). Skaparen blir owner, den som går med via länk blir editor. Viewer får bara bocka av sin egen packning.
 - "Automatically expose new tables" är avstängt och automatisk RLS är påslagen.
-- Varje migrering som skapar en tabell måste därför innehålla GRANT till rollen `authenticated` (till `anon` bara om det verkligen behövs) och RLS-policyer som begränsar åtkomsten till rätt användare. Allt som hör till en tur skyddas med `public.ar_medlem(tur_id)`.
-- Alla schemaändringar görs som migreringsfiler i `supabase/migrations` och körs med Supabase CLI. Inga ändringar för hand i SQL Editor.
+- Varje migrering som skapar en tabell måste därför innehålla GRANT till rollen `authenticated` (till `anon` bara om det verkligen behövs) och RLS-policyer som begränsar åtkomsten till rätt användare. Allt som hör till en tur läses med `public.ar_medlem(tur_id)`, ändras med `public.kan_andra(tur_id)` (owner och editor) och det som bara ägaren får göra skyddas med `public.ar_agare(tur_id)`.
+- Åtkomstkontrollen testas i `supabase/rls.test.ts` (Postgres i minnet via PGlite). Ny policy eller tabell = nytt test där.
+- Alla schemaändringar görs som migreringsfiler i `supabase/migrations` och körs med Supabase CLI mot det riktiga projektet: `npx supabase db push --remote` (utan `--remote` försöker den nå en lokal databas). Inga ändringar för hand i SQL Editor.
 - Migreringar får datum och tid först i filnamnet, t.ex. `20261108000000_grund.sql`. Ändra aldrig en migrering som redan körts, skriv en ny.
 - Visa SQL för en migrering och vänta på ok innan den körs mot databasen.
 - Bara en av grundarna kör migreringar åt gången.
@@ -57,7 +59,7 @@ Vid prioritering: 1) planera en vandring 2) planera tillsammans 3) packning och 
 
 ## Arkitektur och kod
 - Håll det enkelt. Ingen onödig abstraktion eller förtida optimering.
-- Affärslogik (t.ex. vikt- och matberäkningar) som rena funktioner i `src/lib`, med tester bredvid (`*.test.ts`). Komponenterna ska bara visa och spara. Gemensamma typer i `src/types`.
+- Affärslogik (t.ex. vikt- och matberäkningar) som rena funktioner i `src/lib`, med tester bredvid (`*.test.ts`). Komponenterna ska bara visa och spara. Gemensamma typer i `src/lib/typer.ts`.
 - Små, fokuserade komponenter och funktioner. Undvik `any` och duplicerad logik.
 - Validera data vid systemgränser och hantera fel.
 - Kommentarer bara när de tillför något.
