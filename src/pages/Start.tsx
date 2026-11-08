@@ -56,10 +56,10 @@ export function Start() {
       </header>
 
       <main>
-        <section aria-labelledby="start-rubrik" className="relative isolate flex min-h-svh flex-col text-card">
+        <section aria-labelledby="start-rubrik" className="relative isolate flex h-[80svh] min-h-[36rem] flex-col text-card md:h-[70svh] md:max-h-[52rem]">
           <Bildspel />
 
-          <div className="relative flex flex-1 flex-col items-center justify-center px-4 pt-24 pb-10 text-center">
+          <div className="relative flex flex-1 flex-col items-center justify-center px-4 pt-20 pb-6 text-center [text-shadow:0_1px_14px_rgb(0_0_0/0.35)] sm:pt-24">
             <h1 id="start-rubrik" className="text-[2.6rem] leading-[1.05] font-bold sm:text-6xl lg:text-7xl">
               Planera. Packa. Upplev.
             </h1>
@@ -81,7 +81,7 @@ export function Start() {
             </a>
           </div>
 
-          <ul className="relative mx-auto grid w-full max-w-4xl grid-cols-3 gap-2 px-3 pb-8 sm:flex sm:justify-center sm:divide-x sm:divide-card/40 sm:pb-12">
+          <ul className="relative mx-auto grid w-full max-w-4xl grid-cols-3 gap-2 px-3 pb-6 [text-shadow:0_1px_8px_rgb(0_0_0/0.4)] sm:flex sm:justify-center sm:divide-x sm:divide-card/40 sm:pb-8">
             {punkter.map(({ ikon: Ikon, text }) => (
               <li
                 key={text}
