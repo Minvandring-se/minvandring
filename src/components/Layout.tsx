@@ -1,19 +1,22 @@
-import { Mountain } from 'lucide-react'
 import type { ReactNode } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation } from 'react-router'
+import { Logotyp } from '@/components/Logotyp'
 import { Button } from '@/components/ui/button'
 import { useSession } from '@/hooks/useSession'
 import { supabase } from '@/lib/supabase'
 
 export function Layout({ children }: { children: ReactNode }) {
   const session = useSession()
+  const { pathname } = useLocation()
+
+  // Startsidan har en egen meny och bilder i full bredd.
+  if (pathname === '/') return children
 
   return (
     <div className="mx-auto flex min-h-dvh max-w-3xl flex-col px-4 pb-10">
       <header className="flex items-center justify-between py-4">
-        <Link to="/" className="flex items-center gap-2 text-lg font-semibold text-primary">
-          <Mountain className="size-6" aria-hidden />
-          Min Vandring
+        <Link to="/" className="flex min-h-11 items-center text-primary">
+          <Logotyp />
         </Link>
         {session && (
           <div className="flex items-center gap-2">
