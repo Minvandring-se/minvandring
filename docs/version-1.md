@@ -9,7 +9,7 @@ Inte med i version 1: kartor, leddata, GPX, community, AI, butiker, betalning.
 Varje rubrik blir en issue på GitHub.
 
 ### 1. Koppla Supabase och Vercel
-- Kör migrationen i Supabase (SQL Editor).
+- Kör migreringarna med Supabase CLI (`npx supabase db push --remote`).
 - Slå på inloggning med mejl (Authentication → Sign In / Providers → Email) och lägg till `https://minvandring.se` och Vercels adress under URL Configuration.
 - Koppla repot i Vercel och lägg in `VITE_SUPABASE_URL` och `VITE_SUPABASE_ANON_KEY`.
 - Klart när: man kan logga in på den publicerade sidan och skapa en tur.
