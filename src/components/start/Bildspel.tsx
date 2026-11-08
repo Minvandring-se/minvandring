@@ -2,17 +2,18 @@ import { useEffect, useState } from 'react'
 import { cn } from '@/lib/utils'
 
 // fokus = object-position, så att det viktiga syns när bilden beskärs.
+// På breda skärmar beskärs bilderna uppifrån och nerifrån, då styr den andra siffran vad som syns.
 const bilder = [
-  { namn: '1-grupp', alt: 'En grupp vandrare på en stig genom en fjälldal på hösten', fokus: '60% 72%' },
-  { namn: '2-sommarfjall', alt: 'En vandrare med packning på en stig i sommarfjällen', fokus: '70% 65%' },
-  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokus: '40% 58%' },
-  { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokus: '25% 62%' },
-  { namn: '5-norrsken', alt: 'Norrsken över fjäll och sjö', fokus: '45% 45%' },
+  { namn: '1-grupp', alt: 'En grupp vandrare på en stig genom en fjälldal på hösten', fokus: '60% 75%' },
+  { namn: '2-sommarfjall', alt: 'En vandrare med packning på en stig i sommarfjällen', fokus: '70% 70%' },
+  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokus: '40% 60%' },
+  { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokus: '25% 78%' },
+  { namn: '5-norrsken', alt: 'Norrsken över fjäll och sjö', fokus: '50% 90%' },
 ]
 
 /** Hur länge varje bild syns. Övertoningen (0,8 s) ligger i klassen duration-800. */
 const VISNING_MS = 7000
-const BREDDER = [640, 1280, 1920]
+const BREDDER = [640, 1280, 1920, 2560]
 
 function srcset(namn: string) {
   return BREDDER.map((b) => `/hero/${namn}-${b}.webp ${b}w`).join(', ')
