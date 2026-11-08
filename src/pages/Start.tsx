@@ -56,14 +56,14 @@ export function Start() {
       </header>
 
       <main>
-        <section aria-labelledby="start-rubrik" className="relative isolate flex h-[80svh] min-h-[36rem] flex-col text-card md:h-[70svh] md:max-h-[52rem]">
+        <section aria-labelledby="start-rubrik" className="relative isolate flex h-[80svh] min-h-[36rem] flex-col text-card md:h-[80svh] md:max-h-[64rem]">
           <Bildspel />
 
           <div className="relative flex flex-1 flex-col items-center justify-center px-4 pt-20 pb-6 text-center [text-shadow:0_1px_14px_rgb(0_0_0/0.35)] sm:pt-24">
             <h1 id="start-rubrik" className="text-[2.6rem] leading-[1.05] font-bold sm:text-6xl lg:text-7xl">
               Planera. Packa. Upplev.
             </h1>
-            <p className="mt-5 max-w-xl text-lg text-card/90 sm:text-xl">
+            <p className="mt-5 max-w-xl text-lg text-card/90 [text-shadow:0_1px_3px_rgb(0_0_0/0.55),0_0_12px_rgb(0_0_0/0.35)] sm:text-xl">
               Din nästa vandring börjar här. <span className="sm:block">Samla planen, packningen och maten på ett ställe.</span>
             </p>
             <Link
@@ -75,7 +75,7 @@ export function Start() {
             </Link>
             <a
               href="#sa-fungerar-det"
-              className={`mt-3 inline-flex min-h-11 items-center rounded-md px-2 font-semibold underline decoration-2 underline-offset-4 ${fokusPaBild}`}
+              className={`mt-3 inline-flex min-h-11 items-center rounded-md px-2 font-semibold underline decoration-2 underline-offset-4 [text-shadow:0_1px_3px_rgb(0_0_0/0.55),0_0_12px_rgb(0_0_0/0.35)] ${fokusPaBild}`}
             >
               Så fungerar det
             </a>
