@@ -14,6 +14,9 @@
   --color-accent: #e8a33d;
   --color-accent-soft: #fff2cc;
   --color-sand: #e8dcc4;
+  /* Logotypens egna färger. Används bara i Logotyp. */
+  --color-logo-gron: #1f3d2e;
+  --color-logo-ljus: #faf8f3;
   --color-destructive: #c0392b;
   --color-border: #ddd7ca;
   --color-ring: #356854;
