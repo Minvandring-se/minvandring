@@ -29,8 +29,8 @@ export function StormkokIllustration({ className }: { className?: string }) {
         {/* Kastrull med lock och handtag */}
         <path d="M208 98 H232" className="fill-none" strokeWidth="4" />
         <rect x="228" y="93" width="24" height="9" rx="4.5" className="fill-accent" />
-        <rect x="114" y="82" width="96" height="42" rx="8" className="fill-primary" />
-        <rect x="108" y="77" width="108" height="9" rx="4.5" className="fill-primary" />
+        <rect x="114" y="82" width="96" height="42" rx="8" className="fill-illustration" />
+        <rect x="108" y="77" width="108" height="9" rx="4.5" className="fill-illustration" />
         <path d="M115 77 C 124 64, 200 64, 209 77 Z" className="fill-primary-soft" />
         <rect x="155" y="60" width="14" height="7" rx="3.5" className="fill-foreground" />
 
@@ -40,8 +40,8 @@ export function StormkokIllustration({ className }: { className?: string }) {
         <path d="M274 145 L300 124" className="fill-none" strokeWidth="3" />
       </g>
       <circle cx="256" cy="147" r="3" className="fill-accent" />
-      <circle cx="264" cy="149" r="3" className="fill-primary" />
-      <circle cx="252" cy="150" r="2.5" className="fill-primary" />
+      <circle cx="264" cy="149" r="3" className="fill-illustration" />
+      <circle cx="252" cy="150" r="2.5" className="fill-illustration" />
     </svg>
   )
 }

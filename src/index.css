@@ -16,6 +16,8 @@
   --color-accent: #e8a33d;
   --color-accent-soft: #fff2cc;
   --color-sand: #e8dcc4;
+  /* Fyllda ytor i illustrationerna. Ljusare än primary så att detaljerna syns mot de mörka konturerna. */
+  --color-illustration: #356854;
   --color-destructive: #c0392b;
   --color-border: #ddd7ca;
   --color-ring: #2e5945;

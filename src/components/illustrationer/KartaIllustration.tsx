@@ -13,7 +13,7 @@ export function KartaIllustration({ className }: { className?: string }) {
       </g>
 
       {/* Höjdkurvor och en sjö, tunt och lugnt. */}
-      <g className="fill-none stroke-primary/35" strokeWidth="1.5" strokeLinecap="round">
+      <g className="fill-none stroke-illustration/35" strokeWidth="1.5" strokeLinecap="round">
         <path d="M80 80 C 95 70, 112 74, 122 66" />
         <path d="M80 94 C 98 84, 114 90, 124 80" />
         <path d="M138 140 C 150 132, 166 138, 182 128" />
@@ -21,26 +21,26 @@ export function KartaIllustration({ className }: { className?: string }) {
       </g>
       <path
         d="M203 128 C 210 118, 230 116, 238 124 S 236 144, 222 146 S 198 140, 203 128 Z"
-        className="fill-primary-soft stroke-primary/50"
+        className="fill-primary-soft stroke-illustration/50"
         strokeWidth="1.5"
       />
 
       <path
         d="M88 152 C 100 128, 118 126, 134 112 S 160 84, 176 92 S 206 116, 220 100 S 234 72, 238 64"
-        className="fill-none stroke-primary"
+        className="fill-none stroke-illustration"
         strokeWidth="3"
         strokeLinecap="round"
         strokeDasharray="1 8"
       />
 
-      <circle cx="88" cy="152" r="5" className="fill-card stroke-primary" strokeWidth="2.5" />
+      <circle cx="88" cy="152" r="5" className="fill-card stroke-illustration" strokeWidth="2.5" />
       {[
         { x: 134, y: 112, dag: '1' },
         { x: 176, y: 92, dag: '2' },
         { x: 220, y: 100, dag: '3' },
       ].map(({ x, y, dag }) => (
         <g key={dag}>
-          <circle cx={x} cy={y} r="10" className="fill-primary stroke-card" strokeWidth="2" />
+          <circle cx={x} cy={y} r="10" className="fill-illustration stroke-card" strokeWidth="2" />
           <text x={x} y={y + 3.5} textAnchor="middle" className="fill-card font-heading text-[10px] font-bold">
             {dag}
           </text>
