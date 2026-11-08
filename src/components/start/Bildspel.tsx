@@ -4,12 +4,13 @@ import { cn } from '@/lib/utils'
 // Bildfokus (object-position) så att det viktiga syns när bilden beskärs.
 // fokusMobil: i stående format beskärs bilden från sidorna, så den första siffran styr.
 // fokus (dator): på breda skärmar beskärs bilden uppifrån och nerifrån, så den andra siffran styr.
+// Utsiktsbilden är mörkast och ligger därför sist.
 const bilder = [
   { namn: '1-grupp', alt: 'En grupp vandrare på en stig genom en fjälldal på hösten', fokusMobil: '60% 50%', fokus: '60% 75%' },
   { namn: '2-sommarfjall', alt: 'En vandrare med packning på en stig i sommarfjällen', fokusMobil: '70% 50%', fokus: '70% 70%' },
-  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokusMobil: '45% 50%', fokus: '40% 60%' },
   { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokusMobil: '20% 50%', fokus: '25% 78%' },
   { namn: '5-norrsken', alt: 'Norrsken över fjäll och sjö', fokusMobil: '30% 50%', fokus: '50% 90%' },
+  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokusMobil: '45% 50%', fokus: '40% 60%' },
 ]
 
 /** Hur länge varje bild syns. Övertoningen (0,8 s) ligger i klassen duration-800. */
