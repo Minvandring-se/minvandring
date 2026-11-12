@@ -9,6 +9,51 @@
     <meta name="theme-color" content="#1F3D2E" />
     <meta name="description" content="Planera vandringen tillsammans. Packning, mat och rutt på ett ställe." />
     <title>MinVandring · Planera. Packa. Upplev.</title>
+    <!-- Förhandsvisning när sidan delas. Samma titel och beskrivning som ovan. Bilden görs om med design/og/og-bild.cjs. -->
+    <meta property="og:type" content="website" />
+    <meta property="og:url" content="https://www.minvandring.se/" />
+    <meta property="og:title" content="MinVandring · Planera. Packa. Upplev." />
+    <meta property="og:description" content="Planera vandringen tillsammans. Packning, mat och rutt på ett ställe." />
+    <meta property="og:image" content="https://www.minvandring.se/og-bild.jpg" />
+    <meta property="og:image:width" content="1200" />
+    <meta property="og:image:height" content="630" />
+    <meta property="og:image:alt" content="Vandrare på en stig i en fjälldal, med MinVandrings logotyp och texten Planera. Packa. Upplev." />
+    <meta name="twitter:card" content="summary_large_image" />
+    <script>
+      {
+        // Förladda första bilden i startsidans bildspel, bara på startsidan. Samma villkor och storlekar som i Bildspel.tsx.
+        // Inte för inloggade (Supabase sparar sessionen som sb-…-auth-token), de skickas vidare till sina turer.
+        const inloggad = (() => {
+          try {
+            return Object.keys(localStorage).some((k) => /^sb-.+-auth-token$/.test(k))
+          } catch {
+            return false
+          }
+        })()
+        if (location.pathname === '/' && !inloggad) {
+          const mobil = '(max-width: 767px) and (orientation: portrait)'
+          const bilder = [
+            [mobil, '/hero/1-grupp-mobil-640.webp 640w, /hero/1-grupp-mobil-900.webp 900w', '100vw'],
+            [
+              'not all and ' + mobil,
+              '/hero/1-grupp-640.webp 640w, /hero/1-grupp-1280.webp 1280w, /hero/1-grupp-1920.webp 1920w, /hero/1-grupp-2560.webp 2560w',
+              '100vw',
+            ],
+          ]
+          for (const [media, srcset, sizes] of bilder) {
+            const l = document.createElement('link')
+            l.rel = 'preload'
+            l.as = 'image'
+            l.type = 'image/webp'
+            l.media = media
+            l.imageSrcset = srcset
+            l.imageSizes = sizes
+            l.fetchPriority = 'high'
+            document.head.appendChild(l)
+          }
+        }
+      }
+    </script>
   </head>
   <body>
     <div id="root"></div>

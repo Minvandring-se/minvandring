@@ -61,3 +61,57 @@
     @apply font-heading font-semibold tracking-tight;
   }
 }
+
+/*
+ * Illustrationerna på startsidan. Varje del spelas en gång när illustrationen syns (data-spelar sätts av Levande.tsx)
+ * och stannar sedan i slutläget. Tidpunkten sätts per del med --d (fördröjning) i style.
+ * Med "minska rörelse" finns inga animationer och slutbilden syns direkt.
+ * .mv-mellan är mellanlägen (till exempel delsummor på vågen) som bara finns med när animationen spelar.
+ */
+.mv-mellan {
+  display: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .mv-anim .mv-mellan {
+    display: inline;
+  }
+  .mv-anim :is(.mv-in, .mv-falla, .mv-splat, .mv-visa, .mv-dolj, .mv-visa-dolj, .mv-fyll, .mv-gunga) {
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+  }
+  .mv-anim .mv-in { animation: mv-in 0.5s ease-out var(--d, 0s) both; }
+  .mv-anim .mv-falla { animation: mv-falla 0.8s var(--d, 0s) both; }
+  .mv-anim .mv-splat { animation: mv-splat 0.45s ease-out var(--d, 0s) both; transform-origin: 50% 50%; }
+  .mv-anim .mv-visa { animation: mv-visa 0.15s var(--d, 0s) both; }
+  .mv-anim .mv-dolj { animation: mv-dolj 0.15s var(--d, 0s) forwards; }
+  .mv-anim .mv-visa-dolj { animation: mv-visa 0.15s var(--d, 0s) both, mv-dolj 0.15s var(--d2, 0s) forwards; }
+  .mv-anim .mv-fyll { animation: mv-fyll var(--t, 1.2s) ease-in-out var(--d, 0s) both; }
+  /* Vågen gungar till en gång för varje föremål som landar. */
+  .mv-anim .mv-gunga {
+    animation:
+      mv-gunga 0.35s ease-out var(--d1, 0s),
+      mv-gunga 0.35s ease-out var(--d2, 0s),
+      mv-gunga 0.35s ease-out var(--d3, 0s);
+  }
+  /* Bockar i anteckningsblocket: ritas fram (pathLength 10). */
+  .mv-anim .mv-bock { animation: mv-bock 0.45s ease-out var(--d, 0s) both; }
+  .mv-anim:not([data-spelar]) * {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes mv-in { from { opacity: 0; transform: translateY(6px) scale(0.85); } to { opacity: 1; transform: none; } }
+@keyframes mv-falla {
+  0% { opacity: 0; transform: translateY(-70px); animation-timing-function: cubic-bezier(0.5, 0, 1, 1); }
+  15% { opacity: 1; }
+  62% { transform: translateY(0); animation-timing-function: ease-out; }
+  78% { transform: translateY(-6px); animation-timing-function: ease-in; }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes mv-splat { 0% { opacity: 0; transform: scale(0.3); } 60% { opacity: 1; transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes mv-visa { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mv-dolj { from { opacity: 1; } to { opacity: 0; } }
+@keyframes mv-fyll { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes mv-gunga { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(2.5px); } }
+@keyframes mv-bock { from { stroke-dashoffset: 10; } to { stroke-dashoffset: 0; } }
