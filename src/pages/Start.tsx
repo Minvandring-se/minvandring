@@ -3,12 +3,20 @@ import { Link, Navigate } from 'react-router'
 import { KartaIllustration } from '@/components/illustrationer/KartaIllustration'
 import { RyggsackIllustration } from '@/components/illustrationer/RyggsackIllustration'
 import { StormkokIllustration } from '@/components/illustrationer/StormkokIllustration'
+import { TankenIllustration } from '@/components/illustrationer/TankenIllustration'
 import { Logotyp } from '@/components/Logotyp'
 import { Bildspel } from '@/components/start/Bildspel'
 import { Levande } from '@/components/start/Levande'
 import { PacklistaSmakprov } from '@/components/start/PacklistaSmakprov'
 import { useSession } from '@/hooks/useSession'
 import { KONTAKT_LANK } from '@/lib/kontakt'
+
+/** Flödet i tre steg direkt under hero. Korten längre ner visar innehållet. */
+const floden = [
+  { nr: '01', rubrik: 'Skapa er tur', text: 'Välj datum och antal dagar.' },
+  { nr: '02', rubrik: 'Bjud in gruppen', text: 'Dela turen med en länk.' },
+  { nr: '03', rubrik: 'Planera tillsammans', text: 'Samla packning och måltider.' },
+]
 
 const steg = [
   {
@@ -38,6 +46,22 @@ const fragor = [
   {
     fraga: 'Kostar det något?',
     svar: <>Nej, det kostar ingenting att använda MinVandring idag.</>,
+  },
+  {
+    fraga: 'Varför inte bara ett delat ark?',
+    svar: (
+      <>
+        <p>Ett Excel-ark eller Google-dokument fungerar, men MinVandring är gjort för just vandringar:</p>
+        <ul className="mt-3 space-y-2">
+          {fordelar.map((text) => (
+            <li key={text} className="flex gap-2.5">
+              <Check className="mt-1 size-4 shrink-0 text-primary" strokeWidth={2.5} aria-hidden />
+              {text}
+            </li>
+          ))}
+        </ul>
+      </>
+    ),
   },
   {
     fraga: 'Behöver alla ha konto?',
@@ -145,7 +169,26 @@ export function Start() {
           </div>
         </section>
 
-        <section id="sa-fungerar-det" aria-labelledby="sa-fungerar-rubrik" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <section id="sa-fungerar-det" aria-labelledby="floden-rubrik" className="scroll-mt-4 border-b border-border">
+          <h2 id="floden-rubrik" className="sr-only">
+            Så fungerar det
+          </h2>
+          <ol className="mx-auto grid max-w-6xl divide-y divide-border px-4 sm:px-6 md:grid-cols-3 md:divide-x md:divide-y-0">
+            {floden.map(({ nr, rubrik, text }) => (
+              <li key={nr} className="flex items-baseline gap-4 py-6 md:block md:px-8 md:py-10 md:first:pl-0 md:last:pr-0">
+                <span aria-hidden className="w-12 shrink-0 font-heading text-4xl font-semibold text-primary tabular-nums md:block md:text-5xl">
+                  {nr}
+                </span>
+                <div className="md:mt-3">
+                  <h3 className="text-lg">{rubrik}</h3>
+                  <p className="text-muted-foreground">{text}</p>
+                </div>
+              </li>
+            ))}
+          </ol>
+        </section>
+
+        <section aria-labelledby="sa-fungerar-rubrik" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
           <h2 id="sa-fungerar-rubrik" className="text-3xl font-bold sm:text-4xl">
             Börja med din nästa tur
           </h2>
@@ -167,17 +210,26 @@ export function Start() {
               </li>
             ))}
           </ul>
+
+          <div className="mt-5 rounded-lg border border-border bg-card p-5 shadow-soft sm:p-6">
+            <h3 className="text-xl">Kom ihåg till nästa vandring</h3>
+            <p className="mt-2 text-muted-foreground">
+              Skriv ner vad som fungerade och vad ni saknade. Lärdomarna finns kvar när ni planerar nästa tur.
+            </p>
+          </div>
         </section>
 
         <section aria-labelledby="smakprov-rubrik" className="bg-muted/60">
           <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-16 sm:px-6 sm:py-20 md:grid-cols-2 md:gap-12">
             <div className="space-y-5">
-              <h2 id="smakprov-rubrik" className="text-3xl font-bold sm:text-4xl">
-                Se direkt vem som bär vad och hur tung packningen blir.
-              </h2>
+              <div className="space-y-2">
+                <p className="text-sm font-semibold tracking-widest text-primary uppercase">Packning med koll</p>
+                <h2 id="smakprov-rubrik" className="text-3xl font-bold sm:text-4xl">
+                  Vem tar tältet?
+                </h2>
+              </div>
               <p className="text-lg text-muted-foreground">
-                Lägg in utrustningen, välj vem som bär vad och markera det som alla har med sig. MinVandring räknar ut vikten för varje
-                ryggsäck, så att ni kan fördela lasten jämnt redan hemma.
+                Fördela utrustningen och se vad var och en bär. Alla har samma lista inför avfärd.
               </p>
               <Link
                 to="/logga-in"
@@ -191,36 +243,25 @@ export function Start() {
           </div>
         </section>
 
-        <section aria-labelledby="ark-rubrik" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-          <div className="grid gap-8 md:grid-cols-2 md:gap-12">
-            <div className="space-y-3">
-              <h2 id="ark-rubrik" className="text-3xl font-bold sm:text-4xl">
-                Enklare än ett delat ark
+        <section aria-labelledby="tanken-rubrik" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+          <div className="grid items-center gap-8 overflow-hidden rounded-lg bg-sand/50 p-6 sm:p-10 md:grid-cols-2 md:gap-12">
+            <Levande>
+              <TankenIllustration className="block aspect-[8/5] w-full overflow-hidden rounded-md" />
+            </Levande>
+            <div className="space-y-4">
+              <h2 id="tanken-rubrik" className="text-3xl font-bold sm:text-4xl">
+                Tanken bakom MinVandring
               </h2>
-              <p className="text-lg text-muted-foreground">
-                Många planerar i Excel eller ett Google-dokument. Det fungerar, men MinVandring är gjort för just vandringar.
+              <p className="text-lg">
+                Vi är Andreas och Oscar. På vår senaste vandring i fjällen i Jämtland fick vi packa om när vi kom ut, för att fördela vikten
+                bättre. Det hade varit enklare att ha löst innan vi gick hemifrån.
+              </p>
+              <p className="text-lg">
+                Vi bygger MinVandring för alla vandrare som vi. Du ska inte behöva missa något, och lägga så lite tid som möjligt på
+                planerandet och mer tid ute i naturen.
               </p>
             </div>
-            <ul className="space-y-4">
-              {fordelar.map((text) => (
-                <li key={text} className="flex gap-3">
-                  <span className="mt-0.5 flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-primary">
-                    <Check className="size-4" strokeWidth={2.5} aria-hidden />
-                  </span>
-                  <span className="text-lg">{text}</span>
-                </li>
-              ))}
-            </ul>
           </div>
-
-          <section aria-labelledby="lardomar-rubrik" className="mt-12 rounded-lg border border-border bg-card p-6 shadow-soft sm:p-8">
-            <h2 id="lardomar-rubrik" className="text-2xl font-bold sm:text-3xl">
-              Kom ihåg till nästa vandring
-            </h2>
-            <p className="mt-3 max-w-2xl text-lg text-muted-foreground">
-              Skriv ner vad som fungerade och vad ni saknade. Lärdomarna finns kvar när ni planerar nästa tur.
-            </p>
-          </section>
         </section>
 
         <section aria-labelledby="qa-rubrik" className="bg-muted/60">
@@ -244,7 +285,7 @@ export function Start() {
                     {fraga}
                     <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
                   </summary>
-                  <p className="px-5 pb-5 text-muted-foreground">{svar}</p>
+                  <div className="px-5 pb-5 text-muted-foreground">{svar}</div>
                 </details>
               ))}
             </div>
