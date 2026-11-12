@@ -10,7 +10,7 @@ import { Bildspel } from '@/components/start/Bildspel'
 import { Levande } from '@/components/start/Levande'
 import { PacklistaSmakprov } from '@/components/start/PacklistaSmakprov'
 import { useSession } from '@/hooks/useSession'
-import { KONTAKT_LANK } from '@/lib/kontakt'
+import { Kontaktlank } from '@/components/Kontaktlank'
 
 /** Flödet i tre steg direkt under hero. Korten längre ner visar innehållet. */
 const floden = [
@@ -263,10 +263,10 @@ export function Start() {
           </div>
         </section>
 
-        <section aria-labelledby="qa-rubrik" className="bg-muted/60">
+        <section aria-labelledby="vanliga-fragor-rubrik" className="bg-muted/60">
           <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">
-            <h2 id="qa-rubrik" className="text-3xl font-bold sm:text-4xl">
-              Q&amp;A
+            <h2 id="vanliga-fragor-rubrik" className="text-3xl font-bold sm:text-4xl">
+              Vanliga frågor
             </h2>
             <div className="mt-8 divide-y divide-border rounded-lg border border-border bg-card">
               {fragor.map(({ fraga, svar }) => (
@@ -282,11 +282,7 @@ export function Start() {
               ))}
             </div>
             <p className="mt-5 text-muted-foreground">
-              MinVandring är en beta. Lämna gärna{' '}
-              <a href={KONTAKT_LANK} className={textlank}>
-                synpunkter
-              </a>
-              .
+              MinVandring är en beta. Lämna gärna <Kontaktlank className={textlank}>synpunkter</Kontaktlank>.
             </p>
           </div>
         </section>
@@ -306,17 +302,11 @@ export function Start() {
         <Logotyp className="justify-center text-xl" />
         <p className="mt-2 text-muted-foreground">För vandringar tillsammans.</p>
         <p className="mx-auto mt-4 max-w-md text-sm text-muted-foreground">
-          Det här är en beta. Lämna gärna{' '}
-          <a href={KONTAKT_LANK} className={textlank}>
-            synpunkter
-          </a>
-          .
+          Det här är en beta. Lämna gärna <Kontaktlank className={textlank}>synpunkter</Kontaktlank>.
         </p>
         <ul className="mt-4 flex flex-wrap justify-center gap-x-6 text-sm text-muted-foreground">
-          <li>
-            <a href={KONTAKT_LANK} className={`inline-flex min-h-11 items-center ${textlank}`}>
-              Kontakt och feedback
-            </a>
+          <li className="inline-flex min-h-11 items-center">
+            <Kontaktlank className={`inline-flex min-h-11 items-center ${textlank}`}>Kontakt och feedback</Kontaktlank>
           </li>
           <li>
             <Link to="/integritet" className={`inline-flex min-h-11 items-center ${textlank}`}>

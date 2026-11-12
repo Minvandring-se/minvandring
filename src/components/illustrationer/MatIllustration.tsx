@@ -27,7 +27,7 @@ function Svampskiva({ x, y, v }: { x: number; y: number; v: number }) {
  * en stekpanna där ett ägg landar, och en frystorkad måltidspåse som fylls med vatten. Dekorativ.
  * Klasserna mv-* animerar den en gång på startsidan (se index.css), en sak i taget. Med "minska rörelse" syns slutbilden.
  *
- * Tider (s): pasta 0,3, morot 1,5, svamp 2,7, ägg 4,0, flaskan 5,0, vattnet 5,4 till 6,8.
+ * Tider (s): pasta 0,3, morot 1,5, svamp 2,7, ångan 3,5, ägg 4,0, flaskan 5,0, vattnet 5,4 till 6,8.
  */
 export function MatIllustration({ className }: { className?: string }) {
   const paseId = `pase-${useId().replace(/[^\w-]/g, '')}`
@@ -43,6 +43,13 @@ export function MatIllustration({ className }: { className?: string }) {
       <rect width="320" height="200" className="fill-sand/50" />
       <path d="M0 150 C 80 134, 140 144, 200 136 S 290 132, 320 142 V200 H0 Z" className="fill-primary-soft" />
       <ellipse cx="164" cy="176" rx="146" ry="6" className="fill-foreground/10" />
+
+      {/* Stillastående ånga över kastrullen. Tonas in en gång när råvarorna ligger i och står sedan kvar. */}
+      <g className="mv-visa fill-none stroke-foreground/25" style={tid('3.5s')} strokeWidth="2.2" strokeLinecap="round">
+        <path d="M48 70 C 42 61, 54 54, 48 43" />
+        <path d="M64 62 C 58 52, 70 44, 64 31" />
+        <path d="M80 66 C 74 57, 86 50, 80 39" />
+      </g>
 
       {/* Gasolkök: gasolflaska, brännare och kastrullstöd */}
       <g className="stroke-foreground" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">

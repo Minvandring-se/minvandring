@@ -12,15 +12,14 @@ function Avsnitt({ rubrik, children }: { rubrik: string; children: ReactNode }) 
 
 const lank = 'font-medium text-primary underline underline-offset-2 hover:text-primary-hover'
 
-function Mejladresser() {
-  return KONTAKT_MEJL.map((mejl, i) => (
-    <span key={mejl}>
-      {i > 0 && ' eller '}
-      <a href={`mailto:${mejl}`} className={lank}>
-        {mejl}
-      </a>
-    </span>
-  ))
+/** Kontaktadressen som länk. Saknas den (se src/lib/kontakt.ts) visas "..." utan länk. */
+function Kontaktadress() {
+  if (!KONTAKT_MEJL) return <>...</>
+  return (
+    <a href={`mailto:${KONTAKT_MEJL}`} className={lank}>
+      {KONTAKT_MEJL}
+    </a>
+  )
 }
 
 /**
@@ -82,10 +81,14 @@ export function Integritet() {
 
       <Avsnitt rubrik="Radera dina uppgifter">
         <p>
-          Du kan när som helst be oss radera ditt konto och dina uppgifter. Mejla{' '}
-          <Mejladresser />{' '}
-          så tar vi bort dem. Du kan också själv lämna en tur, och den som äger en tur kan radera den. Då försvinner allt i turen för
-          alla.
+          {KONTAKT_MEJL ? (
+            <>
+              Kontakta oss på <Kontaktadress /> så raderar vi dina uppgifter.
+            </>
+          ) : (
+            'Kontakta oss så raderar vi dina uppgifter.'
+          )}{' '}
+          Du kan också själv lämna en tur, och den som äger en tur kan radera den. Då försvinner allt i turen för alla.
         </p>
         <p>
           Du har också rätt att få veta vilka uppgifter vi har om dig och att få fel rättade. Om du tycker att vi hanterar dina
@@ -95,9 +98,8 @@ export function Integritet() {
 
       <Avsnitt rubrik="Frågor">
         <p>
-          Hör av dig till{' '}
-          <Mejladresser />
-          .
+          Hör av dig till <Kontaktadress />
+          {KONTAKT_MEJL && '.'}
         </p>
       </Avsnitt>
     </article>

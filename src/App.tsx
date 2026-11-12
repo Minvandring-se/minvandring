@@ -1,22 +1,33 @@
-import type { ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router'
 import { Layout } from '@/components/Layout'
 import { useSession } from '@/hooks/useSession'
 import { GaMed } from '@/pages/GaMed'
 import { Integritet } from '@/pages/Integritet'
 import { LoggaIn } from '@/pages/LoggaIn'
-import { MinaTurer } from '@/pages/MinaTurer'
-import { Profil } from '@/pages/Profil'
 import { Start } from '@/pages/Start'
-import { TurSida } from '@/pages/Tur'
+
+// Sidorna för inloggade ligger i egna JS-filer och hämtas först när de behövs.
+// Startsidan, inloggningen och integritetssidan ligger kvar i huvudfilen.
+const MinaTurer = lazy(() => import('@/pages/MinaTurer').then((m) => ({ default: m.MinaTurer })))
+const Profil = lazy(() => import('@/pages/Profil').then((m) => ({ default: m.Profil })))
+const TurSida = lazy(() => import('@/pages/Tur').then((m) => ({ default: m.TurSida })))
+
+function Laddar({ text = 'Laddar …' }: { text?: string }) {
+  return (
+    <p role="status" className="text-muted-foreground">
+      {text}
+    </p>
+  )
+}
 
 /** Sidor som kräver inloggning. Skickar till inloggningen och tillbaka efteråt. */
 function Inloggad({ children }: { children: ReactNode }) {
   const session = useSession()
   const { pathname } = useLocation()
-  if (session === undefined) return <p className="text-muted-foreground">Laddar …</p>
+  if (session === undefined) return <Laddar />
   if (session === null) return <Navigate to={`/logga-in?vidare=${encodeURIComponent(pathname)}`} replace />
-  return children
+  return <Suspense fallback={<Laddar text="Hämtar sidan …" />}>{children}</Suspense>
 }
 
 export default function App() {
