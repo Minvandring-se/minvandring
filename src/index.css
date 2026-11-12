@@ -61,3 +61,44 @@
     @apply font-heading font-semibold tracking-tight;
   }
 }
+
+/*
+ * Illustrationerna på startsidans kort. En loop på 7 s: delarna dyker upp i tur och ordning (mv-in-1 till mv-in-5),
+ * står kvar en stund och tonar sedan ut tillsammans innan loopen börjar om.
+ * Utan klasserna, och med "minska rörelse", syns slutbilden. Animationen står still tills kortet syns (data-spelar).
+ */
+@media (prefers-reduced-motion: no-preference) {
+  .mv-anim :is(.mv-in-1, .mv-in-2, .mv-in-3, .mv-in-4, .mv-in-5, .mv-rita, .mv-fore) {
+    animation-duration: 7s;
+    animation-iteration-count: infinite;
+    animation-timing-function: ease-out;
+    animation-fill-mode: both;
+    transform-box: fill-box;
+    transform-origin: 50% 100%;
+  }
+  .mv-anim .mv-in-1 { animation-name: mv-in-1; }
+  .mv-anim .mv-in-2 { animation-name: mv-in-2; }
+  .mv-anim .mv-in-3 { animation-name: mv-in-3; }
+  .mv-anim .mv-in-4 { animation-name: mv-in-4; }
+  .mv-anim .mv-in-5 { animation-name: mv-in-5; }
+  .mv-anim .mv-rita { animation-name: mv-rita; animation-timing-function: linear; }
+  .mv-anim .mv-fore { animation-name: mv-fore; }
+  .mv-anim .mv-anga {
+    animation: mv-anga 2.33s ease-out infinite both;
+    transform-box: fill-box;
+  }
+  .mv-anim:not([data-spelar]) * {
+    animation-play-state: paused;
+  }
+}
+
+@keyframes mv-in-1 { 0%, 8% { opacity: 0; transform: translateY(6px) scale(0.85); } 14%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
+@keyframes mv-in-2 { 0%, 20% { opacity: 0; transform: translateY(6px) scale(0.85); } 26%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
+@keyframes mv-in-3 { 0%, 32% { opacity: 0; transform: translateY(6px) scale(0.85); } 38%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
+@keyframes mv-in-4 { 0%, 44% { opacity: 0; transform: translateY(6px) scale(0.85); } 50%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
+@keyframes mv-in-5 { 0%, 56% { opacity: 0; transform: translateY(6px) scale(0.85); } 62%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
+/* Rutten ritas fram med en mask. Masken har pathLength 100. */
+@keyframes mv-rita { 0%, 4% { stroke-dashoffset: 100; opacity: 1; } 50%, 88% { stroke-dashoffset: 0; opacity: 1; } 95%, 100% { stroke-dashoffset: 0; opacity: 0; } }
+/* Det som syns innan mv-in-5 har dykt upp, t.ex. vågens nolla. */
+@keyframes mv-fore { 0%, 56% { opacity: 1; } 58%, 100% { opacity: 0; } }
+@keyframes mv-anga { 0% { opacity: 0; transform: translateY(6px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }

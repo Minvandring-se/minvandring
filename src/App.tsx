@@ -3,6 +3,7 @@ import { Link, Navigate, Route, Routes, useLocation } from 'react-router'
 import { Layout } from '@/components/Layout'
 import { useSession } from '@/hooks/useSession'
 import { GaMed } from '@/pages/GaMed'
+import { Integritet } from '@/pages/Integritet'
 import { LoggaIn } from '@/pages/LoggaIn'
 import { MinaTurer } from '@/pages/MinaTurer'
 import { Profil } from '@/pages/Profil'
@@ -24,6 +25,7 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Start />} />
         <Route path="/logga-in" element={<LoggaIn />} />
+        <Route path="/integritet" element={<Integritet />} />
         <Route path="/ga-med/:kod" element={<GaMed />} />
         <Route path="/turer" element={<Inloggad><MinaTurer /></Inloggad>} />
         <Route path="/profil" element={<Inloggad><Profil /></Inloggad>} />

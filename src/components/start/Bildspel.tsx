@@ -5,20 +5,28 @@ import { cn } from '@/lib/utils'
 // fokusMobil: i stående format beskärs bilden från sidorna, så den första siffran styr.
 // fokus (dator): på breda skärmar beskärs bilden uppifrån och nerifrån, så den andra siffran styr.
 // Utsiktsbilden är mörkast och ligger därför sist.
+// ljus: dämpar ljusa bilder så att den vita texten klarar WCAG AA (uppmätt bakom rubrik, undertext och meny).
 const bilder = [
-  { namn: '1-grupp', alt: 'En grupp vandrare på en stig genom en fjälldal på hösten', fokusMobil: '60% 50%', fokus: '60% 75%' },
-  { namn: '2-sommarfjall', alt: 'En vandrare med packning på en stig i sommarfjällen', fokusMobil: '70% 50%', fokus: '70% 70%' },
-  { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokusMobil: '20% 50%', fokus: '25% 78%' },
-  { namn: '5-norrsken', alt: 'Norrsken över fjäll och sjö', fokusMobil: '30% 50%', fokus: '50% 90%' },
-  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokusMobil: '45% 50%', fokus: '40% 60%' },
+  { namn: '1-grupp', alt: 'En grupp vandrare på en stig genom en fjälldal på hösten', fokusMobil: '60% 50%', fokus: '60% 75%', ljus: 0.85 },
+  { namn: '2-sommarfjall', alt: 'En vandrare med packning på en stig i sommarfjällen', fokusMobil: '70% 50%', fokus: '70% 70%', ljus: 0.62 },
+  { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokusMobil: '20% 50%', fokus: '25% 78%', ljus: 0.62 },
+  { namn: '5-norrsken', alt: 'Norrsken över fjäll och sjö', fokusMobil: '30% 50%', fokus: '50% 90%', ljus: 1 },
+  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokusMobil: '45% 50%', fokus: '40% 60%', ljus: 1 },
 ]
 
 /** Hur länge varje bild syns. Övertoningen (0,8 s) ligger i klassen duration-800. */
 const VISNING_MS = 7000
 const BREDDER = [640, 1280, 1920, 2560]
+/** Stående mobilbilder (9:16), redan beskurna kring fokusMobil. Görs om med design/hero/mobilbilder.cjs. */
+const MOBILBREDDER = [640, 900]
 
-function srcset(namn: string) {
-  return BREDDER.map((b) => `/hero/${namn}-${b}.webp ${b}w`).join(', ')
+/** Stående skärm smalare än md. Samma villkor och storlekar står i förladdningen i index.html. */
+const MOBIL_MEDIA = '(max-width: 767px) and (orientation: portrait)'
+/** Bilden täcker hela bredden. På stående surfplattor blir den egentligen bredare, men där räcker 100vw-versionen gott. */
+const SIZES = '100vw'
+
+function srcset(namn: string, bredder: number[], tillagg = '') {
+  return bredder.map((b) => `/hero/${namn}${tillagg}-${b}.webp ${b}w`).join(', ')
 }
 
 function useMinskaRorelse() {
@@ -90,19 +98,22 @@ export function Bildspel() {
         const synlig = i === aktiv
         const under = i === forra
         return (
-          <img
-            key={bild.namn}
+          <picture key={bild.namn} className="contents">
+            <source media={MOBIL_MEDIA} srcSet={srcset(bild.namn, MOBILBREDDER, '-mobil')} sizes="100vw" />
+            <img
             src={`/hero/${bild.namn}-1280.webp`}
-            srcSet={srcset(bild.namn)}
-            sizes="100vw"
+            srcSet={srcset(bild.namn, BREDDER)}
+            sizes={SIZES}
             alt={synlig ? bild.alt : ''}
             aria-hidden={synlig ? undefined : true}
             fetchPriority={i === 0 ? 'high' : 'low'}
             decoding="async"
             onLoad={() => laddad(i)}
-            style={{ '--fokus-mobil': bild.fokusMobil, '--fokus': bild.fokus } as CSSProperties}
+            style={{ '--fokus-mobil': bild.fokusMobil, '--fokus': bild.fokus, filter: bild.ljus < 1 ? `brightness(${bild.ljus})` : undefined } as CSSProperties}
             className={cn(
               'absolute inset-0 size-full object-cover [object-position:var(--fokus-mobil)] md:[object-position:var(--fokus)]',
+              // Mobilbilderna är redan beskurna kring fokus.
+              '[@media(max-width:767px)_and_(orientation:portrait)]:[object-position:50%_50%]',
               // Den nya bilden tonar in ovanpå. Den gamla ligger kvar helt synlig under tills övergången är klar.
               synlig && 'z-10 opacity-100 transition-opacity duration-800 ease-out',
               under && 'z-0 opacity-100',
@@ -110,13 +121,14 @@ export function Bildspel() {
               // Zoomen ligger kvar på bilden under, annars hoppar den tillbaka.
               !minskaRorelse && (synlig || under) && 'animate-zoom-langsam',
             )}
-          />
+            />
+          </picture>
         )
       })}
       {/* Neutral skugga så att bilderna behåller sina färger: lätt överst bakom menyn, mörkare bakom texten och i nederkant.
           Lagren är i procent av ytan. I stående format blir de därför lättare och smalare, annars täcker de nästan hela bilden. */}
-      <div className="absolute inset-0 z-20 bg-linear-to-b from-black/30 via-transparent via-20% to-transparent md:from-black/45 md:via-30%" />
-      <div className="absolute inset-0 z-20 bg-[radial-gradient(ellipse_75%_28%_at_50%_42%,rgb(0_0_0/0.38),transparent)] md:bg-[radial-gradient(ellipse_65%_45%_at_50%_50%,rgb(0_0_0/0.5),transparent)]" />
+      <div className="absolute inset-0 z-20 bg-linear-to-b from-black/50 via-black/10 via-20% to-transparent to-40% md:from-black/55 md:via-30%" />
+      <div className="absolute inset-0 z-20 bg-[radial-gradient(ellipse_95%_36%_at_50%_48%,rgb(0_0_0/0.5),transparent)] md:bg-[radial-gradient(ellipse_70%_48%_at_50%_52%,rgb(0_0_0/0.55),transparent)]" />
       <div className="absolute inset-0 z-20 bg-linear-to-t from-black/60 via-black/10 via-15% to-transparent to-30% md:from-black/65 md:via-black/15 md:via-25% md:to-45%" />
     </div>
   )
