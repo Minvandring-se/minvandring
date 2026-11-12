@@ -252,12 +252,14 @@ export function Start() {
                 Tanken bakom MinVandring
               </h2>
               <p className="text-lg">
-                Vi är Andreas och Oscar. På vår senaste vandring i fjällen i Jämtland glömde vi gasen i bilen. Vi trodde båda att den andre
-                hade tagit den. Som tur var hade vi också med T-sprit.
+                Vi är Andreas och Oscar. På vår senaste vandring i de jämtländska fjällen glömde vi gasen i bilen. Vi trodde båda att den
+                andre hade tagit den. Som tur var hade vi också med T-sprit.
               </p>
               <p className="text-lg">
-                Vi bygger MinVandring för alla vandrare som oss, så att det är tydligt vem som tar vad och så att mer tid går till naturen
-                och mindre till planerandet.
+                Våra planer låg tidigare utspridda i chattar, Word, Excel och Google Docs. Det gick att hålla reda på vem som tog vad, men
+                det tog mycket tid och energi, och gasen försvann ändå mellan stolarna. Därför bygger vi MinVandring: ett ställe där hela
+                gänget ser samma plan, packlista och mat utan allt det jobbet. Så att ni kan lägga mindre tid på planerandet och mer på det
+                ni egentligen ska göra, att vara ute.
               </p>
             </div>
           </div>
