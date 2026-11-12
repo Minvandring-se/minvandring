@@ -1,4 +1,6 @@
-/** Samma ryggsäck som i RyggsackIllustration, i originalkoordinater (x 134–212, botten y 170). */
+import type { CSSProperties } from 'react'
+
+/** En ryggsäck i samma stil som korten, i koordinaterna (x 134–212, botten y 170). */
 function Ryggsack({ kropp, ficka }: { kropp: string; ficka: string }) {
   return (
     <g className="stroke-foreground" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
@@ -16,7 +18,7 @@ function Ryggsack({ kropp, ficka }: { kropp: string; ficka: string }) {
 
 /**
  * Två ryggsäckar framför fjällen, med packning utspridd på marken som mitt i en omfördelning. Dekorativ.
- * Klasserna mv-* animerar den på startsidan (se index.css): sakerna dyker upp en i taget.
+ * Klasserna mv-* animerar den en gång på startsidan (se index.css): sakerna dyker upp en i taget och står sedan kvar.
  * Ingen egen bakgrundsyta, den ligger på sektionens beige yta.
  */
 export function TankenIllustration({ className }: { className?: string }) {
@@ -35,27 +37,27 @@ export function TankenIllustration({ className }: { className?: string }) {
       <ellipse cx="166" cy="174" rx="140" ry="7" className="fill-foreground/10" />
 
       {/* Den större ryggsäcken */}
-      <g className="mv-in-1">
+      <g className="mv-in" style={{ '--d': '0.3s' } as CSSProperties}>
         <g transform="translate(-42 2)">
           <Ryggsack kropp="fill-illustration" ficka="fill-primary-soft" />
         </g>
       </g>
 
       {/* Den mindre ryggsäcken */}
-      <g className="mv-in-2">
+      <g className="mv-in" style={{ '--d': '1.2s' } as CSSProperties}>
         <g transform="translate(73.5 39.4) scale(0.78)">
           <Ryggsack kropp="fill-accent" ficka="fill-sand" />
         </g>
       </g>
 
       {/* Flaska */}
-      <g className="mv-in-3 stroke-foreground" strokeWidth="2.5" strokeLinejoin="round">
+      <g className="mv-in stroke-foreground" style={{ '--d': '2.1s' } as CSSProperties} strokeWidth="2.5" strokeLinejoin="round">
         <rect x="246" y="134" width="16" height="38" rx="5" className="fill-primary-soft" />
         <rect x="250" y="126" width="8" height="9" rx="2" className="fill-foreground" />
       </g>
 
       {/* Kastrull med lock */}
-      <g className="mv-in-4 stroke-foreground" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
+      <g className="mv-in stroke-foreground" style={{ '--d': '3.0s' } as CSSProperties} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
         <path d="M306 158 H316" className="fill-none" strokeWidth="3" />
         <rect x="272" y="152" width="34" height="20" rx="4" className="fill-illustration" />
         <rect x="269" y="148" width="40" height="6" rx="3" className="fill-illustration" />
@@ -63,7 +65,7 @@ export function TankenIllustration({ className }: { className?: string }) {
       </g>
 
       {/* Våg med sovsäcken i sin packpåse, som i packningskortet */}
-      <g className="mv-in-5">
+      <g className="mv-in" style={{ '--d': '3.9s' } as CSSProperties}>
         <g className="stroke-foreground" strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
           <path d="M34 146 C 31 122, 38 108, 52 106 C 66 108, 73 122, 70 146 Z" className="fill-sand" />
           <path d="M44 109 L40 100 M60 109 L64 100" className="fill-none" strokeWidth="2" />

@@ -1,24 +1,31 @@
 import { useEffect, useRef, useState, type ReactNode } from 'react'
 
 /**
- * Spelar illustrationens animation (klasserna mv-* i index.css) bara medan den syns i bild.
- * Med "minska rörelse" finns ingen animation och slutbilden syns.
+ * Startar illustrationens animation (klasserna mv-* i index.css) första gången den syns i bild.
+ * Animationen spelas en gång och stannar i slutläget. Med "minska rörelse" syns slutbilden direkt.
  */
 export function Levande({ children }: { children: ReactNode }) {
   const ref = useRef<HTMLDivElement>(null)
-  // Utan IntersectionObserver spelar den alltid, annars skulle bilden stå tom.
-  const [syns, setSyns] = useState(() => !('IntersectionObserver' in window))
+  // Utan IntersectionObserver spelar den direkt, annars skulle bilden stå tom.
+  const [startad, setStartad] = useState(() => !('IntersectionObserver' in window))
 
   useEffect(() => {
     const el = ref.current
-    if (!el || !('IntersectionObserver' in window)) return
-    const observer = new IntersectionObserver(([post]) => setSyns(post.isIntersecting), { threshold: 0.4 })
+    if (!el || startad) return
+    const observer = new IntersectionObserver(
+      ([post]) => {
+        if (!post.isIntersecting) return
+        setStartad(true)
+        observer.disconnect()
+      },
+      { threshold: 0.5 },
+    )
     observer.observe(el)
     return () => observer.disconnect()
-  }, [])
+  }, [startad])
 
   return (
-    <div ref={ref} className="mv-anim" data-spelar={syns || undefined}>
+    <div ref={ref} className="mv-anim" data-spelar={startad || undefined}>
       {children}
     </div>
   )

@@ -1,10 +1,11 @@
-import { useId } from 'react'
+import { useId, type CSSProperties } from 'react'
 
 const RUTT = 'M88 152 C 100 128, 118 126, 134 112 S 160 84, 176 92 S 206 116, 220 100 S 234 72, 238 64'
 
 /**
  * En vikt karta med streckad rutt och markeringar för dag 1–3. Dekorativ.
- * Klasserna mv-* animerar den på startsidan (se index.css): rutten ritas fram, etapperna och flaggan dyker upp i tur och ordning.
+ * Klasserna mv-* animerar den en gång på startsidan (se index.css): rutten ritas fram etapp för etapp,
+ * varje dag tänds när linjen når den och flaggan kommer sist. Sedan står allt kvar.
  */
 export function KartaIllustration({ className }: { className?: string }) {
   const maskId = `rutt-${useId().replace(/[^\w-]/g, '')}`
@@ -13,7 +14,7 @@ export function KartaIllustration({ className }: { className?: string }) {
     <svg viewBox="0 0 320 200" className={className} aria-hidden focusable="false">
       <defs>
         <mask id={maskId} maskUnits="userSpaceOnUse" x="0" y="0" width="320" height="200">
-          <path d={RUTT} className="mv-rita fill-none" stroke="white" strokeWidth="12" strokeLinecap="round" pathLength="100" strokeDasharray="100" />
+          <path d={RUTT} className="mv-rutt fill-none" stroke="white" strokeWidth="12" strokeLinecap="round" pathLength="100" strokeDasharray="100" />
         </mask>
       </defs>
       <rect width="320" height="200" className="fill-sand/50" />
@@ -50,11 +51,12 @@ export function KartaIllustration({ className }: { className?: string }) {
 
       <circle cx="88" cy="152" r="5" className="fill-card stroke-illustration" strokeWidth="2.5" />
       {[
-        { x: 134, y: 112, dag: '1', klass: 'mv-in-2' },
-        { x: 176, y: 92, dag: '2', klass: 'mv-in-3' },
-        { x: 220, y: 100, dag: '3', klass: 'mv-in-4' },
-      ].map(({ x, y, dag, klass }) => (
-        <g key={dag} className={klass}>
+        // Tiderna följer mv-rutt i index.css: linjen når dag 1, 2 och 3 efter 1,1, 2,4 och 3,7 s.
+        { x: 134, y: 112, dag: '1', d: '1.15s' },
+        { x: 176, y: 92, dag: '2', d: '2.45s' },
+        { x: 220, y: 100, dag: '3', d: '3.75s' },
+      ].map(({ x, y, dag, d }) => (
+        <g key={dag} className="mv-in" style={{ '--d': d } as CSSProperties}>
           <circle cx={x} cy={y} r="10" className="fill-illustration stroke-card" strokeWidth="2" />
           <text x={x} y={y + 3.5} textAnchor="middle" className="fill-card font-heading text-[10px] font-bold">
             {dag}
@@ -62,7 +64,7 @@ export function KartaIllustration({ className }: { className?: string }) {
         </g>
       ))}
 
-      <g className="mv-in-5" strokeLinecap="round" strokeLinejoin="round">
+      <g className="mv-in" style={{ '--d': '4.95s' } as CSSProperties} strokeLinecap="round" strokeLinejoin="round">
         <path d="M238 64 V38" className="stroke-foreground" strokeWidth="2.5" />
         <path d="M238 38 L254 44 L238 50 Z" className="fill-accent stroke-foreground" strokeWidth="2" />
       </g>

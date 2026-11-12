@@ -1,8 +1,8 @@
 import { ArrowRight, Check, ChevronDown } from 'lucide-react'
 import { Link, Navigate } from 'react-router'
 import { KartaIllustration } from '@/components/illustrationer/KartaIllustration'
-import { RyggsackIllustration } from '@/components/illustrationer/RyggsackIllustration'
-import { StormkokIllustration } from '@/components/illustrationer/StormkokIllustration'
+import { VagIllustration } from '@/components/illustrationer/VagIllustration'
+import { MatIllustration } from '@/components/illustrationer/MatIllustration'
 import { TankenIllustration } from '@/components/illustrationer/TankenIllustration'
 import { Logotyp } from '@/components/Logotyp'
 import { Bildspel } from '@/components/start/Bildspel'
@@ -25,12 +25,12 @@ const steg = [
     text: 'Sätt datum, antal dagar och reservdagar. Bjud in resten av gänget med en länk.',
   },
   {
-    Illustration: RyggsackIllustration,
+    Illustration: VagIllustration,
     rubrik: 'Fördela packningen',
     text: 'Skriv packlistan tillsammans och bestäm vem som bär vad. Vikten räknas ut per ryggsäck.',
   },
   {
-    Illustration: StormkokIllustration,
+    Illustration: MatIllustration,
     rubrik: 'Ordna maten',
     text: 'Planera måltiderna dag för dag och få en gemensam inköpslista.',
   },

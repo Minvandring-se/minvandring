@@ -63,42 +63,63 @@
 }
 
 /*
- * Illustrationerna på startsidans kort. En loop på 7 s: delarna dyker upp i tur och ordning (mv-in-1 till mv-in-5),
- * står kvar en stund och tonar sedan ut tillsammans innan loopen börjar om.
- * Utan klasserna, och med "minska rörelse", syns slutbilden. Animationen står still tills kortet syns (data-spelar).
+ * Illustrationerna på startsidan. Varje del spelas en gång när illustrationen syns (data-spelar sätts av Levande.tsx)
+ * och stannar sedan i slutläget. Tidpunkten sätts per del med --d (fördröjning) i style.
+ * Med "minska rörelse" finns inga animationer och slutbilden syns direkt.
+ * .mv-mellan är mellanlägen (till exempel delsummor på vågen) som bara finns med när animationen spelar.
  */
+.mv-mellan {
+  display: none;
+}
+
 @media (prefers-reduced-motion: no-preference) {
-  .mv-anim :is(.mv-in-1, .mv-in-2, .mv-in-3, .mv-in-4, .mv-in-5, .mv-rita, .mv-fore) {
-    animation-duration: 7s;
-    animation-iteration-count: infinite;
-    animation-timing-function: ease-out;
-    animation-fill-mode: both;
+  .mv-anim .mv-mellan {
+    display: inline;
+  }
+  .mv-anim :is(.mv-in, .mv-falla, .mv-splat, .mv-visa, .mv-dolj, .mv-visa-dolj, .mv-fyll, .mv-gunga, .mv-luta) {
     transform-box: fill-box;
     transform-origin: 50% 100%;
   }
-  .mv-anim .mv-in-1 { animation-name: mv-in-1; }
-  .mv-anim .mv-in-2 { animation-name: mv-in-2; }
-  .mv-anim .mv-in-3 { animation-name: mv-in-3; }
-  .mv-anim .mv-in-4 { animation-name: mv-in-4; }
-  .mv-anim .mv-in-5 { animation-name: mv-in-5; }
-  .mv-anim .mv-rita { animation-name: mv-rita; animation-timing-function: linear; }
-  .mv-anim .mv-fore { animation-name: mv-fore; }
-  .mv-anim .mv-anga {
-    animation: mv-anga 2.33s ease-out infinite both;
-    transform-box: fill-box;
+  .mv-anim .mv-in { animation: mv-in 0.5s ease-out var(--d, 0s) both; }
+  .mv-anim .mv-falla { animation: mv-falla 0.8s var(--d, 0s) both; }
+  .mv-anim .mv-splat { animation: mv-splat 0.45s ease-out var(--d, 0s) both; transform-origin: 50% 50%; }
+  .mv-anim .mv-visa { animation: mv-visa 0.15s var(--d, 0s) both; }
+  .mv-anim .mv-dolj { animation: mv-dolj 0.15s var(--d, 0s) forwards; }
+  .mv-anim .mv-visa-dolj { animation: mv-visa 0.15s var(--d, 0s) both, mv-dolj 0.15s var(--d2, 0s) forwards; }
+  .mv-anim .mv-fyll { animation: mv-fyll var(--t, 1.2s) ease-in-out var(--d, 0s) both; }
+  .mv-anim .mv-luta { animation: mv-luta 0.4s ease-out var(--d, 0s) both; transform-origin: 50% 50%; }
+  /* Vågen gungar till en gång för varje föremål som landar. */
+  .mv-anim .mv-gunga {
+    animation:
+      mv-gunga 0.35s ease-out var(--d1, 0s),
+      mv-gunga 0.35s ease-out var(--d2, 0s),
+      mv-gunga 0.35s ease-out var(--d3, 0s);
   }
+  /* Rutten på kartan ritas i etapper och stannar vid varje dag (pathLength 100, dagarna vid 30,6, 55,3 och 79,9). */
+  .mv-anim .mv-rutt { animation: mv-rutt 4.8s linear both; }
   .mv-anim:not([data-spelar]) * {
     animation-play-state: paused;
   }
 }
 
-@keyframes mv-in-1 { 0%, 8% { opacity: 0; transform: translateY(6px) scale(0.85); } 14%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
-@keyframes mv-in-2 { 0%, 20% { opacity: 0; transform: translateY(6px) scale(0.85); } 26%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
-@keyframes mv-in-3 { 0%, 32% { opacity: 0; transform: translateY(6px) scale(0.85); } 38%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
-@keyframes mv-in-4 { 0%, 44% { opacity: 0; transform: translateY(6px) scale(0.85); } 50%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
-@keyframes mv-in-5 { 0%, 56% { opacity: 0; transform: translateY(6px) scale(0.85); } 62%, 88% { opacity: 1; transform: none; } 95%, 100% { opacity: 0; } }
-/* Rutten ritas fram med en mask. Masken har pathLength 100. */
-@keyframes mv-rita { 0%, 4% { stroke-dashoffset: 100; opacity: 1; } 50%, 88% { stroke-dashoffset: 0; opacity: 1; } 95%, 100% { stroke-dashoffset: 0; opacity: 0; } }
-/* Det som syns innan mv-in-5 har dykt upp, t.ex. vågens nolla. */
-@keyframes mv-fore { 0%, 56% { opacity: 1; } 58%, 100% { opacity: 0; } }
-@keyframes mv-anga { 0% { opacity: 0; transform: translateY(6px); } 30% { opacity: 1; } 100% { opacity: 0; transform: translateY(-10px); } }
+@keyframes mv-in { from { opacity: 0; transform: translateY(6px) scale(0.85); } to { opacity: 1; transform: none; } }
+@keyframes mv-falla {
+  0% { opacity: 0; transform: translateY(-70px); animation-timing-function: cubic-bezier(0.5, 0, 1, 1); }
+  15% { opacity: 1; }
+  62% { transform: translateY(0); animation-timing-function: ease-out; }
+  78% { transform: translateY(-6px); animation-timing-function: ease-in; }
+  100% { opacity: 1; transform: translateY(0); }
+}
+@keyframes mv-splat { 0% { opacity: 0; transform: scale(0.3); } 60% { opacity: 1; transform: scale(1.12); } 100% { opacity: 1; transform: scale(1); } }
+@keyframes mv-visa { from { opacity: 0; } to { opacity: 1; } }
+@keyframes mv-dolj { from { opacity: 1; } to { opacity: 0; } }
+@keyframes mv-fyll { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+@keyframes mv-luta { from { opacity: 0; transform: rotate(0deg) translateY(-10px); } to { opacity: 1; transform: rotate(-55deg); } }
+@keyframes mv-gunga { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(2.5px); } }
+@keyframes mv-rutt {
+  0%, 6.25% { stroke-dashoffset: 100; }
+  22.9%, 35.4% { stroke-dashoffset: 69.4; }
+  50%, 62.5% { stroke-dashoffset: 44.7; }
+  77.1%, 89.6% { stroke-dashoffset: 20.1; }
+  100% { stroke-dashoffset: 0; }
+}
