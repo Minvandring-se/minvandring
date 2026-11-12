@@ -3,6 +3,7 @@ import { Link, Navigate } from 'react-router'
 import { KartaIllustration } from '@/components/illustrationer/KartaIllustration'
 import { VagIllustration } from '@/components/illustrationer/VagIllustration'
 import { MatIllustration } from '@/components/illustrationer/MatIllustration'
+import { AnteckningIllustration } from '@/components/illustrationer/AnteckningIllustration'
 import { TankenIllustration } from '@/components/illustrationer/TankenIllustration'
 import { Logotyp } from '@/components/Logotyp'
 import { Bildspel } from '@/components/start/Bildspel'
@@ -107,6 +108,9 @@ const fragor = [
 const fokusPaBild = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card'
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 const textlank = `rounded-sm underline underline-offset-2 hover:text-foreground ${fokus}`
+/** Korten med illustrationer. De är inte klickbara men lyfts lite vid hover. */
+const kortKlass =
+  'rounded-lg border border-border bg-card shadow-soft transition-[translate,box-shadow] duration-300 ease-out hover:shadow-[0_2px_4px_rgb(31_42_36/0.06),0_14px_32px_rgb(31_42_36/0.12)] motion-safe:hover:-translate-y-1'
 
 /** Huvudknappen i hero och i sista sektionen. Ljus knapp, för mörka ytor. */
 function PlaneraKnapp({ className = '' }: { className?: string }) {
@@ -130,14 +134,9 @@ export function Start() {
     <>
       <header className="absolute inset-x-0 top-0 z-20">
         <nav aria-label="Huvudmeny" className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <div className="flex items-center gap-2">
-            <Link to="/" className={`flex min-h-11 items-center rounded-md text-card ${fokusPaBild}`}>
-              <Logotyp yta="mork" className="text-xl" />
-            </Link>
-            <span className="rounded-full border border-card/70 bg-black/25 px-2 py-0.5 text-xs font-semibold tracking-wide text-card">
-              Beta
-            </span>
-          </div>
+          <Link to="/" className={`flex min-h-11 items-center rounded-md text-card ${fokusPaBild}`}>
+            <Logotyp yta="mork" className="text-xl" />
+          </Link>
           <Link
             to="/logga-in"
             className={`inline-flex h-11 items-center rounded-md border border-card/70 bg-black/20 px-4 text-sm font-semibold text-card transition-colors hover:bg-card/15 ${fokusPaBild}`}
@@ -196,10 +195,7 @@ export function Start() {
 
           <ul className="mt-10 grid gap-5 md:grid-cols-3">
             {steg.map(({ Illustration, rubrik, text }) => (
-              <li
-                key={rubrik}
-                className="overflow-hidden rounded-lg border border-border bg-card shadow-soft transition-[translate,box-shadow] duration-300 ease-out hover:shadow-[0_2px_4px_rgb(31_42_36/0.06),0_14px_32px_rgb(31_42_36/0.12)] motion-safe:hover:-translate-y-1"
-              >
+              <li key={rubrik} className={`overflow-hidden ${kortKlass}`}>
                 <Levande>
                   <Illustration className="block aspect-[8/5] w-full" />
                 </Levande>
@@ -211,11 +207,16 @@ export function Start() {
             ))}
           </ul>
 
-          <div className="mt-5 rounded-lg border border-border bg-card p-5 shadow-soft sm:p-6">
-            <h3 className="text-xl">Kom ihåg till nästa vandring</h3>
-            <p className="mt-2 text-muted-foreground">
-              Skriv ner vad som fungerade och vad ni saknade. Lärdomarna finns kvar när ni planerar nästa tur.
-            </p>
+          <div className={`mt-5 grid overflow-hidden md:grid-cols-[2fr_3fr] md:items-center ${kortKlass}`}>
+            <Levande>
+              <AnteckningIllustration className="block aspect-[8/5] w-full" />
+            </Levande>
+            <div className="space-y-2 p-5 md:p-8">
+              <h3 className="text-xl">Kom ihåg till nästa vandring</h3>
+              <p className="text-muted-foreground">
+                Skriv ner vad som fungerade och vad ni saknade. Lärdomarna finns kvar när ni planerar nästa tur.
+              </p>
+            </div>
           </div>
         </section>
 
@@ -245,20 +246,18 @@ export function Start() {
 
         <section aria-labelledby="tanken-rubrik" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
           <div className="grid items-center gap-8 overflow-hidden rounded-lg bg-sand/50 p-6 sm:p-10 md:grid-cols-2 md:gap-12">
-            <Levande>
-              <TankenIllustration className="block aspect-[8/5] w-full overflow-hidden rounded-md" />
-            </Levande>
+            <TankenIllustration className="mx-auto block aspect-[8/5] w-full max-w-md" />
             <div className="space-y-4">
               <h2 id="tanken-rubrik" className="text-3xl font-bold sm:text-4xl">
                 Tanken bakom MinVandring
               </h2>
               <p className="text-lg">
-                Vi är Andreas och Oscar. På vår senaste vandring i fjällen i Jämtland fick vi packa om när vi kom ut, för att fördela vikten
-                bättre. Det hade varit enklare att ha löst innan vi gick hemifrån.
+                Vi är Andreas och Oscar. På vår senaste vandring i fjällen i Jämtland glömde vi gasen i bilen. Vi trodde båda att den andre
+                hade tagit den. Som tur var hade vi också med T-sprit.
               </p>
               <p className="text-lg">
-                Vi bygger MinVandring för alla vandrare som vi. Du ska inte behöva missa något, och lägga så lite tid som möjligt på
-                planerandet och mer tid ute i naturen.
+                Vi bygger MinVandring för alla vandrare som oss, så att det är tydligt vem som tar vad och så att mer tid går till naturen
+                och mindre till planerandet.
               </p>
             </div>
           </div>
@@ -269,14 +268,7 @@ export function Start() {
             <h2 id="qa-rubrik" className="text-3xl font-bold sm:text-4xl">
               Q&amp;A
             </h2>
-            <p className="mt-4 rounded-md bg-accent-soft p-4">
-              <strong className="font-semibold">MinVandring är en beta.</strong> Saker kan ändras och vi uppskattar dina{' '}
-              <a href={KONTAKT_LANK} className={`font-medium text-primary ${textlank}`}>
-                synpunkter
-              </a>
-              .
-            </p>
-            <div className="mt-6 divide-y divide-border rounded-lg border border-border bg-card">
+            <div className="mt-8 divide-y divide-border rounded-lg border border-border bg-card">
               {fragor.map(({ fraga, svar }) => (
                 <details key={fraga} className="group">
                   <summary
@@ -289,6 +281,13 @@ export function Start() {
                 </details>
               ))}
             </div>
+            <p className="mt-5 text-muted-foreground">
+              MinVandring är en beta. Lämna gärna{' '}
+              <a href={KONTAKT_LANK} className={textlank}>
+                synpunkter
+              </a>
+              .
+            </p>
           </div>
         </section>
 
@@ -307,9 +306,9 @@ export function Start() {
         <Logotyp className="justify-center text-xl" />
         <p className="mt-2 text-muted-foreground">För vandringar tillsammans.</p>
         <p className="mx-auto mt-4 max-w-md text-sm text-muted-foreground">
-          MinVandring är en beta som vi bygger tillsammans med vandrare.{' '}
+          Det här är en beta. Lämna gärna{' '}
           <a href={KONTAKT_LANK} className={textlank}>
-            Hör gärna av dig med synpunkter
+            synpunkter
           </a>
           .
         </p>
@@ -323,12 +322,6 @@ export function Start() {
             <Link to="/integritet" className={`inline-flex min-h-11 items-center ${textlank}`}>
               Integritetspolicy
             </Link>
-          </li>
-          <li className="inline-flex items-center">
-            Foton:&nbsp;
-            <a href="https://unsplash.com" className={`inline-flex min-h-11 items-center ${textlank}`}>
-              Unsplash
-            </a>
           </li>
         </ul>
       </footer>
