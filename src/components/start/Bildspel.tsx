@@ -101,26 +101,26 @@ export function Bildspel() {
           <picture key={bild.namn} className="contents">
             <source media={MOBIL_MEDIA} srcSet={srcset(bild.namn, MOBILBREDDER, '-mobil')} sizes="100vw" />
             <img
-            src={`/hero/${bild.namn}-1280.webp`}
-            srcSet={srcset(bild.namn, BREDDER)}
-            sizes={SIZES}
-            alt={synlig ? bild.alt : ''}
-            aria-hidden={synlig ? undefined : true}
-            fetchPriority={i === 0 ? 'high' : 'low'}
-            decoding="async"
-            onLoad={() => laddad(i)}
-            style={{ '--fokus-mobil': bild.fokusMobil, '--fokus': bild.fokus, filter: bild.ljus < 1 ? `brightness(${bild.ljus})` : undefined } as CSSProperties}
-            className={cn(
-              'absolute inset-0 size-full object-cover [object-position:var(--fokus-mobil)] md:[object-position:var(--fokus)]',
-              // Mobilbilderna är redan beskurna kring fokus.
-              '[@media(max-width:767px)_and_(orientation:portrait)]:[object-position:50%_50%]',
-              // Den nya bilden tonar in ovanpå. Den gamla ligger kvar helt synlig under tills övergången är klar.
-              synlig && 'z-10 opacity-100 transition-opacity duration-800 ease-out',
-              under && 'z-0 opacity-100',
-              !synlig && !under && 'z-0 opacity-0',
-              // Zoomen ligger kvar på bilden under, annars hoppar den tillbaka.
-              !minskaRorelse && (synlig || under) && 'animate-zoom-langsam',
-            )}
+              src={`/hero/${bild.namn}-1280.webp`}
+              srcSet={srcset(bild.namn, BREDDER)}
+              sizes={SIZES}
+              alt={synlig ? bild.alt : ''}
+              aria-hidden={synlig ? undefined : true}
+              fetchPriority={i === 0 ? 'high' : 'low'}
+              decoding="async"
+              onLoad={() => laddad(i)}
+              style={{ '--fokus-mobil': bild.fokusMobil, '--fokus': bild.fokus, filter: bild.ljus < 1 ? `brightness(${bild.ljus})` : undefined } as CSSProperties}
+              className={cn(
+                'absolute inset-0 size-full object-cover [object-position:var(--fokus-mobil)] md:[object-position:var(--fokus)]',
+                // Mobilbilderna är redan beskurna kring fokus.
+                '[@media(max-width:767px)_and_(orientation:portrait)]:[object-position:50%_50%]',
+                // Den nya bilden tonar in ovanpå. Den gamla ligger kvar helt synlig under tills övergången är klar.
+                synlig && 'z-10 opacity-100 transition-opacity duration-800 ease-out',
+                under && 'z-0 opacity-100',
+                !synlig && !under && 'z-0 opacity-0',
+                // Zoomen ligger kvar på bilden under, annars hoppar den tillbaka.
+                !minskaRorelse && (synlig || under) && 'animate-zoom-langsam',
+              )}
             />
           </picture>
         )

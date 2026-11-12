@@ -10,35 +10,37 @@
     <meta name="description" content="Planera vandringen tillsammans. Packning, mat och rutt på ett ställe." />
     <title>MinVandring · Planera. Packa. Upplev.</title>
     <script>
-      // Förladda första bilden i startsidans bildspel, bara på startsidan. Samma villkor och storlekar som i Bildspel.tsx.
-      // Inte för inloggade (Supabase sparar sessionen som sb-…-auth-token), de skickas vidare till sina turer.
-      const inloggad = (() => {
-        try {
-          return Object.keys(localStorage).some((k) => /^sb-.+-auth-token$/.test(k))
-        } catch {
-          return false
-        }
-      })()
-      if (location.pathname === '/' && !inloggad) {
-        const mobil = '(max-width: 767px) and (orientation: portrait)'
-        const bilder = [
-          [mobil, '/hero/1-grupp-mobil-640.webp 640w, /hero/1-grupp-mobil-900.webp 900w', '100vw'],
-          [
-            'not all and ' + mobil,
-            '/hero/1-grupp-640.webp 640w, /hero/1-grupp-1280.webp 1280w, /hero/1-grupp-1920.webp 1920w, /hero/1-grupp-2560.webp 2560w',
-            '100vw',
-          ],
-        ]
-        for (const [media, srcset, sizes] of bilder) {
-          const l = document.createElement('link')
-          l.rel = 'preload'
-          l.as = 'image'
-          l.type = 'image/webp'
-          l.media = media
-          l.imageSrcset = srcset
-          l.imageSizes = sizes
-          l.fetchPriority = 'high'
-          document.head.appendChild(l)
+      {
+        // Förladda första bilden i startsidans bildspel, bara på startsidan. Samma villkor och storlekar som i Bildspel.tsx.
+        // Inte för inloggade (Supabase sparar sessionen som sb-…-auth-token), de skickas vidare till sina turer.
+        const inloggad = (() => {
+          try {
+            return Object.keys(localStorage).some((k) => /^sb-.+-auth-token$/.test(k))
+          } catch {
+            return false
+          }
+        })()
+        if (location.pathname === '/' && !inloggad) {
+          const mobil = '(max-width: 767px) and (orientation: portrait)'
+          const bilder = [
+            [mobil, '/hero/1-grupp-mobil-640.webp 640w, /hero/1-grupp-mobil-900.webp 900w', '100vw'],
+            [
+              'not all and ' + mobil,
+              '/hero/1-grupp-640.webp 640w, /hero/1-grupp-1280.webp 1280w, /hero/1-grupp-1920.webp 1920w, /hero/1-grupp-2560.webp 2560w',
+              '100vw',
+            ],
+          ]
+          for (const [media, srcset, sizes] of bilder) {
+            const l = document.createElement('link')
+            l.rel = 'preload'
+            l.as = 'image'
+            l.type = 'image/webp'
+            l.media = media
+            l.imageSrcset = srcset
+            l.imageSizes = sizes
+            l.fetchPriority = 'high'
+            document.head.appendChild(l)
+          }
         }
       }
     </script>
