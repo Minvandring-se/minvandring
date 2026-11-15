@@ -2,14 +2,14 @@ import type { Ref } from 'react'
 import type { Detalj, Punkt } from '@/components/start/stig/geometri'
 
 interface Props {
-  typ: Detalj
+  typ: Extract<Detalj, 'talt' | 'eld'>
   punkt: Punkt
   detaljRef: Ref<SVGGElement>
   flammaRef: Ref<SVGPathElement>
   glodRef: Ref<SVGEllipseElement>
 }
 
-/** Tält eller liten brasa vid leden, 44 × 36 px. Yttre gruppen placerar, den inre animeras. */
+/** Tält eller liten brasa vid leden, 44 × 36 px. Yttre gruppen placerar, den inre animeras. Tältet står kvar. */
 export function Naturdetalj({ typ, punkt, detaljRef, flammaRef, glodRef }: Props) {
   return (
     <g transform={`translate(${punkt.x - 22} ${punkt.y - 36})`}>
@@ -34,6 +34,24 @@ export function Naturdetalj({ typ, punkt, detaljRef, flammaRef, glodRef }: Props
             <path d="M8 35 H36" className="stroke-foreground/35" />
           </>
         )}
+      </g>
+    </g>
+  )
+}
+
+/**
+ * Ett litet tassavtryck, 10 × 10 px, med mitten i x och y och tårna i färdriktningen (vinkel i grader).
+ * Tassarna tonar in en efter en när leden ritats fram (data-dyker).
+ */
+export function Tass({ punkt, vinkel, andel }: { punkt: Punkt; vinkel: number; andel: number }) {
+  return (
+    <g transform={`translate(${punkt.x} ${punkt.y}) rotate(${vinkel + 90})`}>
+      <g data-dyker="tass" data-andel={andel} className="fill-foreground/40" style={{ opacity: 0 }}>
+        <ellipse cx={0} cy={2} rx={2.6} ry={2.2} />
+        <circle cx={-2.7} cy={-1.4} r={1.05} />
+        <circle cx={-0.95} cy={-3.1} r={1.05} />
+        <circle cx={0.95} cy={-3.1} r={1.05} />
+        <circle cx={2.7} cy={-1.4} r={1.05} />
       </g>
     </g>
   )

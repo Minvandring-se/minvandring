@@ -1,20 +1,18 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { animera, vanta } from '@/components/start/stig/animationsko'
 import { beraknaStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
-import { Naturdetalj } from '@/components/start/stig/Naturdetalj'
+import { Naturdetalj, Tass } from '@/components/start/stig/Naturdetalj'
 import { useStigKo } from '@/components/start/stig/stigKo'
+import { RITTID, tidVidAndel, VANTAN } from '@/components/start/stig/utritning'
 import { Ledkryss, Vagvisare } from '@/components/start/stig/Vagvisare'
-
-/** Paus innan en bit börjar ritas, i ms. */
-const VANTAN = 200
-/** Hur länge utritningen tar, i ms. */
-const RITTID = 1600
 
 /**
  * Höjden på luften mellan panelerna. Rymmer vägvisaren (60 px) med 24 px fritt över och under,
  * på den del av leden som går tvärs över.
  */
 const MELLANRUM = 'h-36 lg:h-40'
+/** Tid mellan tassavtrycken, i ms. De kommer en efter en när leden ritats fram. */
+const TASSTEG = 220
 
 interface Props {
   /** Unikt och stabilt inom startsidan. Ger bitens form och används för att minnas vad som ritats. */
@@ -55,6 +53,7 @@ export function Stigavsnitt({ id, bit }: Props) {
   const rotRef = useRef<HTMLDivElement>(null)
   const panelRef = useRef<HTMLDivElement>(null)
   const maskRef = useRef<SVGPathElement>(null)
+  const svgRef = useRef<SVGSVGElement>(null)
   const detaljRef = useRef<SVGGElement>(null)
   const flammaRef = useRef<SVGPathElement>(null)
   const glodRef = useRef<SVGEllipseElement>(null)
@@ -91,15 +90,20 @@ export function Stigavsnitt({ id, bit }: Props) {
 
   const stig = matt && beraknaStig(matt, bit, id)
   const d = stig?.d
-  const typ = bit.detalj
-  const detaljX = stig?.figurer.detalj?.x
-  const detaljY = stig?.figurer.detalj?.y
+  // Tältet eller brasan, som spelas efter utritningen. Ledkorset tonar in under den, tassarna efter.
+  const huvud = stig?.figurer.detaljer.find((x) => x.typ === 'talt' || x.typ === 'eld')
+  const typ = huvud?.typ === 'talt' || huvud?.typ === 'eld' ? huvud.typ : undefined
+  const detaljNyckel = stig?.figurer.detaljer.map((x) => `${x.typ}:${Math.round(x.punkt.x)}:${Math.round(x.punkt.y)}`).join(' ')
 
   // Rita fram biten en gång och spela sedan tältet eller brasan.
   useEffect(() => {
     const rot = rotRef.current
     const mask = maskRef.current
     const detalj = detaljRef.current
+    // Ledkorset dyker upp när leden når fram till det. Tassarna kommer en efter en när leden är framme.
+    const dyker = [...(svgRef.current?.querySelectorAll<SVGGElement>('[data-dyker]') ?? [])]
+    const tassar = dyker.filter((el) => el.dataset.dyker === 'tass')
+    const underLeden = dyker.filter((el) => el.dataset.dyker !== 'tass')
     const flamma = flammaRef.current
     const glod = glodRef.current
     if (!d || !rot || !mask) return
@@ -110,13 +114,14 @@ export function Stigavsnitt({ id, bit }: Props) {
       mask.style.strokeDashoffset = '0'
       if (detalj) {
         detalj.style.transform = 'none'
-        detalj.style.opacity = typ === 'talt' && !statiskt ? '0' : '1'
+        detalj.style.opacity = '1'
       }
       if (flamma) {
         flamma.style.transform = 'none'
         flamma.style.opacity = statiskt ? '1' : '0.3'
       }
       if (glod) glod.style.opacity = statiskt ? '0.5' : '0.15'
+      for (const el of dyker) el.style.opacity = '1'
     }
 
     const statiskt = minskad || typeof IntersectionObserver === 'undefined' || typeof mask.animate !== 'function'
@@ -128,6 +133,7 @@ export function Stigavsnitt({ id, bit }: Props) {
 
     mask.style.strokeDashoffset = '1'
     if (detalj) detalj.style.opacity = '0'
+    for (const el of dyker) el.style.opacity = '0'
     let avbryt: (() => void) | null = null
     let iLage = false
     // Falskt när effekten har städats, till exempel när minskad rörelse slås på mitt i en scen.
@@ -154,7 +160,17 @@ export function Stigavsnitt({ id, bit }: Props) {
           await vanta(VANTAN, scen.signal)
           ko.markeraSpelad(id)
           ritar = true
-          await animera(mask, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: RITTID, easing: 'ease-in-out' }, scen.signal)
+          await Promise.all([
+            animera(mask, [{ strokeDashoffset: 1 }, { strokeDashoffset: 0 }], { duration: RITTID, easing: 'ease-in-out' }, scen.signal),
+            ...underLeden.map((el) =>
+              animera(
+                el,
+                [{ opacity: 0 }, { opacity: 1 }],
+                { duration: 500, delay: tidVidAndel(Number(el.dataset.andel)) * RITTID, easing: 'ease-out' },
+                scen.signal,
+              ),
+            ),
+          ])
           mask.style.strokeDashoffset = '0'
 
           if (typ === 'talt' && detalj) {
@@ -167,8 +183,15 @@ export function Stigavsnitt({ id, bit }: Props) {
               { duration: 650, easing: 'ease-out' },
               scen.signal,
             )
-            await animera(detalj, [{ opacity: 1 }, { opacity: 1 }], { duration: 1100 }, scen.signal)
-            await animera(detalj, [{ opacity: 1 }, { opacity: 0 }], { duration: 700, easing: 'ease-in-out' }, scen.signal)
+            // Tältet står sedan kvar.
+            detalj.style.opacity = '1'
+          }
+
+          // Tassavtrycken, en efter en, när leden är framme.
+          for (const el of tassar) {
+            await animera(el, [{ opacity: 0 }, { opacity: 1 }], { duration: 300, easing: 'ease-out' }, scen.signal)
+            el.style.opacity = '1'
+            await vanta(TASSTEG - 100, scen.signal)
           }
 
           if (typ === 'eld' && detalj && flamma) {
@@ -245,7 +268,7 @@ export function Stigavsnitt({ id, bit }: Props) {
       document.removeEventListener('visibilitychange', synlighet)
       pausa()
     }
-  }, [d, id, ko, minskad, typ, detaljX, detaljY])
+  }, [d, id, ko, minskad, typ, detaljNyckel])
 
   return (
     <div ref={rotRef} aria-hidden className={`pointer-events-none relative ${MELLANRUM}`}>
@@ -254,6 +277,7 @@ export function Stigavsnitt({ id, bit }: Props) {
       {matt && stig && (
         // Samma mått som viewBox, så att leden och strecken aldrig dras ut.
         <svg
+          ref={svgRef}
           width={matt.bredd}
           height={matt.hojd}
           viewBox={`0 0 ${matt.bredd} ${matt.hojd}`}
@@ -286,8 +310,18 @@ export function Stigavsnitt({ id, bit }: Props) {
           />
           {stig.figurer.ledkryss && <Ledkryss x={stig.figurer.ledkryss.x} y={stig.figurer.ledkryss.y} />}
           {stig.figurer.vagvisare && <Vagvisare x={stig.figurer.vagvisare.x} y={stig.figurer.vagvisare.y} />}
-          {typ && stig.figurer.detalj && (
-            <Naturdetalj typ={typ} punkt={stig.figurer.detalj} detaljRef={detaljRef} flammaRef={flammaRef} glodRef={glodRef} />
+          {stig.figurer.detaljer.map((x) =>
+            x.typ === 'talt' || x.typ === 'eld' ? (
+              <Naturdetalj key={x.typ} typ={x.typ} punkt={x.punkt} detaljRef={detaljRef} flammaRef={flammaRef} glodRef={glodRef} />
+            ) : x.typ === 'ledkors' ? (
+              <g key="ledkors" data-dyker="ledkors" data-andel={x.andel} style={{ opacity: 0 }}>
+                <Ledkryss x={x.punkt.x} y={x.punkt.y} />
+              </g>
+            ) : (
+              <g key="tassar">
+                {x.tassar?.map((t) => <Tass key={t.andel} punkt={t.punkt} vinkel={t.vinkel} andel={t.andel} />)}
+              </g>
+            ),
           )}
         </svg>
       )}

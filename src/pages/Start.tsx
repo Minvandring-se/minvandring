@@ -119,13 +119,22 @@ const kortKlass =
 
 /**
  * Leden i luften mellan panelerna, i ordning. Varje bit går från en panel till nästa och börjar på den
- * sida där förra slutade. Brasan står i mellanrummet efter panelen med kortet Ordna maten, tältet efter
- * packningen och vägvisaren före den gröna avslutningen.
+ * sida där förra slutade.
+ * - Brasan står efter panelen med kortet Ordna maten.
+ * - Efter packningen står tältet, och tassavtryck går mot panelen där hunden sitter (Tanken bakom).
+ * - Före Vanliga frågor står ett rött ledkors.
+ * - Vägvisaren står före den gröna avslutningen.
  */
 const [stigBorja, stigPackning, stigTanken, stigFragor] = kopplaStig([
-  { id: 'borja', detalj: 'eld', detaljLage: 0.72 },
-  { id: 'packning', detalj: 'talt', detaljLage: 0.3 },
-  { id: 'tanken' },
+  { id: 'borja', detaljer: [{ typ: 'eld', lage: 0.72 }] },
+  {
+    id: 'packning',
+    detaljer: [
+      { typ: 'talt', lage: 0.3 },
+      { typ: 'tassar', lage: 0.7 },
+    ],
+  },
+  { id: 'tanken', detaljer: [{ typ: 'ledkors', lage: 0.6 }] },
   { id: 'fragor' },
 ] as const)
 
