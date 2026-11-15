@@ -3,6 +3,7 @@ import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate } from 'react-router'
 import type { AppKontext } from '@/components/app/appKontext'
 import { Namnbricka } from '@/components/app/Namnbricka'
+import { Felgrans } from '@/components/Felgrans'
 import { Logotyp } from '@/components/Logotyp'
 import { Sidfot } from '@/components/Sidfot'
 import { useSession } from '@/hooks/useSession'
@@ -10,10 +11,11 @@ import { aktivDel, type Del } from '@/lib/navigering'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
-const DELAR: { del: Del; till: string; namn: string; kortNamn: string; ikon: LucideIcon }[] = [
+/** Delarna i menyn. Förrådet är inte byggt än, så det står sist, nedtonat och märkt "Kommer snart". */
+const DELAR: { del: Del; till: string; namn: string; kortNamn: string; ikon: LucideIcon; kommerSnart?: boolean }[] = [
   { del: 'turer', till: '/turer', namn: 'Mina turer', kortNamn: 'Mina turer', ikon: Karta },
-  { del: 'forrad', till: '/forrad', namn: 'Ditt förråd', kortNamn: 'Förråd', ikon: Backpack },
   { del: 'profil', till: '/profil', namn: 'Profil', kortNamn: 'Profil', ikon: UserRound },
+  { del: 'forrad', till: '/forrad', namn: 'Ditt förråd', kortNamn: 'Förråd', ikon: Backpack, kommerSnart: true },
 ]
 
 /**
@@ -62,18 +64,20 @@ export function AppSkal() {
           </Link>
           <nav aria-label="Huvudmeny">
             <ul className="space-y-1">
-              {DELAR.map(({ del, till, namn: text, ikon: Ikon }) => (
-                <li key={del}>
+              {DELAR.map(({ del, till, namn: text, ikon: Ikon, kommerSnart }) => (
+                <li key={del} className={cn(kommerSnart && 'mt-3 border-t border-border pt-3')}>
                   <Link
                     to={till}
                     aria-current={aktiv === del ? 'page' : undefined}
                     className={cn(
-                      'flex min-h-12 items-center gap-3 rounded-md px-3 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                      aktiv === del ? 'bg-primary-soft text-primary' : 'text-foreground hover:bg-muted',
+                      'flex items-center gap-3 rounded-md px-3 transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                      kommerSnart ? 'min-h-11 text-sm' : 'min-h-12 font-medium',
+                      aktiv === del ? 'bg-primary-soft text-primary' : kommerSnart ? 'text-muted-foreground hover:bg-muted' : 'text-foreground hover:bg-muted',
                     )}
                   >
-                    <Ikon className="size-5" aria-hidden />
+                    <Ikon className={kommerSnart ? 'size-4' : 'size-5'} aria-hidden />
                     {text}
+                    {kommerSnart && <span className="ml-auto rounded-full bg-muted px-2 py-0.5 text-xs text-muted-foreground">Kommer snart</span>}
                   </Link>
                 </li>
               ))}
@@ -117,6 +121,7 @@ export function AppSkal() {
 
         {/* Luft under innehållet i mobil, så att inget hamnar bakom bottennavigationen. */}
         <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-8 sm:px-6 lg:px-10 lg:pt-10 lg:pb-12">
+          <Felgrans aterstall={pathname}>
           <Suspense
             fallback={
               <p role="status" className="text-muted-foreground">
@@ -126,6 +131,7 @@ export function AppSkal() {
           >
             <Outlet context={kontext} />
           </Suspense>
+          </Felgrans>
         </main>
 
         <Sidfot className="mx-4 mb-[calc(5rem+env(safe-area-inset-bottom))] lg:hidden" />
@@ -136,19 +142,29 @@ export function AppSkal() {
         aria-label="Huvudmeny"
         className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
-        <ul className="mx-auto grid max-w-md grid-cols-3">
-          {DELAR.map(({ del, till, kortNamn, ikon: Ikon }) => (
+        {/* Förrådet får en smalare plats sist, så att Mina turer och Profil är de två tydliga valen. */}
+        <ul className="mx-auto grid max-w-md grid-cols-[1fr_1fr_0.7fr]">
+          {DELAR.map(({ del, till, kortNamn, ikon: Ikon, kommerSnart }) => (
             <li key={del}>
               <Link
                 to={till}
                 aria-current={aktiv === del ? 'page' : undefined}
                 className={cn(
-                  'relative flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+                  'relative flex min-h-16 flex-col items-center justify-center gap-1 text-xs focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+                  !kommerSnart && 'font-medium',
                   aktiv === del ? 'text-primary' : 'text-muted-foreground',
                 )}
               >
-                <Ikon className="size-6" aria-hidden strokeWidth={aktiv === del ? 2.25 : 1.75} />
-                {kortNamn}
+                <Ikon className={kommerSnart ? 'size-5' : 'size-6'} aria-hidden strokeWidth={aktiv === del && !kommerSnart ? 2.25 : 1.75} />
+                <span>
+                  {kortNamn}
+                  {kommerSnart && <span className="sr-only">, kommer snart</span>}
+                </span>
+                {kommerSnart && (
+                  <span aria-hidden className="absolute top-1.5 right-2 rounded-full bg-muted px-1.5 text-[10px] leading-4 text-muted-foreground">
+                    Snart
+                  </span>
+                )}
                 {aktiv === del && <span aria-hidden className="absolute inset-x-6 top-0 h-[3px] rounded-b-full bg-primary" />}
               </Link>
             </li>

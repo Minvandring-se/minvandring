@@ -7,6 +7,7 @@ import { SidRubrik } from '@/components/app/SidRubrik'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { useSidtitel } from '@/hooks/useSidtitel'
 import { supabase } from '@/lib/supabase'
 
 /** Ändra sitt visningsnamn och logga ut. Namnet följer med till alla turer man är med i. */
@@ -15,7 +16,8 @@ export function Profil() {
   const navigate = useNavigate()
   const id = useId()
   const [namn, setNamn] = useState('')
-  const [status, setStatus] = useState<'laddar' | 'redo' | 'sparar' | 'sparat' | 'fel'>('laddar')
+  const [status, setStatus] = useState<'laddar' | 'laddfel' | 'redo' | 'sparar' | 'sparat' | 'fel'>('laddar')
+  useSidtitel('Profil')
 
   useEffect(() => {
     if (!supabase || !anvandarId) return
@@ -24,9 +26,9 @@ export function Profil() {
       .select('namn')
       .eq('id', anvandarId)
       .maybeSingle()
-      .then(({ data }) => {
+      .then(({ data, error }) => {
         setNamn(data?.namn ?? '')
-        setStatus('redo')
+        setStatus(error ? 'laddfel' : 'redo')
       })
   }, [anvandarId])
 
@@ -52,7 +54,9 @@ export function Profil() {
         <div className="flex items-center gap-4">
           <Namnbricka namn={namn || epost || '?'} className="size-14 text-base" />
           <div className="min-w-0">
-            <p className="truncate font-heading text-lg font-semibold">{namn || 'Inget namn än'}</p>
+            <p className="truncate font-heading text-lg font-semibold">
+              {namn || (status === 'laddar' ? 'Hämtar …' : status === 'laddfel' ? 'Namnet gick inte att hämta' : 'Inget namn än')}
+            </p>
             <p className="truncate text-sm text-muted-foreground">{epost}</p>
           </div>
         </div>
@@ -67,7 +71,7 @@ export function Profil() {
               setNamn(e.target.value)
               setStatus('redo')
             }}
-            disabled={status === 'laddar'}
+            disabled={status === 'laddar' || status === 'laddfel'}
             maxLength={40}
             autoComplete="name"
             aria-describedby={`${id}-hjalp`}
@@ -75,12 +79,17 @@ export function Profil() {
           <p id={`${id}-hjalp`} className="text-sm text-muted-foreground">
             Så här ser de andra dig i turerna.
           </p>
-          <Button type="submit" className="w-full sm:w-auto" disabled={status === 'laddar' || status === 'sparar' || !namn.trim()}>
+          <Button type="submit" className="w-full sm:w-auto" disabled={status === 'laddar' || status === 'laddfel' || status === 'sparar' || !namn.trim()}>
             {status === 'sparar' ? 'Sparar …' : 'Spara'}
           </Button>
           <p role="status" className="text-sm">
-            {status === 'sparat' && <span className="text-primary">Sparat.</span>}
-            {status === 'fel' && <span className="text-destructive">Det gick inte att spara. Försök igen.</span>}
+            {status === 'sparat' && <span className="font-medium text-primary">Namnet är sparat. Det syns nu i alla dina turer.</span>}
+            {status === 'fel' && (
+              <span className="text-destructive">Det gick inte att spara namnet. Kontrollera uppkopplingen och försök igen.</span>
+            )}
+            {status === 'laddfel' && (
+              <span className="text-destructive">Det gick inte att hämta ditt namn. Ladda om sidan och försök igen.</span>
+            )}
           </p>
         </form>
       </Card>

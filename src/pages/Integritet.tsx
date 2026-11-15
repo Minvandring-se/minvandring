@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react'
+import { useSidtitel } from '@/hooks/useSidtitel'
 import { KONTAKT_MEJL } from '@/lib/kontakt'
 
 function Avsnitt({ rubrik, children }: { rubrik: string; children: ReactNode }) {
@@ -27,6 +28,7 @@ function Kontaktadress() {
  * Uppdatera texten när nya funktioner börjar spara mer data eller nya tjänster kopplas in.
  */
 export function Integritet() {
+  useSidtitel('Integritetspolicy')
   return (
     <article className="mx-auto max-w-2xl space-y-8 py-4 leading-relaxed">
       <header className="space-y-2">

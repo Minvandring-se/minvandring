@@ -2,7 +2,7 @@ import { ArrowRight, CalendarDays, ChevronRight, MapPin } from 'lucide-react'
 import { Link } from 'react-router'
 import { Namnbrickor } from '@/components/app/Namnbricka'
 import { TurBild } from '@/components/app/TurBild'
-import { dagarText, datumIntervall, deltagareText } from '@/lib/turlista'
+import { datumrad, deltagareText } from '@/lib/turlista'
 
 /** En tur i listan Mina turer, med deltagarna från databasen. */
 export interface TurMedDeltagare {
@@ -14,11 +14,6 @@ export interface TurMedDeltagare {
   dagar: number
   skapad: string
   deltagare: { namn: string; typ: 'person' | 'hund' }[]
-}
-
-/** "12–16 augusti 2027 · 5 dagar". Utan datum bara "Inga datum än". */
-function datumrad(t: TurMedDeltagare) {
-  return t.avresa ? `${datumIntervall(t.avresa, t.hemkomst)} · ${dagarText(t.dagar)}` : datumIntervall(null, null)
 }
 
 /** Det stora kortet för nästa (eller pågående) vandring. Bild till vänster på dator, överst i mobil. */

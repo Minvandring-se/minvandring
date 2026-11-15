@@ -2,9 +2,11 @@ import { Link } from 'react-router'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
 import { Levande } from '@/components/start/Levande'
+import { useSidtitel } from '@/hooks/useSidtitel'
 
 /** Ditt förråd. Finns inte än, så sidan säger det rakt ut och pekar tillbaka till turerna. */
 export function Forrad() {
+  useSidtitel('Ditt förråd')
   return (
     <div className="space-y-8">
       <SidRubrik rubrik="Ditt förråd" text="Din egen utrustning, samlad på ett ställe." />

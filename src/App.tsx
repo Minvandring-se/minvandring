@@ -1,7 +1,9 @@
 import { lazy, type ReactNode } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router'
 import { AppSkal } from '@/components/app/AppSkal'
+import { Felgrans } from '@/components/Felgrans'
 import { Layout } from '@/components/Layout'
+import { RullaUpp } from '@/components/RullaUpp'
 import { useSession } from '@/hooks/useSession'
 import { GaMed } from '@/pages/GaMed'
 import { GlomtLosenord } from '@/pages/GlomtLosenord'
@@ -36,8 +38,12 @@ function Inloggad({ children }: { children: ReactNode }) {
 }
 
 export default function App() {
+  const { pathname } = useLocation()
   return (
     <Layout>
+      <RullaUpp />
+      {/* Fångar fel på sidorna utan sidomeny. De inloggade sidorna har en egen felgräns inne i ramen. */}
+      <Felgrans aterstall={pathname}>
       <Routes>
         <Route path="/" element={<Start />} />
         <Route path="/logga-in" element={<LoggaIn />} />
@@ -62,6 +68,7 @@ export default function App() {
           }
         />
       </Routes>
+      </Felgrans>
     </Layout>
   )
 }
