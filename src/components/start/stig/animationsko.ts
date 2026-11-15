@@ -1,19 +1,12 @@
-/** Fortsättningen av leden i en sektions övre luft. Ritas fram av scenen för biten ovanför. */
-export interface Topp {
-  visa: (signal: AbortSignal) => Promise<void>
-  stilla: () => void
-}
-
 interface Uppgift {
   controller: AbortController
   kor: (signal: AbortSignal) => Promise<void>
 }
 
-/** En kö per sidbesök: högst en scen (utritad bit och eventuell detalj) spelas åt gången. */
+/** En kö per sidbesök: högst en scen (utritad bit och eventuellt tält eller brasa) spelas åt gången. */
 export function skapaAnimationsko(onError: (fel: unknown) => void = console.error) {
   const vantande: Uppgift[] = []
   const spelade = new Set<string>()
-  const toppar = new Map<string, Topp>()
   let aktiv: Uppgift | null = null
 
   function nasta() {
@@ -36,14 +29,6 @@ export function skapaAnimationsko(onError: (fel: unknown) => void = console.erro
 
   return {
     harSpelat: (id: string) => spelade.has(id),
-    /** Registrerar en sektions övre fortsättning. Returnerar en funktion som tar bort den igen. */
-    registreraTopp(id: string, topp: Topp) {
-      toppar.set(id, topp)
-      return () => {
-        if (toppar.get(id) === topp) toppar.delete(id)
-      }
-    },
-    topp: (id: string | undefined) => (id ? toppar.get(id) : undefined),
     markeraSpelad: (id: string) => {
       spelade.add(id)
     },
@@ -83,4 +68,21 @@ export async function animera(element: Element, ramar: Keyframe[], val: Keyframe
     if (signal.aborted) animation.cancel()
     else signal.addEventListener('abort', avbryt, { once: true })
   }
+}
+
+/** Väntar ms millisekunder. Avbryts direkt med AbortError om signalen avbryts. */
+export function vanta(ms: number, signal: AbortSignal) {
+  return new Promise<void>((klar, fel) => {
+    const avbruten = () => new DOMException('Avbruten', 'AbortError')
+    if (signal.aborted) return fel(avbruten())
+    const tid = setTimeout(() => {
+      signal.removeEventListener('abort', avbryt)
+      klar()
+    }, ms)
+    const avbryt = () => {
+      clearTimeout(tid)
+      fel(avbruten())
+    }
+    signal.addEventListener('abort', avbryt, { once: true })
+  })
 }
