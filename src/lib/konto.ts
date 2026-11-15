@@ -1,5 +1,7 @@
 /** Kontroller och felmeddelanden för inloggning, nytt konto och nytt lösenord. */
 
+import { KONTAKT_MEJL } from '@/lib/kontakt'
+
 export const MINSTA_LOSENORD = 8
 export const STANDARD_VIDARE = '/turer'
 
@@ -38,6 +40,11 @@ export function medVidare(sokvag: string, vidare: string): string {
   return vidare === STANDARD_VIDARE ? sokvag : `${sokvag}?vidare=${encodeURIComponent(vidare)}`
 }
 
+/** Fel som inte känns igen. Med kontaktadress, så att man kan höra av sig om det fortsätter. */
+export const ALLMANT_FEL = KONTAKT_MEJL
+  ? `Något gick fel. Försök igen. Om det fortsätter, hör av dig till ${KONTAKT_MEJL}.`
+  : 'Något gick fel. Försök igen.'
+
 /** Felet från Supabase Auth som ett begripligt meddelande på svenska. */
 export function authFel(fel: { code?: string; status?: number } | null): string {
   switch (fel?.code) {
@@ -61,5 +68,5 @@ export function authFel(fel: { code?: string; status?: number } | null): string 
       return 'Det går inte att skapa nya konton just nu.'
   }
   if (fel?.status === 429) return 'För många försök. Vänta en stund och försök igen.'
-  return 'Något gick fel. Försök igen.'
+  return ALLMANT_FEL
 }

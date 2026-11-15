@@ -98,6 +98,9 @@ export function SkapaKonto() {
         <Button type="submit" className="w-full" disabled={status === 'skickar' || !supabase}>
           {status === 'skickar' ? 'Skapar konto …' : 'Skapa konto'}
         </Button>
+        <p className="text-sm text-muted-foreground">
+          Läs hur vi hanterar dina uppgifter i vår <Sidlank to="/integritet">integritetspolicy</Sidlank>.
+        </p>
       </form>
       <p className="text-muted-foreground">
         Har du redan ett konto? <Sidlank to={medVidare('/logga-in', vidare)}>Logga in</Sidlank>
