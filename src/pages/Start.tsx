@@ -9,8 +9,9 @@ import { Logotyp } from '@/components/Logotyp'
 import { Bildspel } from '@/components/start/Bildspel'
 import { Levande } from '@/components/start/Levande'
 import { PacklistaSmakprov } from '@/components/start/PacklistaSmakprov'
-import { Stigavsnitt } from '@/components/start/Stigavsnitt'
-import { kopplaStig } from '@/components/start/stiggeometri'
+import { kopplaStig } from '@/components/start/stig/geometri'
+import { Stigavsnitt } from '@/components/start/stig/Stigavsnitt'
+import { StigProvider } from '@/components/start/stig/StigProvider'
 import { useSession } from '@/hooks/useSession'
 import { Kontaktlank } from '@/components/Kontaktlank'
 
@@ -115,12 +116,15 @@ const textlank = `rounded-sm underline underline-offset-2 hover:text-foreground 
 const kortKlass =
   'rounded-lg border border-border bg-card shadow-soft transition-[translate,box-shadow] duration-300 ease-out hover:shadow-[0_2px_4px_rgb(31_42_36/0.06),0_14px_32px_rgb(31_42_36/0.12)] motion-safe:hover:-translate-y-1'
 
-/** Stigen genom sektionerna, i ordning. Varje bit börjar där förra slutade. */
-const [stigStart, stigPackning, stigTanken, stigFragor] = kopplaStig([
-  { slut: 'hoger' },
-  { slut: 'vanster' },
-  { slut: 'hoger' },
-  { slut: 'hoger' },
+/**
+ * Leden mellan sektionerna, i ordning. Varje bit ritas i sektionens nedre padding och börjar
+ * där förra slutade. Brasan ligger under sektionen med kortet Ordna maten, på samma sida som kortet.
+ */
+const [stigBorja, stigPackning, stigTanken, stigFragor] = kopplaStig([
+  { id: 'borja', svang: 10, detalj: 'eld', detaljLage: 0.72 },
+  { id: 'packning', svang: 12, detalj: 'talt', detaljLage: 0.3 },
+  { id: 'tanken', svang: 9 },
+  { id: 'fragor', svang: 10 },
 ] as const)
 
 /** Huvudknappen i hero och i sista sektionen. Ljus knapp, för mörka ytor. */
@@ -142,7 +146,7 @@ export function Start() {
   if (session) return <Navigate to="/turer" replace />
 
   return (
-    <>
+    <StigProvider>
       <header className="absolute inset-x-0 top-0 z-20">
         <nav aria-label="Huvudmeny" className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
           <Link to="/" className={`flex min-h-11 items-center rounded-md text-card ${fokusPaBild}`}>
@@ -199,7 +203,7 @@ export function Start() {
         </section>
 
         <section aria-labelledby="sa-fungerar-rubrik" className="relative isolate py-16 sm:py-20">
-          <Stigavsnitt bit={stigStart} />
+          <Stigavsnitt id={stigBorja.id} bit={stigBorja} />
           <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
             <h2 id="sa-fungerar-rubrik" className="text-3xl font-bold sm:text-4xl">
               Börja med din nästa tur
@@ -235,7 +239,7 @@ export function Start() {
         </section>
 
         <section aria-labelledby="smakprov-rubrik" className="relative isolate bg-muted/60 py-16 sm:py-20">
-          <Stigavsnitt bit={stigPackning} />
+          <Stigavsnitt id={stigPackning.id} bit={stigPackning} />
           <div
             data-stiginnehall
             className="relative z-10 mx-auto grid max-w-6xl items-center gap-8 px-4 sm:px-6 md:grid-cols-2 md:gap-12"
@@ -263,7 +267,7 @@ export function Start() {
         </section>
 
         <section aria-labelledby="tanken-rubrik" className="relative isolate py-16 sm:py-20">
-          <Stigavsnitt bit={stigTanken} />
+          <Stigavsnitt id={stigTanken.id} bit={stigTanken} />
           <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
             <div className="grid items-center gap-8 overflow-hidden rounded-lg bg-sand/50 p-6 sm:p-10 md:grid-cols-2 md:gap-12">
               <TankenIllustration className="mx-auto block aspect-[8/5] w-full max-w-md" />
@@ -287,8 +291,8 @@ export function Start() {
         </section>
 
         <section aria-labelledby="vanliga-fragor-rubrik" className="relative isolate bg-muted/60 py-16 sm:py-20">
-          <Stigavsnitt bit={stigFragor} />
-          {/* Samma bredd som de andra sektionerna så att stigen hamnar rätt. Själva listan är smalare. */}
+          <Stigavsnitt id={stigFragor.id} bit={stigFragor} />
+          {/* Samma bredd som de andra sektionerna så att leden hamnar rätt. Själva listan är smalare. */}
           <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl">
             <div className="mx-auto max-w-3xl px-4 sm:px-6">
               <h2 id="vanliga-fragor-rubrik" className="text-3xl font-bold sm:text-4xl">
@@ -342,6 +346,6 @@ export function Start() {
           </li>
         </ul>
       </footer>
-    </>
+    </StigProvider>
   )
 }
