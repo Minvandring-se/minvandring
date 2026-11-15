@@ -68,8 +68,9 @@ export interface PlaceradDetalj {
 
 /** Var figurerna står, med fötterna på leden. null eller utelämnad när den saknas eller inte får plats. */
 export interface Figurer {
-  ledkryss: Punkt | null
-  vagvisare: Punkt | null
+  /** Med andel längs leden, så att de kan dyka upp när leden ritats fram dit. */
+  ledkryss: (Punkt & { andel: number }) | null
+  vagvisare: (Punkt & { andel: number }) | null
   detaljer: PlaceradDetalj[]
 }
 
@@ -264,10 +265,10 @@ export function beraknaStig(m: Matt, bit: Stigbit, fro = bit.id ?? '') {
   const upptagna: Ruta[] = []
   const ledig = (r: Ruta) => upptagna.every((u) => !krockar(r, u))
   const passar = (p: Punkt, storlek: { bredd: number; hojd: number }) => farPlats(m, p, storlek) && ledig(rutaFor(p, storlek))
-  const ta = <T extends Punkt>(p: T | undefined, storlek: { bredd: number; hojd: number }) => {
+  const ta = <T extends Punkt & { andel: number }>(p: T | undefined, storlek: { bredd: number; hojd: number }) => {
     if (!p) return null
     upptagna.push(rutaFor(p, storlek))
-    return { x: p.x, y: p.y }
+    return { x: p.x, y: p.y, andel: p.andel }
   }
   const narmast = (onskat: number) => [...tvarsPunkter].filter((p) => Math.abs(p.andel - onskat) <= 0.25).sort((a, b) => Math.abs(a.andel - onskat) - Math.abs(b.andel - onskat))
 
@@ -318,7 +319,7 @@ export function beraknaStig(m: Matt, bit: Stigbit, fro = bit.id ?? '') {
     const storlek = val.typ === 'ledkors' ? FIGUR.ledkryss : FIGUR.detalj
     const p = narmast(val.lage).find((q) => passar(q, storlek))
     const punkt = ta(p, storlek)
-    if (p && punkt) detaljer.push({ typ: val.typ, punkt, andel: p.andel })
+    if (p && punkt) detaljer.push({ typ: val.typ, punkt: { x: punkt.x, y: punkt.y }, andel: p.andel })
   }
   const figurer: Figurer = { ledkryss, vagvisare, detaljer }
 

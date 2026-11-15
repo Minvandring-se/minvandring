@@ -239,6 +239,17 @@ describe('figurer', () => {
     }
   })
 
+  it('vet var längs leden ledkrysset och vägvisaren står, så att de dyker upp när leden når dit', () => {
+    const stig = beraknaStig(matt(1366 - 48, 160), bit('vanster', 'hoger', { forsta: true, sista: true }), 'borja')
+    const { ledkryss, vagvisare } = stig?.figurer ?? {}
+    if (!ledkryss || !vagvisare) throw new Error('Saknad figur')
+    // Ledkrysset tidigt och vägvisaren sent längs leden.
+    expect(ledkryss.andel).toBeGreaterThan(0)
+    expect(ledkryss.andel).toBeLessThanOrEqual(0.35)
+    expect(vagvisare.andel).toBeGreaterThanOrEqual(0.65)
+    expect(vagvisare.andel).toBeLessThan(1)
+  })
+
   it('utelämnar figurer som inte får plats', () => {
     const stig = beraknaStig(
       matt(1416, 44),
