@@ -109,12 +109,12 @@ describe('funktionerna i public', () => {
     for (const f of forInloggade) expect(await kanAnropa('authenticated', f), f).toBe(true)
   })
 
-  it('alla security definer-funktioner har en fast search_path', async () => {
+  it('alla security definer-funktioner har en fast search_path, utom Supabases rls_auto_enable som lämnas orörd', async () => {
     const r = await db.query<{ namn: string }>(`
       select p.proname as namn from pg_proc p
       where p.pronamespace = 'public'::regnamespace and p.prosecdef
         and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')`)
-    expect(r.rows).toEqual([])
+    expect(r.rows).toEqual([{ namn: 'rls_auto_enable' }])
   })
 
   it('inloggade kan fortfarande skapa en tur, gå med via länk och se sina turer', async () => {

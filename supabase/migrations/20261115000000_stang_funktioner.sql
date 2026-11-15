@@ -40,8 +40,8 @@ grant execute on function
   public.ga_med(text)
 to authenticated;
 
--- ─── search_path på alla SECURITY DEFINER-funktioner i public som saknar den ──
--- Våra egna har redan search_path = ''. pg_catalog, public ändrar inte hur en okänd funktion hittar sina tabeller.
+-- ─── search_path på SECURITY DEFINER-funktioner i public som saknar den ──
+-- Våra egna har redan search_path = ''. rls_auto_enable är Supabases och lämnas orörd, den stängs bara ovan.
 do $$
 declare
   f regprocedure;
@@ -50,6 +50,7 @@ begin
     select p.oid::regprocedure from pg_proc p
     where p.pronamespace = 'public'::regnamespace
       and p.prosecdef
+      and p.proname <> 'rls_auto_enable'
       and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')
   loop
     execute format('alter function %s set search_path = pg_catalog, public', f);
