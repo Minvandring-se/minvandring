@@ -18,7 +18,9 @@ import { Start } from '@/pages/Start'
 const MinaTurer = lazy(() => import('@/pages/MinaTurer').then((m) => ({ default: m.MinaTurer })))
 const Forrad = lazy(() => import('@/pages/Forrad').then((m) => ({ default: m.Forrad })))
 const Profil = lazy(() => import('@/pages/Profil').then((m) => ({ default: m.Profil })))
-const TurSida = lazy(() => import('@/pages/Tur').then((m) => ({ default: m.TurSida })))
+const TurRam = lazy(() => import('@/pages/tur/TurRam').then((m) => ({ default: m.TurRam })))
+const TurOversikt = lazy(() => import('@/pages/tur/TurOversikt').then((m) => ({ default: m.TurOversikt })))
+const TurKommerSnart = lazy(() => import('@/pages/tur/TurKommerSnart').then((m) => ({ default: m.TurKommerSnart })))
 
 function Laddar({ text = 'Laddar …' }: { text?: string }) {
   return (
@@ -55,7 +57,14 @@ export default function App() {
         {/* De inloggade sidorna, i ramen med sidomeny och bottennavigation. */}
         <Route element={<Inloggad><AppSkal /></Inloggad>}>
           <Route path="/turer" element={<MinaTurer />} />
-          <Route path="/tur/:id" element={<TurSida />} />
+          {/* Turen är en ram med delsidor. Ramen hämtar turen och deltagarna en gång. */}
+          <Route path="/tur/:id" element={<TurRam />}>
+            <Route index element={<TurOversikt />} />
+            <Route path="packa" element={<TurKommerSnart del="packa" />} />
+            <Route path="mat" element={<TurKommerSnart del="mat" />} />
+            <Route path="rutt" element={<TurKommerSnart del="rutt" />} />
+            <Route path="*" element={<TurOversikt />} />
+          </Route>
           <Route path="/forrad" element={<Forrad />} />
           <Route path="/profil" element={<Profil />} />
         </Route>

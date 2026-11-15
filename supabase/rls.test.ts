@@ -11,6 +11,8 @@ const A = '00000000-0000-0000-0000-00000000000a'
 const B = '00000000-0000-0000-0000-00000000000b'
 const C = '00000000-0000-0000-0000-00000000000c'
 const D = '00000000-0000-0000-0000-00000000000d'
+const E = '00000000-0000-0000-0000-00000000000e'
+const F = '00000000-0000-0000-0000-00000000000f'
 
 let db: PGlite
 
@@ -69,7 +71,8 @@ beforeAll(async () => {
   await db.exec(`
     insert into auth.users (id, email) values
       ('${A}', 'anna@exempel.se'), ('${B}', 'bertil@exempel.se'), ('${C}', 'cilla@exempel.se'),
-      ('${D}', 'david@exempel.se');
+      ('${D}', 'david@exempel.se'),
+      ('${E}', 'erik@exempel.se'), ('${F}', 'frida@exempel.se');
   `)
 }, 60_000)
 
@@ -97,12 +100,14 @@ describe('funktionerna i public', () => {
     'public.rls_auto_enable()',
     'public.slumpkod()',
     'public.ny_inbjudan()',
+    'public.tur_for_kod(text)',
   ]
   const forInloggade = [
     'public.ar_medlem(uuid)',
     'public.kan_andra(uuid)',
     'public.ar_agare(uuid)',
-    'public.ga_med(text)',
+    'public.ga_med(text, uuid)',
+    'public.inbjudan(text)',
     'public.ny_inbjudningskod(uuid)',
   ]
 
@@ -149,7 +154,7 @@ describe('funktionerna i public', () => {
 describe('profiler', () => {
   it('skapas automatiskt för nya användare', async () => {
     const r = await db.query('select id from public.profiler')
-    expect(r.rows).toHaveLength(4)
+    expect(r.rows).toHaveLength(6)
   })
 
   it('går bara att ändra för en själv', async () => {
@@ -436,5 +441,136 @@ describe('vandringsdagar', () => {
     expect(r.rows[0].dagar).toBeNull()
     await forvantaFel(som(A, (tx) => tx.query('update public.turer set dagar = 0 where id = $1', [tur])))
     await forvantaFel(som(A, (tx) => tx.query('update public.turer set dagar = 31 where id = $1', [tur])))
+  })
+})
+
+describe('ta över en person utan konto', () => {
+  let tur: string
+  let kod: string
+  let pichi: string
+  let hund: string
+  let packrad: string
+
+  interface Inbjudan {
+    tur_id: string
+    namn: string
+    redan_med: boolean
+    personer: { id: string; namn: string }[]
+  }
+  const inbjudan = (vem: string, k: string) =>
+    som(vem, (tx) => tx.query<{ i: Inbjudan | null }>('select public.inbjudan($1) as i', [k])).then((r) => r.rows[0].i)
+  const deltagare = () =>
+    db.query<{ id: string; namn: string; user_id: string | null; roll: string }>(
+      'select id, namn, user_id, roll from public.deltagare where tur_id = $1 order by sortering, namn',
+      [tur],
+    )
+
+  beforeAll(async () => {
+    tur = await skapaTur(A, 'Tur med platshållare')
+    kod = await kodFor(tur)
+    const d = await som(A, (tx) =>
+      tx.query<{ id: string; typ: string }>(
+        `insert into public.deltagare (tur_id, namn, typ, sortering) values ($1, 'Pichi', 'person', 1), ($1, 'Bamse', 'hund', 2) returning id, typ`,
+        [tur],
+      ),
+    )
+    pichi = d.rows.find((x) => x.typ === 'person')!.id
+    hund = d.rows.find((x) => x.typ === 'hund')!.id
+    // Något som redan är kopplat till Pichi: hon bär tältet, har packat det och har en egen maxvikt.
+    const p = await som(A, (tx) =>
+      tx.query<{ id: string }>(`insert into public.packrader (tur_id, namn, bars_av) values ($1, 'Tält', $2) returning id`, [tur, pichi]),
+    )
+    packrad = p.rows[0].id
+    await som(A, (tx) => tx.query('insert into public.packstatus (packrad_id, deltagare_id, packad) values ($1, $2, true)', [packrad, pichi]))
+    await som(A, (tx) => tx.query('update public.deltagare set max_barvikt_kg = 14.5 where id = $1', [pichi]))
+  })
+
+  it('visar turens namn och personerna utan konto för den som har länken, inte hundar eller de med konto', async () => {
+    const i = await inbjudan(E, kod)
+    expect(i).toEqual({ tur_id: tur, namn: 'Tur med platshållare', redan_med: false, personer: [{ id: pichi, namn: 'Pichi' }] })
+  })
+
+  it('visar ingenting utan rätt kod eller utan inloggning', async () => {
+    expect(await inbjudan(E, 'fel-kod')).toBeNull()
+    await forvantaFel(somAnon((tx) => tx.query('select public.inbjudan($1)', [kod])))
+  })
+
+  it('säger om man redan är med', async () => {
+    expect((await inbjudan(A, kod))?.redan_med).toBe(true)
+  })
+
+  it('går inte att ta över en hund, någon med konto eller en deltagare i en annan tur', async () => {
+    const annan = await skapaTur(B, 'Annan tur')
+    const annanPerson = await som(B, (tx) =>
+      tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn, typ) values ($1, 'Okänd', 'person') returning id`, [annan]),
+    )
+    const annas = (await deltagare()).rows.find((d) => d.user_id === A)!.id
+    for (const mal of [hund, annas, annanPerson.rows[0].id]) {
+      await forvantaFel(som(E, (tx) => tx.query('select public.ga_med($1, $2)', [kod, mal])))
+    }
+    expect((await deltagare()).rows.some((d) => d.user_id === E)).toBe(false)
+  })
+
+  it('går inte att ta över någon med fel kod', async () => {
+    const r = await som(E, (tx) => tx.query<{ t: string | null }>('select public.ga_med($1, $2) as t', ['fel-kod-igen', pichi]))
+    expect(r.rows[0].t).toBeNull()
+    expect((await deltagare()).rows.find((d) => d.id === pichi)!.user_id).toBeNull()
+  })
+
+  it('den som redan är med kan inte ta över en person, varken via ga_med eller direkt', async () => {
+    await som(A, (tx) => tx.query('select public.ga_med($1, $2)', [kod, pichi]))
+    expect((await deltagare()).rows.find((d) => d.id === pichi)!.user_id).toBeNull()
+    await forvantaFel(som(A, (tx) => tx.query(`update public.deltagare set user_id = '${A}' where id = $1`, [pichi])))
+  })
+
+  it('ingen kan koppla en person utan konto till någon annan än sig själv', async () => {
+    await forvantaFel(som(A, (tx) => tx.query(`update public.deltagare set user_id = '${F}' where id = $1`, [pichi])))
+    // Den som inte är med i turen når inte raden alls.
+    const utanfor = await som(F, (tx) => tx.query(`update public.deltagare set user_id = '${F}' where id = $1`, [pichi]))
+    expect(utanfor.affectedRows).toBe(0)
+    expect((await deltagare()).rows.find((d) => d.id === pichi)!.user_id).toBeNull()
+  })
+
+  it('den som går med tar över personen: ingen dubblett, profilnamnet visas och det som var kopplat följer med', async () => {
+    const fore = (await deltagare()).rows.length
+    const r = await som(E, (tx) => tx.query<{ t: string }>('select public.ga_med($1, $2) as t', [kod, pichi]))
+    expect(r.rows[0].t).toBe(tur)
+
+    const efter = (await deltagare()).rows
+    expect(efter).toHaveLength(fore)
+    expect(efter.find((d) => d.id === pichi)).toEqual({ id: pichi, namn: 'erik', user_id: E, roll: 'editor' })
+
+    const rad = await db.query<{ bars_av: string }>('select bars_av from public.packrader where id = $1', [packrad])
+    expect(rad.rows[0].bars_av).toBe(pichi)
+    const status = await db.query<{ packad: boolean }>('select packad from public.packstatus where packrad_id = $1 and deltagare_id = $2', [packrad, pichi])
+    expect(status.rows[0].packad).toBe(true)
+    const vikt = await db.query<{ max_barvikt_kg: string }>('select max_barvikt_kg from public.deltagare where id = $1', [pichi])
+    expect(Number(vikt.rows[0].max_barvikt_kg)).toBe(14.5)
+
+    // Erik är nu med: han ser turen och finns inte längre bland personerna utan konto.
+    const ser = await som(E, (tx) => tx.query('select id from public.turer where id = $1', [tur]))
+    expect(ser.rows).toHaveLength(1)
+    expect(await inbjudan(E, kod)).toMatchObject({ redan_med: true, personer: [] })
+  })
+
+  it('en tagen person går inte att ta över igen', async () => {
+    await forvantaFel(som(F, (tx) => tx.query('select public.ga_med($1, $2)', [kod, pichi])))
+  })
+
+  it('"Ingen av dem" ger en ny deltagare som förut', async () => {
+    const fore = (await deltagare()).rows.length
+    const r = await som(F, (tx) => tx.query<{ t: string }>('select public.ga_med($1) as t', [kod]))
+    expect(r.rows[0].t).toBe(tur)
+    const efter = (await deltagare()).rows
+    expect(efter).toHaveLength(fore + 1)
+    expect(efter.find((d) => d.user_id === F)).toMatchObject({ namn: 'frida', roll: 'editor' })
+  })
+
+  it('felaktiga koder i inbjudan räknas mot samma gräns som i ga_med', async () => {
+    const annan = await skapaTur(A, 'Gränsen')
+    const riktig = await kodFor(annan)
+    for (let i = 0; i < 10; i++) expect(await inbjudan(F, `gissning-${i}`)).toBeNull()
+    await forvantaFel(som(F, (tx) => tx.query('select public.inbjudan($1)', [riktig])))
+    await forvantaFel(som(F, (tx) => tx.query('select public.ga_med($1)', [riktig])))
   })
 })
