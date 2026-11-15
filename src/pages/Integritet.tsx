@@ -64,7 +64,8 @@ export function Integritet() {
       <Avsnitt rubrik="Var uppgifterna finns">
         <p>
           Uppgifterna lagras i en databas hos Supabase, i deras datacenter i Stockholm (eu-north-1). Supabase sköter också
-          inloggningen och skickar inloggningslänken till din mejl.
+          inloggningen och skickar mejlen när du skapar konto eller vill välja nytt lösenord. Ditt lösenord sparas aldrig i
+          klartext, så ingen kan läsa det.
         </p>
         <p>
           Själva webbplatsen levereras av Vercel. När du besöker sidan behandlar Vercel tekniska uppgifter som behövs för att visa

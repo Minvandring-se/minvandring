@@ -15,7 +15,7 @@ Två grundare utvecklar med Cursor och Claude Code. Långsiktig vision finns i `
 - Komponenter i shadcn-stil ligger i `src/components/ui/` (`Button`, `Input`, `Card`).
 - React Router (paketet `react-router`). PWA via `vite-plugin-pwa`.
 - Tester med Vitest, lint med oxlint.
-- Supabase: Auth (inloggning med mejllänk), Postgres, Row Level Security, Realtime, projekt i eu-north-1 (Stockholm)
+- Supabase: Auth (konto med mejl och lösenord, glömt lösenord via länk i mejlet), Postgres, Row Level Security, Realtime, projekt i eu-north-1 (Stockholm)
 - Hosting: Vercel, kopplat till GitHub-repot Minvandring-se/minvandring. Merge till main publiceras automatiskt.
 - Domän: www.minvandring.se är huvudadress, minvandring.se omdirigerar dit.
 - Detta är INTE ett Next.js-projekt. Föreslå inte byte av ramverk.

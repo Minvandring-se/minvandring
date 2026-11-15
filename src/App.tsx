@@ -3,12 +3,15 @@ import { Link, Navigate, Route, Routes, useLocation } from 'react-router'
 import { Layout } from '@/components/Layout'
 import { useSession } from '@/hooks/useSession'
 import { GaMed } from '@/pages/GaMed'
+import { GlomtLosenord } from '@/pages/GlomtLosenord'
 import { Integritet } from '@/pages/Integritet'
 import { LoggaIn } from '@/pages/LoggaIn'
+import { NyttLosenord } from '@/pages/NyttLosenord'
+import { SkapaKonto } from '@/pages/SkapaKonto'
 import { Start } from '@/pages/Start'
 
 // Sidorna för inloggade ligger i egna JS-filer och hämtas först när de behövs.
-// Startsidan, inloggningen och integritetssidan ligger kvar i huvudfilen.
+// Startsidan, sidorna för konto och inloggning samt integritetssidan ligger kvar i huvudfilen.
 const MinaTurer = lazy(() => import('@/pages/MinaTurer').then((m) => ({ default: m.MinaTurer })))
 const Profil = lazy(() => import('@/pages/Profil').then((m) => ({ default: m.Profil })))
 const TurSida = lazy(() => import('@/pages/Tur').then((m) => ({ default: m.TurSida })))
@@ -36,6 +39,9 @@ export default function App() {
       <Routes>
         <Route path="/" element={<Start />} />
         <Route path="/logga-in" element={<LoggaIn />} />
+        <Route path="/skapa-konto" element={<SkapaKonto />} />
+        <Route path="/glomt-losenord" element={<GlomtLosenord />} />
+        <Route path="/nytt-losenord" element={<NyttLosenord />} />
         <Route path="/integritet" element={<Integritet />} />
         <Route path="/ga-med/:kod" element={<GaMed />} />
         <Route path="/turer" element={<Inloggad><MinaTurer /></Inloggad>} />
