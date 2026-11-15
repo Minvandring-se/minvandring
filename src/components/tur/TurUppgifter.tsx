@@ -17,7 +17,7 @@ function Rad({ etikett, varde }: { etikett: string; varde: string }) {
   return (
     <div className="flex justify-between gap-4 border-b border-border py-2 last:border-0">
       <dt className="text-muted-foreground">{etikett}</dt>
-      <dd className="text-right font-medium">{varde || '–'}</dd>
+      <dd className={varde ? 'min-w-0 text-right font-medium break-words' : 'text-right text-muted-foreground'}>{varde || 'Inte ifyllt'}</dd>
     </div>
   )
 }
@@ -66,19 +66,18 @@ export function TurUppgifter({ tur, kanAndra, onSparad }: Props) {
   if (!redigerar) {
     return (
       <Card className="space-y-2">
-        <div className="flex items-center justify-between">
-          <h2 className="text-lg">Om turen</h2>
+        <div className="flex min-h-11 items-center justify-between">
+          <h2 className="text-xl">Turens uppgifter</h2>
           {kanAndra && (
             <Button
-              variant="ghost"
-              size="sm"
+              variant="outline"
               onClick={() => {
                 setForm(tur)
                 setRedigerar(true)
               }}
             >
               <Pencil className="size-4" aria-hidden />
-              Ändra
+              Ändra uppgifter
             </Button>
           )}
         </div>

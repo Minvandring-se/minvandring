@@ -69,7 +69,7 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
 
   return (
     <Card className="space-y-4">
-      <h2 className="text-lg">Vilka följer med</h2>
+      <h2 className="text-xl">Vilka följer med</h2>
 
       <ul className="divide-y divide-border">
         {deltagare.map((d) => {
@@ -130,10 +130,10 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
       {fel && <p className="text-sm text-destructive">{fel}</p>}
 
       {kanAndra(minRoll) && (
-        <form onSubmit={laggTill} className="flex flex-col gap-2 sm:flex-row">
+        <form onSubmit={laggTill} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
           <select
             aria-label="Typ"
-            className="h-11 rounded-md border border-border bg-card px-3"
+            className="col-span-2 h-11 rounded-md border border-border bg-card px-3"
             value={nyTyp}
             onChange={(e) => setNyTyp(e.target.value as 'person' | 'hund')}
           >

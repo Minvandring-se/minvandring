@@ -1,86 +1,186 @@
-import { Plus } from 'lucide-react'
-import { useEffect, useState, type FormEvent } from 'react'
-import { Link, useNavigate } from 'react-router'
+import { Plus, X } from 'lucide-react'
+import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
+import { useNavigate, useSearchParams } from 'react-router'
+import { useApp } from '@/components/app/appKontext'
+import { SidRubrik } from '@/components/app/SidRubrik'
+import { TomtLage } from '@/components/app/TomtLage'
+import { TurBild } from '@/components/app/TurBild'
+import { NastaTurKort, TurRadKort, type TurMedDeltagare } from '@/components/app/TurKort'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { useSession } from '@/hooks/useSession'
 import { supabase } from '@/lib/supabase'
-
-interface TurRad {
-  id: string
-  namn: string
-  destination: string | null
-  avresa: string | null
-}
+import { delaUppTurer, lage, lokaltDatum } from '@/lib/turlista'
+import { cn } from '@/lib/utils'
 
 export function MinaTurer() {
-  const navigate = useNavigate()
-  const [turer, setTurer] = useState<TurRad[] | null>(null)
-  const [namn, setNamn] = useState('')
-  const anvandarId = useSession()?.user.id
-  const [mittNamn, setMittNamn] = useState('')
+  const { namn: mittNamn } = useApp()
+  const [turer, setTurer] = useState<TurMedDeltagare[] | null>(null)
+  const [laddfel, setLaddfel] = useState(false)
+  const [sok, setSok] = useSearchParams()
+  const formularOppet = sok.get('ny') === '1'
+  const [flik, setFlik] = useState<'kommande' | 'tidigare'>('kommande')
 
   useEffect(() => {
     supabase
       ?.from('turer')
-      .select('id, namn, destination, avresa')
-      .order('skapad', { ascending: false })
-      .then(({ data }) => setTurer(data ?? []))
+      .select('id, namn, destination, avresa, hemkomst, dagar, skapad, deltagare(namn, typ, sortering)')
+      .order('sortering', { referencedTable: 'deltagare' })
+      .then(({ data, error }) => {
+        setLaddfel(!!error)
+        setTurer((data as TurMedDeltagare[] | null) ?? [])
+      })
   }, [])
 
-  useEffect(() => {
-    if (!supabase || !anvandarId) return
-    supabase
-      .from('profiler')
-      .select('namn')
-      .eq('id', anvandarId)
-      .maybeSingle()
-      .then(({ data }) => setMittNamn(data?.namn?.trim() ?? ''))
-  }, [anvandarId])
+  function visaFormular(oppet: boolean) {
+    setSok(oppet ? { ny: '1' } : {}, { replace: true })
+  }
+
+  const idag = lokaltDatum()
+  const { nasta, kommande, tidigare } = delaUppTurer(turer ?? [], idag)
+  const hej = mittNamn ? `Hej ${mittNamn}.` : 'Hej.'
+  const halsning = turer === null || laddfel
+    ? hej
+    : turer.length === 0
+    ? `${hej} Här samlar du vandringarna du planerar.`
+    : nasta && lage(nasta, idag) === 'pagar'
+      ? `${hej} Du är ute på tur just nu.`
+      : nasta
+        ? `${hej} Här är din nästa vandring.`
+        : `${hej} Dags att planera nästa vandring?`
+
+  const nyTurKnapp = !formularOppet && (
+    <Button onClick={() => visaFormular(true)}>
+      <Plus className="size-4" aria-hidden />
+      Ny tur
+    </Button>
+  )
+
+  const lista = flik === 'kommande' ? kommande : tidigare
+
+  return (
+    <div className="space-y-8">
+      <SidRubrik rubrik="Mina turer" text={halsning} knappar={turer?.length ? nyTurKnapp : null} />
+
+      {formularOppet && <NyTurFormular onStang={() => visaFormular(false)} />}
+
+      {turer === null ? (
+        <p role="status" className="text-muted-foreground">
+          Hämtar dina turer …
+        </p>
+      ) : laddfel ? (
+        <p className="text-destructive">Det gick inte att hämta dina turer. Ladda om sidan och försök igen.</p>
+      ) : turer.length === 0 ? (
+        !formularOppet && (
+          <TomtLage
+            bild={<TurBild turId="forsta-turen" sizes="(min-width: 1024px) 900px, 100vw" prioritet className="aspect-[16/9] w-full sm:aspect-[21/9] lg:aspect-[3/1]" />}
+            rubrik="Planera din första vandring"
+            text="Skapa en tur, bjud in de som ska med och samla datum, startpunkt och deltagare på ett ställe."
+            knapp={
+              <Button size="lg" onClick={() => visaFormular(true)}>
+                <Plus className="size-5" aria-hidden />
+                Ny tur
+              </Button>
+            }
+          />
+        )
+      ) : (
+        <>
+          {nasta && <NastaTurKort tur={nasta} pagar={lage(nasta, idag) === 'pagar'} />}
+
+          <section aria-labelledby="fler-turer" className="space-y-4">
+            <h2 id="fler-turer" className="text-2xl">
+              Fler turer
+            </h2>
+            <div role="tablist" aria-label="Fler turer" className="flex gap-2">
+              {(
+                [
+                  ['kommande', 'Kommande', kommande.length],
+                  ['tidigare', 'Tidigare', tidigare.length],
+                ] as const
+              ).map(([varde, text, antal]) => (
+                <button
+                  key={varde}
+                  type="button"
+                  role="tab"
+                  id={`flik-${varde}`}
+                  aria-selected={flik === varde}
+                  aria-controls="fler-turer-lista"
+                  onClick={() => setFlik(varde)}
+                  className={cn(
+                    'h-11 rounded-full border px-5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                    flik === varde ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted',
+                  )}
+                >
+                  {text} ({antal})
+                </button>
+              ))}
+            </div>
+            <div id="fler-turer-lista" role="tabpanel" aria-labelledby={`flik-${flik}`}>
+              {lista.length === 0 ? (
+                <p className="rounded-lg border border-dashed border-border px-5 py-6 text-muted-foreground">
+                  {flik === 'kommande' ? 'Inga fler kommande turer.' : 'Inga tidigare turer än.'}
+                </p>
+              ) : (
+                <ul className="space-y-3">
+                  {lista.map((t) => (
+                    <li key={t.id}>
+                      <TurRadKort tur={t} />
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </div>
+          </section>
+        </>
+      )}
+    </div>
+  )
+}
+
+/** Kort formulär för en ny tur: bara namnet. Resten fylls i inne i turen. */
+function NyTurFormular({ onStang }: { onStang: () => void }) {
+  const navigate = useNavigate()
+  const id = useId()
+  const falt = useRef<HTMLInputElement>(null)
+  const [namn, setNamn] = useState('')
+  const [skapar, setSkapar] = useState(false)
+  const [fel, setFel] = useState('')
+
+  useEffect(() => falt.current?.focus(), [])
 
   async function skapa(e: FormEvent) {
     e.preventDefault()
     if (!supabase || !namn.trim()) return
+    setSkapar(true)
+    setFel('')
     const { data, error } = await supabase.from('turer').insert({ namn: namn.trim() }).select('id').single()
-    if (!error && data) navigate(`/tur/${data.id}`)
+    setSkapar(false)
+    if (error || !data) {
+      setFel('Det gick inte att skapa turen. Försök igen.')
+      return
+    }
+    navigate(`/tur/${data.id}`)
   }
 
   return (
-    <div className="space-y-6">
-      <h1 className="text-3xl">Välkommen till MinVandring{mittNamn && `, ${mittNamn}`}</h1>
-      <h2 className="text-xl">Mina turer</h2>
-
-      <Card>
-        <form onSubmit={skapa} className="flex flex-col gap-3 sm:flex-row">
-          <Input placeholder="Ny tur, t.ex. Sarek 2027" value={namn} onChange={(e) => setNamn(e.target.value)} />
-          <Button type="submit" disabled={!namn.trim()}>
-            <Plus className="size-4" aria-hidden />
-            Skapa tur
-          </Button>
-        </form>
-      </Card>
-
-      {turer === null ? (
-        <p className="text-muted-foreground">Laddar …</p>
-      ) : turer.length === 0 ? (
-        <p className="text-muted-foreground">Du har inga turer än. Skapa din första ovanför.</p>
-      ) : (
-        <ul className="space-y-3">
-          {turer.map((t) => (
-            <li key={t.id}>
-              <Link to={`/tur/${t.id}`}>
-                <Card className="transition-colors hover:bg-muted">
-                  <p className="font-semibold">{t.namn}</p>
-                  <p className="text-sm text-muted-foreground">
-                    {[t.destination, t.avresa].filter(Boolean).join(' · ') || 'Inga detaljer än'}
-                  </p>
-                </Card>
-              </Link>
-            </li>
-          ))}
-        </ul>
-      )}
-    </div>
+    <form onSubmit={skapa} className="space-y-3 rounded-lg border border-border bg-card p-5 shadow-soft sm:p-6">
+      <div className="flex items-start justify-between gap-4">
+        <h2 className="text-xl">Ny tur</h2>
+        <Button type="button" variant="ghost" className="-mt-2 -mr-2 size-11 px-0" aria-label="Stäng" onClick={onStang}>
+          <X className="size-5" aria-hidden />
+        </Button>
+      </div>
+      <label htmlFor={id} className="block text-sm font-medium">
+        Vad heter turen?
+      </label>
+      <div className="flex flex-col gap-3 sm:flex-row">
+        <Input id={id} ref={falt} placeholder="T.ex. Sarek 2027" maxLength={80} value={namn} onChange={(e) => setNamn(e.target.value)} />
+        <Button type="submit" disabled={!namn.trim() || skapar} className="shrink-0">
+          {skapar ? 'Skapar …' : 'Skapa tur'}
+        </Button>
+      </div>
+      <p className="text-sm text-muted-foreground">Datum, startpunkt och deltagare lägger du till inne i turen.</p>
+      {fel && <p className="text-sm text-destructive">{fel}</p>}
+    </form>
   )
 }
