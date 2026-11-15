@@ -59,6 +59,14 @@ Tills dess fungerar inloggning med lösenord ändå i förhandsversionerna. Bara
 
 ## Mejlmallar i Supabase
 
-Under Authentication → Emails → Templates är bara Confirm sign up och Reset password översatta till svenska. Magic link, Change email address, Invite user och Reauthentication är kvar på engelska. Appen använder inte dem i dag, men de behöver översättas när en funktion som använder dem byggs, till exempel byte av mejladress.
+Under Authentication → Emails → Templates är Confirm sign up, Reset password och Invite user översatta till svenska.
+
+Kvar på engelska:
+- Magic link or OTP
+- Change email address
+- Reauthentication
+- Aviseringarna under Security
+
+Appen använder inte Magic link, Change email address eller Reauthentication i dag. De behöver översättas när en funktion som använder dem byggs, till exempel byte av mejladress. Aviseringarna under Security skickas bara om de är påslagna och bör översättas innan de slås på.
 
 Mallarna finns bara i Supabase-dashboarden, inte i repot. Ändras de ska båda grundarna veta om det.

@@ -43,15 +43,15 @@ function useStorlek() {
 
 /**
  * En streckad stig bakom startsidans sektioner, som en led genom sidan. Dekorativ.
- * Läggs först i en sektion med klasserna relative och isolate. Syns bara på breda skärmar,
- * där det finns marginaler. I mobilen är bakgrunden ren.
+ * Läggs först i en sektion med klasserna relative och isolate. Syns först från 1360 px.
+ * Vid 1280 px är marginalerna för smala och stigen hamnar bakom korten. I mobilen är bakgrunden ren.
  */
 export function Stigavsnitt({ del }: { del: Del }) {
   const [ref, { bredd, hojd }] = useStorlek()
   const skylt = skyltar[del]
 
   return (
-    <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden xl:block">
+    <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden min-[1360px]:block">
       {bredd > 0 && (
         <svg width={bredd} height={hojd} className="absolute inset-0 overflow-visible" focusable="false">
           <path
