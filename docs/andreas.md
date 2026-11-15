@@ -19,7 +19,7 @@ Supabase Security Advisor visar 22 varningar om att SECURITY DEFINER-funktionern
 
 - [x] Hämta PR:en med migreringen och läs SQL:en
 - [x] Kör `npx supabase db push --remote` (projektet behöver vara länkat: `npx supabase link --project-ref psvuzkkauiqhimnhtjep`)
-- [ ] Kör Security Advisor i Supabase igen. Förväntat: ungefär 5 varningar kvar (4 avsiktliga för ar_medlem, kan_andra, ar_agare och ga_med, och en om search_path på Supabases egen rls_auto_enable, som vi inte rör)
+- [x] Kör Security Advisor i Supabase igen. Förväntat: ungefär 5 varningar kvar (4 avsiktliga för ar_medlem, kan_andra, ar_agare och ga_med, och en om search_path på Supabases egen rls_auto_enable, som vi inte rör)
 - [ ] Prova att skapa en tur, gå med via inbjudningslänk och se sina turer
 - [x] Merga PR:en
 
@@ -75,8 +75,8 @@ Den här gången spelar ordningen mot appen ingen roll. Den gamla appen fungerar
 - [x] Kör `npx supabase db push --remote`
 - [ ] Prova med två konton: lägg till en person utan konto i en tur, öppna inbjudningslänken med det andra kontot och välj personen. Det ska bli en deltagare, inte två
 - [ ] Prova "Ingen av dem": då blir man en ny deltagare som förut
-- [ ] Kör Security Advisor igen. Förväntat: två nya avsiktliga varningar, för `inbjudan` och `ga_med`, som inloggade ska kunna anropa
+- [x] Kör Security Advisor igen. Förväntat: två nya avsiktliga varningar, för `inbjudan` och `ga_med`, som inloggade ska kunna anropa
 
 ## Anteckning från granskningen av migreringarna (Andreas Claude)
 
-Migreringarna kördes 2026-11-15. En sak att rätta i en ny migrering: en person utan konto kan få rollen owner av ägaren. Då kan den som har länken välja den personen i "Är du någon av de här?" och bli ägare av turen. Förslag: `ga_med` och `inbjudan` hoppar över deltagare med `roll = 'owner'`, med ett test i `supabase/rls.test.ts`.
+Migreringarna kördes 2026-11-15. Security Advisor efteråt: 0 fel, 7 varningar. Sex är de avsiktliga (ar_agare, ar_medlem, kan_andra, ga_med, inbjudan, ny_inbjudningskod) och en gäller att skyddet mot läckta lösenord är avstängt i Auth. En sak att rätta i en ny migrering: en person utan konto kan få rollen owner av ägaren. Då kan den som har länken välja den personen i "Är du någon av de här?" och bli ägare av turen. Förslag: `ga_med` och `inbjudan` hoppar över deltagare med `roll = 'owner'`, med ett test i `supabase/rls.test.ts`.
