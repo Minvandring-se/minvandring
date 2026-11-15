@@ -27,8 +27,8 @@ Supabase Security Advisor visar 22 varningar om att SECURITY DEFINER-funktionern
 
 Vi tog bort `https://*.vercel.app/**` från Redirect URLs i Supabase, eftersom den släppte igenom alla Vercel-sajter.
 
-- [ ] Öppna en förhandsversion (Preview) i Vercel och kolla adressen
-- [ ] Supabase → Authentication → URL Configuration → Redirect URLs: lägg till en smal variant, ungefär `https://minvandring-*-<ditt-team>.vercel.app/**`
+- [x] Öppna en förhandsversion (Preview) i Vercel och kolla adressen
+- [x] Supabase → Authentication → URL Configuration → Redirect URLs: lägg till en smal variant, ungefär `https://minvandring-*-<ditt-team>.vercel.app/**` (tillagd: `https://minvandring-*-minvandring.vercel.app/**`)
 - [ ] Valfritt: Settings → Deployment Protection i Vercel, så att Oscar kan öppna förhandsversionerna utan ditt konto
 
 ## 4. Säkerhet för konton
