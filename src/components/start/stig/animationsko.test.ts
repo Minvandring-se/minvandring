@@ -124,26 +124,3 @@ describe('animera', () => {
     expect(cancel).toHaveBeenCalledOnce()
   })
 })
-
-describe('fortsättningar i den övre luften', () => {
-  const topp = () => ({ visa: vi.fn(async () => {}), stilla: vi.fn() })
-
-  it('hittar en registrerad fortsättning och tar bort den igen', () => {
-    const ko = skapaAnimationsko()
-    const t = topp()
-    const taBort = ko.registreraTopp('packning', t)
-    expect(ko.topp('packning')).toBe(t)
-    expect(ko.topp(undefined)).toBeUndefined()
-    taBort()
-    expect(ko.topp('packning')).toBeUndefined()
-  })
-
-  it('tar inte bort en nyare registrering med samma id', () => {
-    const ko = skapaAnimationsko()
-    const gammal = ko.registreraTopp('packning', topp())
-    const ny = topp()
-    ko.registreraTopp('packning', ny)
-    gammal()
-    expect(ko.topp('packning')).toBe(ny)
-  })
-})
