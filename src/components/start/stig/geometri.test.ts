@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { beraknaStig, FIGUR, FIGURLUFT, kopplaStig, punktPaKurva, sidaX, slumptal, type Kubik, type Matt, type Sida, type Stigbit } from './geometri'
+import { beraknaStig, FIGUR, FIGURLUFT, kopplaStig, TASSAR, punktPaKurva, sidaX, slumptal, type Kubik, type Matt, type Sida, type Stigbit } from './geometri'
 
 /** Ett mellanrum: bredd och höjd, med paneler på 1152 px i mitten (eller nästan kant i kant). */
 const matt = (bredd = 1416, hojd = 112): Matt => {
@@ -118,75 +118,139 @@ describe('beraknaStig', () => {
 })
 
 describe('figurer', () => {
-  /** Helt i mellanrummet med minst 24 px fritt till panelen ovanför och nedanför. */
-  const fritt = (m: Matt, p: { x: number; y: number }, s: { bredd: number; hojd: number }) =>
-    p.x - s.bredd / 2 >= 0 && p.x + s.bredd / 2 <= m.bredd && p.y - s.hojd >= FIGURLUFT && p.y <= m.hojd - FIGURLUFT
   /** Mellanrummen som de är på sidan: 144 px i mobil och 160 px på dator. */
   const sidan = [mobil(366, 144), matt(768, 144), matt(1366 - 48, 160), matt(1920 - 48, 160)]
+  /** Bitarna som på startsidan. */
+  const startsidan: Partial<Stigbit>[] = [
+    { detaljer: [{ typ: 'eld', lage: 0.72 }] },
+    {
+      detaljer: [
+        { typ: 'talt', lage: 0.3 },
+        { typ: 'tassar', lage: 0.7 },
+      ],
+    },
+    { detaljer: [{ typ: 'ledkors', lage: 0.6 }] },
+    {},
+  ]
+  const ids = ['borja', 'packning', 'tanken', 'fragor']
 
-  it('står på leden med minst 24 px fritt över och under, aldrig mot en panel', () => {
+  type Ruta = { namn: string; vanster: number; hoger: number; topp: number; botten: number }
+  /** Alla figurer som rutor: x och y är marken, utom tassarna där punkten är mitten. */
+  const rutor = (stig: NonNullable<ReturnType<typeof beraknaStig>>): Ruta[] => {
+    const ruta = (namn: string, p: { x: number; y: number }, s: { bredd: number; hojd: number }) => ({
+      namn,
+      vanster: p.x - s.bredd / 2,
+      hoger: p.x + s.bredd / 2,
+      topp: p.y - s.hojd,
+      botten: p.y,
+    })
+    const f = stig.figurer
+    return [
+      ...(f.ledkryss ? [ruta('ledkryss', f.ledkryss, FIGUR.ledkryss)] : []),
+      ...(f.vagvisare ? [ruta('vägvisare', f.vagvisare, FIGUR.vagvisare)] : []),
+      ...f.detaljer.flatMap((d) =>
+        d.typ === 'tassar'
+          ? (d.tassar ?? []).map((t, i) => ruta(`tass ${i}`, { x: t.punkt.x, y: t.punkt.y + 5 }, FIGUR.tass))
+          : [ruta(d.typ, d.punkt, d.typ === 'ledkors' ? FIGUR.ledkryss : FIGUR.detalj)],
+      ),
+    ]
+  }
+
+  it('har minst 24 px fritt till panelerna över och under, och håller sig inom mellanrummet', () => {
     expect(FIGURLUFT).toBe(24)
     const fel: string[] = []
     for (const m of sidan) {
-      for (const id of ['borja', 'packning', 'tanken', 'fragor']) {
-        const stig = beraknaStig(m, bit('vanster', 'hoger', { forsta: true, sista: true, detalj: 'talt', detaljLage: 0.5 }), id)
-        if (!stig) continue
-        const langs = stig.kurvor.flatMap((k) => punkter(k, 60))
-        for (const [namn, p, storlek] of [
-          ['ledkryss', stig.figurer.ledkryss, FIGUR.ledkryss],
-          ['vägvisare', stig.figurer.vagvisare, FIGUR.vagvisare],
-          ['detalj', stig.figurer.detalj, FIGUR.detalj],
-        ] as const) {
-          if (!p) continue
-          if (!fritt(m, p, storlek)) fel.push(`${m.bredd} ${id} ${namn}: för nära en panel`)
-          if (Math.min(...langs.map((q) => Math.hypot(q.x - p.x, q.y - p.y))) > 1) fel.push(`${m.bredd} ${id} ${namn}: inte på leden`)
+      kopplaStig(startsidan.map((b, i) => ({ ...b, id: ids[i] }))).forEach((b, i) => {
+        const stig = beraknaStig(m, { ...b, forsta: true, sista: true }, ids[i])
+        for (const r of stig ? rutor(stig) : []) {
+          if (r.topp < FIGURLUFT || r.botten > m.hojd - FIGURLUFT || r.vanster < 0 || r.hoger > m.bredd) fel.push(`${m.bredd} ${ids[i]} ${r.namn}`)
         }
-      }
+      })
     }
     expect(fel).toEqual([])
   })
 
-  it('visar tältet, brasan, ledkrysset och vägvisaren i mobil och på dator', () => {
+  it('krockar aldrig med varandra, varken med ledkrysset, vägvisaren eller tältet', () => {
     const fel: string[] = []
     for (const m of sidan) {
-      for (const id of ['borja', 'packning', 'tanken', 'fragor']) {
-        for (const [start, slut] of [
-          ['vanster', 'hoger'],
-          ['hoger', 'vanster'],
-        ] as const) {
-          for (const [detalj, detaljLage] of [
-            ['talt', 0.3],
-            ['eld', 0.72],
-          ] as const) {
-            const f = beraknaStig(m, bit(start, slut, { forsta: true, sista: true, detalj, detaljLage }), id)?.figurer
-            for (const [namn, p] of Object.entries(f ?? {})) if (!p) fel.push(`${m.bredd} ${id} ${start} ${detalj}: ${namn} saknas`)
+      kopplaStig(startsidan.map((b, i) => ({ ...b, id: ids[i] }))).forEach((b, i) => {
+        const stig = beraknaStig(m, { ...b, forsta: true, sista: true }, ids[i])
+        const r = stig ? rutor(stig) : []
+        for (let a = 0; a < r.length; a++) {
+          for (let c = a + 1; c < r.length; c++) {
+            const [x, y] = [r[a], r[c]]
+            const isar = x.hoger <= y.vanster || x.vanster >= y.hoger || x.botten <= y.topp || x.topp >= y.botten
+            if (!isar) fel.push(`${m.bredd} ${ids[i]}: ${x.namn} och ${y.namn}`)
           }
         }
-      }
+      })
     }
     expect(fel).toEqual([])
   })
 
-  it('står på delen tvärs över, inte i de branta svängarna nära panelerna', () => {
+  it('visar alla figurerna på startsidan i mobil och på dator', () => {
+    const fel: string[] = []
+    for (const m of sidan) {
+      const bitar = kopplaStig(startsidan.map((b, i) => ({ ...b, id: ids[i] })))
+      bitar.forEach((b, i) => {
+        const f = beraknaStig(m, b, ids[i])?.figurer
+        const vantat = [...(b.detaljer ?? []).map((d) => d.typ)].sort()
+        const fick = (f?.detaljer ?? []).map((d) => d.typ).sort()
+        if (JSON.stringify(fick) !== JSON.stringify(vantat)) fel.push(`${m.bredd} ${ids[i]}: ${fick} i stället för ${vantat}`)
+        if (b.forsta && !f?.ledkryss) fel.push(`${m.bredd}: ledkryss saknas`)
+        if (b.sista && !f?.vagvisare) fel.push(`${m.bredd}: vägvisare saknas`)
+      })
+    }
+    expect(fel).toEqual([])
+  })
+
+  it('står på leden, på delen tvärs över och inte i de branta svängarna', () => {
     const m = matt(1366 - 48, 160)
-    const stig = beraknaStig(m, bit('vanster', 'hoger', { forsta: true, sista: true, detalj: 'eld', detaljLage: 0.5 }), 'borja')
+    const stig = beraknaStig(m, bit('vanster', 'hoger', { forsta: true, sista: true, detaljer: [{ typ: 'eld', lage: 0.5 }, { typ: 'ledkors', lage: 0.75 }] }), 'borja')
     if (!stig) throw new Error('Saknad geometri')
-    for (const p of Object.values(stig.figurer)) {
+    const langs = stig.kurvor.flatMap((k) => punkter(k, 60))
+    const punkterna = [stig.figurer.ledkryss, stig.figurer.vagvisare, ...stig.figurer.detaljer.map((d) => d.punkt)]
+    for (const p of punkterna) {
       if (!p) throw new Error('Saknad figur')
-      // Mellan bitens ändar och en bit in från dem, där leden går tvärs över.
+      expect(Math.min(...langs.map((q) => Math.hypot(q.x - p.x, q.y - p.y)))).toBeLessThan(1)
       expect(p.x).toBeGreaterThan(stig.start.x + 30)
       expect(p.x).toBeLessThan(stig.slut.x - 30)
     }
   })
 
+  it('lägger 4–6 tassavtryck i följd längs leden, omväxlande på var sida och i färdriktningen', () => {
+    for (const m of sidan) {
+      for (const [start, slut] of [
+        ['hoger', 'vanster'],
+        ['vanster', 'hoger'],
+      ] as const) {
+        const stig = beraknaStig(m, bit(start, slut, { detaljer: [{ typ: 'tassar', lage: 0.7 }] }), 'packning')
+        const tassar = stig?.figurer.detaljer.find((d) => d.typ === 'tassar')?.tassar ?? []
+        expect(TASSAR).toBeGreaterThanOrEqual(4)
+        expect(TASSAR).toBeLessThanOrEqual(6)
+        expect(tassar).toHaveLength(TASSAR)
+        // Längre och längre fram längs leden, i bitens riktning.
+        expect(tassar.every((t, i) => i === 0 || t.andel > tassar[i - 1].andel)).toBe(true)
+        const riktning = slut === 'vanster' ? -1 : 1
+        expect(Math.sign(tassar[TASSAR - 1].punkt.x - tassar[0].punkt.x)).toBe(riktning)
+        // Tårna pekar i färdriktningen: vinkeln är ungefär 0° åt höger eller 180° åt vänster.
+        for (const t of tassar) expect(Math.cos((t.vinkel * Math.PI) / 180) * riktning).toBeGreaterThan(0.5)
+      }
+    }
+  })
+
   it('utelämnar figurer som inte får plats', () => {
-    const stig = beraknaStig(matt(1416, 44), bit('vanster', 'hoger', { forsta: true, sista: true, detalj: 'talt' }), 'borja')
-    expect(stig?.figurer).toEqual({ ledkryss: null, vagvisare: null, detalj: null })
+    const stig = beraknaStig(
+      matt(1416, 44),
+      bit('vanster', 'hoger', { forsta: true, sista: true, detaljer: [{ typ: 'talt', lage: 0.5 }, { typ: 'tassar', lage: 0.7 }, { typ: 'ledkors', lage: 0.4 }] }),
+      'borja',
+    )
+    expect(stig?.figurer).toEqual({ ledkryss: null, vagvisare: null, detaljer: [] })
   })
 
   it('visar bara figurer som hör till biten', () => {
     const stig = beraknaStig(matt(), bit('vanster', 'hoger'), 'tanken')
-    expect(stig?.figurer).toEqual({ ledkryss: null, vagvisare: null, detalj: null })
+    expect(stig?.figurer).toEqual({ ledkryss: null, vagvisare: null, detaljer: [] })
   })
 })
 
