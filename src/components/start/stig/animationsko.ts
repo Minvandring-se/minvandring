@@ -1,10 +1,3 @@
-/** Fortsättningen av leden i en sektions övre luft. Ritas fram av scenen för biten ovanför. */
-export interface Topp {
-  langd: number
-  rita: (ramar: Keyframe[], varaktighet: number, signal: AbortSignal) => Promise<void>
-  stilla: () => void
-}
-
 interface Uppgift {
   controller: AbortController
   kor: (signal: AbortSignal) => Promise<void>
@@ -14,7 +7,6 @@ interface Uppgift {
 export function skapaAnimationsko(onError: (fel: unknown) => void = console.error) {
   const vantande: Uppgift[] = []
   const spelade = new Set<string>()
-  const toppar = new Map<string, Topp>()
   let aktiv: Uppgift | null = null
 
   function nasta() {
@@ -37,14 +29,6 @@ export function skapaAnimationsko(onError: (fel: unknown) => void = console.erro
 
   return {
     harSpelat: (id: string) => spelade.has(id),
-    /** Registrerar en sektions övre fortsättning. Returnerar en funktion som tar bort den igen. */
-    registreraTopp(id: string, topp: Topp) {
-      toppar.set(id, topp)
-      return () => {
-        if (toppar.get(id) === topp) toppar.delete(id)
-      }
-    },
-    topp: (id: string | undefined) => (id ? toppar.get(id) : undefined),
     markeraSpelad: (id: string) => {
       spelade.add(id)
     },

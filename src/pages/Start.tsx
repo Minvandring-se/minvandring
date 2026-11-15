@@ -10,7 +10,7 @@ import { Bildspel } from '@/components/start/Bildspel'
 import { Levande } from '@/components/start/Levande'
 import { PacklistaSmakprov } from '@/components/start/PacklistaSmakprov'
 import { kopplaStig } from '@/components/start/stig/geometri'
-import { Stigavsnitt } from '@/components/start/stig/Stigavsnitt'
+import { Mellanrum, Stigavsnitt } from '@/components/start/stig/Stigavsnitt'
 import { StigProvider } from '@/components/start/stig/StigProvider'
 import { useSession } from '@/hooks/useSession'
 import { Kontaktlank } from '@/components/Kontaktlank'
@@ -117,15 +117,21 @@ const kortKlass =
   'rounded-lg border border-border bg-card shadow-soft transition-[translate,box-shadow] duration-300 ease-out hover:shadow-[0_2px_4px_rgb(31_42_36/0.06),0_14px_32px_rgb(31_42_36/0.12)] motion-safe:hover:-translate-y-1'
 
 /**
- * Leden mellan sektionerna, i ordning. Varje bit ritas i sektionens nedre padding och börjar
- * där förra slutade. Brasan ligger under sektionen med kortet Ordna maten, på samma sida som kortet.
+ * Leden i luften mellan panelerna, i ordning. Varje bit går från en panel till nästa och börjar på den
+ * sida där förra slutade. Brasan står i mellanrummet efter panelen med kortet Ordna maten, tältet efter
+ * packningen och vägvisaren före den gröna avslutningen.
  */
 const [stigBorja, stigPackning, stigTanken, stigFragor] = kopplaStig([
-  { id: 'borja', svang: 10, detalj: 'eld', detaljLage: 0.72 },
-  { id: 'packning', svang: 12, detalj: 'talt', detaljLage: 0.3 },
-  { id: 'tanken', svang: 9 },
-  { id: 'fragor', svang: 10 },
+  { id: 'borja', detalj: 'eld', detaljLage: 0.72 },
+  { id: 'packning', detalj: 'talt', detaljLage: 0.3 },
+  { id: 'tanken' },
+  { id: 'fragor' },
 ] as const)
+
+/** Upplyft panel för sektionerna mellan hero och avslutningen. Samma innehållsbredd som förut. */
+const panel = 'mx-auto max-w-6xl rounded-lg bg-card shadow-soft'
+/** Luft i panelerna. */
+const panelLuft = 'px-4 py-12 sm:px-6 sm:py-16 lg:py-20'
 
 /** Kort streck i hjortronorange under rubrikerna. Dekorativt. I en space-y-behållare räknas dess avstånd in. */
 function Rubrikstreck({ className = 'mt-4' }: { className?: string }) {
@@ -188,28 +194,29 @@ export function Start() {
           </div>
         </section>
 
-        <section id="sa-fungerar-det" aria-labelledby="floden-rubrik" className="scroll-mt-4 border-b border-border">
-          <h2 id="floden-rubrik" className="sr-only">
-            Så fungerar det
-          </h2>
-          <ol className="mx-auto grid max-w-6xl divide-y divide-border px-4 sm:px-6 md:grid-cols-3 md:divide-x md:divide-y-0">
-            {floden.map(({ nr, rubrik, text }) => (
-              <li key={nr} className="flex items-baseline gap-4 py-7 md:block md:px-8 md:py-12 md:first:pl-0 md:last:pr-0">
-                <span aria-hidden className="w-12 shrink-0 font-heading text-4xl font-semibold text-accent-strong tabular-nums md:block md:text-5xl">
-                  {nr}
-                </span>
-                <div className="md:mt-3">
-                  <h3 className="text-lg">{rubrik}</h3>
-                  <p className="text-muted-foreground">{text}</p>
-                </div>
-              </li>
-            ))}
-          </ol>
-        </section>
+        {/* Panelerna mellan hero och avslutningen, med sidans bakgrund och leden i luften mellan dem. */}
+        <div className="px-3 sm:px-6">
+          <Mellanrum />
+          <section id="sa-fungerar-det" aria-labelledby="floden-rubrik" className={`${panel} scroll-mt-4 px-4 sm:px-6`}>
+            <h2 id="floden-rubrik" className="sr-only">
+              Så fungerar det
+            </h2>
+            <ol className="grid divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
+              {floden.map(({ nr, rubrik, text }) => (
+                <li key={nr} className="flex items-baseline gap-4 py-7 md:block md:px-8 md:py-12 md:first:pl-0 md:last:pr-0">
+                  <span aria-hidden className="w-12 shrink-0 font-heading text-4xl font-semibold text-accent-strong tabular-nums md:block md:text-5xl">
+                    {nr}
+                  </span>
+                  <div className="md:mt-3">
+                    <h3 className="text-lg">{rubrik}</h3>
+                    <p className="text-muted-foreground">{text}</p>
+                  </div>
+                </li>
+              ))}
+            </ol>
+          </section>
 
-        <section aria-labelledby="sa-fungerar-rubrik" className="relative isolate py-20 lg:py-28">
-          <Stigavsnitt id={stigBorja.id} bit={stigBorja} />
-          <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+          <section aria-labelledby="sa-fungerar-rubrik" className={`${panel} ${panelLuft}`}>
             <h2 id="sa-fungerar-rubrik" className="text-3xl font-bold sm:text-4xl">
               Börja med din nästa tur
             </h2>
@@ -241,41 +248,36 @@ export function Start() {
                 </p>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+          <Stigavsnitt id={stigBorja.id} bit={stigBorja} />
 
-        <section aria-labelledby="smakprov-rubrik" className="relative isolate bg-muted/60 py-20 lg:py-28">
-          <Stigavsnitt id={stigPackning.id} bit={stigPackning} />
-          <div
-            data-stiginnehall
-            className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-2 md:gap-16"
-          >
-            <div className="space-y-6">
-              <div className="space-y-2">
-                <p className="text-sm font-semibold tracking-widest text-primary uppercase">Packning med koll</p>
-                <h2 id="smakprov-rubrik" className="text-3xl font-bold sm:text-4xl">
-                  Vem tar tältet?
-                </h2>
-                <Rubrikstreck className="mt-2" />
+          <section aria-labelledby="smakprov-rubrik" className={`${panel} ${panelLuft}`}>
+            <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16">
+              <div className="space-y-6">
+                <div className="space-y-2">
+                  <p className="text-sm font-semibold tracking-widest text-primary uppercase">Packning med koll</p>
+                  <h2 id="smakprov-rubrik" className="text-3xl font-bold sm:text-4xl">
+                    Vem tar tältet?
+                  </h2>
+                  <Rubrikstreck className="mt-2" />
+                </div>
+                <p className="text-lg text-muted-foreground">
+                  Fördela utrustningen och se vad var och en bär. Alla har samma lista inför avfärd.
+                </p>
+                <Link
+                  to="/skapa-konto"
+                  className={`inline-flex h-12 items-center gap-2 rounded-md bg-primary px-5 font-semibold text-primary-foreground transition-colors hover:bg-primary-hover ${fokus}`}
+                >
+                  Gör er packlista
+                  <ArrowRight className="size-4" aria-hidden />
+                </Link>
               </div>
-              <p className="text-lg text-muted-foreground">
-                Fördela utrustningen och se vad var och en bär. Alla har samma lista inför avfärd.
-              </p>
-              <Link
-                to="/skapa-konto"
-                className={`inline-flex h-12 items-center gap-2 rounded-md bg-primary px-5 font-semibold text-primary-foreground transition-colors hover:bg-primary-hover ${fokus}`}
-              >
-                Gör er packlista
-                <ArrowRight className="size-4" aria-hidden />
-              </Link>
+              <PacklistaSmakprov />
             </div>
-            <PacklistaSmakprov />
-          </div>
-        </section>
+          </section>
+          <Stigavsnitt id={stigPackning.id} bit={stigPackning} />
 
-        <section aria-labelledby="tanken-rubrik" className="relative isolate py-20 lg:py-28">
-          <Stigavsnitt id={stigTanken.id} bit={stigTanken} />
-          <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
+          <section aria-labelledby="tanken-rubrik" className={`${panel} ${panelLuft}`}>
             <div className="grid items-center gap-10 overflow-hidden rounded-lg bg-sand/50 p-6 sm:p-10 md:grid-cols-2 md:gap-16 lg:p-12">
               <TankenIllustration className="mx-auto block aspect-[8/5] w-full max-w-md" />
               <div className="space-y-5">
@@ -295,14 +297,11 @@ export function Start() {
                 </p>
               </div>
             </div>
-          </div>
-        </section>
+          </section>
+          <Stigavsnitt id={stigTanken.id} bit={stigTanken} />
 
-        <section aria-labelledby="vanliga-fragor-rubrik" className="relative isolate bg-muted/60 py-20 lg:py-28">
-          <Stigavsnitt id={stigFragor.id} bit={stigFragor} />
-          {/* Samma bredd som de andra sektionerna så att leden hamnar rätt. Själva listan är smalare. */}
-          <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl">
-            <div className="mx-auto max-w-3xl px-4 sm:px-6">
+          <section aria-labelledby="vanliga-fragor-rubrik" className={`${panel} ${panelLuft}`}>
+            <div className="mx-auto max-w-3xl sm:px-6">
               <h2 id="vanliga-fragor-rubrik" className="text-3xl font-bold sm:text-4xl">
                 Vanliga frågor
               </h2>
@@ -324,8 +323,10 @@ export function Start() {
                 MinVandring är en beta. Lämna gärna <Kontaktlank className={textlank}>synpunkter</Kontaktlank>.
               </p>
             </div>
-          </div>
-        </section>
+          </section>
+          <Stigavsnitt id={stigFragor.id} bit={stigFragor} />
+
+        </div>
 
         <section aria-labelledby="cta-rubrik" className="bg-primary text-primary-foreground">
           <div className="mx-auto flex max-w-6xl flex-col items-center px-4 py-20 text-center sm:px-6 lg:py-28">
