@@ -12,11 +12,11 @@ const etiketter = [
 const LAPP = { x: 208, bredd: 62, hojd: 15 }
 
 /**
- * En förrådshylla där en sovsäck, ett kök med gasolflaska och en vikt tröja läggs in en i taget,
- * mitt på var sin hylla. Dekorativ. Varje pryl faller ner och får en etikett med kategori och vikt.
+ * En förrådshylla där en sovsäck, ett kök med gasolflaska och kläder (en tröja och en mössa) läggs in
+ * en i taget, mitt på var sin hylla. Dekorativ. Varje pryl faller ner och får en etikett med kategori och vikt.
  * Klasserna mv-* animerar den en gång på startsidan (se index.css). Med "minska rörelse" syns slutbilden.
  *
- * Tider (s): sovsäcken landar 0,9, köket 2,5 och tröjan 4,1. Etiketterna kommer strax efter.
+ * Tider (s): sovsäcken landar 0,9, köket 2,5, tröjan 4,1 och mössan 4,4. Etiketterna kommer strax efter.
  */
 export function ForradIllustration({ className }: { className?: string }) {
   return (
@@ -52,14 +52,19 @@ export function ForradIllustration({ className }: { className?: string }) {
         <path d="M123 109 H148" className="fill-none stroke-foreground/40" strokeWidth="1.5" />
       </g>
 
-      {/* En ihopvikt tröja mitt på nedersta hyllan: halsringning, ärmarna vikta snett in över bålen och resår nertill */}
+      {/* Kläder på nedersta hyllan: en tröja med ärmar, halsringning och muddar, och en mössa med tofs. Mitt på hyllan tillsammans. */}
       <g className="mv-falla stroke-foreground" style={tid('3.6s')} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
-        <path d="M80 168 V151 Q80 146 85 146 H151 Q156 146 156 151 V168 Z" className="fill-accent" />
-        <path d="M84 150 L106 163 M152 150 L130 163" className="fill-none stroke-foreground/45" strokeWidth="2" />
-        <path d="M82 163.5 H154" className="fill-none stroke-foreground/45" strokeWidth="2" />
-        <path d="M90 164 V167 M100 164 V167 M110 164 V167 M126 164 V167 M136 164 V167 M146 164 V167" className="fill-none stroke-foreground/30" strokeWidth="1.4" />
-        <ellipse cx="118" cy="148.5" rx="12" ry="4.5" className="fill-sand" strokeWidth="2" />
-        <path d="M108.5 149.5 Q118 153 127.5 149.5" className="fill-none stroke-foreground/40" strokeWidth="1.4" />
+        <path d="M95 133 Q103 140 111 133 L123 136 L137 152 L129 158 L121 150 V168 H85 V150 L77 158 L69 152 L83 136 Z" className="fill-accent" />
+        <path d="M95 133 Q103 141 111 133" className="fill-none" strokeWidth="2" />
+        <path d="M95 133 Q103 138.5 111 133" className="fill-sand" strokeWidth="1.6" />
+        <path d="M86 164 H120 M71.5 155 L74.5 152.5 M134.5 155 L131.5 152.5" className="fill-none stroke-foreground/45" strokeWidth="2" />
+        <path d="M103 141 V160" className="fill-none stroke-foreground/25" strokeWidth="1.6" />
+      </g>
+      <g className="mv-falla stroke-foreground" style={tid('3.9s')} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round">
+        <path d="M144 168 V160 Q144 147 156 147 Q168 147 168 160 V168 Z" className="fill-illustration" />
+        <rect x="142.5" y="161" width="27" height="7" rx="2" className="fill-sand" strokeWidth="2" />
+        <path d="M150 150 V160 M156 148 V160 M162 150 V160" className="fill-none stroke-foreground/30" strokeWidth="1.4" />
+        <circle cx="156" cy="144" r="4" className="fill-sand" strokeWidth="2" />
       </g>
 
       {/* Etiketterna i en kolumn till höger: kategori och vikt, likadana för alla tre */}
