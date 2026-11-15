@@ -300,14 +300,15 @@ export function Start() {
                 </h2>
                 <Rubrikstreck className="mt-0" />
                 <p className="text-lg">
-                  Vi är Andreas och Oscar. På vår senaste vandring i de jämtländska fjällen glömde vi gasen i bilen. Vi trodde båda att den
-                  andre hade tagit den. Som tur var hade vi också med T-sprit.
+                  Vi är Andreas och Oscar, två vandrare från olika delar av Sverige. Förra gången vi gick i de jämtländska fjällen hade vi
+                  planerat i veckor. Listor, chattar, kalkylark. Ändå satt vi där första kvällen med kastrullen framme och insåg att gasen låg
+                  kvar i bilen. Vi hade båda trott att den andre tog den.
                 </p>
+                <p className="text-lg">Som tur var hade vi T-sprit med oss. Men det hade lika gärna kunnat sluta med att vi fick vända.</p>
                 <p className="text-lg">
-                  Våra planer låg tidigare utspridda i chattar, Word, Excel och Google Docs. Det gick att hålla reda på vem som tog vad, men
-                  det tog mycket tid och energi, och gasen försvann ändå mellan stolarna. Därför bygger vi MinVandring: ett ställe där hela
-                  gänget ser samma plan, packlista och mat utan allt det jobbet. Så att ni kan lägga mindre tid på planerandet och mer på det
-                  ni egentligen ska göra, att vara ute.
+                  Felet var inte att vi planerade för lite. Planen låg bara på för många ställen: i chattar, Word, Excel och Google Docs.
+                  Därför bygger vi MinVandring, ett ställe där hela gänget ser samma plan, samma packlista och samma mat. Mindre tid åt att
+                  hålla ihop planeringen, mer tid ute på fjället.
                 </p>
               </div>
             </div>
