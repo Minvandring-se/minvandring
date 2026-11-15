@@ -57,16 +57,27 @@ Att göra (den som har Vercel-kontot): öppna en förhandsversion (Preview) unde
 
 Tills dess fungerar inloggning med lösenord ändå i förhandsversionerna. Bara länkarna i mejlen (bekräfta konto, nytt lösenord) leder till www.minvandring.se i stället.
 
-## Mejlmallar i Supabase
+## Mejlmallar i Supabase som inte är översatta
 
-Under Authentication → Emails → Templates är Confirm sign up, Reset password och Invite user översatta till svenska.
+Mejlen skickas via Resend (SMTP) från noreply@minvandring.se. Mallarna finns under Authentication → Emails → Templates.
 
-Kvar på engelska:
-- Magic link or OTP
-- Change email address
-- Reauthentication
-- Aviseringarna under Security
+Översatta till svenska: Confirm sign up, Reset password och Invite user.
 
-Appen använder inte Magic link, Change email address eller Reauthentication i dag. De behöver översättas när en funktion som använder dem byggs, till exempel byte av mejladress. Aviseringarna under Security skickas bara om de är påslagna och bör översättas innan de slås på.
+Fortfarande på engelska, eftersom appen inte använder dem än:
+- Magic link or OTP (inloggning med länk eller kod, togs bort i PR #19)
+- Change email address (används när man kan byta mejladress i appen)
+- Reauthentication (används om "Secure password change" slås på)
+- Aviseringarna under Security (Password changed, Email address changed med flera), som är avstängda
 
-Mallarna finns bara i Supabase-dashboarden, inte i repot. Ändras de ska båda grundarna veta om det.
+Den som bygger en funktion som skickar något av de här mejlen översätter mallen samtidigt.
+
+## Ta bort gruppbilden från startsidan
+
+Bilden med flera personer som vandrar (`1-grupp`) blir för gul och beskärs konstigt på vissa telefoner. Den ska bort ur bildspelet.
+
+Den används på tre ställen:
+- Första bilden i bildspelet i `src/components/start/Bildspel.tsx`. Låt `5-norrsken` bli första bilden i stället.
+- Delningsbilden `public/og-bild.jpg` görs av den via `design/og/og-bild.cjs`. Byt motiv i skriptet och gör om bilden.
+- `design/hero/mobilbilder.cjs`.
+
+Radera också `public/hero/1-grupp-*.webp` och kolla `index.html` efter förladdning av bilden. `hero-original/1-grupp.jpg` kan ligga kvar.
