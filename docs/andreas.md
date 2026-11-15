@@ -1,0 +1,37 @@
+# Att göra för Andreas
+
+Hej Andreas! Det här behöver göras från ditt håll, eftersom det gäller Vercel och migreringar, som körs från din dator. Be din Claude Code läsa filen och hjälpa dig. Följ CLAUDE.md. Det som kräver dina inloggningar gör du själv.
+
+Bocka av punkterna här när de är klara och committa filen.
+
+## 1. Rätta Supabase-adressen i Vercel (brådskande)
+
+Det går inte att skapa konto på www.minvandring.se just nu. `VITE_SUPABASE_URL` i Vercel slutar med `/rest/v1`, så anropen till inloggningen går till en adress som inte finns (404 i Supabase API Gateway-loggar).
+
+- [ ] Vercel → projektet → Settings → Environment Variables → `VITE_SUPABASE_URL`
+- [ ] Ändra värdet till exakt `https://psvuzkkauiqhimnhtjep.supabase.co` (utan `/rest/v1` och utan snedstreck på slutet), för Production och Preview
+- [ ] Deployments → senaste → Redeploy (adressen byggs in vid publicering)
+- [ ] Kontrollera att det går att skapa konto på www.minvandring.se/skapa-konto och att bekräftelsemejlet kommer
+
+## 2. Kör migreringen som stänger databasfunktionerna
+
+Supabase Security Advisor visar 22 varningar om att SECURITY DEFINER-funktionerna kan anropas via API:t. Oscar har en PR med en migrering som stänger det. Bara en av oss kör migreringar åt gången, så meddela Oscar när du kör.
+
+- [ ] Hämta PR:en med migreringen och läs SQL:en
+- [ ] Kör `npx supabase db push --remote` (projektet behöver vara länkat: `npx supabase link --project-ref psvuzkkauiqhimnhtjep`)
+- [ ] Kör Security Advisor i Supabase igen. Förväntat: ungefär 5 varningar kvar (4 avsiktliga för ar_medlem, kan_andra, ar_agare och ga_med, och en om search_path på Supabases egen rls_auto_enable, som vi inte rör)
+- [ ] Prova att skapa en tur, gå med via inbjudningslänk och se sina turer
+- [ ] Merga PR:en
+
+## 3. Vercels förhandsversioner i Supabase
+
+Vi tog bort `https://*.vercel.app/**` från Redirect URLs i Supabase, eftersom den släppte igenom alla Vercel-sajter.
+
+- [ ] Öppna en förhandsversion (Preview) i Vercel och kolla adressen
+- [ ] Supabase → Authentication → URL Configuration → Redirect URLs: lägg till en smal variant, ungefär `https://minvandring-*-<ditt-team>.vercel.app/**`
+- [ ] Valfritt: Settings → Deployment Protection i Vercel, så att Oscar kan öppna förhandsversionerna utan ditt konto
+
+## 4. Säkerhet för konton
+
+- [ ] Tvåstegsverifiering på GitHub, Vercel och Supabase (Oscar gör samma sak på sina konton, Resend, one.com och Gmail)
+- [ ] Kontrollera att Vercel har ett personuppgiftsbiträdesavtal (DPA) och skriv upp det i vårt delade dokument
