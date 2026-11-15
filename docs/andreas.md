@@ -29,12 +29,15 @@ Vi tog bort `https://*.vercel.app/**` från Redirect URLs i Supabase, eftersom d
 
 - [x] Öppna en förhandsversion (Preview) i Vercel och kolla adressen
 - [x] Supabase → Authentication → URL Configuration → Redirect URLs: lägg till en smal variant, ungefär `https://minvandring-*-<ditt-team>.vercel.app/**` (tillagd: `https://minvandring-*-minvandring.vercel.app/**`)
-- [ ] Valfritt: Settings → Deployment Protection i Vercel, så att Oscar kan öppna förhandsversionerna utan ditt konto
+- [x] Valfritt: Settings → Deployment Protection i Vercel, så att Oscar kan öppna förhandsversionerna utan ditt konto
+  Beslut: skyddet (Vercel Authentication) får vara kvar. En förhandsversion delas med knappen Share på dess sida i Vercel. Lösenordsskydd kräver Pro och används inte.
 
 ## 4. Säkerhet för konton
 
 - [x] Tvåstegsverifiering på GitHub, Vercel och Supabase (Oscar gör samma sak på sina konton, Resend, one.com och Gmail)
-- [ ] Kontrollera att Vercel har ett personuppgiftsbiträdesavtal (DPA) och skriv upp det i vårt delade dokument
+- [x] Kontrollera att Vercel har ett personuppgiftsbiträdesavtal (DPA) och skriv upp det i vårt delade dokument
+  Resultat (kontrollerat 2026-11-15): Vercels DPA (vercel.com/legal/dpa, senast uppdaterad 17 mars 2026) gäller bara kunder på Pro och Enterprise. Vi är på Hobby, så vi har inget DPA med Vercel. Hobby får dessutom bara användas för personligt eller icke-kommersiellt bruk, och på Hobby får Vercel använda innehållet för att träna AI om man inte stänger av det i inställningarna.
+  Vad det betyder för oss: Vercel levererar bara de färdiga sidorna. Konton och turer går direkt mellan webbläsaren och Supabase, men Vercel ser ändå besökarnas IP-adresser i sina loggar. Förslag: stäng av AI-träningen i Vercels inställningar nu, kolla Supabases DPA, och gå över till Pro (20 dollar i månaden) innan appen öppnas för fler än en sluten beta. Skriv upp beslutet i det delade dokumentet.
 
 ## 5. Kör migreringen för säkrare inbjudningar
 
