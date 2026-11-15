@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
+  antalFranFalt,
   bildForTur,
+  dagarVarde,
   datumrad,
   flerTurer,
   dagarText,
@@ -17,7 +19,7 @@ import {
 
 const IDAG = '2027-08-14'
 
-function tur(id: string, avresa: string | null, hemkomst: string | null = null, dagar = 1, skapad = '2027-01-01T00:00:00Z'): TurIListan {
+function tur(id: string, avresa: string | null, hemkomst: string | null = null, dagar: number | null = 1, skapad = '2027-01-01T00:00:00Z'): TurIListan {
   return { id, namn: id, avresa, hemkomst, dagar, skapad }
 }
 
@@ -120,8 +122,16 @@ describe('datumrad', () => {
     expect(datumrad({ avresa: '2027-08-12', hemkomst: '2027-08-16', dagar: 5 })).toBe('12–16 augusti 2027 · 5 dagar')
   })
 
-  it('visar inte standardvärdet för dagar på en tur utan datum', () => {
-    expect(datumrad({ avresa: null, hemkomst: null, dagar: 3 })).toBe('Inga datum än')
+  it('visar bara "Inga datum än" på en ny tur, där dagarna inte är angivna', () => {
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: null })).toBe('Inga datum än')
+  })
+
+  it('visar dagarna när någon har angett dem, även utan datum', () => {
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: 4 })).toBe('Inga datum än · 4 dagar')
+  })
+
+  it('visar bara avresan när varken hemkomst eller dagar är angivna', () => {
+    expect(datumrad({ avresa: '2027-08-12', hemkomst: null, dagar: null })).toBe('Från 12 augusti 2027')
   })
 })
 
@@ -137,5 +147,24 @@ describe('flerTurer', () => {
 
   it('väljer Tidigare när det inte finns några kommande turer', () => {
     expect(flerTurer(0, 2)).toEqual({ visa: true, forvald: 'tidigare' })
+  })
+})
+
+describe('vandringsdagar som inte är angivna', () => {
+  it('visas som "Inte angett" i turens uppgifter', () => {
+    expect(dagarVarde(null)).toBe('Inte angett')
+    expect(dagarVarde(5)).toBe('5')
+  })
+
+  it('ett tomt fält sparas som tomt, inte som 0', () => {
+    expect(antalFranFalt('')).toBeNull()
+    expect(antalFranFalt('  ')).toBeNull()
+    expect(antalFranFalt('5')).toBe(5)
+    expect(antalFranFalt('abc')).toBeNull()
+  })
+
+  it('en tur med avresa men utan dagar räknas som en dag lång', () => {
+    expect(sistaDag({ avresa: '2027-08-12', hemkomst: null, dagar: null })).toBe('2027-08-12')
+    expect(lage({ avresa: '2027-08-12', hemkomst: null, dagar: null }, '2027-08-13')).toBe('tidigare')
   })
 })

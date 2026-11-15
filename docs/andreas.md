@@ -46,3 +46,19 @@ Här är ordningen viktig: den gamla appen läser `turer.inbjudningskod`, som mi
 - [ ] Merga PR:en och vänta tills Vercel har publicerat
 - [ ] Kör `npx supabase db push --remote`
 - [ ] Prova: som ägare syns länken och "Skapa ny länk", den gamla länken slutar fungera efter en ny, och en läsare ser ingen länk
+
+## 6. Kör migreringen för skaparens åtkomst och vandringsdagar
+
+Migreringen `20261115180000_skaparen_och_dagar.sql` gör två saker:
+- Den som skapat en tur ser den inte längre efter att ha lämnat den eller tagits bort.
+- Antal vandringsdagar är tomt tills någon anger det, i stället för 3. Befintliga turer behåller sina värden.
+
+Kör punkt 2 och 5 först, och meddela Oscar när du kör. `npx supabase db push --remote` kör alla migreringar som inte är körda, i rätt ordning, så det räcker med en körning om allt är mergat.
+
+Ordningen är viktig här också: den gamla appen läser tillbaka turen när den skapas, och det tillåter databasen inte efter migreringen. Merga därför PR:en först och kör migreringen direkt efter att Vercel har publicerat.
+
+- [ ] Läs SQL:en i PR:en "Skaparen förlorar åtkomsten och tomma vandringsdagar"
+- [ ] Merga PR:en och vänta tills Vercel har publicerat
+- [ ] Kör `npx supabase db push --remote`
+- [ ] Prova direkt att skapa en ny tur. Den ska öppnas, och Vandringsdagar ska visa "Inte angett"
+- [ ] Prova att en tur du skapat försvinner ur Mina turer när du gjort någon annan till ägare och lämnat den

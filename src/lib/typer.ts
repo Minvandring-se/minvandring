@@ -7,7 +7,8 @@ export interface Tur {
   startpunkt: string | null
   avresa: string | null
   hemkomst: string | null
-  dagar: number
+  /** Antal vandringsdagar. null tills någon har angett det. */
+  dagar: number | null
   reservdagar: number
 }
 

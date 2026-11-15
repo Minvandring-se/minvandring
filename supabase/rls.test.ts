@@ -31,11 +31,11 @@ async function turnamn(id: string) {
   return r.rows[0]?.namn
 }
 
+/** Skapar en tur som appen gör: id:t väljs i förväg och raden läses inte tillbaka. */
 async function skapaTur(agare: string, namn: string): Promise<string> {
-  return som(agare, async (tx) => {
-    const r = await tx.query<{ id: string }>('insert into public.turer (namn) values ($1) returning id', [namn])
-    return r.rows[0].id
-  })
+  const id = crypto.randomUUID()
+  await som(agare, (tx) => tx.query('insert into public.turer (id, namn) values ($1, $2)', [id, namn]))
+  return id
 }
 
 async function kodFor(turId: string) {
@@ -371,5 +371,70 @@ describe('inbjudningar', () => {
 
   it('försöken går inte att läsa', async () => {
     await forvantaFel(som(D, (tx) => tx.query('select * from public.inbjudningsforsok')))
+  })
+})
+
+describe('skaparen av en tur', () => {
+  it('kan skapa en tur med eget id utan att läsa tillbaka raden, och ser den sedan som ägare', async () => {
+    const id = crypto.randomUUID()
+    await som(A, (tx) => tx.query(`insert into public.turer (id, namn) values ($1, 'Ny tur')`, [id]))
+    const r = await som(A, (tx) => tx.query<{ namn: string }>('select namn from public.turer where id = $1', [id]))
+    expect(r.rows).toEqual([{ namn: 'Ny tur' }])
+    const d = await db.query<{ roll: string; user_id: string }>('select roll, user_id from public.deltagare where tur_id = $1', [id])
+    expect(d.rows).toEqual([{ roll: 'owner', user_id: A }])
+  })
+
+  it('kan inte skapa en tur i någon annans namn', async () => {
+    await forvantaFel(
+      som(B, (tx) => tx.query(`insert into public.turer (id, namn, skapad_av) values ($1, 'Falsk', '${A}')`, [crypto.randomUUID()])),
+    )
+  })
+
+  it('ser inte turen längre efter att ha lämnat den', async () => {
+    const tur = await skapaTur(A, 'Lämnas över')
+    const kod = await kodFor(tur)
+    await som(C, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(A, (tx) => tx.query(`update public.deltagare set roll = 'owner' where tur_id = $1 and user_id = '${C}'`, [tur]))
+    await som(A, (tx) => tx.query(`delete from public.deltagare where tur_id = $1 and user_id = '${A}'`, [tur]))
+
+    const ser = await som(A, (tx) => tx.query('select id from public.turer where id = $1', [tur]))
+    expect(ser.rows).toHaveLength(0)
+    const andrad = await som(A, (tx) => tx.query(`update public.turer set namn = 'Ändrad' where id = $1`, [tur]))
+    expect(andrad.affectedRows).toBe(0)
+    // Den nya ägaren ser turen som förut.
+    const cilla = await som(C, (tx) => tx.query('select id from public.turer where id = $1', [tur]))
+    expect(cilla.rows).toHaveLength(1)
+  })
+
+  it('ser inte turen längre efter att ha tagits bort av en annan ägare', async () => {
+    const tur = await skapaTur(A, 'Tas bort')
+    const kod = await kodFor(tur)
+    await som(C, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(A, (tx) => tx.query(`update public.deltagare set roll = 'owner' where tur_id = $1 and user_id = '${C}'`, [tur]))
+    await som(C, (tx) => tx.query(`delete from public.deltagare where tur_id = $1 and user_id = '${A}'`, [tur]))
+
+    const ser = await som(A, (tx) => tx.query('select id from public.turer where id = $1', [tur]))
+    expect(ser.rows).toHaveLength(0)
+    expect(await turnamn(tur)).toBe('Tas bort')
+  })
+})
+
+describe('vandringsdagar', () => {
+  it('är tomt på en ny tur tills någon anger det', async () => {
+    const tur = await skapaTur(A, 'Utan dagar')
+    const r = await db.query<{ dagar: number | null; reservdagar: number }>('select dagar, reservdagar from public.turer where id = $1', [tur])
+    expect(r.rows[0]).toEqual({ dagar: null, reservdagar: 1 })
+  })
+
+  it('går att ange, tömma igen och måste vara 1 till 30', async () => {
+    const tur = await skapaTur(A, 'Med dagar')
+    await som(A, (tx) => tx.query('update public.turer set dagar = 5 where id = $1', [tur]))
+    let r = await db.query<{ dagar: number | null }>('select dagar from public.turer where id = $1', [tur])
+    expect(r.rows[0].dagar).toBe(5)
+    await som(A, (tx) => tx.query('update public.turer set dagar = null where id = $1', [tur]))
+    r = await db.query<{ dagar: number | null }>('select dagar from public.turer where id = $1', [tur])
+    expect(r.rows[0].dagar).toBeNull()
+    await forvantaFel(som(A, (tx) => tx.query('update public.turer set dagar = 0 where id = $1', [tur])))
+    await forvantaFel(som(A, (tx) => tx.query('update public.turer set dagar = 31 where id = $1', [tur])))
   })
 })
