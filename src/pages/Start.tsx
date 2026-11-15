@@ -15,6 +15,7 @@ import { Mellanrum, Stigavsnitt } from '@/components/start/stig/Stigavsnitt'
 import { StigProvider } from '@/components/start/stig/StigProvider'
 import { useSession } from '@/hooks/useSession'
 import { Kontaktlank } from '@/components/Kontaktlank'
+import { KONTAKT_MEJL } from '@/lib/kontakt'
 import { cn } from '@/lib/utils'
 
 /** Flödet i tre steg direkt under hero. Korten längre ner visar innehållet. */
@@ -380,6 +381,8 @@ export function Start() {
           <li className="inline-flex min-h-11 items-center">
             <Kontaktlank className={`inline-flex min-h-11 items-center ${textlank}`}>Kontakt och feedback</Kontaktlank>
           </li>
+          {/* I klartext, så att adressen går att kopiera även utan mejlprogram. */}
+          {KONTAKT_MEJL && <li className="inline-flex min-h-11 items-center select-all">{KONTAKT_MEJL}</li>}
           <li>
             <Link to="/integritet" className={`inline-flex min-h-11 items-center ${textlank}`}>
               Integritetspolicy

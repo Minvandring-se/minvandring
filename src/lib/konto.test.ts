@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { authFel, kontrolleraEpost, kontrolleraLosenord, kontrolleraNamn, medVidare, sakerVidare } from './konto'
+import { ALLMANT_FEL, authFel, kontrolleraEpost, kontrolleraLosenord, kontrolleraNamn, medVidare, sakerVidare } from './konto'
+import { KONTAKT_MEJL } from './kontakt'
 
 describe('kontrolleraEpost', () => {
   it('godtar vanliga adresser, även med mellanslag runt', () => {
@@ -66,7 +67,13 @@ describe('authFel', () => {
   })
 
   it('har ett allmänt meddelande för okända fel', () => {
-    expect(authFel({ code: 'nagot_nytt' })).toBe('Något gick fel. Försök igen.')
-    expect(authFel(null)).toBe('Något gick fel. Försök igen.')
+    expect(authFel({ code: 'nagot_nytt' })).toBe(ALLMANT_FEL)
+    expect(authFel(null)).toBe(ALLMANT_FEL)
+  })
+
+  it('ber en höra av sig till kontaktadressen om det allmänna felet fortsätter', () => {
+    expect(ALLMANT_FEL).toMatch(/^Något gick fel\. Försök igen\./)
+    expect(KONTAKT_MEJL).not.toBeNull()
+    expect(ALLMANT_FEL).toContain(`Om det fortsätter, hör av dig till ${KONTAKT_MEJL}.`)
   })
 })
