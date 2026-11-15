@@ -33,7 +33,7 @@ Vi tog bort `https://*.vercel.app/**` från Redirect URLs i Supabase, eftersom d
 
 ## 4. Säkerhet för konton
 
-- [ ] Tvåstegsverifiering på GitHub, Vercel och Supabase (Oscar gör samma sak på sina konton, Resend, one.com och Gmail)
+- [x] Tvåstegsverifiering på GitHub, Vercel och Supabase (Oscar gör samma sak på sina konton, Resend, one.com och Gmail)
 - [ ] Kontrollera att Vercel har ett personuppgiftsbiträdesavtal (DPA) och skriv upp det i vårt delade dokument
 
 ## 5. Kör migreringen för säkrare inbjudningar
