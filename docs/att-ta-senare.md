@@ -85,3 +85,20 @@ Radera också `public/hero/1-grupp-*.webp` och kolla `index.html` efter förladd
 ## Cloudflare Turnstile mot robotkonton
 
 Lägg till Cloudflare Turnstile som CAPTCHA i Supabase Auth (Authentication → Attack Protection), så att robotar inte kan skapa konton i mängd. Det kräver en widget på Skapa konto, Logga in och Glömt lösenord, och att CSP:n i `vercel.json` släpper fram `https://challenges.cloudflare.com` i `script-src` och `frame-src`. Ingen Cloudflare-proxy behövs framför sajten.
+
+## Öppna API:er för lederna man ska gå
+
+Idé: visa information om leden och området för turen, hämtad från gratis öppna källor. Det ska stödja planeringen, inte göra MinVandring till en ledguide (se docs/vision.md).
+
+Källor:
+- **SMHI, väderprognos:** öppna data, gratis, ingen nyckel. Får användas även kommersiellt, men SMHI ska anges som källa. Prognos för cirka tio dygn framåt vid turens startpunkt. Bra första steg, visas på turens översikt när turen närmar sig. Dokumentation: https://opendata.smhi.se/apidocs/metfcst
+- **Naturvårdsverket, leder och friluftsanordningar:** öppna data med REST-API. Statliga leder i fjällen och anordningar i skyddade områden (stugor, rastskydd, eldplatser). Kvaliteten varierar mellan områden.
+- **OpenStreetMap via Overpass:** märkta leder (route=hiking), till exempel Kungsleden, med GPX via Waymarked Trails. Den publika servern har gränser per IP, så datan ska hämtas en gång och sparas i vår databas, inte anropas för varje användare. OpenStreetMap ska anges som källa (ODbL).
+- **Naturvårdsverket, lavinprognoser:** dagliga prognoser för sex fjällområden under vintern, som kartlager (WMS). För vinterturer längre fram.
+
+Naturkartan har inget öppet API som vi hittat.
+
+Att lösa innan:
+- Turens startpunkt är bara text i dag. Vi behöver koordinater, till exempel genom att man väljer platsen på en karta eller söker upp den.
+- Säkerhetsrubrikerna i vercel.json (CSP, connect-src) måste tillåta de nya adresserna.
+- Ange källan där datan visas.
