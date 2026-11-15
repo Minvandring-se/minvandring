@@ -308,8 +308,17 @@ export function Stigavsnitt({ id, bit }: Props) {
             className="stroke-foreground/30"
             mask={`url(#${maskId})`}
           />
-          {stig.figurer.ledkryss && <Ledkryss x={stig.figurer.ledkryss.x} y={stig.figurer.ledkryss.y} />}
-          {stig.figurer.vagvisare && <Vagvisare x={stig.figurer.vagvisare.x} y={stig.figurer.vagvisare.y} />}
+          {/* Ledkrysset och vägvisaren dyker upp när leden ritats fram till dem, som de andra figurerna. */}
+          {stig.figurer.ledkryss && (
+            <g data-dyker="ledkryss" data-andel={stig.figurer.ledkryss.andel} style={{ opacity: minskad ? 1 : 0 }}>
+              <Ledkryss x={stig.figurer.ledkryss.x} y={stig.figurer.ledkryss.y} />
+            </g>
+          )}
+          {stig.figurer.vagvisare && (
+            <g data-dyker="vagvisare" data-andel={stig.figurer.vagvisare.andel} style={{ opacity: minskad ? 1 : 0 }}>
+              <Vagvisare x={stig.figurer.vagvisare.x} y={stig.figurer.vagvisare.y} />
+            </g>
+          )}
           {stig.figurer.detaljer.map((x) =>
             x.typ === 'talt' || x.typ === 'eld' ? (
               <Naturdetalj key={x.typ} typ={x.typ} punkt={x.punkt} detaljRef={detaljRef} flammaRef={flammaRef} glodRef={glodRef} />
