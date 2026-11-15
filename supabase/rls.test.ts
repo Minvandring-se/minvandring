@@ -54,6 +54,10 @@ beforeAll(async () => {
     grant execute on function auth.uid() to authenticated, anon;
     grant usage on schema public to authenticated, anon;
     create publication supabase_realtime;
+    -- Som i Supabase: nya funktioner i public får execute för anon och authenticated.
+    alter default privileges in schema public grant execute on functions to anon, authenticated;
+    -- Supabase skapar rls_auto_enable själv (automatisk RLS). En kopia utan search_path, som i ett nytt projekt.
+    create function public.rls_auto_enable() returns event_trigger language plpgsql security definer as $$ begin end $$;
   `)
   const mapp = path.join(import.meta.dirname, 'migrations')
   for (const fil of fs.readdirSync(mapp).sort()) {
@@ -64,6 +68,71 @@ beforeAll(async () => {
       ('${A}', 'anna@exempel.se'), ('${B}', 'bertil@exempel.se'), ('${C}', 'cilla@exempel.se');
   `)
 }, 60_000)
+
+/** Kör utan inloggning, som ett anrop till API:t med bara den publika nyckeln. */
+async function somAnon<T>(fn: (tx: Transaction) => Promise<T>): Promise<T> {
+  return db.transaction(async (tx) => {
+    await tx.exec('set local role anon;')
+    return fn(tx)
+  })
+}
+
+async function kanAnropa(roll: 'anon' | 'authenticated', funktion: string) {
+  const r = await db.query<{ ok: boolean }>("select has_function_privilege($1, $2, 'execute') as ok", [roll, funktion])
+  return r.rows[0].ok
+}
+
+describe('funktionerna i public', () => {
+  const interna = [
+    'public.ny_anvandare()',
+    'public.ny_tur()',
+    'public.skydda_deltagare()',
+    'public.ny_deltagare_utan_konto()',
+    'public.synka_namn()',
+    'public.min_roll(uuid)',
+    'public.rls_auto_enable()',
+  ]
+  const forInloggade = ['public.ar_medlem(uuid)', 'public.kan_andra(uuid)', 'public.ar_agare(uuid)', 'public.ga_med(text)']
+
+  it('går inte att anropa utan inloggning', async () => {
+    for (const f of [...interna, ...forInloggade]) expect(await kanAnropa('anon', f), f).toBe(false)
+    await forvantaFel(somAnon((tx) => tx.query(`select public.ga_med('NAGOT')`)))
+    await forvantaFel(somAnon((tx) => tx.query(`select public.ar_medlem('${A}')`)))
+  })
+
+  it('triggerfunktionerna och min_roll går inte att anropa för inloggade heller', async () => {
+    for (const f of interna) expect(await kanAnropa('authenticated', f), f).toBe(false)
+    await forvantaFel(som(A, (tx) => tx.query(`select public.min_roll('${A}')`)))
+  })
+
+  it('hjälpfunktionerna i policyerna och ga_med går att anropa för inloggade', async () => {
+    for (const f of forInloggade) expect(await kanAnropa('authenticated', f), f).toBe(true)
+  })
+
+  it('alla security definer-funktioner har en fast search_path', async () => {
+    const r = await db.query<{ namn: string }>(`
+      select p.proname as namn from pg_proc p
+      where p.pronamespace = 'public'::regnamespace and p.prosecdef
+        and not exists (select 1 from unnest(coalesce(p.proconfig, '{}')) c where c like 'search_path=%')`)
+    expect(r.rows).toEqual([])
+  })
+
+  it('inloggade kan fortfarande skapa en tur, gå med via länk och se sina turer', async () => {
+    const tur = await skapaTur(A, 'Tur efter stängningen')
+    const kod = await kodFor(tur)
+    await som(B, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    for (const vem of [A, B]) {
+      const r = await som(vem, (tx) => tx.query<{ id: string }>('select id from public.turer where id = $1', [tur]))
+      expect(r.rows, vem).toHaveLength(1)
+    }
+    const roller = await db.query<{ roll: string }>('select roll from public.deltagare where tur_id = $1 order by roll', [tur])
+    expect(roller.rows.map((r) => r.roll)).toEqual(['editor', 'owner'])
+  })
+
+  it('anon ser inga turer', async () => {
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.turer')))
+  })
+})
 
 describe('profiler', () => {
   it('skapas automatiskt för nya användare', async () => {
