@@ -10,6 +10,7 @@ import { Bildspel } from '@/components/start/Bildspel'
 import { Levande } from '@/components/start/Levande'
 import { PacklistaSmakprov } from '@/components/start/PacklistaSmakprov'
 import { Stigavsnitt } from '@/components/start/Stigavsnitt'
+import { kopplaStig } from '@/components/start/stiggeometri'
 import { useSession } from '@/hooks/useSession'
 import { Kontaktlank } from '@/components/Kontaktlank'
 
@@ -114,6 +115,14 @@ const textlank = `rounded-sm underline underline-offset-2 hover:text-foreground 
 const kortKlass =
   'rounded-lg border border-border bg-card shadow-soft transition-[translate,box-shadow] duration-300 ease-out hover:shadow-[0_2px_4px_rgb(31_42_36/0.06),0_14px_32px_rgb(31_42_36/0.12)] motion-safe:hover:-translate-y-1'
 
+/** Stigen genom sektionerna, i ordning. Varje bit börjar där förra slutade. */
+const [stigStart, stigPackning, stigTanken, stigFragor] = kopplaStig([
+  { slut: 'hoger' },
+  { slut: 'vanster' },
+  { slut: 'hoger' },
+  { slut: 'hoger' },
+] as const)
+
 /** Huvudknappen i hero och i sista sektionen. Ljus knapp, för mörka ytor. */
 function PlaneraKnapp({ className = '' }: { className?: string }) {
   return (
@@ -189,9 +198,9 @@ export function Start() {
           </ol>
         </section>
 
-        <section aria-labelledby="sa-fungerar-rubrik" className="relative isolate">
-          <Stigavsnitt del="start" />
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <section aria-labelledby="sa-fungerar-rubrik" className="relative isolate py-16 sm:py-20">
+          <Stigavsnitt bit={stigStart} />
+          <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
             <h2 id="sa-fungerar-rubrik" className="text-3xl font-bold sm:text-4xl">
               Börja med din nästa tur
             </h2>
@@ -225,9 +234,12 @@ export function Start() {
           </div>
         </section>
 
-        <section aria-labelledby="smakprov-rubrik" className="relative isolate bg-muted/60">
-          <Stigavsnitt del="packning" />
-          <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-16 sm:px-6 sm:py-20 md:grid-cols-2 md:gap-12">
+        <section aria-labelledby="smakprov-rubrik" className="relative isolate bg-muted/60 py-16 sm:py-20">
+          <Stigavsnitt bit={stigPackning} />
+          <div
+            data-stiginnehall
+            className="relative z-10 mx-auto grid max-w-6xl items-center gap-8 px-4 sm:px-6 md:grid-cols-2 md:gap-12"
+          >
             <div className="space-y-5">
               <div className="space-y-2">
                 <p className="text-sm font-semibold tracking-widest text-primary uppercase">Packning med koll</p>
@@ -250,9 +262,9 @@ export function Start() {
           </div>
         </section>
 
-        <section aria-labelledby="tanken-rubrik" className="relative isolate">
-          <Stigavsnitt del="tanken" />
-          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+        <section aria-labelledby="tanken-rubrik" className="relative isolate py-16 sm:py-20">
+          <Stigavsnitt bit={stigTanken} />
+          <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
             <div className="grid items-center gap-8 overflow-hidden rounded-lg bg-sand/50 p-6 sm:p-10 md:grid-cols-2 md:gap-12">
               <TankenIllustration className="mx-auto block aspect-[8/5] w-full max-w-md" />
               <div className="space-y-4">
@@ -274,28 +286,31 @@ export function Start() {
           </div>
         </section>
 
-        <section aria-labelledby="vanliga-fragor-rubrik" className="relative isolate bg-muted/60">
-          <Stigavsnitt del="fragor" />
-          <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">
-            <h2 id="vanliga-fragor-rubrik" className="text-3xl font-bold sm:text-4xl">
-              Vanliga frågor
-            </h2>
-            <div className="mt-8 divide-y divide-border rounded-lg border border-border bg-card">
-              {fragor.map(({ fraga, svar }) => (
-                <details key={fraga} className="group">
-                  <summary
-                    className={`flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-lg px-5 py-3 font-heading text-lg font-semibold [&::-webkit-details-marker]:hidden ${fokus} focus-visible:-outline-offset-2`}
-                  >
-                    {fraga}
-                    <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
-                  </summary>
-                  <div className="px-5 pb-5 text-muted-foreground">{svar}</div>
-                </details>
-              ))}
+        <section aria-labelledby="vanliga-fragor-rubrik" className="relative isolate bg-muted/60 py-16 sm:py-20">
+          <Stigavsnitt bit={stigFragor} />
+          {/* Samma bredd som de andra sektionerna så att stigen hamnar rätt. Själva listan är smalare. */}
+          <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl">
+            <div className="mx-auto max-w-3xl px-4 sm:px-6">
+              <h2 id="vanliga-fragor-rubrik" className="text-3xl font-bold sm:text-4xl">
+                Vanliga frågor
+              </h2>
+              <div className="mt-8 divide-y divide-border rounded-lg border border-border bg-card">
+                {fragor.map(({ fraga, svar }) => (
+                  <details key={fraga} className="group">
+                    <summary
+                      className={`flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-lg px-5 py-3 font-heading text-lg font-semibold [&::-webkit-details-marker]:hidden ${fokus} focus-visible:-outline-offset-2`}
+                    >
+                      {fraga}
+                      <ChevronDown className="size-5 shrink-0 text-muted-foreground transition-transform group-open:rotate-180" aria-hidden />
+                    </summary>
+                    <div className="px-5 pb-5 text-muted-foreground">{svar}</div>
+                  </details>
+                ))}
+              </div>
+              <p className="mt-5 text-muted-foreground">
+                MinVandring är en beta. Lämna gärna <Kontaktlank className={textlank}>synpunkter</Kontaktlank>.
+              </p>
             </div>
-            <p className="mt-5 text-muted-foreground">
-              MinVandring är en beta. Lämna gärna <Kontaktlank className={textlank}>synpunkter</Kontaktlank>.
-            </p>
           </div>
         </section>
 

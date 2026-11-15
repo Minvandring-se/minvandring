@@ -1,90 +1,84 @@
-import { useEffect, useRef, useState, type CSSProperties } from 'react'
+import { useEffect, useRef, useState } from 'react'
+import { skapaStig, type Stigbit, type Stigmal } from '@/components/start/stiggeometri'
+import { Vagvisare } from '@/components/start/Vagvisare'
 
-type Del = 'start' | 'packning' | 'tanken' | 'fragor'
+const nycklar: Array<keyof Stigmal> = ['bredd', 'hojd', 'innehallVanster', 'innehallHoger', 'innehallTopp', 'innehallBotten']
 
 /**
- * Var stigen går i varje sektion, i procent av sektionens bredd och höjd (x y-par).
- * Varje del börjar där förra slutade, så stigen hänger ihop över sektionerna.
- * Stigen går i marginalerna och korsar sidan i luften längst ner i varje sektion.
+ * En streckad stig genom startsidans sektioner, som en led genom sidan. Dekorativ.
+ * Läggs först i en sektion med relative, isolate och 80 px padding uppe och nere. Sektionens innehåll
+ * ligger i en behållare med data-stiginnehall och samma bredd i alla sektioner. Stigen mäter behållaren
+ * och går 48 px utanför den, så den hamnar aldrig bakom text eller kort. Syns först från 1360 px
+ * fönsterbredd, och bara om marginalen bredvid innehållet räcker.
  */
-const stigar: Record<Del, string> = {
-  start: 'M 4 7 C 2.8 30 5.6 58 4 84 C 3.2 93 20 95 50 95.5 S 92.5 96.5 93 100',
-  packning: 'M 93 0 C 96 25 93.5 55 95.5 80 C 96.8 92 80 95 50 95.5 S 6.5 96.5 6 100',
-  tanken: 'M 6 0 C 3 28 5.5 60 4 82 C 3 93 20 95.5 50 95.5 S 93.5 96.5 94 100',
-  fragor: 'M 94 0 C 96.5 18 94 38 89 60',
-}
+export function Stigavsnitt({ bit }: { bit: Stigbit }) {
+  const lagerRef = useRef<HTMLDivElement>(null)
+  const [mal, setMal] = useState<Stigmal | null>(null)
 
-/** Vägvisare i början och slutet av stigen, i procent. */
-const skyltar: Partial<Record<Del, { x: number; y: number }>> = {
-  start: { x: 4, y: 7 },
-  fragor: { x: 89, y: 60 },
-}
-
-/** Gör om procent till pixlar. Alla kommandon i stigarna består av x y-par. */
-function tillPixlar(d: string, bredd: number, hojd: number) {
-  let i = 0
-  return d.replace(/-?\d+(\.\d+)?/g, (tal) => ((Number(tal) * (i++ % 2 === 0 ? bredd : hojd)) / 100).toFixed(1))
-}
-
-function useStorlek() {
-  const ref = useRef<HTMLDivElement>(null)
-  const [storlek, setStorlek] = useState({ bredd: 0, hojd: 0 })
   useEffect(() => {
-    const el = ref.current
-    if (!el) return
-    const observer = new ResizeObserver(([post]) => {
-      setStorlek({ bredd: post.contentRect.width, hojd: post.contentRect.height })
-    })
-    observer.observe(el)
-    return () => observer.disconnect()
-  }, [])
-  return [ref, storlek] as const
-}
+    const lager = lagerRef.current
+    const sektion = lager?.parentElement
+    const innehall = sektion?.querySelector<HTMLElement>('[data-stiginnehall]')
+    if (!lager || !sektion || !innehall) return
 
-/**
- * En streckad stig bakom startsidans sektioner, som en led genom sidan. Dekorativ.
- * Läggs först i en sektion med klasserna relative och isolate. Syns först från 1360 px.
- * Vid 1280 px är marginalerna för smala och stigen hamnar bakom korten. I mobilen är bakgrunden ren.
- */
-export function Stigavsnitt({ del }: { del: Del }) {
-  const [ref, { bredd, hojd }] = useStorlek()
-  const skylt = skyltar[del]
+    let ram = 0
+    const mat = () => {
+      const yta = lager.getBoundingClientRect()
+      const ruta = innehall.getBoundingClientRect()
+      const nytt: Stigmal = {
+        bredd: yta.width,
+        hojd: yta.height,
+        innehallVanster: ruta.left - yta.left,
+        innehallHoger: ruta.right - yta.left,
+        innehallTopp: ruta.top - yta.top,
+        innehallBotten: ruta.bottom - yta.top,
+      }
+      setMal((forra) => (forra && nycklar.every((n) => forra[n] === nytt[n]) ? forra : nytt))
+    }
+    // En mätning per bildruta även om flera element ändras samtidigt, till exempel när en fråga öppnas.
+    const schemalagg = () => {
+      cancelAnimationFrame(ram)
+      ram = requestAnimationFrame(mat)
+    }
+    const observer = new ResizeObserver(schemalagg)
+    observer.observe(lager)
+    observer.observe(sektion)
+    observer.observe(innehall)
+    window.addEventListener('resize', schemalagg)
+    schemalagg()
+
+    return () => {
+      cancelAnimationFrame(ram)
+      observer.disconnect()
+      window.removeEventListener('resize', schemalagg)
+    }
+  }, [])
+
+  const stig = mal && skapaStig(mal, bit)
 
   return (
-    <div ref={ref} aria-hidden className="pointer-events-none absolute inset-0 -z-10 hidden min-[1360px]:block">
-      {bredd > 0 && (
-        <svg width={bredd} height={hojd} className="absolute inset-0 overflow-visible" focusable="false">
+    <div ref={lagerRef} aria-hidden className="pointer-events-none absolute inset-0 z-0 hidden overflow-hidden min-[1360px]:block">
+      {mal && stig && (
+        // Samma mått som viewBox, så att stigen och strecken aldrig dras ut.
+        <svg
+          width={mal.bredd}
+          height={mal.hojd}
+          viewBox={`0 0 ${mal.bredd} ${mal.hojd}`}
+          focusable="false"
+          className="absolute top-0 left-0 block max-w-none"
+        >
           <path
-            d={tillPixlar(stigar[del], bredd, hojd)}
+            d={stig.d}
             fill="none"
-            className="stroke-foreground/30"
-            strokeWidth="2"
+            strokeWidth={2}
             strokeDasharray="7 9"
             strokeLinecap="round"
+            className="stroke-foreground/30"
           />
+          {bit.forsta && <Vagvisare x={stig.startX} y={8} />}
+          {bit.sista && <Vagvisare x={stig.slutX} y={mal.hojd - 68} />}
         </svg>
       )}
-      {skylt && (
-        <Vagvisare className="absolute h-15 w-12 -translate-x-1/2 -translate-y-full" style={{ left: `${skylt.x}%`, top: `${skylt.y}%` }} />
-      )}
     </div>
-  )
-}
-
-/** Liten vägvisare med två skyltar och grästuvor. Nederkanten står på stigen. */
-function Vagvisare({ className, style }: { className?: string; style?: CSSProperties }) {
-  return (
-    <svg viewBox="0 0 48 60" className={className} style={style} focusable="false">
-      <ellipse cx="24" cy="58" rx="13" ry="2" className="fill-foreground/10" />
-      <g className="fill-none stroke-illustration" strokeWidth="2" strokeLinecap="round">
-        <path d="M11 58 L9 52 M14 58 V50 M17 58 L19 53" />
-        <path d="M31 58 L29 53 M34 58 V51 M37 58 L39 53" />
-      </g>
-      <g className="stroke-foreground" strokeWidth="2" strokeLinejoin="round" strokeLinecap="round">
-        <path d="M24 8 V58" className="fill-none" strokeWidth="2.5" />
-        <path d="M9 9 H35 L40 14 L35 19 H9 Z" className="fill-accent" />
-        <path d="M39 24 H14 L9 29 L14 34 H39 Z" className="fill-accent" />
-      </g>
-    </svg>
   )
 }
