@@ -13,6 +13,7 @@ const C = '00000000-0000-0000-0000-00000000000c'
 const D = '00000000-0000-0000-0000-00000000000d'
 const E = '00000000-0000-0000-0000-00000000000e'
 const F = '00000000-0000-0000-0000-00000000000f'
+const G = '00000000-0000-0000-0000-000000000010'
 
 let db: PGlite
 
@@ -72,7 +73,7 @@ beforeAll(async () => {
     insert into auth.users (id, email) values
       ('${A}', 'anna@exempel.se'), ('${B}', 'bertil@exempel.se'), ('${C}', 'cilla@exempel.se'),
       ('${D}', 'david@exempel.se'),
-      ('${E}', 'erik@exempel.se'), ('${F}', 'frida@exempel.se');
+      ('${E}', 'erik@exempel.se'), ('${F}', 'frida@exempel.se'), ('${G}', 'gustav@exempel.se');
   `)
 }, 60_000)
 
@@ -154,7 +155,7 @@ describe('funktionerna i public', () => {
 describe('profiler', () => {
   it('skapas automatiskt för nya användare', async () => {
     const r = await db.query('select id from public.profiler')
-    expect(r.rows).toHaveLength(6)
+    expect(r.rows).toHaveLength(7)
   })
 
   it('går bara att ändra för en själv', async () => {
@@ -564,6 +565,23 @@ describe('ta över en person utan konto', () => {
     const efter = (await deltagare()).rows
     expect(efter).toHaveLength(fore + 1)
     expect(efter.find((d) => d.user_id === F)).toMatchObject({ namn: 'frida', roll: 'editor' })
+  })
+
+  it('en person utan konto som är ägare visas inte och går inte att ta över', async () => {
+    const t = await skapaTur(A, 'Tur med ägare utan konto')
+    const k = await kodFor(t)
+    const r = await som(A, (tx) =>
+      tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn, typ) values ($1, 'Platsägare', 'person') returning id`, [t]),
+    )
+    const platsagare = r.rows[0].id
+    await som(A, (tx) => tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [platsagare]))
+
+    expect((await inbjudan(G, k))?.personer).toEqual([])
+    await forvantaFel(som(G, (tx) => tx.query('select public.ga_med($1, $2)', [k, platsagare])))
+    const rad = await db.query<{ user_id: string | null; roll: string }>('select user_id, roll from public.deltagare where id = $1', [platsagare])
+    expect(rad.rows[0]).toEqual({ user_id: null, roll: 'owner' })
+    const gsRad = await db.query('select 1 from public.deltagare where tur_id = $1 and user_id = $2', [t, G])
+    expect(gsRad.rows).toHaveLength(0)
   })
 
   it('felaktiga koder i inbjudan räknas mot samma gräns som i ga_med', async () => {
