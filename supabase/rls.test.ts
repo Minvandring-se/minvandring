@@ -4,11 +4,13 @@
 import fs from 'node:fs'
 import path from 'node:path'
 import { PGlite, type Transaction } from '@electric-sql/pglite'
+import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { beforeAll, describe, expect, it } from 'vitest'
 
 const A = '00000000-0000-0000-0000-00000000000a'
 const B = '00000000-0000-0000-0000-00000000000b'
 const C = '00000000-0000-0000-0000-00000000000c'
+const D = '00000000-0000-0000-0000-00000000000d'
 
 let db: PGlite
 
@@ -37,15 +39,16 @@ async function skapaTur(agare: string, namn: string): Promise<string> {
 }
 
 async function kodFor(turId: string) {
-  const r = await db.query<{ inbjudningskod: string }>('select inbjudningskod from public.turer where id = $1', [turId])
-  return r.rows[0].inbjudningskod
+  const r = await db.query<{ kod: string }>('select kod from public.inbjudningar where tur_id = $1', [turId])
+  return r.rows[0].kod
 }
 
 beforeAll(async () => {
-  db = new PGlite()
+  db = new PGlite({ extensions: { pgcrypto } })
   await db.exec(`
     create role anon nologin;
     create role authenticated nologin;
+    create schema extensions;
     create schema auth;
     create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
     create function auth.uid() returns uuid language sql stable as
@@ -65,7 +68,8 @@ beforeAll(async () => {
   }
   await db.exec(`
     insert into auth.users (id, email) values
-      ('${A}', 'anna@exempel.se'), ('${B}', 'bertil@exempel.se'), ('${C}', 'cilla@exempel.se');
+      ('${A}', 'anna@exempel.se'), ('${B}', 'bertil@exempel.se'), ('${C}', 'cilla@exempel.se'),
+      ('${D}', 'david@exempel.se');
   `)
 }, 60_000)
 
@@ -91,8 +95,16 @@ describe('funktionerna i public', () => {
     'public.synka_namn()',
     'public.min_roll(uuid)',
     'public.rls_auto_enable()',
+    'public.slumpkod()',
+    'public.ny_inbjudan()',
   ]
-  const forInloggade = ['public.ar_medlem(uuid)', 'public.kan_andra(uuid)', 'public.ar_agare(uuid)', 'public.ga_med(text)']
+  const forInloggade = [
+    'public.ar_medlem(uuid)',
+    'public.kan_andra(uuid)',
+    'public.ar_agare(uuid)',
+    'public.ga_med(text)',
+    'public.ny_inbjudningskod(uuid)',
+  ]
 
   it('går inte att anropa utan inloggning', async () => {
     for (const f of [...interna, ...forInloggade]) expect(await kanAnropa('anon', f), f).toBe(false)
@@ -137,7 +149,7 @@ describe('funktionerna i public', () => {
 describe('profiler', () => {
   it('skapas automatiskt för nya användare', async () => {
     const r = await db.query('select id from public.profiler')
-    expect(r.rows).toHaveLength(3)
+    expect(r.rows).toHaveLength(4)
   })
 
   it('går bara att ändra för en själv', async () => {
@@ -186,7 +198,10 @@ describe('en annan användares tur', () => {
   })
 
   it('går inte att gå med i med fel kod', async () => {
-    await forvantaFel(som(B, (tx) => tx.query(`select public.ga_med('FELKOD')`)))
+    const r = await som(B, (tx) => tx.query<{ t: string | null }>(`select public.ga_med('FELKOD') as t`))
+    expect(r.rows[0].t).toBeNull()
+    const syns = await som(B, (tx) => tx.query('select id from public.turer where id = $1', [tur]))
+    expect(syns.rows).toHaveLength(0)
   })
 })
 
@@ -269,5 +284,92 @@ describe('roller', () => {
     expect(await turnamn(tur)).toBeUndefined()
     const d = await db.query('select id from public.deltagare where tur_id = $1', [tur])
     expect(d.rows).toHaveLength(0)
+  })
+})
+
+describe('inbjudningar', () => {
+  let tur: string
+  let cillasDeltagare: string
+
+  beforeAll(async () => {
+    tur = await skapaTur(A, 'Inbjudningstur')
+    const kod = await kodFor(tur)
+    await som(C, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const d = await db.query<{ id: string }>(`select id from public.deltagare where tur_id = $1 and user_id = '${C}'`, [tur])
+    cillasDeltagare = d.rows[0].id
+  })
+
+  const seKod = (vem: string) =>
+    som(vem, (tx) => tx.query<{ kod: string }>('select kod from public.inbjudningar where tur_id = $1', [tur])).then((r) => r.rows)
+
+  it('har en lång url-säker slumpkod, olika för varje tur', async () => {
+    const r = await db.query<{ kod: string }>('select kod from public.inbjudningar')
+    expect(r.rows.length).toBeGreaterThan(1)
+    for (const { kod } of r.rows) expect(kod).toMatch(/^[A-Za-z0-9_-]{24}$/)
+    expect(new Set(r.rows.map((x) => x.kod)).size).toBe(r.rows.length)
+  })
+
+  it('gamla kolumnen med den korta koden finns inte kvar', async () => {
+    const r = await db.query(`select 1 from information_schema.columns where table_name = 'turer' and column_name = 'inbjudningskod'`)
+    expect(r.rows).toHaveLength(0)
+  })
+
+  it('syns för ägare och redigerare, men inte för läsare eller någon utanför', async () => {
+    expect(await seKod(A)).toHaveLength(1)
+    expect(await seKod(C)).toHaveLength(1)
+    expect(await seKod(B)).toHaveLength(0)
+    await som(A, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [cillasDeltagare]))
+    expect(await seKod(C)).toHaveLength(0)
+    await som(A, (tx) => tx.query(`update public.deltagare set roll = 'editor' where id = $1`, [cillasDeltagare]))
+  })
+
+  it('går inte att ändra, lägga till eller ta bort direkt, inte ens för ägaren', async () => {
+    const fore = await kodFor(tur)
+    await forvantaFel(som(A, (tx) => tx.query(`update public.inbjudningar set kod = 'ENKEL' where tur_id = $1`, [tur])))
+    await forvantaFel(som(A, (tx) => tx.query('delete from public.inbjudningar where tur_id = $1', [tur])))
+    await forvantaFel(som(B, (tx) => tx.query(`insert into public.inbjudningar (tur_id, kod) values ($1, 'BERTIL')`, [tur])))
+    expect(await kodFor(tur)).toBe(fore)
+  })
+
+  it('ägaren kan skapa en ny länk, och då slutar den gamla fungera', async () => {
+    const gammal = await kodFor(tur)
+    const r = await som(A, (tx) => tx.query<{ ny: string }>('select public.ny_inbjudningskod($1) as ny', [tur]))
+    const ny = r.rows[0].ny
+    expect(ny).not.toBe(gammal)
+    expect(ny).toMatch(/^[A-Za-z0-9_-]{24}$/)
+    expect(await kodFor(tur)).toBe(ny)
+    const medGammal = await som(B, (tx) => tx.query<{ t: string | null }>('select public.ga_med($1) as t', [gammal]))
+    expect(medGammal.rows[0].t).toBeNull()
+    const medNy = await som(B, (tx) => tx.query<{ t: string | null }>('select public.ga_med($1) as t', [ny]))
+    expect(medNy.rows[0].t).toBe(tur)
+  })
+
+  it('redigerare, läsare och andra kan inte skapa en ny länk', async () => {
+    const fore = await kodFor(tur)
+    await forvantaFel(som(C, (tx) => tx.query('select public.ny_inbjudningskod($1)', [tur])))
+    await som(A, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [cillasDeltagare]))
+    await forvantaFel(som(C, (tx) => tx.query('select public.ny_inbjudningskod($1)', [tur])))
+    await forvantaFel(som(D, (tx) => tx.query('select public.ny_inbjudningskod($1)', [tur])))
+    expect(await kodFor(tur)).toBe(fore)
+  })
+
+  it('stoppar ett konto efter 10 felaktiga koder i timmen, även om nästa kod är rätt', async () => {
+    for (let i = 0; i < 10; i++) {
+      const r = await som(D, (tx) => tx.query<{ t: string | null }>('select public.ga_med($1) as t', [`gissning-${i}`]))
+      expect(r.rows[0].t).toBeNull()
+    }
+    const kod = await kodFor(tur)
+    await forvantaFel(som(D, (tx) => tx.query('select public.ga_med($1)', [kod])))
+    const syns = await som(D, (tx) => tx.query('select id from public.turer where id = $1', [tur]))
+    expect(syns.rows).toHaveLength(0)
+    // Andra konton påverkas inte.
+    const annan = await skapaTur(B, 'Bertils andra tur')
+    const annanKod = await kodFor(annan)
+    const r = await som(C, (tx) => tx.query<{ t: string | null }>('select public.ga_med($1) as t', [annanKod]))
+    expect(r.rows[0].t).toBe(annan)
+  })
+
+  it('försöken går inte att läsa', async () => {
+    await forvantaFel(som(D, (tx) => tx.query('select * from public.inbjudningsforsok')))
   })
 })

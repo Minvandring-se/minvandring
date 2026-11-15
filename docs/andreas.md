@@ -35,3 +35,14 @@ Vi tog bort `https://*.vercel.app/**` från Redirect URLs i Supabase, eftersom d
 
 - [ ] Tvåstegsverifiering på GitHub, Vercel och Supabase (Oscar gör samma sak på sina konton, Resend, one.com och Gmail)
 - [ ] Kontrollera att Vercel har ett personuppgiftsbiträdesavtal (DPA) och skriv upp det i vårt delade dokument
+
+## 5. Kör migreringen för säkrare inbjudningar
+
+Migreringen `20261115120000_inbjudningar.sql` ger långa slumpkoder, låter ägaren skapa en ny länk, döljer länken för läsare och begränsar felaktiga försök i `ga_med`. Alla gamla inbjudningslänkar slutar fungera. Kör punkt 2 först, och meddela Oscar när du kör.
+
+Här är ordningen viktig: den gamla appen läser `turer.inbjudningskod`, som migreringen tar bort. Merga därför PR:en först och kör migreringen direkt efter att Vercel har publicerat. Fram till dess visar turen "Det gick inte att hämta länken", men allt annat fungerar.
+
+- [ ] Läs SQL:en i PR:en "Säkrare inbjudningskoder"
+- [ ] Merga PR:en och vänta tills Vercel har publicerat
+- [ ] Kör `npx supabase db push --remote`
+- [ ] Prova: som ägare syns länken och "Skapa ny länk", den gamla länken slutar fungera efter en ny, och en läsare ser ingen länk
