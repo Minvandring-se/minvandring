@@ -8,20 +8,20 @@ Bocka av punkterna här när de är klara och committa filen.
 
 Det går inte att skapa konto på www.minvandring.se just nu. `VITE_SUPABASE_URL` i Vercel slutar med `/rest/v1`, så anropen till inloggningen går till en adress som inte finns (404 i Supabase API Gateway-loggar).
 
-- [ ] Vercel → projektet → Settings → Environment Variables → `VITE_SUPABASE_URL`
-- [ ] Ändra värdet till exakt `https://psvuzkkauiqhimnhtjep.supabase.co` (utan `/rest/v1` och utan snedstreck på slutet), för Production och Preview
-- [ ] Deployments → senaste → Redeploy (adressen byggs in vid publicering)
-- [ ] Kontrollera att det går att skapa konto på www.minvandring.se/skapa-konto och att bekräftelsemejlet kommer
+- [x] Vercel → projektet → Settings → Environment Variables → `VITE_SUPABASE_URL`
+- [x] Ändra värdet till exakt `https://psvuzkkauiqhimnhtjep.supabase.co` (utan `/rest/v1` och utan snedstreck på slutet), för Production och Preview
+- [x] Deployments → senaste → Redeploy (adressen byggs in vid publicering)
+- [x] Kontrollera att det går att skapa konto på www.minvandring.se/skapa-konto och att bekräftelsemejlet kommer
 
 ## 2. Kör migreringen som stänger databasfunktionerna
 
 Supabase Security Advisor visar 22 varningar om att SECURITY DEFINER-funktionerna kan anropas via API:t. Oscar har en PR med en migrering som stänger det. Bara en av oss kör migreringar åt gången, så meddela Oscar när du kör.
 
-- [ ] Hämta PR:en med migreringen och läs SQL:en
-- [ ] Kör `npx supabase db push --remote` (projektet behöver vara länkat: `npx supabase link --project-ref psvuzkkauiqhimnhtjep`)
+- [x] Hämta PR:en med migreringen och läs SQL:en
+- [x] Kör `npx supabase db push --remote` (projektet behöver vara länkat: `npx supabase link --project-ref psvuzkkauiqhimnhtjep`)
 - [ ] Kör Security Advisor i Supabase igen. Förväntat: ungefär 5 varningar kvar (4 avsiktliga för ar_medlem, kan_andra, ar_agare och ga_med, och en om search_path på Supabases egen rls_auto_enable, som vi inte rör)
 - [ ] Prova att skapa en tur, gå med via inbjudningslänk och se sina turer
-- [ ] Merga PR:en
+- [x] Merga PR:en
 
 ## 3. Vercels förhandsversioner i Supabase
 
@@ -42,9 +42,9 @@ Migreringen `20261115120000_inbjudningar.sql` ger långa slumpkoder, låter äga
 
 Här är ordningen viktig: den gamla appen läser `turer.inbjudningskod`, som migreringen tar bort. Merga därför PR:en först och kör migreringen direkt efter att Vercel har publicerat. Fram till dess visar turen "Det gick inte att hämta länken", men allt annat fungerar.
 
-- [ ] Läs SQL:en i PR:en "Säkrare inbjudningskoder"
-- [ ] Merga PR:en och vänta tills Vercel har publicerat
-- [ ] Kör `npx supabase db push --remote`
+- [x] Läs SQL:en i PR:en "Säkrare inbjudningskoder"
+- [x] Merga PR:en och vänta tills Vercel har publicerat
+- [x] Kör `npx supabase db push --remote`
 - [ ] Prova: som ägare syns länken och "Skapa ny länk", den gamla länken slutar fungera efter en ny, och en läsare ser ingen länk
 
 ## 6. Kör migreringen för skaparens åtkomst och vandringsdagar
@@ -57,9 +57,9 @@ Kör punkt 2 och 5 först, och meddela Oscar när du kör. `npx supabase db push
 
 Ordningen är viktig här också: den gamla appen läser tillbaka turen när den skapas, och det tillåter databasen inte efter migreringen. Merga därför PR:en först och kör migreringen direkt efter att Vercel har publicerat.
 
-- [ ] Läs SQL:en i PR:en "Skaparen förlorar åtkomsten och tomma vandringsdagar"
-- [ ] Merga PR:en och vänta tills Vercel har publicerat
-- [ ] Kör `npx supabase db push --remote`
+- [x] Läs SQL:en i PR:en "Skaparen förlorar åtkomsten och tomma vandringsdagar"
+- [x] Merga PR:en och vänta tills Vercel har publicerat
+- [x] Kör `npx supabase db push --remote`
 - [ ] Prova direkt att skapa en ny tur. Den ska öppnas, och Vandringsdagar ska visa "Inte angett"
 - [ ] Prova att en tur du skapat försvinner ur Mina turer när du gjort någon annan till ägare och lämnat den
 
@@ -71,8 +71,12 @@ Kör punkt 2, 5 och 6 först, och meddela Oscar när du kör. `npx supabase db p
 
 Den här gången spelar ordningen mot appen ingen roll. Den gamla appen fungerar mot den nya databasen, och den nya appen går med som förut tills migreringen är körd.
 
-- [ ] Läs SQL:en i PR:en "Turen som ram med delsidor, och ta över en person utan konto"
-- [ ] Kör `npx supabase db push --remote`
+- [x] Läs SQL:en i PR:en "Turen som ram med delsidor, och ta över en person utan konto"
+- [x] Kör `npx supabase db push --remote`
 - [ ] Prova med två konton: lägg till en person utan konto i en tur, öppna inbjudningslänken med det andra kontot och välj personen. Det ska bli en deltagare, inte två
 - [ ] Prova "Ingen av dem": då blir man en ny deltagare som förut
 - [ ] Kör Security Advisor igen. Förväntat: två nya avsiktliga varningar, för `inbjudan` och `ga_med`, som inloggade ska kunna anropa
+
+## Anteckning från granskningen av migreringarna (Andreas Claude)
+
+Migreringarna kördes 2026-11-15. En sak att rätta i en ny migrering: en person utan konto kan få rollen owner av ägaren. Då kan den som har länken välja den personen i "Är du någon av de här?" och bli ägare av turen. Förslag: `ga_med` och `inbjudan` hoppar över deltagare med `roll = 'owner'`, med ett test i `supabase/rls.test.ts`.
