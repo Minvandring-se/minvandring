@@ -1,18 +1,56 @@
-import { useEffect } from 'react'
+import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useLocation, useNavigationType } from 'react-router'
+import { rullmal } from '@/lib/rullning'
+
+/** Rullningsläget för varje sida i historiken, så att bakåt hamnar där man var. Lever så länge fliken är öppen. */
+const lagen = new Map<string, number>()
+
+/** Turens id om sökvägen är en tur eller en av dess delsidor. Flikbyten inom samma tur ska inte rulla sidan. */
+const turId = (sokvag: string) => /^\/tur\/([^/]+)/.exec(sokvag)?.[1]
 
 /**
- * Rullar till toppen när man går till en ny sida. Går man bakåt eller framåt får webbläsaren
- * sköta läget själv, och en länk till en del av sidan (#deltagare) rullar dit som vanligt.
+ * Sköter rullningsläget vid sidbyte. En ny sida visas från toppen, och går man bakåt eller framåt
+ * hamnar man där man var. Webbläsarens egen återställning räcker inte, eftersom innehållet hämtas efter sidbytet.
  */
 export function RullaUpp() {
-  const { pathname, hash } = useLocation()
+  const { key, pathname, hash } = useLocation()
   const typ = useNavigationType()
+  const aktuell = useRef(key)
+  const forraSokvag = useRef(pathname)
 
   useEffect(() => {
-    if (typ === 'POP' || hash) return
-    window.scrollTo({ top: 0, left: 0, behavior: 'instant' })
-  }, [pathname, hash, typ])
+    history.scrollRestoration = 'manual'
+    const spara = () => lagen.set(aktuell.current, window.scrollY)
+    window.addEventListener('scroll', spara, { passive: true })
+    return () => window.removeEventListener('scroll', spara)
+  }, [])
+
+  // I layoutfasen, innan webbläsaren hinner rulla om den nya sidan och skriva över det sparade läget.
+  useLayoutEffect(() => {
+    const sammaTur = turId(pathname) !== undefined && turId(pathname) === turId(forraSokvag.current)
+    aktuell.current = key
+    forraSokvag.current = pathname
+
+    const mal = rullmal(typ, hash !== '', lagen.get(key), sammaTur)
+    if (mal === null) return
+    window.scrollTo({ top: mal, left: 0, behavior: 'instant' })
+    if (mal === 0) return
+
+    // Sidan kan vara för kort tills innehållet har hämtats. Försök en stund till, men ge upp om man själv rullar.
+    let forsok = 0
+    const avbryt = () => clearInterval(timer)
+    const timer = setInterval(() => {
+      if (Math.abs(window.scrollY - mal) < 2 || ++forsok > 30) return avbryt()
+      window.scrollTo({ top: mal, left: 0, behavior: 'instant' })
+    }, 50)
+    window.addEventListener('wheel', avbryt, { once: true, passive: true })
+    window.addEventListener('touchstart', avbryt, { once: true, passive: true })
+    return () => {
+      avbryt()
+      window.removeEventListener('wheel', avbryt)
+      window.removeEventListener('touchstart', avbryt)
+    }
+  }, [key, pathname, hash, typ])
 
   return null
 }

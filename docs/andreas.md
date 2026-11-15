@@ -62,3 +62,17 @@ Ordningen är viktig här också: den gamla appen läser tillbaka turen när den
 - [ ] Kör `npx supabase db push --remote`
 - [ ] Prova direkt att skapa en ny tur. Den ska öppnas, och Vandringsdagar ska visa "Inte angett"
 - [ ] Prova att en tur du skapat försvinner ur Mina turer när du gjort någon annan till ägare och lämnat den
+
+## 7. Kör migreringen för att ta över en person utan konto
+
+Migreringen `20261116000000_ta_over_deltagare.sql` gör att den som går med via länken får frågan "Är du någon av de här?" när turen har personer utan konto. Väljer man sig själv tar man över den deltagaren, så att det inte blir en dubblett och så att det som är kopplat till personen följer med.
+
+Kör punkt 2, 5 och 6 först, och meddela Oscar när du kör. `npx supabase db push --remote` kör alla migreringar som inte är körda, i rätt ordning.
+
+Den här gången spelar ordningen mot appen ingen roll. Den gamla appen fungerar mot den nya databasen, och den nya appen går med som förut tills migreringen är körd.
+
+- [ ] Läs SQL:en i PR:en "Turen som ram med delsidor, och ta över en person utan konto"
+- [ ] Kör `npx supabase db push --remote`
+- [ ] Prova med två konton: lägg till en person utan konto i en tur, öppna inbjudningslänken med det andra kontot och välj personen. Det ska bli en deltagare, inte två
+- [ ] Prova "Ingen av dem": då blir man en ny deltagare som förut
+- [ ] Kör Security Advisor igen. Förväntat: två nya avsiktliga varningar, för `inbjudan` och `ga_med`, som inloggade ska kunna anropa

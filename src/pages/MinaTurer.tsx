@@ -6,6 +6,7 @@ import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { TurBild } from '@/components/app/TurBild'
 import { NastaTurKort, TurRadKort, type TurMedDeltagare } from '@/components/app/TurKort'
+import { glomTurlistan, mindTurlista, minnsTurlistan } from '@/components/app/turlistaMinne'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useSidtitel } from '@/hooks/useSidtitel'
@@ -14,8 +15,8 @@ import { delaUppTurer, flerTurer, lage, lokaltDatum } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
 
 export function MinaTurer() {
-  const { namn: mittNamn } = useApp()
-  const [turer, setTurer] = useState<TurMedDeltagare[] | null>(null)
+  const { namn: mittNamn, anvandarId } = useApp()
+  const [turer, setTurer] = useState<TurMedDeltagare[] | null>(() => mindTurlista(anvandarId))
   const [laddfel, setLaddfel] = useState(false)
   const [sok, setSok] = useSearchParams()
   const formularOppet = sok.get('ny') === '1'
@@ -31,10 +32,14 @@ export function MinaTurer() {
       .select('id, namn, destination, avresa, hemkomst, dagar, skapad, deltagare(namn, typ, sortering)')
       .order('sortering', { referencedTable: 'deltagare' })
       .then(({ data, error }) => {
+        const hamtade = (data as TurMedDeltagare[] | null) ?? []
+        // Går det inte att hämta om listan får den sparade stå kvar.
+        if (error && mindTurlista(anvandarId)) return
         setLaddfel(!!error)
-        setTurer((data as TurMedDeltagare[] | null) ?? [])
+        setTurer(hamtade)
+        if (!error && anvandarId) minnsTurlistan(anvandarId, hamtade)
       })
-  }, [])
+  }, [anvandarId])
 
   function visaFormular(oppet: boolean) {
     setSok(oppet ? { ny: '1' } : {}, { replace: true })
@@ -183,6 +188,7 @@ function NyTurFormular({ onStang }: { onStang: () => void }) {
       setFel('Det gick inte att skapa turen. Försök igen.')
       return
     }
+    glomTurlistan()
     navigate(`/tur/${id}`)
   }
 

@@ -16,6 +16,9 @@ export interface TurMedDeltagare {
   deltagare: { namn: string; typ: 'person' | 'hund' }[]
 }
 
+/** Följer med när en tur öppnas från listan, så att Tillbaka i turen leder till samma plats i listan. */
+const FRAN_LISTA = { franLista: true }
+
 /** Det stora kortet för nästa (eller pågående) vandring. Bild till vänster på dator, överst i mobil. */
 export function NastaTurKort({ tur, pagar }: { tur: TurMedDeltagare; pagar: boolean }) {
   const personer = tur.deltagare.filter((d) => d.typ === 'person').map((d) => d.namn)
@@ -49,6 +52,7 @@ export function NastaTurKort({ tur, pagar }: { tur: TurMedDeltagare; pagar: bool
           {/* Länken täcker hela kortet, så att det går att trycka var som helst på det. */}
           <Link
             to={`/tur/${tur.id}`}
+            state={FRAN_LISTA}
             className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors after:absolute after:inset-0 hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             Öppna turen
@@ -65,6 +69,7 @@ export function TurRadKort({ tur }: { tur: TurMedDeltagare }) {
   return (
     <Link
       to={`/tur/${tur.id}`}
+      state={FRAN_LISTA}
       className="group flex items-center gap-4 rounded-lg border border-border bg-card p-2 pr-3 shadow-soft transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       <TurBild turId={tur.id} sizes="160px" className="h-14 w-16 shrink-0 rounded-md sm:h-20 sm:w-32" />
