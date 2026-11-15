@@ -1,6 +1,7 @@
 import { createClient, type SupabaseClient } from '@supabase/supabase-js'
+import { supabaseAdress } from '@/lib/supabaseAdress'
 
-const url = import.meta.env.VITE_SUPABASE_URL
+const url = supabaseAdress(import.meta.env.VITE_SUPABASE_URL)
 const nyckel = import.meta.env.VITE_SUPABASE_ANON_KEY
 
 /** null när nycklarna saknas i .env.local. Då visar appen en ruta om hur man kommer igång. */

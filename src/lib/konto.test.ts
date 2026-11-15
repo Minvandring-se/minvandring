@@ -77,3 +77,9 @@ describe('authFel', () => {
     expect(ALLMANT_FEL).toContain(`Om det fortsätter, hör av dig till ${KONTAKT_MEJL}.`)
   })
 })
+
+describe('authFel när servern inte nås', () => {
+  it('säger att servern inte gick att nå', () => {
+    expect(authFel({ name: 'AuthRetryableFetchError', status: 0 })).toMatch(/^Kunde inte nå servern/)
+  })
+})
