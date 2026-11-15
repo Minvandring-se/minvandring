@@ -4,6 +4,7 @@ import { KartaIllustration } from '@/components/illustrationer/KartaIllustration
 import { VagIllustration } from '@/components/illustrationer/VagIllustration'
 import { MatIllustration } from '@/components/illustrationer/MatIllustration'
 import { AnteckningIllustration } from '@/components/illustrationer/AnteckningIllustration'
+import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
 import { TankenIllustration } from '@/components/illustrationer/TankenIllustration'
 import { Logotyp } from '@/components/Logotyp'
 import { Bildspel } from '@/components/start/Bildspel'
@@ -250,17 +251,32 @@ export function Start() {
                 ))}
               </ul>
 
-              <div className={`mt-6 grid overflow-hidden md:grid-cols-[2fr_3fr] md:items-center lg:mt-8 ${kortKlass}`}>
-                <Levande>
-                  <AnteckningIllustration className="block aspect-[8/5] w-full" />
-                </Levande>
-                <div className="space-y-2 p-5 md:p-8">
-                  <h3 className="text-xl">Kom ihåg till nästa vandring</h3>
-                  <p className="text-muted-foreground">
-                    Skriv ner vad som fungerade och vad ni saknade. Lärdomarna finns kvar när ni planerar nästa tur.
-                  </p>
-                </div>
-              </div>
+              {/* Det som finns kvar mellan turerna: lärdomarna och ens egen utrustning. */}
+              <ul className="mt-6 grid gap-6 md:grid-cols-2 lg:mt-8 lg:gap-8">
+                <li className={`overflow-hidden ${kortKlass}`}>
+                  <Levande>
+                    <AnteckningIllustration className="block aspect-[8/5] w-full" />
+                  </Levande>
+                  <div className="space-y-2 p-5">
+                    <h3 className="text-xl">Kom ihåg till nästa vandring</h3>
+                    <p className="text-muted-foreground">
+                      Skriv ner vad som fungerade och vad ni saknade. Lärdomarna finns kvar när ni planerar nästa tur.
+                    </p>
+                  </div>
+                </li>
+                <li className={`overflow-hidden ${kortKlass}`}>
+                  <Levande>
+                    <ForradIllustration className="block aspect-[8/5] w-full" />
+                  </Levande>
+                  <div className="space-y-2 p-5">
+                    <h3 className="text-xl">Ditt förråd</h3>
+                    <p className="text-muted-foreground">
+                      Lägg in dina prylar en gång, sorterade i kategorier med vikt och anteckningar. Sedan väljer du bara vad som ska med på
+                      nästa tur.
+                    </p>
+                  </div>
+                </li>
+              </ul>
             </section>
           </div>
           <Stigavsnitt id={stigBorja.id} bit={stigBorja} />
