@@ -10,8 +10,11 @@ const VANTAN = 200
 /** Hur länge utritningen tar, i ms. */
 const RITTID = 1600
 
-/** Höjden på luften mellan panelerna. Samma i Mellanrum, så att alla mellanrum blir lika. */
-const MELLANRUM = 'h-20 sm:h-24 lg:h-28'
+/**
+ * Höjden på luften mellan panelerna. Rymmer vägvisaren (60 px) med 24 px fritt över och under,
+ * på den del av leden som går tvärs över.
+ */
+const MELLANRUM = 'h-36 lg:h-40'
 
 interface Props {
   /** Unikt och stabilt inom startsidan. Ger bitens form och används för att minnas vad som ritats. */
@@ -33,9 +36,9 @@ function useMinskadRorelse() {
   return minskad
 }
 
-/** Luft mellan två paneler utan led. */
+/** Luft utan led, till exempel mellan hero och första panelen. */
 export function Mellanrum() {
-  return <div aria-hidden className={MELLANRUM} />
+  return <div aria-hidden className="h-12 lg:h-16" />
 }
 
 /**

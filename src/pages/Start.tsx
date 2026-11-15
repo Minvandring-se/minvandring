@@ -14,6 +14,7 @@ import { Mellanrum, Stigavsnitt } from '@/components/start/stig/Stigavsnitt'
 import { StigProvider } from '@/components/start/stig/StigProvider'
 import { useSession } from '@/hooks/useSession'
 import { Kontaktlank } from '@/components/Kontaktlank'
+import { cn } from '@/lib/utils'
 
 /** Flödet i tre steg direkt under hero. Korten längre ner visar innehållet. */
 const floden = [
@@ -130,8 +131,10 @@ const [stigBorja, stigPackning, stigTanken, stigFragor] = kopplaStig([
 
 /** Upplyft panel för sektionerna mellan hero och avslutningen. Samma innehållsbredd som förut. */
 const panel = 'mx-auto max-w-6xl rounded-lg bg-card shadow-soft'
-/** Luft i panelerna. */
-const panelLuft = 'px-4 py-12 sm:px-6 sm:py-16 lg:py-20'
+/** Samma panel i sand, för Tanken bakom MinVandring. */
+const panelSand = 'mx-auto max-w-6xl rounded-lg bg-sand/50 shadow-soft'
+/** Luft i panelerna. Lite mindre i nederkant, där innehållet redan slutar med kort eller text. */
+const panelLuft = 'px-4 pt-8 pb-7 sm:px-6 sm:pt-11 sm:pb-9 lg:pt-13 lg:pb-11'
 
 /** Kort streck i hjortronorange under rubrikerna. Dekorativt. I en space-y-behållare räknas dess avstånd in. */
 function Rubrikstreck({ className = 'mt-4' }: { className?: string }) {
@@ -197,58 +200,60 @@ export function Start() {
         {/* Panelerna mellan hero och avslutningen, med sidans bakgrund och leden i luften mellan dem. */}
         <div className="px-3 sm:px-6">
           <Mellanrum />
-          <section id="sa-fungerar-det" aria-labelledby="floden-rubrik" className={`${panel} scroll-mt-4 px-4 sm:px-6`}>
-            <h2 id="floden-rubrik" className="sr-only">
-              Så fungerar det
-            </h2>
-            <ol className="grid divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
-              {floden.map(({ nr, rubrik, text }) => (
-                <li key={nr} className="flex items-baseline gap-4 py-7 md:block md:px-8 md:py-12 md:first:pl-0 md:last:pr-0">
-                  <span aria-hidden className="w-12 shrink-0 font-heading text-4xl font-semibold text-accent-strong tabular-nums md:block md:text-5xl">
-                    {nr}
-                  </span>
-                  <div className="md:mt-3">
-                    <h3 className="text-lg">{rubrik}</h3>
-                    <p className="text-muted-foreground">{text}</p>
-                  </div>
-                </li>
-              ))}
-            </ol>
-          </section>
+          {/* Stegen 01–03 och Börja med din nästa tur i samma panel. Hero-länken Så fungerar det hoppar hit. */}
+          <div id="sa-fungerar-det" className={`${panel} scroll-mt-4`}>
+            <section aria-labelledby="floden-rubrik" className="border-b border-border px-4 sm:px-6">
+              <h2 id="floden-rubrik" className="sr-only">
+                Så fungerar det
+              </h2>
+              <ol className="grid divide-y divide-border md:grid-cols-3 md:divide-x md:divide-y-0">
+                {floden.map(({ nr, rubrik, text }) => (
+                  <li key={nr} className="flex items-baseline gap-4 py-7 md:block md:px-8 md:py-12 md:first:pl-0 md:last:pr-0">
+                    <span aria-hidden className="w-12 shrink-0 font-heading text-4xl font-semibold text-accent-strong tabular-nums md:block md:text-5xl">
+                      {nr}
+                    </span>
+                    <div className="md:mt-3">
+                      <h3 className="text-lg">{rubrik}</h3>
+                      <p className="text-muted-foreground">{text}</p>
+                    </div>
+                  </li>
+                ))}
+              </ol>
+            </section>
+            <section aria-labelledby="sa-fungerar-rubrik" className={panelLuft}>
+              <h2 id="sa-fungerar-rubrik" className="text-3xl font-bold sm:text-4xl">
+                Börja med din nästa tur
+              </h2>
+              <Rubrikstreck />
+              <p className="mt-5 text-lg text-muted-foreground">En gemensam plan, från första packlistan till sista dagen.</p>
 
-          <section aria-labelledby="sa-fungerar-rubrik" className={`${panel} ${panelLuft}`}>
-            <h2 id="sa-fungerar-rubrik" className="text-3xl font-bold sm:text-4xl">
-              Börja med din nästa tur
-            </h2>
-            <Rubrikstreck />
-            <p className="mt-5 text-lg text-muted-foreground">En gemensam plan, från första packlistan till sista dagen.</p>
+              <ul className="mt-12 grid gap-6 md:grid-cols-3 lg:mt-14 lg:gap-8">
+                {steg.map(({ Illustration, rubrik, text }) => (
+                  <li key={rubrik} className={`overflow-hidden ${kortKlass}`}>
+                    <Levande>
+                      <Illustration className="block aspect-[8/5] w-full" />
+                    </Levande>
+                    <div className="space-y-2 p-5">
+                      <h3 className="text-xl">{rubrik}</h3>
+                      <p className="text-muted-foreground">{text}</p>
+                    </div>
+                  </li>
+                ))}
+              </ul>
 
-            <ul className="mt-12 grid gap-6 md:grid-cols-3 lg:mt-14 lg:gap-8">
-              {steg.map(({ Illustration, rubrik, text }) => (
-                <li key={rubrik} className={`overflow-hidden ${kortKlass}`}>
-                  <Levande>
-                    <Illustration className="block aspect-[8/5] w-full" />
-                  </Levande>
-                  <div className="space-y-2 p-5">
-                    <h3 className="text-xl">{rubrik}</h3>
-                    <p className="text-muted-foreground">{text}</p>
-                  </div>
-                </li>
-              ))}
-            </ul>
-
-            <div className={`mt-6 grid overflow-hidden md:grid-cols-[2fr_3fr] md:items-center lg:mt-8 ${kortKlass}`}>
-              <Levande>
-                <AnteckningIllustration className="block aspect-[8/5] w-full" />
-              </Levande>
-              <div className="space-y-2 p-5 md:p-8">
-                <h3 className="text-xl">Kom ihåg till nästa vandring</h3>
-                <p className="text-muted-foreground">
-                  Skriv ner vad som fungerade och vad ni saknade. Lärdomarna finns kvar när ni planerar nästa tur.
-                </p>
+              <div className={`mt-6 grid overflow-hidden md:grid-cols-[2fr_3fr] md:items-center lg:mt-8 ${kortKlass}`}>
+                <Levande>
+                  <AnteckningIllustration className="block aspect-[8/5] w-full" />
+                </Levande>
+                <div className="space-y-2 p-5 md:p-8">
+                  <h3 className="text-xl">Kom ihåg till nästa vandring</h3>
+                  <p className="text-muted-foreground">
+                    Skriv ner vad som fungerade och vad ni saknade. Lärdomarna finns kvar när ni planerar nästa tur.
+                  </p>
+                </div>
               </div>
-            </div>
-          </section>
+            </section>
+          </div>
           <Stigavsnitt id={stigBorja.id} bit={stigBorja} />
 
           <section aria-labelledby="smakprov-rubrik" className={`${panel} ${panelLuft}`}>
@@ -277,8 +282,8 @@ export function Start() {
           </section>
           <Stigavsnitt id={stigPackning.id} bit={stigPackning} />
 
-          <section aria-labelledby="tanken-rubrik" className={`${panel} ${panelLuft}`}>
-            <div className="grid items-center gap-10 overflow-hidden rounded-lg bg-sand/50 p-6 sm:p-10 md:grid-cols-2 md:gap-16 lg:p-12">
+          <section aria-labelledby="tanken-rubrik" className={cn(panelSand, panelLuft, 'sm:px-10 lg:px-12')}>
+            <div className="grid items-center gap-10 md:grid-cols-2 md:gap-16">
               <TankenIllustration className="mx-auto block aspect-[8/5] w-full max-w-md" />
               <div className="space-y-5">
                 <h2 id="tanken-rubrik" className="text-3xl font-bold sm:text-4xl">

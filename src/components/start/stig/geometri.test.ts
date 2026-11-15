@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { beraknaStig, FIGUR, kopplaStig, punktPaKurva, sidaX, slumptal, type Kubik, type Matt, type Sida, type Stigbit } from './geometri'
+import { beraknaStig, FIGUR, FIGURLUFT, kopplaStig, punktPaKurva, sidaX, slumptal, type Kubik, type Matt, type Sida, type Stigbit } from './geometri'
 
 /** Ett mellanrum: bredd och höjd, med paneler på 1152 px i mitten (eller nästan kant i kant). */
 const matt = (bredd = 1416, hojd = 112): Matt => {
@@ -118,12 +118,16 @@ describe('beraknaStig', () => {
 })
 
 describe('figurer', () => {
-  const inom = (m: Matt, p: { x: number; y: number }, s: { bredd: number; hojd: number }) =>
-    p.x - s.bredd / 2 >= 0 && p.x + s.bredd / 2 <= m.bredd && p.y - s.hojd >= 0 && p.y <= m.hojd
+  /** Helt i mellanrummet med minst 24 px fritt till panelen ovanför och nedanför. */
+  const fritt = (m: Matt, p: { x: number; y: number }, s: { bredd: number; hojd: number }) =>
+    p.x - s.bredd / 2 >= 0 && p.x + s.bredd / 2 <= m.bredd && p.y - s.hojd >= FIGURLUFT && p.y <= m.hojd - FIGURLUFT
+  /** Mellanrummen som de är på sidan: 144 px i mobil och 160 px på dator. */
+  const sidan = [mobil(366, 144), matt(768, 144), matt(1366 - 48, 160), matt(1920 - 48, 160)]
 
-  it('står på leden och helt i mellanrummet, aldrig över en panel', () => {
+  it('står på leden med minst 24 px fritt över och under, aldrig mot en panel', () => {
+    expect(FIGURLUFT).toBe(24)
     const fel: string[] = []
-    for (const m of [mobil(), matt(768, 96), matt(1366 - 48, 112), matt(1920 - 48, 112)]) {
+    for (const m of sidan) {
       for (const id of ['borja', 'packning', 'tanken', 'fragor']) {
         const stig = beraknaStig(m, bit('vanster', 'hoger', { forsta: true, sista: true, detalj: 'talt', detaljLage: 0.5 }), id)
         if (!stig) continue
@@ -134,7 +138,7 @@ describe('figurer', () => {
           ['detalj', stig.figurer.detalj, FIGUR.detalj],
         ] as const) {
           if (!p) continue
-          if (!inom(m, p, storlek)) fel.push(`${m.bredd} ${id} ${namn}: utanför`)
+          if (!fritt(m, p, storlek)) fel.push(`${m.bredd} ${id} ${namn}: för nära en panel`)
           if (Math.min(...langs.map((q) => Math.hypot(q.x - p.x, q.y - p.y))) > 1) fel.push(`${m.bredd} ${id} ${namn}: inte på leden`)
         }
       }
@@ -142,13 +146,36 @@ describe('figurer', () => {
     expect(fel).toEqual([])
   })
 
-  it('visar tältet, brasan, ledkrysset och vägvisaren på dator', () => {
-    const m = matt(1366 - 48, 112)
-    for (const detalj of ['talt', 'eld'] as const) {
-      const stig = beraknaStig(m, bit('vanster', 'hoger', { forsta: true, sista: true, detalj, detaljLage: 0.5 }), 'borja')
-      expect(stig?.figurer.detalj).not.toBeNull()
-      expect(stig?.figurer.ledkryss).not.toBeNull()
-      expect(stig?.figurer.vagvisare).not.toBeNull()
+  it('visar tältet, brasan, ledkrysset och vägvisaren i mobil och på dator', () => {
+    const fel: string[] = []
+    for (const m of sidan) {
+      for (const id of ['borja', 'packning', 'tanken', 'fragor']) {
+        for (const [start, slut] of [
+          ['vanster', 'hoger'],
+          ['hoger', 'vanster'],
+        ] as const) {
+          for (const [detalj, detaljLage] of [
+            ['talt', 0.3],
+            ['eld', 0.72],
+          ] as const) {
+            const f = beraknaStig(m, bit(start, slut, { forsta: true, sista: true, detalj, detaljLage }), id)?.figurer
+            for (const [namn, p] of Object.entries(f ?? {})) if (!p) fel.push(`${m.bredd} ${id} ${start} ${detalj}: ${namn} saknas`)
+          }
+        }
+      }
+    }
+    expect(fel).toEqual([])
+  })
+
+  it('står på delen tvärs över, inte i de branta svängarna nära panelerna', () => {
+    const m = matt(1366 - 48, 160)
+    const stig = beraknaStig(m, bit('vanster', 'hoger', { forsta: true, sista: true, detalj: 'eld', detaljLage: 0.5 }), 'borja')
+    if (!stig) throw new Error('Saknad geometri')
+    for (const p of Object.values(stig.figurer)) {
+      if (!p) throw new Error('Saknad figur')
+      // Mellan bitens ändar och en bit in från dem, där leden går tvärs över.
+      expect(p.x).toBeGreaterThan(stig.start.x + 30)
+      expect(p.x).toBeLessThan(stig.slut.x - 30)
     }
   })
 

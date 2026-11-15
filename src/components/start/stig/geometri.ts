@@ -50,6 +50,9 @@ export interface Figurer {
   detalj: Punkt | null
 }
 
+/** Minsta fria luft över och under en figur, till panelen eller sektionen intill. */
+export const FIGURLUFT = 24
+
 /** Figurernas storlek i px. x är mitten och y marken. */
 export const FIGUR = {
   ledkryss: { bredd: 32, hojd: 44 },
@@ -125,9 +128,14 @@ function langsLeden(kurvor: Kubik[], steg = 60) {
   return punkter.map((p, i) => ({ ...p, andel: avstand[i] / total }))
 }
 
-/** Om figuren får plats i mellanrummet: helt inom det, med fötterna på leden. */
+/** Om figuren får plats i mellanrummet: helt inom det och med minst FIGURLUFT fritt över och under. */
 export function farPlats(m: Matt, p: Punkt, storlek: { bredd: number; hojd: number }) {
-  return p.x - storlek.bredd / 2 >= 0 && p.x + storlek.bredd / 2 <= m.bredd && p.y - storlek.hojd >= 2 && p.y <= m.hojd
+  return (
+    p.x - storlek.bredd / 2 >= 0 &&
+    p.x + storlek.bredd / 2 <= m.bredd &&
+    p.y - storlek.hojd >= FIGURLUFT &&
+    p.y <= m.hojd - FIGURLUFT
+  )
 }
 
 /** Bitens kurvor, SVG-sökväg och figurer, eller null om mellanrummet är för litet. */
@@ -150,7 +158,8 @@ export function beraknaStig(m: Matt, bit: Stigbit, fro = bit.id ?? '') {
   // Grundformen i tre delar: brant ner från panelen ovanför, tvärs över i mitten och brant ner mot
   // nästa panel. Samma sida: en båge in mot mitten och tillbaka.
   const panel = m.hoger - m.vanster
-  const mittY = hojd / 2
+  // Delen tvärs över ligger lite under mitten, så att figurerna på den får luft över sig.
+  const mittY = 0.6 * hojd
   const bojning = Math.min(130, Math.max(40, 0.12 * panel))
   const tvars = slut.x !== start.x ? Math.sign(slut.x - start.x) : bit.start === 'vanster' ? 1 : -1
   const m1 = { x: start.x + tvars * bojning, y: mittY }
@@ -200,15 +209,17 @@ export function beraknaStig(m: Matt, bit: Stigbit, fro = bit.id ?? '') {
     kurvor.push([b, inom({ x: b.x + (c.x - a.x) / 6, y: b.y + (c.y - a.y) / 6 }), inom({ x: c.x - (d.x - b.x) / 6, y: c.y - (d.y - b.y) / 6 }), c])
   }
 
-  const langs = langsLeden(kurvor)
+  // Figurerna står bara på delen som går tvärs över, inte i de branta svängarna nära panelerna.
+  const [tvarsFran, tvarsTill] = [Math.min(m1.x, m2.x), Math.max(m1.x, m2.x)]
+  const langs = langsLeden(kurvor).filter((p) => p.x >= tvarsFran && p.x <= tvarsTill)
   const utan = (p: (Punkt & { andel: number }) | undefined) => (p ? { x: p.x, y: p.y } : null)
   const narmast = (onskat: number) =>
     langs
       .filter((p) => Math.abs(p.andel - onskat) <= 0.25 && farPlats(m, p, FIGUR.detalj))
       .sort((a, b) => Math.abs(a.andel - onskat) - Math.abs(b.andel - onskat))[0]
   const figurer: Figurer = {
-    ledkryss: bit.forsta ? utan(langs.find((p) => p.andel <= 0.3 && farPlats(m, p, FIGUR.ledkryss))) : null,
-    vagvisare: bit.sista ? utan([...langs].reverse().find((p) => p.andel >= 0.7 && farPlats(m, p, FIGUR.vagvisare))) : null,
+    ledkryss: bit.forsta ? utan(langs.find((p) => p.andel <= 0.35 && farPlats(m, p, FIGUR.ledkryss))) : null,
+    vagvisare: bit.sista ? utan([...langs].reverse().find((p) => p.andel >= 0.65 && farPlats(m, p, FIGUR.vagvisare))) : null,
     detalj: bit.detalj ? utan(narmast(bit.detaljLage ?? 0.6)) : null,
   }
 
