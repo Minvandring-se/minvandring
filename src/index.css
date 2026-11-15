@@ -125,13 +125,3 @@ input::-ms-reveal,
 input::-ms-clear {
   display: none;
 }
-
-/* Leden på startsidan ritas fram i takt med scrollen (animation-timeline sätts i Stigavsnitt). */
-@keyframes stig-rita {
-  from {
-    stroke-dashoffset: 1;
-  }
-  to {
-    stroke-dashoffset: 0;
-  }
-}

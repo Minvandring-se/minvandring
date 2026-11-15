@@ -29,6 +29,8 @@ export interface Stigbit extends StigVal {
   forsta?: boolean
   /** Sista biten i leden. Slutar vid en vägvisare i stället för att svänga ner. */
   sista?: boolean
+  forraId?: string
+  nastaId?: string
 }
 
 /** Sektionens mått och innehållsbehållarens läge i sektionen, i CSS-pixlar. */
@@ -81,7 +83,7 @@ const riktningMot = (sida: Sida) => (sida === 'hoger' ? 1 : -1)
 
 /**
  * Kopplar ihop bitarna i ordning. Varje bit börjar där förra slutade och utan eget slut
- * växlar den sida. Första och sista biten räknas fram från ordningen.
+ * växlar den sida. Första och sista biten och grannarnas id räknas fram från ordningen.
  */
 export function kopplaStig<T extends StigVal>(delar: readonly T[], start: Sida = 'vanster'): Array<T & Stigbit> {
   let sida = start
@@ -93,6 +95,8 @@ export function kopplaStig<T extends StigVal>(delar: readonly T[], start: Sida =
       slut,
       forsta: i === 0,
       sista: i === delar.length - 1,
+      forraId: delar[i - 1]?.id,
+      nastaId: delar[i + 1]?.id,
     }
     sida = slut
     return bit
@@ -283,36 +287,4 @@ export type Stig = NonNullable<ReturnType<typeof beraknaStig> | ReturnType<typeo
 /** Den fulla varianten när den får plats och skärmen är bred, annars den enkla. */
 export function valjStig(m: Matt, bit: Stigbit, bred: boolean): Stig | null {
   return (bred ? beraknaStig(m, bit) : null) ?? beraknaEnkelStig(m, bit)
-}
-
-/*
- * Hur leden följer scrollen. p är hur många px gränsen mellan sektionen och nästa ligger ovanför
- * fönstrets nederkant. Biten i den nedre luften ritas medan p går från halva luften under
- * nederkanten till 30 % av fönstrets höjd. Fortsättningen i nästa sektions övre luft ritas sedan,
- * till 40 %. Samma intervall används i CSS (animation-range) och i reserven i JavaScript.
- */
-const RITAD_NERE = 0.3
-const RITAD_UPPE = 0.4
-
-export function ritintervall(luftNere: number, fonsterhojd: number) {
-  return {
-    nere: [-luftNere / 2, RITAD_NERE * fonsterhojd] as [number, number],
-    uppe: [RITAD_NERE * fonsterhojd, RITAD_UPPE * fonsterhojd] as [number, number],
-  }
-}
-
-/** Hur stor del av biten som är ritad, 0–1. */
-export function framsteg(p: number, [fran, till]: [number, number]) {
-  return Math.min(1, Math.max(0, (p - fran) / (till - fran)))
-}
-
-/**
- * Samma intervall som animation-range för view()-tidslinjer. Den nedre utlösaren är sektionens nedre
- * luft, så att dess cover-läge är p + luften. Den övre utlösaren börjar vid gränsen, så där är det p.
- */
-export function cssIntervall(luftNere: number) {
-  return {
-    nere: `cover ${luftNere / 2}px cover calc(${luftNere}px + ${RITAD_NERE * 100}vh)`,
-    uppe: `cover ${RITAD_NERE * 100}vh cover ${RITAD_UPPE * 100}vh`,
-  }
 }

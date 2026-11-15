@@ -1,12 +1,13 @@
 import { useEffect, useId, useRef, useState } from 'react'
-import { animera } from '@/components/start/stig/animationsko'
-import { cssIntervall, framsteg, ritintervall, valjStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
+import { animera, vanta } from '@/components/start/stig/animationsko'
+import { valjStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
 import { Naturdetalj } from '@/components/start/stig/Naturdetalj'
 import { useStigKo } from '@/components/start/stig/stigKo'
+import { utritning, VANTAN } from '@/components/start/stig/utritning'
 import { Ledkryss, Vagvisare } from '@/components/start/stig/Vagvisare'
 
 interface Props {
-  /** Unikt och stabilt inom startsidan. Används för att minnas vad som redan spelats och för tidslinjernas namn. */
+  /** Unikt och stabilt inom startsidan. Används för att minnas vad som redan ritats. */
   id: string
   bit: Stigbit
 }
@@ -25,28 +26,15 @@ function useMedia(fraga: string) {
   return traff
 }
 
-/** Om webbläsaren kan styra animationer med scrollen (CSS scroll-driven animations). */
-const stodjerScrollTidslinje = () => typeof CSS !== 'undefined' && CSS.supports('animation-timeline: view()')
-
-const scrollEgenskaper = ['animation-name', 'animation-duration', 'animation-timing-function', 'animation-fill-mode', 'animation-timeline', 'animation-range']
-
-/** Sätter en animation som följer en view()-tidslinje. Longhands, så att inget nollställs av en shorthand. */
-function satsScrollAnimation(mask: SVGPathElement, tidslinje: string, intervall: string) {
-  const varden = ['stig-rita', 'auto', 'linear', 'both', tidslinje, intervall]
-  scrollEgenskaper.forEach((egenskap, i) => mask.style.setProperty(egenskap, varden[i]))
-}
-
-function rensaScrollAnimation(mask: SVGPathElement) {
-  for (const egenskap of scrollEgenskaper) mask.style.removeProperty(egenskap)
-}
-
 /**
  * En bit av leden i luften mellan sektionen och nästa. Dekorativ.
  * Läggs först i en sektion med relative och isolate. Innehållet ligger i en behållare med
  * data-stiginnehall och samma bredd i alla sektioner. Från 1360 px, när marginalen räcker, visas den
  * fulla varianten som svänger ner mot nästa sektion. Annars en enkel kurva i den nedre luften.
- * Leden ritas fram i takt med scrollen och dras tillbaka när man scrollar upp. Tältet och brasan
- * spelas en gång per sidbesök. Vid minskad rörelse visas allt stilla.
+ *
+ * När mellanrummet nått en tredjedel upp på skärmen ritas biten fram, en gång per sidbesök, efter
+ * en kort väntan och i tur och ordning med de andra bitarna. Scrollar man förbi innan dess visas den
+ * färdig. Tältet och brasan spelas när leden nått fram. Vid minskad rörelse visas allt stilla.
  */
 export function Stigavsnitt({ id, bit }: Props) {
   const ko = useStigKo()
@@ -54,7 +42,6 @@ export function Stigavsnitt({ id, bit }: Props) {
   const bred = useMedia('(min-width: 1360px)')
   const lagerRef = useRef<HTMLDivElement>(null)
   const nereRef = useRef<HTMLDivElement>(null)
-  const uppeRef = useRef<HTMLDivElement>(null)
   const maskNereRef = useRef<SVGPathElement>(null)
   const maskUppeRef = useRef<SVGPathElement>(null)
   const detaljRef = useRef<SVGGElement>(null)
@@ -62,7 +49,6 @@ export function Stigavsnitt({ id, bit }: Props) {
   const glodRef = useRef<SVGEllipseElement>(null)
   const [matt, setMatt] = useState<Matt | null>(null)
   const maskId = `stigmask-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
-  const tidslinje = `--stig-${id.replace(/[^a-zA-Z0-9_-]/g, '')}`
 
   // Mät sektionen och innehållet. Följer med när en fråga öppnas, en bild laddas eller fönstret ändras.
   useEffect(() => {
@@ -106,115 +92,98 @@ export function Stigavsnitt({ id, bit }: Props) {
   const stig = matt && valjStig(matt, bit, bred)
   const dNere = stig?.dBotten
   const dUppe = stig?.dTopp
-  const luftNere = matt ? matt.hojd - matt.botten : 0
-
-  // Rita fram leden i takt med scrollen. CSS där det stöds, annars en passiv scroll-lyssnare.
-  useEffect(() => {
-    const lager = lagerRef.current
-    const nere = nereRef.current
-    const uppe = uppeRef.current
-    const maskNere = maskNereRef.current
-    const maskUppe = maskUppeRef.current
-    if (!dNere || !lager || !nere || !maskNere) return
-    const masker = maskUppe ? [maskNere, maskUppe] : [maskNere]
-
-    if (minskad) {
-      for (const mask of masker) {
-        rensaScrollAnimation(mask)
-        mask.style.strokeDashoffset = '0'
-      }
-      return
-    }
-
-    if (stodjerScrollTidslinje()) {
-      const intervall = cssIntervall(luftNere)
-      lager.style.setProperty('timeline-scope', `${tidslinje}-nere, ${tidslinje}-uppe`)
-      nere.style.setProperty('view-timeline-name', `${tidslinje}-nere`)
-      satsScrollAnimation(maskNere, `${tidslinje}-nere`, intervall.nere)
-      if (uppe && maskUppe) {
-        uppe.style.setProperty('view-timeline-name', `${tidslinje}-uppe`)
-        satsScrollAnimation(maskUppe, `${tidslinje}-uppe`, intervall.uppe)
-      }
-      return () => {
-        lager.style.removeProperty('timeline-scope')
-        nere.style.removeProperty('view-timeline-name')
-        uppe?.style.removeProperty('view-timeline-name')
-        for (const mask of masker) rensaScrollAnimation(mask)
-      }
-    }
-
-    // Reserv: läs lägena och skriv framsteget högst en gång per bildruta medan man scrollar.
-    let ram = 0
-    const uppdatera = () => {
-      ram = 0
-      const fonster = window.innerHeight
-      const intervall = ritintervall(luftNere, fonster)
-      const pNere = fonster - nere.getBoundingClientRect().bottom
-      const pUppe = uppe ? fonster - uppe.getBoundingClientRect().top : 0
-      maskNere.style.strokeDashoffset = String(1 - framsteg(pNere, intervall.nere))
-      if (maskUppe) maskUppe.style.strokeDashoffset = String(1 - framsteg(pUppe, intervall.uppe))
-    }
-    const schemalagg = () => {
-      if (!ram) ram = requestAnimationFrame(uppdatera)
-    }
-    window.addEventListener('scroll', schemalagg, { passive: true })
-    window.addEventListener('resize', schemalagg)
-    uppdatera()
-    return () => {
-      cancelAnimationFrame(ram)
-      window.removeEventListener('scroll', schemalagg)
-      window.removeEventListener('resize', schemalagg)
-    }
-  }, [dNere, dUppe, luftNere, minskad, tidslinje])
-
+  const { forraId, nastaId } = bit
   const typ = bit.detalj
   const detaljX = stig?.figurer.detalj?.x
   const detaljY = stig?.figurer.detalj?.y
 
-  // Tältet och brasan spelas en gång när leden ritats fram dit. Avbryts om de lämnar skärmen eller fliken döljs.
+  // Fortsättningen i den övre luften hör till biten ovanför. Den syns när den biten har ritats
+  // och ritas fram av den bitens scen, i samma rörelse som biten.
+  useEffect(() => {
+    const mask = maskUppeRef.current
+    if (!dUppe || !mask) return
+    const visa = () => {
+      mask.style.strokeDashoffset = '0'
+    }
+    if (minskad || (forraId && ko.harSpelat(forraId))) visa()
+    else mask.style.strokeDashoffset = '1'
+    return ko.registreraTopp(id, {
+      langd: mask.getTotalLength(),
+      async rita(ramar, varaktighet, signal) {
+        await animera(mask, ramar, { duration: varaktighet }, signal)
+        visa()
+      },
+      stilla: visa,
+    })
+  }, [dUppe, forraId, id, ko, minskad])
+
+  // Rita fram biten en gång när mellanrummet nått en tredjedel upp, och spela sedan tältet eller brasan.
   useEffect(() => {
     const nere = nereRef.current
+    const mask = maskNereRef.current
     const detalj = detaljRef.current
     const flamma = flammaRef.current
     const glod = glodRef.current
-    if (!typ || detaljX === undefined || !nere || !detalj) return
+    if (!dNere || !nere || !mask) return
 
     /** Sluttillståndet. Statiskt (minskad rörelse) visar tältet och full eld. */
     function stilla(statiskt = false) {
-      if (!detalj) return
-      detalj.style.transform = 'none'
-      detalj.style.opacity = typ === 'talt' && !statiskt ? '0' : '1'
+      if (!mask) return
+      mask.style.strokeDashoffset = '0'
+      if (detalj) {
+        detalj.style.transform = 'none'
+        detalj.style.opacity = typ === 'talt' && !statiskt ? '0' : '1'
+      }
       if (flamma) {
         flamma.style.transform = 'none'
         flamma.style.opacity = statiskt ? '1' : '0.3'
       }
       if (glod) glod.style.opacity = statiskt ? '0.5' : '0.15'
+      ko.topp(nastaId)?.stilla()
     }
 
-    const statiskt = minskad || typeof IntersectionObserver === 'undefined' || typeof detalj.animate !== 'function'
+    const statiskt = minskad || typeof IntersectionObserver === 'undefined' || typeof mask.animate !== 'function'
     if (statiskt || ko.harSpelat(id)) {
       stilla(statiskt)
       if (statiskt) ko.markeraSpelad(id)
       return
     }
 
-    detalj.style.opacity = '0'
-    let synlig = false
+    mask.style.strokeDashoffset = '1'
+    if (detalj) detalj.style.opacity = '0'
     let avbryt: (() => void) | null = null
+    let iLage = false
     // Falskt när effekten har städats, till exempel när minskad rörelse slås på mitt i en scen.
     // Då har nästa körning redan satt rätt läge och den avbrutna scenen får inte skriva över det.
     let aktuell = true
+    /** Mellanrummet har passerat ovanför skärmen. */
+    const forbi = () => nere.getBoundingClientRect().bottom <= 0
 
-    function startaOmSynlig() {
-      if (!synlig || document.hidden || avbryt || ko.harSpelat(id)) return
+    /** Visar biten färdig. Används när man scrollat förbi, så att den aldrig hoppar fram synligt. */
+    function fardig() {
+      ko.markeraSpelad(id)
+      stilla()
+    }
+
+    function starta() {
+      if (document.hidden || avbryt || ko.harSpelat(id)) return
       avbryt = ko.laggTill(async (signal) => {
-        if (signal.aborted || ko.harSpelat(id) || !detalj) return
-        ko.markeraSpelad(id)
+        if (signal.aborted || ko.harSpelat(id) || !mask) return
         const scen = new AbortController()
         const avbrytScen = () => scen.abort()
         signal.addEventListener('abort', avbrytScen, { once: true })
+        let ritar = false
         try {
-          if (typ === 'talt') {
+          await vanta(VANTAN, scen.signal)
+          ko.markeraSpelad(id)
+          ritar = true
+          const topp = ko.topp(nastaId)
+          const { nere: delNere, uppe: delUppe } = utritning(mask.getTotalLength(), topp?.langd)
+          await animera(mask, delNere.ramar, { duration: delNere.varaktighet }, scen.signal)
+          mask.style.strokeDashoffset = '0'
+          if (topp && delUppe) await topp.rita(delUppe.ramar, delUppe.varaktighet, scen.signal)
+
+          if (typ === 'talt' && detalj) {
             await animera(
               detalj,
               [
@@ -228,7 +197,7 @@ export function Stigavsnitt({ id, bit }: Props) {
             await animera(detalj, [{ opacity: 1 }, { opacity: 0 }], { duration: 700, easing: 'ease-in-out' }, scen.signal)
           }
 
-          if (typ === 'eld' && flamma) {
+          if (typ === 'eld' && detalj && flamma) {
             await animera(detalj, [{ opacity: 0 }, { opacity: 1 }], { duration: 500, easing: 'ease-out' }, scen.signal)
             // Tre sekunder, ingen loop och inga gnistor.
             await animera(
@@ -248,8 +217,9 @@ export function Stigavsnitt({ id, bit }: Props) {
         } catch (fel) {
           if (!scen.signal.aborted) throw fel
         } finally {
-          // Sätt sluttillståndet innan animationerna med fill forwards tas bort.
-          if (aktuell) stilla()
+          // Sätt sluttillståndet innan animationerna med fill forwards tas bort. Avbröts den redan
+          // under väntan och mellanrummet ligger kvar nedanför skärmen förblir den oritad.
+          if (aktuell && (ritar || forbi())) fardig()
           scen.abort()
           signal.removeEventListener('abort', avbrytScen)
         }
@@ -261,38 +231,53 @@ export function Stigavsnitt({ id, bit }: Props) {
       avbryt = null
     }
 
-    // Startar när mellanrummet nått upp till 70 % av fönstret. Då är leden i stort sett utritad.
-    const observer = new IntersectionObserver(
+    // Startar när mellanrummet nått en tredjedel upp på skärmen.
+    const start = new IntersectionObserver(
       (poster) => {
-        synlig = poster.some((p) => p.isIntersecting)
-        if (synlig) startaOmSynlig()
-        else pausa()
+        iLage = poster.some((p) => p.isIntersecting)
+        if (iLage) starta()
       },
-      { rootMargin: '0px 0px -30% 0px' },
+      { rootMargin: '0px 0px -33% 0px' },
     )
-    observer.observe(nere)
+    // Lämnar mellanrummet skärmen helt avbryts biten. Har den ritats färdigställs den direkt.
+    const utanfor = new IntersectionObserver((poster) => {
+      if (!poster.some((p) => p.isIntersecting)) pausa()
+    })
+    // Området ovanför skärmen. Hamnar mellanrummet där har man scrollat förbi, även med ett hopp
+    // som aldrig visade det, och då visas biten färdig.
+    const ovanfor = new IntersectionObserver(
+      (poster) => {
+        if (!poster.some((p) => p.isIntersecting && p.intersectionRatio >= 1)) return
+        pausa()
+        if (!ko.harSpelat(id)) fardig()
+      },
+      // root: document, så att marginalen gäller sidans eget fönster, även i en ram.
+      { root: document, rootMargin: '100000px 0px -100% 0px', threshold: 1 },
+    )
+    start.observe(nere)
+    utanfor.observe(nere)
+    ovanfor.observe(nere)
     const synlighet = () => {
       if (document.hidden) pausa()
-      else startaOmSynlig()
+      else if (iLage) starta()
     }
     document.addEventListener('visibilitychange', synlighet)
 
     return () => {
       aktuell = false
-      observer.disconnect()
+      start.disconnect()
+      utanfor.disconnect()
+      ovanfor.disconnect()
       document.removeEventListener('visibilitychange', synlighet)
       pausa()
     }
-  }, [id, ko, minskad, typ, detaljX, detaljY])
+  }, [dNere, id, ko, minskad, nastaId, typ, detaljX, detaljY])
 
   return (
-    // overflow-clip, inte overflow-hidden: hidden gör lagret till en scrollbehållare och då skulle
-    // view()-tidslinjerna följa lagret i stället för sidan.
-    <div ref={lagerRef} aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-clip">
+    <div ref={lagerRef} aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
       {matt && stig && (
         <>
-          <div ref={nereRef} className="absolute inset-x-0 bottom-0" style={{ height: luftNere }} />
-          {stig.dTopp && <div ref={uppeRef} className="absolute inset-x-0 top-0" style={{ height: matt.topp }} />}
+          <div ref={nereRef} className="absolute inset-x-0 bottom-0" style={{ height: matt.hojd - matt.botten }} />
           {/* Samma mått som viewBox, så att leden och strecken aldrig dras ut. */}
           <svg
             width={matt.bredd}

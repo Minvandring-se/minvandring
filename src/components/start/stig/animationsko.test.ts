@@ -1,5 +1,5 @@
 import { describe, expect, it, vi } from 'vitest'
-import { animera, skapaAnimationsko } from './animationsko'
+import { animera, skapaAnimationsko, vanta } from './animationsko'
 
 const tomKo = async () => {
   for (let i = 0; i < 12; i++) await Promise.resolve()
@@ -122,5 +122,51 @@ describe('animera', () => {
     expect(cancel).not.toHaveBeenCalled()
     controller.abort()
     expect(cancel).toHaveBeenCalledOnce()
+  })
+})
+
+describe('vanta', () => {
+  it('väntar den angivna tiden', async () => {
+    vi.useFakeTimers()
+    let klar = false
+    const lofte = vanta(500, new AbortController().signal).then(() => {
+      klar = true
+    })
+    await vi.advanceTimersByTimeAsync(499)
+    expect(klar).toBe(false)
+    await vi.advanceTimersByTimeAsync(1)
+    await lofte
+    expect(klar).toBe(true)
+    vi.useRealTimers()
+  })
+
+  it('avbryts direkt, så att en bit som scrollats förbi inte ritas', async () => {
+    const controller = new AbortController()
+    const lofte = vanta(10_000, controller.signal)
+    controller.abort()
+    await expect(lofte).rejects.toMatchObject({ name: 'AbortError' })
+  })
+})
+
+describe('fortsättningar i den övre luften', () => {
+  const topp = () => ({ langd: 60, rita: vi.fn(async () => {}), stilla: vi.fn() })
+
+  it('hittar en registrerad fortsättning och tar bort den igen', () => {
+    const ko = skapaAnimationsko()
+    const t = topp()
+    const taBort = ko.registreraTopp('packning', t)
+    expect(ko.topp('packning')).toBe(t)
+    expect(ko.topp(undefined)).toBeUndefined()
+    taBort()
+    expect(ko.topp('packning')).toBeUndefined()
+  })
+
+  it('tar inte bort en nyare registrering med samma id', () => {
+    const ko = skapaAnimationsko()
+    const gammal = ko.registreraTopp('packning', topp())
+    const ny = topp()
+    ko.registreraTopp('packning', ny)
+    gammal()
+    expect(ko.topp('packning')).toBe(ny)
   })
 })
