@@ -112,3 +112,19 @@ export function bildForTur(id: string): (typeof TURBILDER)[number] {
   }
   return TURBILDER[(h >>> 0) % TURBILDER.length]
 }
+
+/**
+ * Raden med datum under turens namn: "12–16 augusti 2027 · 5 dagar".
+ * Utan avresa står bara "Inga datum än". Antalet dagar har då ett standardvärde som ingen har valt.
+ */
+export function datumrad(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'>): string {
+  return tur.avresa ? `${datumIntervall(tur.avresa, tur.hemkomst)} · ${dagarText(tur.dagar)}` : datumIntervall(null, null)
+}
+
+/**
+ * Avsnittet under nästa vandring. Visas bara när det finns fler turer än den som redan syns i det stora kortet.
+ * Fliken Tidigare är förvald när det inte finns några kommande turer.
+ */
+export function flerTurer(kommande: number, tidigare: number): { visa: boolean; forvald: 'kommande' | 'tidigare' } {
+  return { visa: kommande + tidigare > 0, forvald: kommande === 0 && tidigare > 0 ? 'tidigare' : 'kommande' }
+}

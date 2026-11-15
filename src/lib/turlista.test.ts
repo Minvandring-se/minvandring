@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest'
 import {
   bildForTur,
+  datumrad,
+  flerTurer,
   dagarText,
   datumIntervall,
   delaUppTurer,
@@ -110,5 +112,30 @@ describe('bildForTur', () => {
     expect(bildForTur(id)).toBe(bildForTur(id))
     const bilder = new Set(Array.from({ length: 40 }, (_, i) => bildForTur(`tur-${i}`)))
     expect(bilder.size).toBe(TURBILDER.length)
+  })
+})
+
+describe('datumrad', () => {
+  it('visar datum och dagar när turen har datum', () => {
+    expect(datumrad({ avresa: '2027-08-12', hemkomst: '2027-08-16', dagar: 5 })).toBe('12–16 augusti 2027 · 5 dagar')
+  })
+
+  it('visar inte standardvärdet för dagar på en tur utan datum', () => {
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: 3 })).toBe('Inga datum än')
+  })
+})
+
+describe('flerTurer', () => {
+  it('visas inte när det bara finns en tur', () => {
+    expect(flerTurer(0, 0).visa).toBe(false)
+  })
+
+  it('visas när det finns fler turer, med Kommande förvald', () => {
+    expect(flerTurer(2, 0)).toEqual({ visa: true, forvald: 'kommande' })
+    expect(flerTurer(1, 3)).toEqual({ visa: true, forvald: 'kommande' })
+  })
+
+  it('väljer Tidigare när det inte finns några kommande turer', () => {
+    expect(flerTurer(0, 2)).toEqual({ visa: true, forvald: 'tidigare' })
   })
 })

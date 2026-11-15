@@ -1,6 +1,6 @@
 import { Plus, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import { useNavigate, useSearchParams } from 'react-router'
+import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
@@ -8,8 +8,9 @@ import { TurBild } from '@/components/app/TurBild'
 import { NastaTurKort, TurRadKort, type TurMedDeltagare } from '@/components/app/TurKort'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { useSidtitel } from '@/hooks/useSidtitel'
 import { supabase } from '@/lib/supabase'
-import { delaUppTurer, lage, lokaltDatum } from '@/lib/turlista'
+import { delaUppTurer, flerTurer, lage, lokaltDatum } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
 
 export function MinaTurer() {
@@ -18,7 +19,11 @@ export function MinaTurer() {
   const [laddfel, setLaddfel] = useState(false)
   const [sok, setSok] = useSearchParams()
   const formularOppet = sok.get('ny') === '1'
-  const [flik, setFlik] = useState<'kommande' | 'tidigare'>('kommande')
+  // Fliken man själv har valt. Innan dess gäller den förvalda (Tidigare när inga kommande turer finns).
+  const [valdFlik, setValdFlik] = useState<'kommande' | 'tidigare' | null>(null)
+  // Besked från sidan man kom ifrån, till exempel att en tur har raderats.
+  const besked = (useLocation().state as { besked?: string } | null)?.besked
+  useSidtitel('Mina turer')
 
   useEffect(() => {
     supabase
@@ -55,11 +60,19 @@ export function MinaTurer() {
     </Button>
   )
 
+  const fler = flerTurer(kommande.length, tidigare.length)
+  const flik = valdFlik ?? fler.forvald
   const lista = flik === 'kommande' ? kommande : tidigare
 
   return (
     <div className="space-y-8">
       <SidRubrik rubrik="Mina turer" text={halsning} knappar={turer?.length ? nyTurKnapp : null} />
+
+      {besked && (
+        <p role="status" className="rounded-md bg-primary-soft px-4 py-3 text-sm font-medium text-primary">
+          {besked}
+        </p>
+      )}
 
       {formularOppet && <NyTurFormular onStang={() => visaFormular(false)} />}
 
@@ -87,9 +100,16 @@ export function MinaTurer() {
         <>
           {nasta && <NastaTurKort tur={nasta} pagar={lage(nasta, idag) === 'pagar'} />}
 
+          {!nasta && (
+            <p className="rounded-lg border border-dashed border-border px-5 py-6 text-muted-foreground">
+              Du har ingen kommande vandring. Skapa en ny tur när det är dags att planera nästa.
+            </p>
+          )}
+
+          {fler.visa && (
           <section aria-labelledby="fler-turer" className="space-y-4">
             <h2 id="fler-turer" className="text-2xl">
-              Fler turer
+              {nasta ? 'Fler turer' : 'Dina turer'}
             </h2>
             <div role="tablist" aria-label="Fler turer" className="flex gap-2">
               {(
@@ -105,7 +125,7 @@ export function MinaTurer() {
                   id={`flik-${varde}`}
                   aria-selected={flik === varde}
                   aria-controls="fler-turer-lista"
-                  onClick={() => setFlik(varde)}
+                  onClick={() => setValdFlik(varde)}
                   className={cn(
                     'h-11 rounded-full border px-5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     flik === varde ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted',
@@ -131,6 +151,7 @@ export function MinaTurer() {
               )}
             </div>
           </section>
+          )}
         </>
       )}
     </div>

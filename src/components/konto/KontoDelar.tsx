@@ -3,10 +3,12 @@ import { useId, useState, type InputHTMLAttributes, type ReactNode } from 'react
 import { Link } from 'react-router'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { useSidtitel } from '@/hooks/useSidtitel'
 import { cn } from '@/lib/utils'
 
 /** Ramen runt sidorna för inloggning, nytt konto och lösenord. */
 export function KontoKort({ rubrik, children }: { rubrik: string; children: ReactNode }) {
+  useSidtitel(rubrik)
   return (
     <Card className="mx-auto mt-10 max-w-md space-y-5">
       <h1 className="text-2xl">{rubrik}</h1>

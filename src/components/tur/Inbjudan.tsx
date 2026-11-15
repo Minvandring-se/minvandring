@@ -13,6 +13,7 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
   const [kopierad, setKopierad] = useState(false)
   const [skapar, setSkapar] = useState(false)
   const [fel, setFel] = useState('')
+  const [nyLank, setNyLank] = useState(false)
 
   useEffect(() => {
     if (!supabase) return
@@ -27,15 +28,22 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
   const lank = kod ? `${window.location.origin}/ga-med/${kod}` : ''
 
   async function kopiera() {
-    await navigator.clipboard.writeText(lank)
+    setFel('')
+    try {
+      await navigator.clipboard.writeText(lank)
+    } catch {
+      setFel('Det gick inte att kopiera länken. Markera den i rutan och kopiera den själv.')
+      return
+    }
     setKopierad(true)
-    setTimeout(() => setKopierad(false), 2000)
+    setTimeout(() => setKopierad(false), 4000)
   }
 
   async function skapaNy() {
     if (!supabase) return
     if (!window.confirm('Skapa en ny länk? Den gamla slutar fungera, men de som redan är med finns kvar.')) return
     setFel('')
+    setNyLank(false)
     setSkapar(true)
     const { data, error } = await supabase.rpc('ny_inbjudningskod', { t: turId })
     setSkapar(false)
@@ -45,6 +53,7 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
     }
     setKod(data)
     setKopierad(false)
+    setNyLank(true)
   }
 
   return (
@@ -55,14 +64,14 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
       {kod === null && <p className="text-sm text-destructive">Det gick inte att hämta länken.</p>}
       {kod && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <code className="flex-1 truncate rounded-md bg-card px-3 py-2 text-sm">{lank}</code>
+          <code className="flex-1 truncate rounded-md bg-card px-3 py-2 text-sm select-all">{lank}</code>
           <Button variant="outline" onClick={kopiera}>
             {kopierad ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
             {kopierad ? 'Kopierad' : 'Kopiera länk'}
           </Button>
         </div>
       )}
-      {arAgare(minRoll) && kod !== undefined && (
+      {arAgare(minRoll) && kod && (
         <div className="space-y-1">
           <Button variant="ghost" onClick={skapaNy} disabled={skapar} className="px-3">
             <RefreshCw className="size-4" aria-hidden />
@@ -71,7 +80,11 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
           <p className="text-xs text-muted-foreground">Gör att den gamla länken slutar fungera.</p>
         </div>
       )}
-      {fel && <p className="text-sm text-destructive">{fel}</p>}
+      <p role="status" className="text-sm">
+        {kopierad && <span className="font-medium text-primary">Länken är kopierad. Klistra in den till de som ska med.</span>}
+        {nyLank && !kopierad && <span className="font-medium text-primary">En ny länk är skapad. Den gamla fungerar inte längre.</span>}
+        {fel && <span className="text-destructive">{fel}</span>}
+      </p>
     </div>
   )
 }

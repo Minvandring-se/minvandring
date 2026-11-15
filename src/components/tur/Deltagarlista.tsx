@@ -1,5 +1,5 @@
 import { Dog, Plus, UserRound, X } from 'lucide-react'
-import { useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent } from 'react'
 import { Inbjudan } from '@/components/tur/Inbjudan'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -23,6 +23,7 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
   const [nyttNamn, setNyttNamn] = useState('')
   const [nyTyp, setNyTyp] = useState<'person' | 'hund'>('hund')
   const [fel, setFel] = useState('')
+  const faltId = useId()
 
   const alla = deltagare.map((d) => ({ id: d.id, roll: d.roll, userId: d.user_id }))
 
@@ -94,7 +95,6 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
                 (arAgare(minRoll) ? (
                   <select
                     aria-label={`Roll för ${d.namn}`}
-                    title={ROLLBESKRIVNING[d.roll]}
                     className="h-11 rounded-md border border-border bg-card px-2 text-sm"
                     value={d.roll}
                     onChange={(e) => bytRoll(d.id, e.target.value as Roll)}
@@ -106,7 +106,7 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
                     ))}
                   </select>
                 ) : (
-                  <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-medium" title={ROLLBESKRIVNING[d.roll]}>
+                  <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-medium">
                     {ROLLNAMN[d.roll]}
                   </span>
                 ))}
@@ -127,20 +127,46 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
         })}
       </ul>
 
-      {fel && <p className="text-sm text-destructive">{fel}</p>}
+      {fel && (
+        <p role="alert" className="text-sm text-destructive">
+          {fel}
+        </p>
+      )}
+
+      {/* Rollerna i klartext. Syns även i mobilen, där en hjälptext vid muspekaren inte går att få fram. */}
+      <details className="rounded-md border border-border">
+        <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">
+          Vad betyder rollerna?
+        </summary>
+        <dl className="space-y-2 px-3 pb-3 text-sm">
+          {ROLLER.map((r) => (
+            <div key={r}>
+              <dt className="font-medium">{ROLLNAMN[r]}</dt>
+              <dd className="text-muted-foreground">{ROLLBESKRIVNING[r]}</dd>
+            </div>
+          ))}
+        </dl>
+      </details>
 
       {kanAndra(minRoll) && (
-        <form onSubmit={laggTill} className="grid grid-cols-[minmax(0,1fr)_auto] gap-2">
+        <form onSubmit={laggTill} className="grid grid-cols-[minmax(0,1fr)_auto] gap-x-2 gap-y-1">
+          <p className="col-span-2 text-sm font-medium">Lägg till en hund eller någon utan konto</p>
+          <label htmlFor={`${faltId}-typ`} className="col-span-2 text-sm text-muted-foreground">
+            Typ
+          </label>
           <select
-            aria-label="Typ"
-            className="col-span-2 h-11 rounded-md border border-border bg-card px-3"
+            id={`${faltId}-typ`}
+            className="col-span-2 mb-1 h-11 rounded-md border border-border bg-card px-3"
             value={nyTyp}
             onChange={(e) => setNyTyp(e.target.value as 'person' | 'hund')}
           >
             <option value="hund">Hund</option>
             <option value="person">Person utan konto</option>
           </select>
-          <Input placeholder="Namn" maxLength={40} value={nyttNamn} onChange={(e) => setNyttNamn(e.target.value)} />
+          <label htmlFor={`${faltId}-namn`} className="col-span-2 text-sm text-muted-foreground">
+            Namn
+          </label>
+          <Input id={`${faltId}-namn`} maxLength={40} value={nyttNamn} onChange={(e) => setNyttNamn(e.target.value)} />
           <Button type="submit" variant="outline" disabled={!nyttNamn.trim()}>
             <Plus className="size-4" aria-hidden />
             Lägg till
