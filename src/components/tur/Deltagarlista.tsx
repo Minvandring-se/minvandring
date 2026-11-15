@@ -1,5 +1,6 @@
-import { Check, Copy, Dog, Plus, UserRound, X } from 'lucide-react'
+import { Dog, Plus, UserRound, X } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
+import { Inbjudan } from '@/components/tur/Inbjudan'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -19,19 +20,11 @@ interface Props {
 const ROLLER: Roll[] = ['owner', 'editor', 'viewer']
 
 export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, onLamnat }: Props) {
-  const [kopierad, setKopierad] = useState(false)
   const [nyttNamn, setNyttNamn] = useState('')
   const [nyTyp, setNyTyp] = useState<'person' | 'hund'>('hund')
   const [fel, setFel] = useState('')
 
-  const lank = `${window.location.origin}/ga-med/${tur.inbjudningskod}`
   const alla = deltagare.map((d) => ({ id: d.id, roll: d.roll, userId: d.user_id }))
-
-  async function kopiera() {
-    await navigator.clipboard.writeText(lank)
-    setKopierad(true)
-    setTimeout(() => setKopierad(false), 2000)
-  }
 
   async function bytRoll(id: string, roll: Roll) {
     if (!supabase) return
@@ -155,17 +148,7 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
         </form>
       )}
 
-      <div className="space-y-2 rounded-md bg-muted p-3">
-        <p className="text-sm font-medium">Bjud in fler</p>
-        <p className="text-sm text-muted-foreground">Den som går med via länken blir redigerare. Ägaren kan ändra rollen efteråt.</p>
-        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-          <code className="flex-1 truncate rounded-md bg-card px-3 py-2 text-sm">{lank}</code>
-          <Button variant="outline" onClick={kopiera}>
-            {kopierad ? <Check className="size-4" aria-hidden /> : <Copy className="size-4" aria-hidden />}
-            {kopierad ? 'Kopierad' : 'Kopiera länk'}
-          </Button>
-        </div>
-      </div>
+      {minRoll && kanAndra(minRoll) && <Inbjudan turId={tur.id} minRoll={minRoll} />}
     </Card>
   )
 }

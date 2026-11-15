@@ -27,7 +27,7 @@ Två grundare utvecklar med Cursor och Claude Code. Långsiktig vision finns i `
 - Secret- eller service_role-nycklar får aldrig användas i klientkoden.
 
 ## Supabase och databas
-- Tabeller just nu (efter `grund` och `roller`): `profiler`, `turer`, `deltagare` (med `roll`), `packrader`, `packstatus`, `varor`, `ratter`, `ingredienser`, `maltider`.
+- Tabeller just nu (efter `grund`, `roller` och `inbjudningar`): `profiler`, `turer`, `deltagare` (med `roll`), `packrader`, `packstatus`, `varor`, `ratter`, `ingredienser`, `maltider`, `inbjudningar` (koden, bara ägare och redigerare ser den) och `inbjudningsforsok` (felaktiga koder i `ga_med`, ingen roll når den).
 - `deltagare.roll` är `owner` (ägare), `editor` (redigerare) eller `viewer` (läsare). Skaparen blir owner, den som går med via länk blir editor. Viewer får bara bocka av sin egen packning.
 - "Automatically expose new tables" är avstängt och automatisk RLS är påslagen.
 - Varje migrering som skapar en tabell måste därför innehålla GRANT till rollen `authenticated` (till `anon` bara om det verkligen behövs) och RLS-policyer som begränsar åtkomsten till rätt användare. Allt som hör till en tur läses med `public.ar_medlem(tur_id)`, ändras med `public.kan_andra(tur_id)` (owner och editor) och det som bara ägaren får göra skyddas med `public.ar_agare(tur_id)`.

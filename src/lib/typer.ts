@@ -9,7 +9,6 @@ export interface Tur {
   hemkomst: string | null
   dagar: number
   reservdagar: number
-  inbjudningskod: string
 }
 
 export interface DeltagareRad {

@@ -28,7 +28,7 @@ export function TurSida() {
     if (!supabase || !id) return
     supabase
       .from('turer')
-      .select('id, namn, destination, startpunkt, avresa, hemkomst, dagar, reservdagar, inbjudningskod')
+      .select('id, namn, destination, startpunkt, avresa, hemkomst, dagar, reservdagar')
       .eq('id', id)
       .maybeSingle()
       .then(({ data }) => setTur(data as Tur | null))

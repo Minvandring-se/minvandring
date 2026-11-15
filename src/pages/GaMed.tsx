@@ -8,17 +8,18 @@ export function GaMed() {
   const { kod = '' } = useParams()
   const session = useSession()
   const navigate = useNavigate()
-  const [fel, setFel] = useState(false)
+  const [fel, setFel] = useState('')
 
   useEffect(() => {
     if (!session || !supabase) return
     supabase.rpc('ga_med', { kod }).then(({ data, error }) => {
-      if (error || !data) setFel(true)
+      if (error?.message.includes('För många försök')) setFel('Du har provat för många länkar som inte fungerar. Vänta en timme och försök igen.')
+      else if (error || !data) setFel('Inbjudan fungerar inte. Be om en ny länk.')
       else navigate(`/tur/${data}`, { replace: true })
     })
   }, [session, kod, navigate])
 
   if (session === null) return <Navigate to={`/logga-in?vidare=/ga-med/${kod}`} replace />
-  if (fel) return <p>Inbjudan fungerar inte. Be om en ny länk.</p>
+  if (fel) return <p>{fel}</p>
   return <p className="text-muted-foreground">Går med i turen …</p>
 }
