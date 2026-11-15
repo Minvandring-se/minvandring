@@ -5,7 +5,7 @@ import fs from 'node:fs'
 import path from 'node:path'
 import { describe, expect, it } from 'vitest'
 
-const rot = path.join(import.meta.dirname, '..', '..')
+const rot = import.meta.dirname
 const vercel = JSON.parse(fs.readFileSync(path.join(rot, 'vercel.json'), 'utf8')) as {
   headers: { source: string; headers: { key: string; value: string }[] }[]
 }
