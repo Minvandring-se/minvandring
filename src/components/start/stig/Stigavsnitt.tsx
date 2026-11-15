@@ -26,10 +26,11 @@ function useMinskadRorelse() {
 }
 
 /**
- * En bit av leden i sektionens nedre padding, mellan sektionen och nästa. Dekorativ.
- * Läggs först i en sektion med relative, isolate och 80 px padding uppe och nere. Innehållet ligger
- * i en behållare med data-stiginnehall och samma bredd i alla sektioner. Biten ritas fram en gång
- * när mellanrummet syns. Vid minskad rörelse visas allt stilla.
+ * En bit av leden i sektionens nedre luft, som svänger ner mot nästa sektion. Dekorativ.
+ * Läggs först i en sektion med relative, isolate och minst 80 px padding uppe och nere. Innehållet
+ * ligger i en behållare med data-stiginnehall och samma bredd i alla sektioner. Syns från 1360 px
+ * fönsterbredd, och bara om marginalen bredvid innehållet räcker. Biten ritas fram en gång när
+ * mellanrummet syns. Vid minskad rörelse visas allt stilla.
  */
 export function Stigavsnitt({ id, bit }: Props) {
   const ko = useStigKo()
@@ -37,6 +38,7 @@ export function Stigavsnitt({ id, bit }: Props) {
   const lagerRef = useRef<HTMLDivElement>(null)
   const triggerRef = useRef<HTMLDivElement>(null)
   const maskRef = useRef<SVGPathElement>(null)
+  const toppMaskRef = useRef<SVGPathElement>(null)
   const detaljRef = useRef<SVGGElement>(null)
   const flammaRef = useRef<SVGPathElement>(null)
   const glodRef = useRef<SVGEllipseElement>(null)
@@ -83,7 +85,37 @@ export function Stigavsnitt({ id, bit }: Props) {
   }, [])
 
   const stig = matt && beraknaStig(matt, bit)
-  const d = stig?.d
+  const d = stig?.dBotten
+  const dTopp = stig?.dTopp
+  const { forraId, nastaId } = bit
+
+  // Fortsättningen i den övre luften hör till biten ovanför. Den syns när den biten har spelats
+  // och ritas fram av den bitens scen, direkt efter att S-kurvan nått sektionsgränsen.
+  useEffect(() => {
+    const mask = toppMaskRef.current
+    if (!dTopp || !mask) return
+    const langd = mask.getTotalLength()
+    mask.style.strokeDasharray = `${langd} ${langd}`
+    const visa = () => {
+      mask.style.strokeDashoffset = '0'
+      mask.style.visibility = 'visible'
+    }
+    const statiskt = minskad || typeof mask.animate !== 'function'
+    if (statiskt || (forraId && ko.harSpelat(forraId))) visa()
+    else {
+      mask.style.strokeDashoffset = String(langd)
+      mask.style.visibility = 'visible'
+    }
+    return ko.registreraTopp(id, {
+      async visa(signal) {
+        if (!statiskt) {
+          await animera(mask, [{ strokeDashoffset: String(langd) }, { strokeDashoffset: '0' }], { duration: 450, easing: 'ease-out' }, signal)
+        }
+        visa()
+      },
+      stilla: visa,
+    })
+  }, [dTopp, forraId, id, ko, minskad])
   const typ = bit.detalj
   const detaljX = stig?.detaljPunkt.x
   const detaljY = stig?.detaljPunkt.y
@@ -111,6 +143,7 @@ export function Stigavsnitt({ id, bit }: Props) {
         flamma.style.opacity = statiskt ? '1' : '0.3'
       }
       if (glod) glod.style.opacity = statiskt ? '0.5' : '0.15'
+      ko.topp(nastaId)?.stilla()
     }
 
     const langd = mask.getTotalLength()
@@ -140,8 +173,16 @@ export function Stigavsnitt({ id, bit }: Props) {
         const avbrytScen = () => scen.abort()
         signal.addEventListener('abort', avbrytScen, { once: true })
         try {
-          await animera(mask, [{ strokeDashoffset: String(langd) }, { strokeDashoffset: '0' }], { duration: 1400, easing: 'cubic-bezier(.2,.6,.3,1)' }, scen.signal)
+          // Med en fortsättning nedanför slutar biten i full fart, så att linjen ser ut att gå vidare.
+          const nastaTopp = ko.topp(nastaId)
+          await animera(
+            mask,
+            [{ strokeDashoffset: String(langd) }, { strokeDashoffset: '0' }],
+            { duration: 1400, easing: nastaTopp ? 'cubic-bezier(.35,0,.75,.9)' : 'cubic-bezier(.2,.6,.3,1)' },
+            scen.signal,
+          )
           mask.style.strokeDashoffset = '0'
+          if (nastaTopp) await nastaTopp.visa(scen.signal)
 
           if (typ === 'talt' && detalj) {
             await animera(
@@ -211,10 +252,10 @@ export function Stigavsnitt({ id, bit }: Props) {
       document.removeEventListener('visibilitychange', synlighet)
       pausa()
     }
-  }, [d, id, ko, minskad, typ, detaljX, detaljY])
+  }, [d, id, ko, minskad, nastaId, typ, detaljX, detaljY])
 
   return (
-    <div ref={lagerRef} aria-hidden className="pointer-events-none absolute inset-0 z-0 overflow-hidden">
+    <div ref={lagerRef} aria-hidden className="pointer-events-none absolute inset-0 z-0 hidden overflow-hidden min-[1360px]:block">
       <div ref={triggerRef} className="absolute inset-x-0 bottom-0 h-20" />
       {matt && stig && (
         // Samma mått som viewBox, så att leden och strecken aldrig dras ut.
@@ -228,11 +269,14 @@ export function Stigavsnitt({ id, bit }: Props) {
           <defs>
             <mask id={maskId} maskUnits="userSpaceOnUse" x={0} y={0} width={matt.bredd} height={matt.hojd} style={{ maskType: 'alpha' }}>
               {/* Masken avtäcker den streckade linjen. Själva strecken flyttas inte. */}
-              <path ref={maskRef} d={stig.d} fill="none" stroke="white" strokeWidth={5} strokeLinecap="round" style={{ visibility: 'hidden' }} />
+              <path ref={maskRef} d={stig.dBotten} fill="none" stroke="white" strokeWidth={5} strokeLinecap="round" style={{ visibility: 'hidden' }} />
+              {stig.dTopp && (
+                <path ref={toppMaskRef} d={stig.dTopp} fill="none" stroke="white" strokeWidth={5} strokeLinecap="round" style={{ visibility: 'hidden' }} />
+              )}
             </mask>
           </defs>
           <path
-            d={stig.d}
+            d={stig.dTopp ? `${stig.dTopp} ${stig.dBotten}` : stig.dBotten}
             fill="none"
             strokeWidth={2}
             strokeDasharray="7 9"

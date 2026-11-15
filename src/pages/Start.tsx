@@ -127,6 +127,11 @@ const [stigBorja, stigPackning, stigTanken, stigFragor] = kopplaStig([
   { id: 'fragor', svang: 10 },
 ] as const)
 
+/** Kort streck i hjortronorange under rubrikerna. Dekorativt. I en space-y-behållare räknas dess avstånd in. */
+function Rubrikstreck({ className = 'mt-4' }: { className?: string }) {
+  return <span aria-hidden className={`block h-[3px] w-7 rounded-full bg-accent ${className}`} />
+}
+
 /** Huvudknappen i hero och i sista sektionen. Ljus knapp, för mörka ytor. */
 function PlaneraKnapp({ className = '' }: { className?: string }) {
   return (
@@ -189,8 +194,8 @@ export function Start() {
           </h2>
           <ol className="mx-auto grid max-w-6xl divide-y divide-border px-4 sm:px-6 md:grid-cols-3 md:divide-x md:divide-y-0">
             {floden.map(({ nr, rubrik, text }) => (
-              <li key={nr} className="flex items-baseline gap-4 py-6 md:block md:px-8 md:py-10 md:first:pl-0 md:last:pr-0">
-                <span aria-hidden className="w-12 shrink-0 font-heading text-4xl font-semibold text-primary tabular-nums md:block md:text-5xl">
+              <li key={nr} className="flex items-baseline gap-4 py-7 md:block md:px-8 md:py-12 md:first:pl-0 md:last:pr-0">
+                <span aria-hidden className="w-12 shrink-0 font-heading text-4xl font-semibold text-accent-strong tabular-nums md:block md:text-5xl">
                   {nr}
                 </span>
                 <div className="md:mt-3">
@@ -202,15 +207,16 @@ export function Start() {
           </ol>
         </section>
 
-        <section aria-labelledby="sa-fungerar-rubrik" className="relative isolate py-16 sm:py-20">
+        <section aria-labelledby="sa-fungerar-rubrik" className="relative isolate py-20 lg:py-28">
           <Stigavsnitt id={stigBorja.id} bit={stigBorja} />
           <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
             <h2 id="sa-fungerar-rubrik" className="text-3xl font-bold sm:text-4xl">
               Börja med din nästa tur
             </h2>
-            <p className="mt-3 text-lg text-muted-foreground">En gemensam plan, från första packlistan till sista dagen.</p>
+            <Rubrikstreck />
+            <p className="mt-5 text-lg text-muted-foreground">En gemensam plan, från första packlistan till sista dagen.</p>
 
-            <ul className="mt-10 grid gap-5 md:grid-cols-3">
+            <ul className="mt-12 grid gap-6 md:grid-cols-3 lg:mt-14 lg:gap-8">
               {steg.map(({ Illustration, rubrik, text }) => (
                 <li key={rubrik} className={`overflow-hidden ${kortKlass}`}>
                   <Levande>
@@ -224,7 +230,7 @@ export function Start() {
               ))}
             </ul>
 
-            <div className={`mt-5 grid overflow-hidden md:grid-cols-[2fr_3fr] md:items-center ${kortKlass}`}>
+            <div className={`mt-6 grid overflow-hidden md:grid-cols-[2fr_3fr] md:items-center lg:mt-8 ${kortKlass}`}>
               <Levande>
                 <AnteckningIllustration className="block aspect-[8/5] w-full" />
               </Levande>
@@ -238,18 +244,19 @@ export function Start() {
           </div>
         </section>
 
-        <section aria-labelledby="smakprov-rubrik" className="relative isolate bg-muted/60 py-16 sm:py-20">
+        <section aria-labelledby="smakprov-rubrik" className="relative isolate bg-muted/60 py-20 lg:py-28">
           <Stigavsnitt id={stigPackning.id} bit={stigPackning} />
           <div
             data-stiginnehall
-            className="relative z-10 mx-auto grid max-w-6xl items-center gap-8 px-4 sm:px-6 md:grid-cols-2 md:gap-12"
+            className="relative z-10 mx-auto grid max-w-6xl items-center gap-10 px-4 sm:px-6 md:grid-cols-2 md:gap-16"
           >
-            <div className="space-y-5">
+            <div className="space-y-6">
               <div className="space-y-2">
                 <p className="text-sm font-semibold tracking-widest text-primary uppercase">Packning med koll</p>
                 <h2 id="smakprov-rubrik" className="text-3xl font-bold sm:text-4xl">
                   Vem tar tältet?
                 </h2>
+                <Rubrikstreck className="mt-2" />
               </div>
               <p className="text-lg text-muted-foreground">
                 Fördela utrustningen och se vad var och en bär. Alla har samma lista inför avfärd.
@@ -266,15 +273,16 @@ export function Start() {
           </div>
         </section>
 
-        <section aria-labelledby="tanken-rubrik" className="relative isolate py-16 sm:py-20">
+        <section aria-labelledby="tanken-rubrik" className="relative isolate py-20 lg:py-28">
           <Stigavsnitt id={stigTanken.id} bit={stigTanken} />
           <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl px-4 sm:px-6">
-            <div className="grid items-center gap-8 overflow-hidden rounded-lg bg-sand/50 p-6 sm:p-10 md:grid-cols-2 md:gap-12">
+            <div className="grid items-center gap-10 overflow-hidden rounded-lg bg-sand/50 p-6 sm:p-10 md:grid-cols-2 md:gap-16 lg:p-12">
               <TankenIllustration className="mx-auto block aspect-[8/5] w-full max-w-md" />
-              <div className="space-y-4">
+              <div className="space-y-5">
                 <h2 id="tanken-rubrik" className="text-3xl font-bold sm:text-4xl">
                   Tanken bakom MinVandring
                 </h2>
+                <Rubrikstreck className="mt-0" />
                 <p className="text-lg">
                   Vi är Andreas och Oscar. På vår senaste vandring i de jämtländska fjällen glömde vi gasen i bilen. Vi trodde båda att den
                   andre hade tagit den. Som tur var hade vi också med T-sprit.
@@ -290,7 +298,7 @@ export function Start() {
           </div>
         </section>
 
-        <section aria-labelledby="vanliga-fragor-rubrik" className="relative isolate bg-muted/60 py-16 sm:py-20">
+        <section aria-labelledby="vanliga-fragor-rubrik" className="relative isolate bg-muted/60 py-20 lg:py-28">
           <Stigavsnitt id={stigFragor.id} bit={stigFragor} />
           {/* Samma bredd som de andra sektionerna så att leden hamnar rätt. Själva listan är smalare. */}
           <div data-stiginnehall className="relative z-10 mx-auto max-w-6xl">
@@ -298,7 +306,8 @@ export function Start() {
               <h2 id="vanliga-fragor-rubrik" className="text-3xl font-bold sm:text-4xl">
                 Vanliga frågor
               </h2>
-              <div className="mt-8 divide-y divide-border rounded-lg border border-border bg-card">
+              <Rubrikstreck />
+              <div className="mt-10 divide-y divide-border rounded-lg border border-border bg-card">
                 {fragor.map(({ fraga, svar }) => (
                   <details key={fraga} className="group">
                     <summary
@@ -319,7 +328,7 @@ export function Start() {
         </section>
 
         <section aria-labelledby="cta-rubrik" className="bg-primary text-primary-foreground">
-          <div className="mx-auto flex max-w-6xl flex-col items-center px-4 py-16 text-center sm:px-6 sm:py-20">
+          <div className="mx-auto flex max-w-6xl flex-col items-center px-4 py-20 text-center sm:px-6 lg:py-28">
             <h2 id="cta-rubrik" className="text-3xl font-bold sm:text-4xl">
               Redo för nästa tur?
             </h2>
