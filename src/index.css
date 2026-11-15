@@ -119,3 +119,9 @@
 @keyframes mv-fyll { from { transform: scaleY(0); } to { transform: scaleY(1); } }
 @keyframes mv-gunga { 0%, 100% { transform: translateY(0); } 40% { transform: translateY(2.5px); } }
 @keyframes mv-bock { from { stroke-dashoffset: 10; } to { stroke-dashoffset: 0; } }
+
+/* Edge visar ett eget öga i lösenordsfält. Vi har ett eget, så Edges döljs. */
+input::-ms-reveal,
+input::-ms-clear {
+  display: none;
+}
