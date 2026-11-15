@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
-import { Falt, Felruta, KontoKort, Sidlank } from '@/components/konto/KontoDelar'
+import { Felruta, KontoKort, LosenordFalt, Sidlank } from '@/components/konto/KontoDelar'
 import { Button } from '@/components/ui/button'
 import { useSession } from '@/hooks/useSession'
 import { authFel, kontrolleraLosenord, MINSTA_LOSENORD, STANDARD_VIDARE } from '@/lib/konto'
@@ -49,9 +49,8 @@ export function NyttLosenord() {
       <form onSubmit={spara} noValidate className="space-y-4">
         {/* Dolt fält så att lösenordshanteraren vet vilket konto lösenordet hör till. */}
         <input type="email" autoComplete="username" value={session.user.email ?? ''} readOnly hidden />
-        <Falt
+        <LosenordFalt
           etikett="Nytt lösenord"
-          type="password"
           autoComplete="new-password"
           value={losenord}
           onChange={(e) => setLosenord(e.target.value)}

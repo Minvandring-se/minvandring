@@ -1,6 +1,6 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useSearchParams } from 'react-router'
-import { Falt, Felruta, KontoKort, Sidlank } from '@/components/konto/KontoDelar'
+import { Falt, Felruta, KontoKort, LosenordFalt, Sidlank } from '@/components/konto/KontoDelar'
 import { Button } from '@/components/ui/button'
 import { useSession } from '@/hooks/useSession'
 import { authFel, kontrolleraEpost, medVidare, sakerVidare } from '@/lib/konto'
@@ -48,9 +48,8 @@ export function LoggaIn() {
           onChange={(e) => setEpost(e.target.value)}
           fel={epostFel}
         />
-        <Falt
+        <LosenordFalt
           etikett="Lösenord"
-          type="password"
           autoComplete="current-password"
           value={losenord}
           onChange={(e) => setLosenord(e.target.value)}
