@@ -9,6 +9,7 @@ import { Logotyp } from '@/components/Logotyp'
 import { Bildspel } from '@/components/start/Bildspel'
 import { Levande } from '@/components/start/Levande'
 import { PacklistaSmakprov } from '@/components/start/PacklistaSmakprov'
+import { Stigavsnitt } from '@/components/start/Stigavsnitt'
 import { useSession } from '@/hooks/useSession'
 import { Kontaktlank } from '@/components/Kontaktlank'
 
@@ -188,40 +189,44 @@ export function Start() {
           </ol>
         </section>
 
-        <section aria-labelledby="sa-fungerar-rubrik" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-          <h2 id="sa-fungerar-rubrik" className="text-3xl font-bold sm:text-4xl">
-            Börja med din nästa tur
-          </h2>
-          <p className="mt-3 text-lg text-muted-foreground">En gemensam plan, från första packlistan till sista dagen.</p>
+        <section aria-labelledby="sa-fungerar-rubrik" className="relative isolate">
+          <Stigavsnitt del="start" />
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+            <h2 id="sa-fungerar-rubrik" className="text-3xl font-bold sm:text-4xl">
+              Börja med din nästa tur
+            </h2>
+            <p className="mt-3 text-lg text-muted-foreground">En gemensam plan, från första packlistan till sista dagen.</p>
 
-          <ul className="mt-10 grid gap-5 md:grid-cols-3">
-            {steg.map(({ Illustration, rubrik, text }) => (
-              <li key={rubrik} className={`overflow-hidden ${kortKlass}`}>
-                <Levande>
-                  <Illustration className="block aspect-[8/5] w-full" />
-                </Levande>
-                <div className="space-y-2 p-5">
-                  <h3 className="text-xl">{rubrik}</h3>
-                  <p className="text-muted-foreground">{text}</p>
-                </div>
-              </li>
-            ))}
-          </ul>
+            <ul className="mt-10 grid gap-5 md:grid-cols-3">
+              {steg.map(({ Illustration, rubrik, text }) => (
+                <li key={rubrik} className={`overflow-hidden ${kortKlass}`}>
+                  <Levande>
+                    <Illustration className="block aspect-[8/5] w-full" />
+                  </Levande>
+                  <div className="space-y-2 p-5">
+                    <h3 className="text-xl">{rubrik}</h3>
+                    <p className="text-muted-foreground">{text}</p>
+                  </div>
+                </li>
+              ))}
+            </ul>
 
-          <div className={`mt-5 grid overflow-hidden md:grid-cols-[2fr_3fr] md:items-center ${kortKlass}`}>
-            <Levande>
-              <AnteckningIllustration className="block aspect-[8/5] w-full" />
-            </Levande>
-            <div className="space-y-2 p-5 md:p-8">
-              <h3 className="text-xl">Kom ihåg till nästa vandring</h3>
-              <p className="text-muted-foreground">
-                Skriv ner vad som fungerade och vad ni saknade. Lärdomarna finns kvar när ni planerar nästa tur.
-              </p>
+            <div className={`mt-5 grid overflow-hidden md:grid-cols-[2fr_3fr] md:items-center ${kortKlass}`}>
+              <Levande>
+                <AnteckningIllustration className="block aspect-[8/5] w-full" />
+              </Levande>
+              <div className="space-y-2 p-5 md:p-8">
+                <h3 className="text-xl">Kom ihåg till nästa vandring</h3>
+                <p className="text-muted-foreground">
+                  Skriv ner vad som fungerade och vad ni saknade. Lärdomarna finns kvar när ni planerar nästa tur.
+                </p>
+              </div>
             </div>
           </div>
         </section>
 
-        <section aria-labelledby="smakprov-rubrik" className="bg-muted/60">
+        <section aria-labelledby="smakprov-rubrik" className="relative isolate bg-muted/60">
+          <Stigavsnitt del="packning" />
           <div className="mx-auto grid max-w-6xl items-center gap-8 px-4 py-16 sm:px-6 sm:py-20 md:grid-cols-2 md:gap-12">
             <div className="space-y-5">
               <div className="space-y-2">
@@ -245,28 +250,32 @@ export function Start() {
           </div>
         </section>
 
-        <section aria-labelledby="tanken-rubrik" className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
-          <div className="grid items-center gap-8 overflow-hidden rounded-lg bg-sand/50 p-6 sm:p-10 md:grid-cols-2 md:gap-12">
-            <TankenIllustration className="mx-auto block aspect-[8/5] w-full max-w-md" />
-            <div className="space-y-4">
-              <h2 id="tanken-rubrik" className="text-3xl font-bold sm:text-4xl">
-                Tanken bakom MinVandring
-              </h2>
-              <p className="text-lg">
-                Vi är Andreas och Oscar. På vår senaste vandring i de jämtländska fjällen glömde vi gasen i bilen. Vi trodde båda att den
-                andre hade tagit den. Som tur var hade vi också med T-sprit.
-              </p>
-              <p className="text-lg">
-                Våra planer låg tidigare utspridda i chattar, Word, Excel och Google Docs. Det gick att hålla reda på vem som tog vad, men
-                det tog mycket tid och energi, och gasen försvann ändå mellan stolarna. Därför bygger vi MinVandring: ett ställe där hela
-                gänget ser samma plan, packlista och mat utan allt det jobbet. Så att ni kan lägga mindre tid på planerandet och mer på det
-                ni egentligen ska göra, att vara ute.
-              </p>
+        <section aria-labelledby="tanken-rubrik" className="relative isolate">
+          <Stigavsnitt del="tanken" />
+          <div className="mx-auto max-w-6xl px-4 py-16 sm:px-6 sm:py-20">
+            <div className="grid items-center gap-8 overflow-hidden rounded-lg bg-sand/50 p-6 sm:p-10 md:grid-cols-2 md:gap-12">
+              <TankenIllustration className="mx-auto block aspect-[8/5] w-full max-w-md" />
+              <div className="space-y-4">
+                <h2 id="tanken-rubrik" className="text-3xl font-bold sm:text-4xl">
+                  Tanken bakom MinVandring
+                </h2>
+                <p className="text-lg">
+                  Vi är Andreas och Oscar. På vår senaste vandring i de jämtländska fjällen glömde vi gasen i bilen. Vi trodde båda att den
+                  andre hade tagit den. Som tur var hade vi också med T-sprit.
+                </p>
+                <p className="text-lg">
+                  Våra planer låg tidigare utspridda i chattar, Word, Excel och Google Docs. Det gick att hålla reda på vem som tog vad, men
+                  det tog mycket tid och energi, och gasen försvann ändå mellan stolarna. Därför bygger vi MinVandring: ett ställe där hela
+                  gänget ser samma plan, packlista och mat utan allt det jobbet. Så att ni kan lägga mindre tid på planerandet och mer på det
+                  ni egentligen ska göra, att vara ute.
+                </p>
+              </div>
             </div>
           </div>
         </section>
 
-        <section aria-labelledby="vanliga-fragor-rubrik" className="bg-muted/60">
+        <section aria-labelledby="vanliga-fragor-rubrik" className="relative isolate bg-muted/60">
+          <Stigavsnitt del="fragor" />
           <div className="mx-auto max-w-3xl px-4 py-16 sm:px-6 sm:py-20">
             <h2 id="vanliga-fragor-rubrik" className="text-3xl font-bold sm:text-4xl">
               Vanliga frågor
