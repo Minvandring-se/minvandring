@@ -46,7 +46,7 @@ export const ALLMANT_FEL = KONTAKT_MEJL
   : 'Något gick fel. Försök igen.'
 
 /** Felet från Supabase Auth som ett begripligt meddelande på svenska. */
-export function authFel(fel: { code?: string; status?: number } | null): string {
+export function authFel(fel: { code?: string; status?: number; name?: string } | null): string {
   switch (fel?.code) {
     case 'invalid_credentials':
       return 'Fel mejladress eller lösenord.'
@@ -66,6 +66,9 @@ export function authFel(fel: { code?: string; status?: number } | null): string 
       return 'För många försök. Vänta en stund och försök igen.'
     case 'signup_disabled':
       return 'Det går inte att skapa nya konton just nu.'
+  }
+  if (fel?.name === 'AuthRetryableFetchError' || fel?.status === 0) {
+    return 'Kunde inte nå servern. Kolla att du är uppkopplad och försök igen.'
   }
   if (fel?.status === 429) return 'För många försök. Vänta en stund och försök igen.'
   return ALLMANT_FEL
