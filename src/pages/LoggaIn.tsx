@@ -1,54 +1,72 @@
 import { useState, type FormEvent } from 'react'
 import { Navigate, useSearchParams } from 'react-router'
+import { Falt, Felruta, KontoKort, Sidlank } from '@/components/konto/KontoDelar'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
-import { Input } from '@/components/ui/input'
 import { useSession } from '@/hooks/useSession'
+import { authFel, kontrolleraEpost, medVidare, sakerVidare } from '@/lib/konto'
 import { supabase } from '@/lib/supabase'
 
-/** Inloggning med en länk i mejlet. Inga lösenord. */
+/** Inloggning med mejl och lösenord. */
 export function LoggaIn() {
   const session = useSession()
   const [params] = useSearchParams()
-  const vidare = params.get('vidare') ?? '/turer'
+  const vidare = sakerVidare(params.get('vidare'))
   const [epost, setEpost] = useState('')
-  const [status, setStatus] = useState<'redo' | 'skickar' | 'skickat' | 'fel'>('redo')
+  const [losenord, setLosenord] = useState('')
+  const [epostFel, setEpostFel] = useState<string | null>(null)
+  const [losenordFel, setLosenordFel] = useState<string | null>(null)
+  const [fel, setFel] = useState<string | null>(null)
+  const [skickar, setSkickar] = useState(false)
 
   if (session) return <Navigate to={vidare} replace />
 
-  async function skicka(e: FormEvent) {
+  async function loggaIn(e: FormEvent) {
     e.preventDefault()
-    if (!supabase) return
-    setStatus('skickar')
-    const { error } = await supabase.auth.signInWithOtp({
-      email: epost.trim(),
-      options: { emailRedirectTo: `${window.location.origin}${vidare}` },
-    })
-    setStatus(error ? 'fel' : 'skickat')
+    const ef = kontrolleraEpost(epost)
+    const lf = losenord ? null : 'Fyll i ditt lösenord.'
+    setEpostFel(ef)
+    setLosenordFel(lf)
+    setFel(null)
+    if (ef || lf || !supabase) return
+
+    setSkickar(true)
+    const { error } = await supabase.auth.signInWithPassword({ email: epost.trim(), password: losenord })
+    setSkickar(false)
+    if (error) setFel(authFel(error))
+    // Lyckas det byter useSession till inloggad och Navigate ovan tar över.
   }
 
   return (
-    <Card className="mx-auto mt-10 max-w-md space-y-4">
-      <h1 className="text-2xl">Logga in</h1>
-      {status === 'skickat' ? (
-        <p>Kolla din mejl. Vi har skickat en länk till {epost}. Klicka på den så är du inloggad.</p>
-      ) : (
-        <form onSubmit={skicka} className="space-y-3">
-          <p className="text-muted-foreground">Skriv din mejladress så skickar vi en inloggningslänk. Inget lösenord behövs.</p>
-          <Input
-            type="email"
-            required
-            autoComplete="email"
-            placeholder="namn@exempel.se"
-            value={epost}
-            onChange={(e) => setEpost(e.target.value)}
-          />
-          <Button type="submit" className="w-full" disabled={status === 'skickar' || !supabase}>
-            {status === 'skickar' ? 'Skickar …' : 'Skicka länk'}
-          </Button>
-          {status === 'fel' && <p className="text-sm text-destructive">Det gick inte att skicka länken. Försök igen.</p>}
-        </form>
-      )}
-    </Card>
+    <KontoKort rubrik="Logga in">
+      <form onSubmit={loggaIn} noValidate className="space-y-4">
+        <Falt
+          etikett="Mejladress"
+          type="email"
+          autoComplete="email"
+          inputMode="email"
+          value={epost}
+          onChange={(e) => setEpost(e.target.value)}
+          fel={epostFel}
+        />
+        <Falt
+          etikett="Lösenord"
+          type="password"
+          autoComplete="current-password"
+          value={losenord}
+          onChange={(e) => setLosenord(e.target.value)}
+          fel={losenordFel}
+        />
+        {fel && <Felruta>{fel}</Felruta>}
+        <Button type="submit" className="w-full" disabled={skickar || !supabase}>
+          {skickar ? 'Loggar in …' : 'Logga in'}
+        </Button>
+      </form>
+      <div className="flex flex-col items-start">
+        <Sidlank to="/glomt-losenord">Glömt lösenordet?</Sidlank>
+        <p className="text-muted-foreground">
+          Inget konto? <Sidlank to={medVidare('/skapa-konto', vidare)}>Skapa konto</Sidlank>
+        </p>
+      </div>
+    </KontoKort>
   )
 }

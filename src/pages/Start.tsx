@@ -68,8 +68,9 @@ const fragor = [
     fraga: 'Behöver alla ha konto?',
     svar: (
       <>
-        Den som vill öppna turen loggar in med sin mejladress. Du får en inloggningslänk i mejlet, så inget lösenord behövs. Du kan
-        också lägga till deltagare utan konto, till exempel en kompis eller hunden, men de kan inte själva öppna turen.
+        Den som vill öppna turen skapar ett konto med sin mejladress och ett lösenord. Glömmer du lösenordet kan du få en länk i
+        mejlet och välja ett nytt. Du kan också lägga till deltagare utan konto, till exempel en kompis eller hunden, men de kan
+        inte själva öppna turen.
       </>
     ),
   },
@@ -116,7 +117,7 @@ const kortKlass =
 function PlaneraKnapp({ className = '' }: { className?: string }) {
   return (
     <Link
-      to="/logga-in"
+      to="/skapa-konto"
       className={`inline-flex h-14 items-center gap-3 rounded-lg bg-card px-8 font-heading text-lg font-semibold text-primary shadow-soft transition-colors hover:bg-background ${fokusPaBild} ${className}`}
     >
       Planera en vandring
@@ -233,7 +234,7 @@ export function Start() {
                 Fördela utrustningen och se vad var och en bär. Alla har samma lista inför avfärd.
               </p>
               <Link
-                to="/logga-in"
+                to="/skapa-konto"
                 className={`inline-flex h-12 items-center gap-2 rounded-md bg-primary px-5 font-semibold text-primary-foreground transition-colors hover:bg-primary-hover ${fokus}`}
               >
                 Gör er packlista

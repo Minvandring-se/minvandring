@@ -4,6 +4,7 @@ import { Link, useNavigate } from 'react-router'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { useSession } from '@/hooks/useSession'
 import { supabase } from '@/lib/supabase'
 
 interface TurRad {
@@ -17,6 +18,8 @@ export function MinaTurer() {
   const navigate = useNavigate()
   const [turer, setTurer] = useState<TurRad[] | null>(null)
   const [namn, setNamn] = useState('')
+  const anvandarId = useSession()?.user.id
+  const [mittNamn, setMittNamn] = useState('')
 
   useEffect(() => {
     supabase
@@ -25,6 +28,16 @@ export function MinaTurer() {
       .order('skapad', { ascending: false })
       .then(({ data }) => setTurer(data ?? []))
   }, [])
+
+  useEffect(() => {
+    if (!supabase || !anvandarId) return
+    supabase
+      .from('profiler')
+      .select('namn')
+      .eq('id', anvandarId)
+      .maybeSingle()
+      .then(({ data }) => setMittNamn(data?.namn?.trim() ?? ''))
+  }, [anvandarId])
 
   async function skapa(e: FormEvent) {
     e.preventDefault()
@@ -35,7 +48,8 @@ export function MinaTurer() {
 
   return (
     <div className="space-y-6">
-      <h1 className="text-3xl">Mina turer</h1>
+      <h1 className="text-3xl">Välkommen till MinVandring{mittNamn && `, ${mittNamn}`}</h1>
+      <h2 className="text-xl">Mina turer</h2>
 
       <Card>
         <form onSubmit={skapa} className="flex flex-col gap-3 sm:flex-row">
