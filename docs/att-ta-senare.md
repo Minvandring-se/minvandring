@@ -71,17 +71,6 @@ Fortfarande på engelska, eftersom appen inte använder dem än:
 
 Den som bygger en funktion som skickar något av de här mejlen översätter mallen samtidigt.
 
-## Ta bort gruppbilden från startsidan
-
-Bilden med flera personer som vandrar (`1-grupp`) blir för gul och beskärs konstigt på vissa telefoner. Den ska bort ur bildspelet.
-
-Den används på tre ställen:
-- Första bilden i bildspelet i `src/components/start/Bildspel.tsx`. Låt `5-norrsken` bli första bilden i stället.
-- Delningsbilden `public/og-bild.jpg` görs av den via `design/og/og-bild.cjs`. Byt motiv i skriptet och gör om bilden.
-- `design/hero/mobilbilder.cjs`.
-
-Radera också `public/hero/1-grupp-*.webp` och kolla `index.html` efter förladdning av bilden. `hero-original/1-grupp.jpg` kan ligga kvar.
-
 ## Cloudflare Turnstile mot robotkonton
 
 Lägg till Cloudflare Turnstile som CAPTCHA i Supabase Auth (Authentication → Attack Protection), så att robotar inte kan skapa konton i mängd. Det kräver en widget på Skapa konto, Logga in och Glömt lösenord, och att CSP:n i `vercel.json` släpper fram `https://challenges.cloudflare.com` i `script-src` och `frame-src`. Ingen Cloudflare-proxy behövs framför sajten.
