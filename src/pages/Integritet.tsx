@@ -23,34 +23,39 @@ function Kontaktadress() {
 }
 
 /**
- * Utkast till integritetspolicy. Ska bara beskriva det appen faktiskt gör med data idag.
- * Uppdatera texten när nya funktioner börjar spara mer data.
+ * Integritetspolicy för betan. Ska bara beskriva det appen faktiskt gör med data i dag.
+ * Uppdatera texten när nya funktioner börjar spara mer data eller nya tjänster kopplas in.
  */
 export function Integritet() {
   return (
     <article className="mx-auto max-w-2xl space-y-8 py-4 leading-relaxed">
       <header className="space-y-2">
         <h1 className="text-3xl">Integritetspolicy</h1>
-        <p className="text-muted-foreground">Så här hanterar MinVandring dina uppgifter.</p>
+        <p className="text-muted-foreground">Så här hanterar MinVandring dina uppgifter under betan.</p>
       </header>
+
+      <Avsnitt rubrik="Vem som ansvarar">
+        <p>
+          MinVandring drivs privat av Andreas och Oscar. Vi är personuppgiftsansvariga för de uppgifter du lämnar här. Du når oss på{' '}
+          <Kontaktadress />
+          {KONTAKT_MEJL && '.'}
+        </p>
+      </Avsnitt>
 
       <Avsnitt rubrik="Vad vi sparar">
         <ul className="list-disc space-y-1 pl-5">
-          <li>Din mejladress, som du loggar in med.</li>
-          <li>Ditt namn i profilen, som de andra i dina turer ser.</li>
-          <li>
-            Det du skriver in i en tur: namn, destination, startpunkt, datum, antal dagar och reservdagar, samt vilka deltagare som är
-            med och vilken roll de har.
-          </li>
-          <li>Namn på deltagare som du själv lägger till, till exempel en kompis utan konto eller en hund.</li>
-          <li>Tekniska uppgifter som behövs för inloggningen, till exempel när du senast loggade in.</li>
+          <li>Ditt namn och din mejladress.</li>
+          <li>Ditt lösenord. Det sparas krypterat hos Supabase, så varken vi eller någon annan kan se det.</li>
+          <li>Dina turer och det ni lägger in i dem: deltagare, packning och mat.</li>
+          <li>Namn på deltagare utan konto, som någon annan i turen har lagt till, till exempel en kompis eller en hund.</li>
         </ul>
       </Avsnitt>
 
       <Avsnitt rubrik="Varför vi sparar det">
         <p>
-          Uppgifterna behövs för att du ska kunna logga in och planera vandringar tillsammans med andra. Vi använder dem inte till
-          reklam och säljer dem inte vidare.
+          Vi sparar uppgifterna för att tjänsten ska fungera: så att du kan logga in och planera vandringar tillsammans med andra. Det
+          är den rättsliga grunden, ett avtal mellan dig och oss när du skapar ett konto. Vi använder inte uppgifterna till reklam och
+          säljer dem inte vidare.
         </p>
       </Avsnitt>
 
@@ -61,47 +66,43 @@ export function Integritet() {
         </p>
       </Avsnitt>
 
-      <Avsnitt rubrik="Var uppgifterna finns">
-        <p>
-          Uppgifterna lagras i en databas hos Supabase, i deras datacenter i Stockholm (eu-north-1). Supabase sköter också
-          inloggningen och skickar mejlen när du skapar konto eller vill välja nytt lösenord. Ditt lösenord sparas aldrig i
-          klartext, så ingen kan läsa det.
-        </p>
-        <p>
-          Själva webbplatsen levereras av Vercel. När du besöker sidan behandlar Vercel tekniska uppgifter som behövs för att visa
-          den, till exempel din IP-adress.
-        </p>
+      <Avsnitt rubrik="Tjänster som hanterar uppgifterna åt oss">
+        <ul className="list-disc space-y-1 pl-5">
+          <li>Supabase sköter databasen och inloggningen. Uppgifterna ligger i deras datacenter i Stockholm.</li>
+          <li>Resend skickar mejlen, till exempel när du skapar konto eller väljer nytt lösenord. Mejlen skickas från Irland.</li>
+          <li>Vercel driver webbplatsen. När du besöker den behandlar Vercel tekniska uppgifter som behövs för att visa sidan, till exempel din IP-adress.</li>
+        </ul>
       </Avsnitt>
 
-      <Avsnitt rubrik="Cookies">
+      <Avsnitt rubrik="Hur länge vi sparar uppgifterna">
         <p>
-          Vi använder inga cookies för spårning eller reklam och ingen webbanalys. För att du ska förbli inloggad sparas inloggningen
-          i din webbläsares lokala lagring. Den försvinner när du loggar ut.
-        </p>
-      </Avsnitt>
-
-      <Avsnitt rubrik="Radera dina uppgifter">
-        <p>
+          Vi sparar dina uppgifter så länge du har ett konto.{' '}
           {KONTAKT_MEJL ? (
             <>
-              Kontakta oss på <Kontaktadress /> så raderar vi dina uppgifter.
+              Mejla oss på <Kontaktadress /> om du vill att vi raderar ditt konto.
             </>
           ) : (
-            'Kontakta oss så raderar vi dina uppgifter.'
+            'Hör av dig till oss om du vill att vi raderar ditt konto.'
           )}{' '}
-          Du kan också själv lämna en tur, och den som äger en tur kan radera den. Då försvinner allt i turen för alla.
-        </p>
-        <p>
-          Du har också rätt att få veta vilka uppgifter vi har om dig och att få fel rättade. Om du tycker att vi hanterar dina
-          uppgifter fel kan du kontakta oss eller vända dig till Integritetsskyddsmyndigheten (IMY).
+          Då raderar vi kontot och alla turer som du äger. Den som äger en tur kan också själv radera den, och då försvinner allt i
+          turen för alla.
         </p>
       </Avsnitt>
 
-      <Avsnitt rubrik="Frågor">
+      <Avsnitt rubrik="Kakor">
         <p>
-          Hör av dig till <Kontaktadress />
-          {KONTAKT_MEJL && '.'}
+          Vi använder inga kakor för spårning eller statistik. Det enda vi sparar i din webbläsare är det som behövs för att du ska
+          vara inloggad. Det försvinner när du loggar ut.
         </p>
+      </Avsnitt>
+
+      <Avsnitt rubrik="Dina rättigheter">
+        <ul className="list-disc space-y-1 pl-5">
+          <li>Du har rätt att få ut de uppgifter vi har om dig.</li>
+          <li>Du har rätt att få fel rättade.</li>
+          <li>Du har rätt att få dina uppgifter raderade.</li>
+          <li>Tycker du att vi hanterar dina uppgifter fel kan du klaga hos Integritetsskyddsmyndigheten (IMY).</li>
+        </ul>
       </Avsnitt>
     </article>
   )
