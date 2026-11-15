@@ -5,6 +5,7 @@ import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { dagarMellan, datumText } from '@/lib/datum'
 import { supabase } from '@/lib/supabase'
+import { antalFranFalt, dagarVarde, INTE_ANGETT } from '@/lib/turlista'
 import type { Tur } from '@/lib/typer'
 
 interface Props {
@@ -17,7 +18,9 @@ function Rad({ etikett, varde }: { etikett: string; varde: string }) {
   return (
     <div className="flex justify-between gap-4 border-b border-border py-2 last:border-0">
       <dt className="text-muted-foreground">{etikett}</dt>
-      <dd className={varde ? 'min-w-0 text-right font-medium break-words' : 'text-right text-muted-foreground'}>{varde || 'Inte ifyllt'}</dd>
+      <dd className={varde && varde !== INTE_ANGETT ? 'min-w-0 text-right font-medium break-words' : 'text-right text-muted-foreground'}>
+        {varde || INTE_ANGETT}
+      </dd>
     </div>
   )
 }
@@ -86,7 +89,7 @@ export function TurUppgifter({ tur, kanAndra, onSparad }: Props) {
           <Rad etikett="Startpunkt" varde={tur.startpunkt ?? ''} />
           <Rad etikett="Avresa" varde={datumText(tur.avresa)} />
           <Rad etikett="Hemkomst" varde={datumText(tur.hemkomst)} />
-          <Rad etikett="Vandringsdagar" varde={String(tur.dagar)} />
+          <Rad etikett="Vandringsdagar" varde={dagarVarde(tur.dagar)} />
           <Rad etikett="Reservdagar" varde={String(tur.reservdagar)} />
         </dl>
       </Card>
@@ -124,9 +127,9 @@ export function TurUppgifter({ tur, kanAndra, onSparad }: Props) {
               inputMode="numeric"
               min={1}
               max={30}
-              value={dagarFranDatum ?? form.dagar}
+              value={dagarFranDatum ?? form.dagar ?? ''}
               disabled={dagarFranDatum !== null}
-              onChange={(e) => andra('dagar', Number(e.target.value))}
+              onChange={(e) => andra('dagar', antalFranFalt(e.target.value))}
             />
           </Falt>
           <Falt etikett="Reservdagar">
@@ -136,7 +139,7 @@ export function TurUppgifter({ tur, kanAndra, onSparad }: Props) {
               min={0}
               max={10}
               value={form.reservdagar}
-              onChange={(e) => andra('reservdagar', Number(e.target.value))}
+              onChange={(e) => andra('reservdagar', antalFranFalt(e.target.value) ?? 0)}
             />
           </Falt>
         </div>

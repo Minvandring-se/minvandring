@@ -11,7 +11,7 @@ export interface TurMedDeltagare {
   destination: string | null
   avresa: string | null
   hemkomst: string | null
-  dagar: number
+  dagar: number | null
   skapad: string
   deltagare: { namn: string; typ: 'person' | 'hund' }[]
 }

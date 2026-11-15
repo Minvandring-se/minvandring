@@ -174,13 +174,16 @@ function NyTurFormular({ onStang }: { onStang: () => void }) {
     if (!supabase || !namn.trim()) return
     setSkapar(true)
     setFel('')
-    const { data, error } = await supabase.from('turer').insert({ namn: namn.trim() }).select('id').single()
+    // Id:t väljs här och raden läses inte tillbaka. Man blir deltagare först när raden finns,
+    // och innan dess släpper databasen inte fram turen till någon.
+    const id = crypto.randomUUID()
+    const { error } = await supabase.from('turer').insert({ id, namn: namn.trim() })
     setSkapar(false)
-    if (error || !data) {
+    if (error) {
       setFel('Det gick inte att skapa turen. Försök igen.')
       return
     }
-    navigate(`/tur/${data.id}`)
+    navigate(`/tur/${id}`)
   }
 
   return (

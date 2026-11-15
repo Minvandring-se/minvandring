@@ -6,7 +6,8 @@ export interface TurIListan {
   namn: string
   avresa: string | null
   hemkomst: string | null
-  dagar: number
+  /** null tills någon har angett antalet dagar. */
+  dagar: number | null
   skapad: string
 }
 
@@ -25,11 +26,11 @@ function laggTillDagar(iso: string, dagar: number): string {
   return d.toISOString().slice(0, 10)
 }
 
-/** Sista dagen på turen: hemkomsten, annars räknat från avresan och antal dagar. null utan avresa. */
+/** Sista dagen på turen: hemkomsten, annars räknat från avresan och antal dagar (en dag om det inte är angett). null utan avresa. */
 export function sistaDag(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'>): string | null {
   if (!tur.avresa) return null
   if (tur.hemkomst && tur.hemkomst >= tur.avresa) return tur.hemkomst
-  return laggTillDagar(tur.avresa, Math.max(1, tur.dagar) - 1)
+  return laggTillDagar(tur.avresa, Math.max(1, tur.dagar ?? 1) - 1)
 }
 
 /** Pågår turen, ligger den framför eller bakom oss? Turer utan datum räknas som kommande. */
@@ -115,10 +116,26 @@ export function bildForTur(id: string): (typeof TURBILDER)[number] {
 
 /**
  * Raden med datum under turens namn: "12–16 augusti 2027 · 5 dagar".
- * Utan avresa står bara "Inga datum än". Antalet dagar har då ett standardvärde som ingen har valt.
+ * Utan avresa står "Inga datum än", med antalet dagar efter om någon har angett det.
  */
 export function datumrad(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'>): string {
-  return tur.avresa ? `${datumIntervall(tur.avresa, tur.hemkomst)} · ${dagarText(tur.dagar)}` : datumIntervall(null, null)
+  const datum = datumIntervall(tur.avresa, tur.hemkomst)
+  return tur.dagar === null ? datum : `${datum} · ${dagarText(tur.dagar)}`
+}
+
+/** Texten som visas när en uppgift om turen inte är ifylld. */
+export const INTE_ANGETT = 'Inte angett'
+
+/** Antalet vandringsdagar i turens uppgifter: "5", eller "Inte angett" när ingen har angett det. */
+export function dagarVarde(dagar: number | null): string {
+  return dagar === null ? INTE_ANGETT : String(dagar)
+}
+
+/** Värdet i ett sifferfält: ett heltal, eller null när fältet är tomt eller inte är ett tal. */
+export function antalFranFalt(text: string): number | null {
+  if (text.trim() === '') return null
+  const tal = Number(text)
+  return Number.isFinite(tal) ? Math.round(tal) : null
 }
 
 /**
