@@ -8,7 +8,7 @@ import { SakFormular } from '@/components/forrad/SakFormular'
 import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
 import { Button } from '@/components/ui/button'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { formateraVikt, sakdetaljer, summeraForrad, underkategoriFor, viktjamforelse, type Detaljrad, type Forval, type Kategorigrupp } from '@/lib/forrad'
+import { formateraVikt, forradsrad, sakdetaljer, summeraForrad, underkategoriFor, viktjamforelse, type Detaljrad, type Forval, type Kategorigrupp } from '@/lib/forrad'
 import { felrapportLank } from '@/lib/kontakt'
 import { supabase } from '@/lib/supabase'
 import type { Forradssak } from '@/lib/typer'
@@ -67,14 +67,32 @@ export function Forrad() {
   const laggTillKnapp = !laggerTill && (
     <Button onClick={oppnaSok}>
       <Plus className="size-4" aria-hidden />
-      Lägg till
+      Lägg till utrustning
     </Button>
+  )
+  // Raden under rubriken ersätter summeringskorten. Pricken framför "saknar vikt" säger att här finns något att göra.
+  const rad = saker?.length ? forradsrad(summa) : null
+  const ingress = rad ? (
+    <>
+      {rad.saker}
+      {rad.saknarVikt && (
+        <>
+          {' · '}
+          <span className="whitespace-nowrap">
+            <Prick />
+            {rad.saknarVikt}
+          </span>
+        </>
+      )}
+    </>
+  ) : (
+    'Din egen utrustning, samlad på ett ställe.'
   )
   const finnsRedan = new Set((saker ?? []).flatMap((s) => (s.produkt_id ? [s.produkt_id] : [])))
 
   return (
     <div className="space-y-8">
-      <SidRubrik rubrik="Mitt förråd" text="Din egen utrustning, samlad på ett ställe." knappar={saker?.length ? laggTillKnapp : null} />
+      <SidRubrik rubrik="Mitt förråd" text={ingress} knappar={saker?.length ? laggTillKnapp : null} />
 
       {sokOppen && (
         <ProduktSok
@@ -133,19 +151,6 @@ export function Forrad() {
         )
       ) : (
         <>
-          <dl className="grid grid-cols-2 gap-3 sm:max-w-md">
-            <div className="rounded-lg border border-border bg-card p-4 shadow-soft">
-              <dt className="text-sm text-muted-foreground">I förrådet</dt>
-              <dd className="text-2xl font-semibold">{antalText(summa.antal)}</dd>
-            </div>
-            {summa.utanVikt > 0 && (
-              <div className="rounded-lg border border-border bg-card p-4 shadow-soft">
-                <dt className="text-sm text-muted-foreground">Saknar vikt</dt>
-                <dd className="text-2xl font-semibold">{antalText(summa.utanVikt)}</dd>
-              </div>
-            )}
-          </dl>
-
           <div className="space-y-6">
             {summa.grupper.map((grupp) => (
               <Kategoridel
@@ -212,6 +217,11 @@ function Kategoridel({
   )
 }
 
+/** En liten gul prick som säger att något saknas och går att fylla i. Bara en markering, texten bredvid bär betydelsen. */
+function Prick() {
+  return <span aria-hidden className="mr-1.5 inline-block size-2 rounded-full bg-accent align-middle" />
+}
+
 const lankKlass =
   'inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
@@ -276,7 +286,10 @@ function Sakrad({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => vo
           {detaljer && <span className="block text-sm break-words text-muted-foreground">{detaljer}</span>}
         </span>
         {sak.vikt_g === null ? (
-          <span className="shrink-0 text-sm text-muted-foreground italic">vikt saknas</span>
+          <span className="shrink-0 text-sm text-muted-foreground italic">
+            <Prick />
+            vikt saknas
+          </span>
         ) : (
           <span className="shrink-0 text-right">
             <span className="block text-sm font-medium">{formateraVikt(sak.antal * sak.vikt_g)}</span>
@@ -287,9 +300,10 @@ function Sakrad({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => vo
       </button>
 
       {/*
-        Märkningen gäller katalogens uppgifter. Den står vid raden så länge vikten är katalogens.
+        Etiketten Granskad gäller katalogens uppgifter. Den står vid raden så länge vikten är katalogens.
         Har man en egen vikt flyttas den ner till specifikationerna, så att den inte ser ut att gälla den egna vikten.
         Den ligger utanför knappen, eftersom etiketten själv går att trycka på.
+        Att en produkt inte är granskad står bara i den utfällda detaljen.
       */}
       {produkt && !egen && <Granskad kontrollerad={produkt.kontrollerad} className="px-4 pb-2" />}
 
@@ -316,6 +330,7 @@ function Sakrad({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => vo
               </h3>
               {egen && <Granskad kontrollerad={produkt.kontrollerad} />}
             </div>
+            {!produkt.kontrollerad && <p className="text-sm text-muted-foreground">Produktuppgifterna har inte granskats.</p>}
             {viktiga.length > 0 && <Detaljlista rader={viktiga} />}
             {ovriga.length > 0 && (
               <>

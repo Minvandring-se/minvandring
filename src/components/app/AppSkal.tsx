@@ -70,11 +70,13 @@ export function AppSkal() {
                     to={till}
                     aria-current={aktiv === del ? 'page' : undefined}
                     className={cn(
-                      'flex min-h-12 items-center gap-3 rounded-md px-3 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                      'relative flex min-h-12 items-center gap-3 rounded-md px-3 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                       aktiv === del ? 'bg-primary-soft text-primary' : 'text-foreground hover:bg-muted',
                     )}
                   >
-                    <Ikon className="size-5" aria-hidden />
+                    {/* Aktiv sida: grön text, fetare ikon och en kort gul markering, som en målad ledmarkering. */}
+                    {aktiv === del && <span aria-hidden className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent" />}
+                    <Ikon className="size-5" aria-hidden strokeWidth={aktiv === del ? 2.25 : 1.75} />
                     {text}
                   </Link>
                 </li>
@@ -153,7 +155,7 @@ export function AppSkal() {
               >
                 <Ikon className="size-6" aria-hidden strokeWidth={aktiv === del ? 2.25 : 1.75} />
                 <span>{kortNamn}</span>
-                {aktiv === del && <span aria-hidden className="absolute inset-x-6 top-0 h-[3px] rounded-b-full bg-primary" />}
+                {aktiv === del && <span aria-hidden className="absolute top-0 left-1/2 h-1 w-7 -translate-x-1/2 rounded-b-full bg-accent" />}
               </Link>
             </li>
           ))}

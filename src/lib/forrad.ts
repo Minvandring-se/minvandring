@@ -470,3 +470,14 @@ export function sakdetaljer(sak: Forradssak): Sakdetaljer {
   ovriga.push(...egenskaper.filter((e) => !e.viktig))
   return { grund, viktiga: egenskaper.filter((e) => e.viktig), ovriga }
 }
+
+/**
+ * Raden under rubriken Mitt förråd: hur många saker som finns, och hur många som saknar vikt när det är minst en.
+ * Delarna är skilda åt så att den andra kan få en markering framför sig.
+ */
+export function forradsrad(summa: Pick<Forradssumma, 'antal' | 'utanVikt'>): { saker: string; saknarVikt: string | null } {
+  return {
+    saker: summa.antal === 1 ? '1 sak i förrådet' : `${summa.antal} saker i förrådet`,
+    saknarVikt: summa.utanVikt > 0 ? `${summa.utanVikt} saknar vikt` : null,
+  }
+}

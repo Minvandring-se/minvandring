@@ -303,7 +303,7 @@ function Produktrad({
   const Ikon = kategoriFor(produkt.kategori).ikon
   return (
     <>
-      <button type="button" disabled={upptagen} onClick={() => onValj(produkt)} className={cn(radKlass, 'pt-2 pb-1', indragen && 'pl-11')}>
+      <button type="button" disabled={upptagen} onClick={() => onValj(produkt)} className={cn(radKlass, produkt.kontrollerad ? 'pt-2 pb-1' : 'py-2', indragen && 'pl-11')}>
         {!indragen && <Ikon className="size-5 shrink-0 text-primary" aria-hidden />}
         <span className="min-w-0 flex-1">
           <span className="block font-medium break-words">
@@ -316,7 +316,7 @@ function Produktrad({
         <span className="shrink-0 text-sm font-medium">{formateraVikt(produkt.packvikt_g)}</span>
         <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       </button>
-      {/* Märkningen ligger utanför knappen, eftersom den granskade etiketten själv går att trycka på. */}
+      {/* Bara granskade produkter har en etikett. Den ligger utanför knappen, eftersom den själv går att trycka på. */}
       <Granskad kontrollerad={produkt.kontrollerad} className="px-3 pb-2 pl-11" />
     </>
   )

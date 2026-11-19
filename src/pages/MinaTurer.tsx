@@ -58,8 +58,9 @@ export function MinaTurer() {
         ? `${hej} Här är din nästa vandring.`
         : `${hej} Dags att planera nästa vandring?`
 
+  // På dator finns Ny tur i sidomenyn, så knappen i sidhuvudet visas bara i mobil.
   const nyTurKnapp = !formularOppet && (
-    <Button onClick={() => visaFormular(true)}>
+    <Button className="lg:hidden" onClick={() => visaFormular(true)}>
       <Plus className="size-4" aria-hidden />
       Ny tur
     </Button>

@@ -1,17 +1,16 @@
 import { Check } from 'lucide-react'
 import { useId, useState } from 'react'
 import { datumText } from '@/lib/datum'
-import { cn } from '@/lib/utils'
 
 /**
- * Märkningen på en produkt ur katalogen. Granskad: en liten etikett som visar en förklaring när man trycker på den.
- * Inte granskad: diskret grå text. Saker man har skrivit in själv får ingen märkning och använder inte komponenten.
+ * Etiketten på en produkt ur katalogen som vi har granskat. Ett tryck visar en förklaring med datum.
+ * En produkt som inte är granskad får ingen etikett. Det står i stället i den utfällda detaljen i förrådet.
  */
 export function Granskad({ kontrollerad, className }: { kontrollerad: string | null; className?: string }) {
   const id = useId()
   const [oppen, setOppen] = useState(false)
 
-  if (!kontrollerad) return <p className={cn('text-xs text-muted-foreground', className)}>Inte granskad än</p>
+  if (!kontrollerad) return null
 
   return (
     <div className={className}>

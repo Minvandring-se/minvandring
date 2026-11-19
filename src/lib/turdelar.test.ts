@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aktivTurdel, turdelAdress, TURDELAR } from './turdelar'
+import { aktivTurdel, synligaFlikar, turdelAdress, TURDELAR, type TurdelInfo } from './turdelar'
 
 describe('turens delar', () => {
   it('har egna adresser', () => {
@@ -19,5 +19,22 @@ describe('turens delar', () => {
 
   it('visar bara översikten som byggd, resten kommer snart', () => {
     expect(TURDELAR.filter((d) => d.byggd).map((d) => d.del)).toEqual(['oversikt'])
+  })
+})
+
+describe('synligaFlikar', () => {
+  const del = (namn: string, byggd: boolean): TurdelInfo => ({ del: 'oversikt', namn, sokvag: '', byggd })
+
+  it('visar ingen flikrad i dag, när bara Översikt är byggd', () => {
+    expect(synligaFlikar()).toEqual([])
+  })
+
+  it('visar ingen flikrad när bara en del är byggd', () => {
+    expect(synligaFlikar([del('Översikt', true), del('Packa', false)])).toEqual([])
+    expect(synligaFlikar([])).toEqual([])
+  })
+
+  it('visar bara de byggda delarna när det finns minst två, i samma ordning', () => {
+    expect(synligaFlikar([del('Översikt', true), del('Packa', true), del('Mat', false), del('Rutt', true)]).map((d) => d.namn)).toEqual(['Översikt', 'Packa', 'Rutt'])
   })
 })
