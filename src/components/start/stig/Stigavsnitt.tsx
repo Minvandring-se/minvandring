@@ -1,6 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { animera, vanta } from '@/components/start/stig/animationsko'
-import { beraknaStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
+import { arLandskap, beraknaStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
+import { Landskapsbild } from '@/components/start/stig/Landskapsbild'
 import { Naturdetalj, Tass } from '@/components/start/stig/Naturdetalj'
 import { useStigKo } from '@/components/start/stig/stigKo'
 import { RITTID, tidVidAndel, VANTAN } from '@/components/start/stig/utritning'
@@ -299,6 +300,14 @@ export function Stigavsnitt({ id, bit }: Props) {
               />
             </mask>
           </defs>
+          {/* Landskapen ligger under leden, så att den går framför dem. De dyker upp när leden når dit. */}
+          {stig.figurer.detaljer.map((x) =>
+            arLandskap(x.typ) ? (
+              <g key={x.typ} data-dyker="landskap" data-andel={x.andel} style={{ opacity: 0 }}>
+                <Landskapsbild typ={x.typ} punkt={x.punkt} />
+              </g>
+            ) : null,
+          )}
           <path
             d={stig.d}
             fill="none"
@@ -322,7 +331,7 @@ export function Stigavsnitt({ id, bit }: Props) {
           {stig.figurer.detaljer.map((x) =>
             x.typ === 'talt' || x.typ === 'eld' ? (
               <Naturdetalj key={x.typ} typ={x.typ} punkt={x.punkt} detaljRef={detaljRef} flammaRef={flammaRef} glodRef={glodRef} />
-            ) : x.typ === 'ledkors' ? (
+            ) : arLandskap(x.typ) ? null : x.typ === 'ledkors' ? (
               <g key="ledkors" data-dyker="ledkors" data-andel={x.andel} style={{ opacity: 0 }}>
                 <Ledkryss x={x.punkt.x} y={x.punkt.y} />
               </g>

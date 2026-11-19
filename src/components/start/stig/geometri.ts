@@ -8,7 +8,10 @@
  */
 
 export type Sida = 'vanster' | 'hoger'
-export type Detalj = 'talt' | 'eld' | 'tassar' | 'ledkors'
+export type Landskap = 'fjall' | 'skog' | 'sjo'
+export type Detalj = 'talt' | 'eld' | 'tassar' | 'ledkors' | Landskap
+
+export const arLandskap = (typ: Detalj): typ is Landskap => typ === 'fjall' || typ === 'skog' || typ === 'sjo'
 
 export interface DetaljVal {
   typ: Detalj
@@ -84,6 +87,16 @@ export const FIGUR = {
   detalj: { bredd: 44, hojd: 36 },
   tass: { bredd: 10, hojd: 10 },
 }
+
+/** Landskapen längs leden, i px. Små, så att de får plats även i mobil. x är mitten och y marken. */
+export const LANDSKAP: Record<Landskap, { bredd: number; hojd: number }> = {
+  fjall: { bredd: 60, hojd: 34 },
+  skog: { bredd: 48, hojd: 34 },
+  sjo: { bredd: 72, hojd: 18 },
+}
+
+/** Storleken på en detalj som inte är tassar. */
+export const detaljStorlek = (typ: Exclude<Detalj, 'tassar'>) => (typ === 'ledkors' ? FIGUR.ledkryss : arLandskap(typ) ? LANDSKAP[typ] : FIGUR.detalj)
 
 /** Antal tassavtryck och avståndet mellan dem längs leden, i px. */
 export const TASSAR = 5
@@ -316,7 +329,7 @@ export function beraknaStig(m: Matt, bit: Stigbit, fro = bit.id ?? '') {
       continue
     }
     // Ledkorset är samma röda kryss som vid ledens början.
-    const storlek = val.typ === 'ledkors' ? FIGUR.ledkryss : FIGUR.detalj
+    const storlek = detaljStorlek(val.typ)
     const p = narmast(val.lage).find((q) => passar(q, storlek))
     const punkt = ta(p, storlek)
     if (p && punkt) detaljer.push({ typ: val.typ, punkt: { x: punkt.x, y: punkt.y }, andel: p.andel })

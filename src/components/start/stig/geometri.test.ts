@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { beraknaStig, FIGUR, FIGURLUFT, kopplaStig, TASSAR, punktPaKurva, sidaX, slumptal, type Kubik, type Matt, type Sida, type Stigbit } from './geometri'
+import { beraknaStig, detaljStorlek, FIGUR, FIGURLUFT, kopplaStig, TASSAR, punktPaKurva, sidaX, slumptal, type Kubik, type Matt, type Sida, type Stigbit } from './geometri'
 
 /** Ett mellanrum: bredd och höjd, med paneler på 1152 px i mitten (eller nästan kant i kant). */
 const matt = (bredd = 1416, hojd = 112): Matt => {
@@ -122,15 +122,26 @@ describe('figurer', () => {
   const sidan = [mobil(366, 144), matt(768, 144), matt(1366 - 48, 160), matt(1920 - 48, 160)]
   /** Bitarna som på startsidan. */
   const startsidan: Partial<Stigbit>[] = [
-    { detaljer: [{ typ: 'eld', lage: 0.72 }] },
+    {
+      detaljer: [
+        { typ: 'eld', lage: 0.72 },
+        { typ: 'fjall', lage: 0.35 },
+      ],
+    },
     {
       detaljer: [
         { typ: 'talt', lage: 0.3 },
         { typ: 'tassar', lage: 0.7 },
+        { typ: 'skog', lage: 0.5 },
       ],
     },
-    { detaljer: [{ typ: 'ledkors', lage: 0.6 }] },
-    {},
+    {
+      detaljer: [
+        { typ: 'ledkors', lage: 0.6 },
+        { typ: 'sjo', lage: 0.35 },
+      ],
+    },
+    { detaljer: [{ typ: 'fjall', lage: 0.4 }] },
   ]
   const ids = ['borja', 'packning', 'tanken', 'fragor']
 
@@ -151,7 +162,7 @@ describe('figurer', () => {
       ...f.detaljer.flatMap((d) =>
         d.typ === 'tassar'
           ? (d.tassar ?? []).map((t, i) => ruta(`tass ${i}`, { x: t.punkt.x, y: t.punkt.y + 5 }, FIGUR.tass))
-          : [ruta(d.typ, d.punkt, d.typ === 'ledkors' ? FIGUR.ledkryss : FIGUR.detalj)],
+          : [ruta(d.typ, d.punkt, detaljStorlek(d.typ))],
       ),
     ]
   }
