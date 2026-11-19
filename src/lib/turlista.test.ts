@@ -5,6 +5,7 @@ import {
   dagarVarde,
   datumrad,
   flerTurer,
+  halsning,
   dagarText,
   datumIntervall,
   delaUppTurer,
@@ -262,5 +263,26 @@ describe('antalen i Kommande och Tidigare', () => {
     // Varje tur finns på exakt ett ställe, så antalen i flikarna stämmer med det listan visar.
     expect(1 + kommande.length + tidigare.length).toBe(turer.length)
     expect(flerTurer(kommande.length, tidigare.length)).toEqual({ visa: true, forvald: 'kommande' })
+  })
+})
+
+describe('halsning', () => {
+  it('är kort när kortet för nästa vandring visas', () => {
+    expect(halsning('Oscar', 'nasta-visas')).toBe('Hej Oscar!')
+    expect(halsning('  Anna Karin ', 'nasta-visas')).toBe('Hej Anna Karin!')
+  })
+
+  it('visas inte alls utan namn när kortet för nästa vandring visas', () => {
+    expect(halsning('', 'nasta-visas')).toBeNull()
+    expect(halsning('   ', 'nasta-visas')).toBeNull()
+  })
+
+  it('är som förut i övriga lägen, med och utan namn', () => {
+    expect(halsning('Oscar', 'laddar')).toBe('Hej Oscar.')
+    expect(halsning('', 'laddar')).toBe('Hej.')
+    expect(halsning('Oscar', 'inga-turer')).toBe('Hej Oscar. Här samlar du vandringarna du planerar.')
+    expect(halsning('', 'inga-turer')).toBe('Hej. Här samlar du vandringarna du planerar.')
+    expect(halsning('Oscar', 'bara-tidigare')).toBe('Hej Oscar. Dags att planera nästa vandring?')
+    expect(halsning('', 'bara-tidigare')).toBe('Hej. Dags att planera nästa vandring?')
   })
 })
