@@ -27,7 +27,8 @@ export const FRISTAENDE = ['ja', 'halvt', 'nej'] as const
 export const MATERIALTYPER = ['polyester', 'nylon', 'silnylon', 'silpoly', 'dcf', 'kerlon', 'bomull', 'annat'] as const
 
 const TALT: Egenskap[] = [
-  { nyckel: 'personer', etikett: 'Personer', sort: 'heltal', min: 1, max: 12, forJamforelse: true },
+  // De största kåtorna rymmer femton personer.
+  { nyckel: 'personer', etikett: 'Personer', sort: 'heltal', min: 1, max: 20, forJamforelse: true },
   { nyckel: 'sasong', etikett: 'Säsonger', sort: 'heltal', min: 1, max: 4, forJamforelse: true },
   { nyckel: 'konstruktion', etikett: 'Konstruktion', sort: 'val', val: KONSTRUKTIONER, forJamforelse: true },
   { nyckel: 'fristaende', etikett: 'Fristående', sort: 'val', val: FRISTAENDE, forJamforelse: true },
@@ -50,7 +51,7 @@ const TALT: Egenskap[] = [
 
 /** Tarp och vindsäck: några få egenskaper, alla frivilliga. Tältens krav gäller bara underkategorin talt. */
 const SKYDD: Egenskap[] = [
-  { nyckel: 'personer', etikett: 'Personer', sort: 'heltal', min: 1, max: 12 },
+  { nyckel: 'personer', etikett: 'Personer', sort: 'heltal', min: 1, max: 20 },
   { nyckel: 'langd_cm', etikett: 'Längd', sort: 'heltal', min: 100, max: 1000, enhet: 'cm' },
   { nyckel: 'material_typ', etikett: 'Material', sort: 'val', val: MATERIALTYPER },
   { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text' },
