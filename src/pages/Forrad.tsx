@@ -1,4 +1,4 @@
-import { ChevronDown, ExternalLink, Pencil, Plus } from 'lucide-react'
+import { ChevronDown, ExternalLink, Pencil, Plus, RotateCcw } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
@@ -8,7 +8,8 @@ import { SakFormular } from '@/components/forrad/SakFormular'
 import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
 import { Button } from '@/components/ui/button'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { formateraVikt, sakdetaljer, summeraForrad, underkategoriFor, type Forval, type Kategorigrupp } from '@/lib/forrad'
+import { formateraVikt, sakdetaljer, summeraForrad, underkategoriFor, viktjamforelse, type Detaljrad, type Forval, type Kategorigrupp } from '@/lib/forrad'
+import { felrapportLank } from '@/lib/kontakt'
 import { supabase } from '@/lib/supabase'
 import type { Forradssak } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -38,7 +39,7 @@ export function Forrad() {
   useEffect(() => {
     supabase
       ?.from('forradssaker')
-      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, produkter(kontrollerad, version, underkategori, minvikt_g, kalla, egenskaper)')
+      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, produkter(id, marke, modell, packvikt_g, kontrollerad, version, underkategori, minvikt_g, kalla, egenskaper)')
       .then(({ data, error }) => {
         setLaddfel(!!error)
         if (!error) setSaker((data as unknown as Forradssak[] | null) ?? [])
@@ -132,23 +133,18 @@ export function Forrad() {
         )
       ) : (
         <>
-          <div className="space-y-2">
-            <dl className="grid grid-cols-2 gap-3 sm:max-w-md">
-              <div className="rounded-lg border border-border bg-card p-4 shadow-soft">
-                <dt className="text-sm text-muted-foreground">Total vikt</dt>
-                <dd className="text-2xl font-semibold">{formateraVikt(summa.viktG)}</dd>
-              </div>
-              <div className="rounded-lg border border-border bg-card p-4 shadow-soft">
-                <dt className="text-sm text-muted-foreground">I förrådet</dt>
-                <dd className="text-2xl font-semibold">{antalText(summa.antal)}</dd>
-              </div>
-            </dl>
+          <dl className="grid grid-cols-2 gap-3 sm:max-w-md">
+            <div className="rounded-lg border border-border bg-card p-4 shadow-soft">
+              <dt className="text-sm text-muted-foreground">I förrådet</dt>
+              <dd className="text-2xl font-semibold">{antalText(summa.antal)}</dd>
+            </div>
             {summa.utanVikt > 0 && (
-              <p className="text-sm text-muted-foreground">
-                {summa.utanVikt === 1 ? '1 sak saknar vikt och är inte med i summan.' : `${summa.utanVikt} saker saknar vikt och är inte med i summan.`}
-              </p>
+              <div className="rounded-lg border border-border bg-card p-4 shadow-soft">
+                <dt className="text-sm text-muted-foreground">Saknar vikt</dt>
+                <dd className="text-2xl font-semibold">{antalText(summa.utanVikt)}</dd>
+              </div>
             )}
-          </div>
+          </dl>
 
           <div className="space-y-6">
             {summa.grupper.map((grupp) => (
@@ -158,6 +154,7 @@ export function Forrad() {
                 oppenSak={oppet !== null && 'sakId' in oppet ? oppet.sakId : null}
                 onOppna={(sakId) => setOppet({ sakId })}
                 onKlar={klar}
+                onAndrad={hamtaOm}
                 onAvbryt={() => setOppet(null)}
               />
             ))}
@@ -173,12 +170,15 @@ function Kategoridel({
   oppenSak,
   onOppna,
   onKlar,
+  onAndrad,
   onAvbryt,
 }: {
   grupp: Kategorigrupp
   oppenSak: string | null
   onOppna: (sakId: string) => void
   onKlar: () => void
+  /** Något har sparats direkt från raden, så listan ska hämtas igen. */
+  onAndrad: () => void
   onAvbryt: () => void
 }) {
   const { kategori, saker, antal, viktG } = grupp
@@ -203,7 +203,7 @@ function Kategoridel({
             </li>
           ) : (
             <li key={sak.id}>
-              <Sakrad sak={sak} onAndra={() => onOppna(sak.id)} />
+              <Sakrad sak={sak} onAndra={() => onOppna(sak.id)} onAndrad={onAndrad} />
             </li>
           ),
         )}
@@ -212,12 +212,51 @@ function Kategoridel({
   )
 }
 
+const lankKlass =
+  'inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
+
+/** Rader med rubrik och värde. På bredare skärmar i två kolumner, så att värdet står nära sin rubrik. */
+function Detaljlista({ rader }: { rader: Detaljrad[] }) {
+  return (
+    <dl className="grid gap-x-8 text-sm sm:grid-cols-2">
+      {rader.map((rad) => (
+        <div key={rad.etikett} className="flex justify-between gap-4 border-b border-border py-1.5">
+          <dt className="text-muted-foreground">{rad.etikett}</dt>
+          <dd className="min-w-0 text-right font-medium break-words">{rad.varde}</dd>
+        </div>
+      ))}
+    </dl>
+  )
+}
+
 /** En sak i listan. Ett tryck på raden fäller ut informationen om saken, där den också går att ändra. */
-function Sakrad({ sak, onAndra }: { sak: Forradssak; onAndra: () => void }) {
+function Sakrad({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => void; onAndrad: () => void }) {
   const id = useId()
   const [utfalld, setUtfalld] = useState(false)
+  const [visaAlla, setVisaAlla] = useState(false)
+  const [aterstaller, setAterstaller] = useState(false)
+  const [fel, setFel] = useState('')
   // Underkategorin och anteckningen står diskret under namnet.
   const detaljer = [underkategoriFor(sak.kategori, sak.underkategori)?.etikett, sak.notering].filter(Boolean).join(' · ')
+  const { grund, viktiga, ovriga } = sakdetaljer(sak)
+  const { egen, katalogG } = viktjamforelse(sak)
+  const produkt = sak.produkter
+  const rapportera = produkt ? felrapportLank(produkt) : null
+
+  /** Sätter tillbaka katalogens vikt. Sparas direkt, eftersom det är lätt att ändra tillbaka. */
+  async function aterstallVikt() {
+    if (!supabase || katalogG === null) return
+    setAterstaller(true)
+    setFel('')
+    const { error } = await supabase.from('forradssaker').update({ vikt_g: katalogG }).eq('id', sak.id)
+    setAterstaller(false)
+    if (error) {
+      setFel('Det gick inte att återställa vikten. Försök igen.')
+      return
+    }
+    onAndrad()
+  }
+
   return (
     <>
       <button
@@ -233,47 +272,93 @@ function Sakrad({ sak, onAndra }: { sak: Forradssak; onAndra: () => void }) {
             {sak.antal > 1 && <span className="font-normal text-muted-foreground"> × {sak.antal}</span>}
           </span>
           {/* Versionen, till exempel Regular eller Red Label, står under namnet som i träfflistan. */}
-          {sak.produkter?.version && <span className="block text-sm break-words text-muted-foreground">{sak.produkter.version}</span>}
+          {produkt?.version && <span className="block text-sm break-words text-muted-foreground">{produkt.version}</span>}
           {detaljer && <span className="block text-sm break-words text-muted-foreground">{detaljer}</span>}
         </span>
         {sak.vikt_g === null ? (
           <span className="shrink-0 text-sm text-muted-foreground italic">vikt saknas</span>
         ) : (
-          <span className="shrink-0 text-sm font-medium">{formateraVikt(sak.antal * sak.vikt_g)}</span>
+          <span className="shrink-0 text-right">
+            <span className="block text-sm font-medium">{formateraVikt(sak.antal * sak.vikt_g)}</span>
+            {egen && <span className="block text-xs text-muted-foreground">Egen vikt</span>}
+          </span>
         )}
         <ChevronDown className={cn('size-5 shrink-0 text-muted-foreground transition-transform', utfalld && 'rotate-180')} aria-hidden />
       </button>
 
-      {/* Bara saker från katalogen har en märkning. Den ligger utanför knappen, eftersom etiketten själv går att trycka på. */}
-      {sak.produkter && <Granskad kontrollerad={sak.produkter.kontrollerad} className="px-4 pb-2" />}
+      {/*
+        Märkningen gäller katalogens uppgifter. Den står vid raden så länge vikten är katalogens.
+        Har man en egen vikt flyttas den ner till specifikationerna, så att den inte ser ut att gälla den egna vikten.
+        Den ligger utanför knappen, eftersom etiketten själv går att trycka på.
+      */}
+      {produkt && !egen && <Granskad kontrollerad={produkt.kontrollerad} className="px-4 pb-2" />}
 
-      <div id={id} hidden={!utfalld} className="space-y-3 border-t border-border bg-muted/40 px-4 py-3">
-        <dl className="text-sm">
-          {sakdetaljer(sak).map((rad) => (
-            <div key={rad.etikett} className="flex justify-between gap-4 border-b border-border py-1.5 last:border-0">
-              <dt className="text-muted-foreground">{rad.etikett}</dt>
-              <dd className="min-w-0 text-right font-medium break-words">{rad.varde}</dd>
+      <div id={id} hidden={!utfalld} className="space-y-4 border-t border-border bg-muted/40 px-4 py-3">
+        <Detaljlista rader={grund} />
+
+        {egen && (
+          <Button variant="outline" disabled={aterstaller} onClick={aterstallVikt}>
+            <RotateCcw className="size-4" aria-hidden />
+            {aterstaller ? 'Återställer …' : 'Återställ till katalogens vikt'}
+          </Button>
+        )}
+        {fel && (
+          <p role="alert" className="text-sm text-destructive">
+            {fel}
+          </p>
+        )}
+
+        {produkt && (
+          <section aria-labelledby={`${id}-spec`} className="space-y-2">
+            <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
+              <h3 id={`${id}-spec`} className="text-sm font-semibold">
+                Specifikationer från katalogen
+              </h3>
+              {egen && <Granskad kontrollerad={produkt.kontrollerad} />}
             </div>
-          ))}
-        </dl>
+            {viktiga.length > 0 && <Detaljlista rader={viktiga} />}
+            {ovriga.length > 0 && (
+              <>
+                <button
+                  type="button"
+                  aria-expanded={visaAlla}
+                  aria-controls={`${id}-alla`}
+                  onClick={() => setVisaAlla((v) => !v)}
+                  className={cn(lankKlass, 'no-underline')}
+                >
+                  {visaAlla ? 'Dölj specifikationerna' : 'Visa alla specifikationer'}
+                  <ChevronDown className={cn('size-4 transition-transform', visaAlla && 'rotate-180')} aria-hidden />
+                </button>
+                <div id={`${id}-alla`} hidden={!visaAlla}>
+                  <Detaljlista rader={ovriga} />
+                </div>
+              </>
+            )}
+          </section>
+        )}
+
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <Button variant="outline" onClick={onAndra}>
             <Pencil className="size-4" aria-hidden />
             Ändra
           </Button>
-          {sak.produkter && (
-            <a
-              href={sak.produkter.kalla}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
+          {produkt && (
+            <a href={produkt.kalla} target="_blank" rel="noopener noreferrer" className={lankKlass}>
               Tillverkarens sida
               <ExternalLink className="size-4" aria-hidden />
               <span className="sr-only">(öppnas i ny flik)</span>
             </a>
           )}
         </div>
+
+        {rapportera && (
+          <p className="border-t border-border pt-2 text-sm text-muted-foreground">
+            Fel uppgift?{' '}
+            <a href={rapportera} className={lankKlass}>
+              Meddela oss
+            </a>
+          </p>
+        )}
       </div>
     </>
   )
