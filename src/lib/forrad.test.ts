@@ -15,9 +15,10 @@ import {
   typEfterVal,
   TYPVAL,
   underkategoriFor,
+  viktjamforelse,
   type SakFalt,
 } from './forrad'
-import type { Forradssak } from './typer'
+import type { ForradsProdukt, Forradssak } from './typer'
 
 function sak(delar: Partial<Forradssak>): Forradssak {
   return { id: crypto.randomUUID(), produkt_id: null, namn: 'Sak', kategori: 'ovrigt', underkategori: null, antal: 1, vikt_g: null, typ: 'ryggsack', notering: null, ...delar }
@@ -291,85 +292,144 @@ describe('val av kategori i formuläret', () => {
   })
 })
 
-describe('sakdetaljer', () => {
-  const rader = (s: Forradssak) => sakdetaljer(s).map((r) => `${r.etikett}: ${r.varde}`)
+/** En produkt som saken kan komma från. Enskilda fält byts ut i testerna. */
+function katalogprodukt(delar: Partial<ForradsProdukt> = {}): ForradsProdukt {
+  return {
+    id: 'p1',
+    marke: 'Hilleberg',
+    modell: 'Akto',
+    packvikt_g: 1700,
+    kontrollerad: null,
+    version: 'Red Label',
+    underkategori: 'talt',
+    minvikt_g: 1300,
+    kalla: 'https://exempel.se/akto',
+    egenskaper: {},
+    ...delar,
+  }
+}
 
-  it('visar kategori, vikt, antal och typ för en sak man har skrivit in själv', () => {
-    expect(rader(sak({ kategori: 'kok', underkategori: 'bransle', vikt_g: 230, antal: 2, typ: 'forbrukas' }))).toEqual([
-      'Kategori: Kök, Bränsle',
-      'Vikt per styck: 230 g',
-      'Antal: 2',
-      'Räknas som: Förbrukas',
-    ])
+describe('viktjamforelse', () => {
+  const franKatalogen = (vikt_g: number | null, produkt = katalogprodukt()) => sak({ produkt_id: 'p1', kategori: 'talt', vikt_g, produkter: produkt })
+
+  it('samma vikt som katalogen är inte en egen vikt', () => {
+    expect(viktjamforelse(franKatalogen(1700))).toEqual({ egen: false, katalogG: 1700 })
+  })
+
+  it('en annan vikt än katalogens är en egen vikt, oavsett om den är högre eller lägre', () => {
+    expect(viktjamforelse(franKatalogen(1750))).toEqual({ egen: true, katalogG: 1700 })
+    expect(viktjamforelse(franKatalogen(1699)).egen).toBe(true)
+  })
+
+  it('en borttagen vikt skiljer sig också från katalogens, så att den går att återställa', () => {
+    expect(viktjamforelse(franKatalogen(null))).toEqual({ egen: true, katalogG: 1700 })
+  })
+
+  it('utan vikt i katalogen finns inget att jämföra med', () => {
+    expect(viktjamforelse(franKatalogen(1750, katalogprodukt({ packvikt_g: null })))).toEqual({ egen: false, katalogG: null })
+  })
+
+  it('en sak utan produkt_id har aldrig en egen vikt', () => {
+    expect(viktjamforelse(sak({ vikt_g: 1750 }))).toEqual({ egen: false, katalogG: null })
+    expect(viktjamforelse(sak({ vikt_g: null }))).toEqual({ egen: false, katalogG: null })
+    // Produkten är borttagen ur katalogen: produkt_id är tomt även om listan skulle ha kvar uppgifterna.
+    expect(viktjamforelse(sak({ produkt_id: null, vikt_g: 1750, produkter: katalogprodukt() })).egen).toBe(false)
+  })
+
+  it('en sak vars produkt inte följde med i hämtningen har ingen egen vikt', () => {
+    expect(viktjamforelse(sak({ produkt_id: 'p1', vikt_g: 1750, produkter: null })).egen).toBe(false)
+  })
+})
+
+describe('sakdetaljer', () => {
+  const text = (rader: { etikett: string; varde: string }[]) => rader.map((r) => `${r.etikett}: ${r.varde}`)
+
+  it('visar kategori, vikt, antal och typ för en sak man har skrivit in själv, och inga specifikationer', () => {
+    const d = sakdetaljer(sak({ kategori: 'kok', underkategori: 'bransle', vikt_g: 230, antal: 2, typ: 'forbrukas' }))
+    expect(text(d.grund)).toEqual(['Kategori: Kök, Bränsle', 'Vikt per styck: 230 g', 'Antal: 2', 'Räknas som: Förbrukas'])
+    expect(d.viktiga).toEqual([])
+    expect(d.ovriga).toEqual([])
   })
 
   it('säger att vikten saknas, och upprepar inte kategorin när underkategorin heter likadant eller saknas', () => {
-    expect(rader(sak({ kategori: 'ovrigt', underkategori: 'ovrigt' }))).toEqual(['Kategori: Övrigt', 'Vikt per styck: Saknas', 'Antal: 1', 'Räknas som: I ryggsäcken'])
-    expect(rader(sak({ kategori: 'sova' }))[0]).toBe('Kategori: Sova')
+    expect(text(sakdetaljer(sak({ kategori: 'ovrigt', underkategori: 'ovrigt' })).grund)).toEqual([
+      'Kategori: Övrigt',
+      'Vikt per styck: Saknas',
+      'Antal: 1',
+      'Räknas som: I ryggsäcken',
+    ])
+    expect(sakdetaljer(sak({ kategori: 'sova' })).grund[0].varde).toBe('Sova')
   })
 
-  it('lägger till version, minsta vikt och tältets egenskaper för ett tält ur katalogen', () => {
+  it('visar de viktigaste egenskaperna för ett tält först, och resten bland alla specifikationer', () => {
     const talt = sak({
+      produkt_id: 'p1',
       kategori: 'talt',
       underkategori: 'talt',
       vikt_g: 1700,
-      produkter: {
-        kontrollerad: null,
-        version: 'Red Label',
-        underkategori: 'talt',
-        minvikt_g: 1300,
-        kalla: 'https://exempel.se/akto',
-        egenskaper: { personer: 1, sasong: 4, konstruktion: 'tunnel', golvyta_m2: 1.7 },
-      },
+      produkter: katalogprodukt({
+        egenskaper: { personer: 1, sasong: 4, konstruktion: 'tunnel', fristaende: 'nej', golvyta_m2: 1.7, absider: 1, innerhojd_cm: 93, material_typ: 'kerlon' },
+      }),
     })
-    expect(rader(talt)).toEqual([
+    const d = sakdetaljer(talt)
+    expect(text(d.grund)).toEqual(['Kategori: Tält och vindskydd, Tält', 'Vikt per styck: 1,7 kg', 'Antal: 1', 'Räknas som: I ryggsäcken'])
+    expect(text(d.viktiga)).toEqual(['Personer: 1', 'Säsonger: 4', 'Konstruktion: Tunnel', 'Fristående: Nej', 'Golvyta: 1,7 m²', 'Absider: 1'])
+    expect(text(d.ovriga)).toEqual(['Version: Red Label', 'Minsta vikt: 1,3 kg', 'Innerhöjd: 93 cm', 'Material: Kerlon'])
+  })
+
+  it('märker en ändrad vikt som egen och visar katalogens vikt bredvid', () => {
+    const d = sakdetaljer(sak({ produkt_id: 'p1', kategori: 'talt', underkategori: 'talt', vikt_g: 1750, produkter: katalogprodukt() }))
+    expect(text(d.grund)).toEqual([
       'Kategori: Tält och vindskydd, Tält',
-      'Version: Red Label',
-      'Vikt per styck: 1,7 kg',
-      'Minsta vikt: 1,3 kg',
+      'Vikt per styck: 1,75 kg (egen vikt)',
+      'Katalogens vikt: 1,7 kg',
       'Antal: 1',
       'Räknas som: I ryggsäcken',
-      'Personer: 1',
-      'Säsonger: 4',
-      'Konstruktion: Tunnel',
-      'Golvyta: 1,7 m²',
     ])
+  })
+
+  it('visar katalogens vikt även när den egna vikten är borttagen', () => {
+    const d = sakdetaljer(sak({ produkt_id: 'p1', kategori: 'talt', vikt_g: null, produkter: katalogprodukt() }))
+    expect(text(d.grund).slice(1, 3)).toEqual(['Vikt per styck: Saknas', 'Katalogens vikt: 1,7 kg'])
+  })
+
+  it('en egen sak får aldrig texten egen vikt', () => {
+    expect(text(sakdetaljer(sak({ vikt_g: 1750 })).grund).join(' ')).not.toContain('egen vikt')
   })
 
   it('visar produktens egenskaper efter produktens underkategori, även om man har flyttat sin sak', () => {
     const tarp = sak({
+      produkt_id: 'p1',
       kategori: 'ovrigt',
-      produkter: { kontrollerad: null, version: null, underkategori: 'tarp', minvikt_g: null, kalla: 'https://exempel.se/tarp', egenskaper: { langd_cm: 300, konstruktion: 'annat' } },
+      produkter: katalogprodukt({ version: null, underkategori: 'tarp', minvikt_g: null, egenskaper: { langd_cm: 300, konstruktion: 'annat', vattenpelare_duk_mm: 3000 } }),
     })
-    expect(rader(tarp).slice(-1)).toEqual(['Längd: 300 cm'])
+    const d = sakdetaljer(tarp)
+    expect(text(d.viktiga)).toEqual(['Längd: 300 cm'])
+    expect(text(d.ovriga)).toEqual(['Vattenpelare duk: 3000 mm'])
   })
 
-  it('visar temperaturer och fyllning för en sovsäck ur katalogen', () => {
+  it('visar temperaturer och fyllning först för en sovsäck ur katalogen', () => {
     const sovsack = sak({
+      produkt_id: 'p2',
       kategori: 'sova',
       underkategori: 'sovsack',
       vikt_g: 1050,
-      produkter: {
-        kontrollerad: null,
+      produkter: katalogprodukt({
+        packvikt_g: 1050,
         version: '185 cm',
         underkategori: 'sovsack',
         minvikt_g: null,
-        kalla: 'https://exempel.se/fjallsack',
         egenskaper: { komfort_temp_c: -3, limit_temp_c: -9, extrem_temp_c: -28, temperaturstandard: 'ej_angiven', fyllning: 'dun', fillpower_cuin: 800, form: 'mumie', max_langd_cm: 185, dragkedja: 'vanster' },
-      },
+      }),
     })
-    expect(rader(sovsack)).toEqual([
-      'Kategori: Sova, Sovsäck',
-      'Version: 185 cm',
-      'Vikt per styck: 1,05 kg',
-      'Antal: 1',
-      'Räknas som: I ryggsäcken',
+    const d = sakdetaljer(sovsack)
+    expect(text(d.viktiga)).toEqual([
       'Komforttemperatur: \u22123 °C (ej ISO-testad)',
       'Limittemperatur: \u22129 °C (ej ISO-testad)',
       'Fyllning: Dun',
-      'Fillpower: 800 cuin',
       'Form: Mumie',
       'Max längd: 185 cm',
     ])
+    expect(text(d.ovriga)).toEqual(['Version: 185 cm', 'Extremtemperatur: \u221228 °C', 'Temperaturstandard: Inte angiven', 'Fillpower: 800 cuin', 'Dragkedja: Vänster'])
   })
 })

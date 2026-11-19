@@ -329,16 +329,24 @@ describe('egenskaper för sovsäck och quilt', () => {
   })
 
   describe('i förrådets utfällning', () => {
-    const rader = (e: Record<string, unknown>) => visaEgenskaper('sovsack', e).map((r) => `${r.etikett}: ${r.varde}`)
+    const rader = (e: Record<string, unknown>, bara?: 'viktiga' | 'ovriga') =>
+      visaEgenskaper('sovsack', e)
+        .filter((r) => (bara === 'viktiga' ? r.viktig : bara === 'ovriga' ? !r.viktig : true))
+        .map((r) => `${r.etikett}: ${r.varde}`)
 
-    it('visar temperaturer, fyllning, fillpower, form och längd, och döljer resten', () => {
-      expect(rader(sovsack)).toEqual([
-        'Komforttemperatur: \u22123 °C',
-        'Limittemperatur: \u22129 °C',
-        'Fyllning: Dun',
+    it('visar temperaturer, fyllning, form och längd först', () => {
+      expect(rader(sovsack, 'viktiga')).toEqual(['Komforttemperatur: \u22123 °C', 'Limittemperatur: \u22129 °C', 'Fyllning: Dun', 'Form: Mumie', 'Max längd: 185 cm'])
+    })
+
+    it('lägger resten bland alla specifikationer', () => {
+      expect(rader(sovsack, 'ovriga')).toEqual([
+        'Extremtemperatur: \u221228 °C',
+        'Temperaturstandard: ISO',
         'Fillpower: 800 cuin',
-        'Form: Mumie',
-        'Max längd: 185 cm',
+        'Fyllnadsvikt: 480 g',
+        'Dragkedja: Vänster',
+        'Materialbeskrivning: Yttertyg i 20D nylon',
+        'Packmått (cm): 30 x 17',
       ])
     })
 
@@ -356,5 +364,21 @@ describe('egenskaper för sovsäck och quilt', () => {
       expect(rader({ limit_temp_c: 0 })).toEqual(['Limittemperatur: 0 °C'])
       expect(rader({})).toEqual([])
     })
+  })
+})
+
+describe('de viktigaste egenskaperna per underkategori', () => {
+  const viktiga = (under: string) => egenskaperFor(under).filter((e) => e.viktig).map((e) => e.nyckel)
+
+  it('tält: personer, säsong, konstruktion, fristående, golvyta och absider', () => {
+    expect(viktiga('talt')).toEqual(['personer', 'sasong', 'konstruktion', 'fristaende', 'golvyta_m2', 'absider'])
+  })
+
+  it('sovsäck och quilt: komfort, limit, fyllning, form och max längd', () => {
+    for (const under of ['sovsack', 'quilt']) expect(viktiga(under)).toEqual(['komfort_temp_c', 'limit_temp_c', 'fyllning', 'form', 'max_langd_cm'])
+  })
+
+  it('tarp och vindsäck: personer, längd och material', () => {
+    for (const under of ['tarp', 'vindsack']) expect(viktiga(under)).toEqual(['personer', 'langd_cm', 'material_typ'])
   })
 })
