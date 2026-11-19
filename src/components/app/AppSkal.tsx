@@ -1,6 +1,6 @@
-import { Backpack, LogOut, Map as Karta, Plus, UserRound, type LucideIcon } from 'lucide-react'
+import { Backpack, Map as Karta, Plus, UserRound, type LucideIcon } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
-import { Link, Outlet, useLocation, useNavigate } from 'react-router'
+import { Link, Outlet, useLocation } from 'react-router'
 import type { AppKontext } from '@/components/app/appKontext'
 import { Namnbricka } from '@/components/app/Namnbricka'
 import { Felgrans } from '@/components/Felgrans'
@@ -19,12 +19,11 @@ const DELAR: { del: Del; till: string; namn: string; kortNamn: string; ikon: Luc
 ]
 
 /**
- * Ramen för de inloggade sidorna. På dator en sidomeny med Ny tur, de tre delarna, Logga ut och sidfoten.
+ * Ramen för de inloggade sidorna. På dator en sidomeny med Ny tur, de tre delarna, länken till profilen och sidfoten.
  * I mobil ett kompakt sidhuvud, sidfoten längst ner på sidan och en bottennavigation för samma tre delar.
  */
 export function AppSkal() {
   const session = useSession()
-  const navigate = useNavigate()
   const { pathname } = useLocation()
   const aktiv = aktivDel(pathname)
   const anvandarId = session?.user.id ?? ''
@@ -39,11 +38,6 @@ export function AppSkal() {
       .maybeSingle()
       .then(({ data }) => setNamn(data?.namn?.trim() ?? ''))
   }, [anvandarId])
-
-  async function loggaUt() {
-    await supabase?.auth.signOut()
-    navigate('/', { replace: true })
-  }
 
   const kontext: AppKontext = { anvandarId, epost: session?.user.email ?? '', namn, setNamn }
 
@@ -86,18 +80,14 @@ export function AppSkal() {
         </div>
 
         <div className="space-y-3 border-t border-border p-5">
-          <Link to="/profil" className="flex min-h-11 items-center gap-3 rounded-md px-1 hover:bg-muted">
+          {/* Namnet leder till Profil, där Logga ut finns. */}
+          <Link
+            to="/profil"
+            className="flex min-h-11 items-center gap-3 rounded-md px-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+          >
             <Namnbricka namn={namn || session?.user.email || '?'} />
             <span className="min-w-0 truncate font-medium">{namn || 'Din profil'}</span>
           </Link>
-          <button
-            type="button"
-            onClick={loggaUt}
-            className="flex min-h-11 w-full items-center gap-3 rounded-md px-3 text-sm font-medium text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-          >
-            <LogOut className="size-4" aria-hidden />
-            Logga ut
-          </button>
           <Sidfot variant="meny" className="border-t border-border pt-2 text-xs" />
         </div>
       </aside>

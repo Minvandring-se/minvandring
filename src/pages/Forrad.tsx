@@ -324,7 +324,7 @@ function Sakrad({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => vo
         ) : (
           <span className="shrink-0 text-right">
             <span className="block text-sm font-medium">{formateraVikt(sak.antal * sak.vikt_g)}</span>
-            {egen && <span className="block text-xs text-muted-foreground">Egen vikt</span>}
+            {egen && <span className="block text-sm text-muted-foreground">Egen vikt</span>}
           </span>
         )}
         <ChevronDown className={cn('size-5 shrink-0 text-muted-foreground transition-transform', utfalld && 'rotate-180')} aria-hidden />

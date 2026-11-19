@@ -22,12 +22,12 @@ export function Granskad({ kontrollerad, className }: { kontrollerad: string | n
         onClick={() => setOppen((o) => !o)}
         className="group -my-2 inline-flex min-h-11 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
-        <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2 py-0.5 text-xs font-medium text-primary group-hover:bg-primary-soft/70">
+        <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-0.5 text-sm font-medium text-primary group-hover:bg-primary-soft/70">
           <Check className="size-3.5" aria-hidden />
           Granskad
         </span>
       </button>
-      <p id={id} hidden={!oppen} role="status" className="mt-1 text-xs text-muted-foreground">
+      <p id={id} hidden={!oppen} role="status" className="mt-1 text-sm text-muted-foreground">
         Vi har jämfört vikt och mått med tillverkarens uppgifter {datumText(kontrollerad)}.
       </p>
     </div>

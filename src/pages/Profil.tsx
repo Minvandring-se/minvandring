@@ -47,7 +47,7 @@ export function Profil() {
   }
 
   return (
-    <div className="max-w-xl space-y-8">
+    <div className="max-w-[520px] space-y-8">
       <SidRubrik rubrik="Profil" text="Ditt namn och ditt konto." />
 
       <Card className="space-y-5 sm:p-6">
@@ -77,15 +77,15 @@ export function Profil() {
             aria-describedby={`${id}-hjalp`}
           />
           <p id={`${id}-hjalp`} className="text-sm text-muted-foreground">
-            Så här ser de andra dig i turerna.
+            Namnet visas för andra deltagare i dina turer.
           </p>
           <Button type="submit" className="w-full sm:w-auto" disabled={status === 'laddar' || status === 'laddfel' || status === 'sparar' || !namn.trim()}>
-            {status === 'sparar' ? 'Sparar …' : 'Spara'}
+            {status === 'sparar' ? 'Sparar …' : 'Spara namn'}
           </Button>
           <p role="status" className="text-sm">
-            {status === 'sparat' && <span className="font-medium text-primary">Namnet är sparat. Det syns nu i alla dina turer.</span>}
+            {status === 'sparat' && <span className="font-medium text-primary">Namnet har sparats.</span>}
             {status === 'fel' && (
-              <span className="text-destructive">Det gick inte att spara namnet. Kontrollera uppkopplingen och försök igen.</span>
+              <span className="text-destructive">Namnet gick inte att spara. Kontrollera uppkopplingen och försök igen.</span>
             )}
             {status === 'laddfel' && (
               <span className="text-destructive">Det gick inte att hämta ditt namn. Ladda om sidan och försök igen.</span>
