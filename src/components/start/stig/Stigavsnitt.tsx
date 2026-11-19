@@ -1,8 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { animera, vanta } from '@/components/start/stig/animationsko'
-import { beraknaStig, FIGUR, type Matt, type Stigbit } from '@/components/start/stig/geometri'
+import { beraknaStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
+import { landskapSrc, placeraLandskap, BILD } from '@/components/start/stig/landskapsbild'
 import { Naturdetalj, Tass } from '@/components/start/stig/Naturdetalj'
-import { hojdkurvor, terrangMotiv, type Ruta } from '@/components/start/stig/terrang'
 import { useStigKo } from '@/components/start/stig/stigKo'
 import { RITTID, tidVidAndel, VANTAN } from '@/components/start/stig/utritning'
 import { Ledkryss, Vagvisare } from '@/components/start/stig/Vagvisare'
@@ -61,7 +61,6 @@ export function Stigavsnitt({ id, bit }: Props) {
   const [matt, setMatt] = useState<Matt | null>(null)
   const unikt = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const maskId = `stigmask-${unikt}`
-  const kantId = `terrangkant-${unikt}`
 
   // Mät mellanrummet och var panelerna börjar och slutar i det.
   useEffect(() => {
@@ -92,18 +91,7 @@ export function Stigavsnitt({ id, bit }: Props) {
   }, [])
 
   const stig = matt && beraknaStig(matt, bit, id)
-  // Terrängen: höjdkurvor och ett motiv som inte krockar med ledens figurer.
-  const terrang = (() => {
-    if (!matt || !stig || !bit.terrang) return null
-    const ruta = (p: { x: number; y: number }, s: { bredd: number; hojd: number }): Ruta => ({ vanster: p.x - s.bredd / 2, hoger: p.x + s.bredd / 2, topp: p.y - s.hojd, botten: p.y })
-    const f = stig.figurer
-    const upptaget = [
-      ...(f.ledkryss ? [ruta(f.ledkryss, FIGUR.ledkryss)] : []),
-      ...(f.vagvisare ? [ruta(f.vagvisare, FIGUR.vagvisare)] : []),
-      ...f.detaljer.map((d) => (d.typ === 'tassar' ? ruta(d.punkt, { bredd: 100, hojd: 20 }) : ruta(d.punkt, d.typ === 'ledkors' ? FIGUR.ledkryss : FIGUR.detalj))),
-    ]
-    return { kurvor: hojdkurvor(matt, id), motiv: terrangMotiv(matt, bit.terrang, id, upptaget).former }
-  })()
+  const landskap = matt && bit.landskap ? placeraLandskap(matt) : null
   const d = stig?.d
   // Tältet eller brasan, som spelas efter utritningen. Ledkorset tonar in under den, tassarna efter.
   const huvud = stig?.figurer.detaljer.find((x) => x.typ === 'talt' || x.typ === 'eld')
@@ -313,30 +301,41 @@ export function Stigavsnitt({ id, bit }: Props) {
                 style={{ strokeDashoffset: minskad ? 0 : 1 }}
               />
             </mask>
-            {/* Höjdkurvorna tonar ut mot sidorna, så att de inte slutar med en kant. */}
-            <linearGradient id={`${kantId}-ton`} x1={0} x2={matt.bredd} y1={0} y2={0} gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="white" stopOpacity={0} />
-              <stop offset="0.15" stopColor="white" stopOpacity={1} />
-              <stop offset="0.85" stopColor="white" stopOpacity={1} />
-              <stop offset="1" stopColor="white" stopOpacity={0} />
-            </linearGradient>
-            <mask id={kantId} maskUnits="userSpaceOnUse" x={0} y={0} width={matt.bredd} height={matt.hojd} style={{ maskType: 'alpha' }}>
-              <rect x={0} y={0} width={matt.bredd} height={matt.hojd} fill={`url(#${kantId}-ton)`} />
-            </mask>
+            {/* Bilderna tonar ut vid ytterkanterna, så att deras dis inte slutar med en rak kant. I smala
+                fönster faller mitten bort, och då tonar halvorna också ut mot mitten. */}
+            {landskap &&
+              (['vanster', 'hoger'] as const).map((sida) => {
+                const h = landskap[sida]
+                const kant = Math.min(0.08, 24 / h.bredd)
+                const mitt = landskap.beskuren ? 0.25 : 0
+                // Från vänster till höger i halvan: ytterkant och insida byter plats mellan halvorna.
+                const [fore, efter] = sida === 'vanster' ? [kant, mitt] : [mitt, kant]
+                return (
+                  <mask key={sida} id={`${unikt}-${sida}`} maskUnits="userSpaceOnUse" x={h.x} y={h.y} width={h.bredd} height={h.hojd} style={{ maskType: 'alpha' }}>
+                    <linearGradient id={`${unikt}-${sida}-ton`} x1={h.x} x2={h.x + h.bredd} y1={0} y2={0} gradientUnits="userSpaceOnUse">
+                      <stop offset={0} stopColor="white" stopOpacity={fore > 0 ? 0 : 1} />
+                      <stop offset={fore} stopColor="white" stopOpacity={1} />
+                      <stop offset={1 - efter} stopColor="white" stopOpacity={1} />
+                      <stop offset={1} stopColor="white" stopOpacity={efter > 0 ? 0 : 1} />
+                    </linearGradient>
+                    <rect x={h.x} y={h.y} width={h.bredd} height={h.hojd} fill={`url(#${unikt}-${sida}-ton)`} />
+                  </mask>
+                )
+              })}
           </defs>
-          {terrang && (
-            // Under leden. Tonar in när leden börjar ritas.
-            <g data-dyker="terrang" data-andel={0} style={{ opacity: minskad ? 1 : 0 }} strokeLinejoin="round" strokeLinecap="round">
-              <g mask={`url(#${kantId})`} fill="none" strokeWidth={1.2}>
-                {terrang.kurvor.map((d, i) => (
-                  <path key={i} d={d} className={i % 2 ? 'stroke-sand' : 'stroke-primary-soft'} />
-                ))}
-              </g>
-              <g strokeWidth={1}>
-                {terrang.motiv.map((f, i) => (
-                  <path key={i} d={f.d} className={f.klass} />
-                ))}
-              </g>
+          {landskap && bit.landskap && (
+            // Under leden, med marken nere vid nästa panel. Tonar in när leden börjar ritas.
+            <g data-dyker="landskap" data-andel={0} style={{ opacity: minskad ? 1 : 0 }}>
+              {(['vanster', 'hoger'] as const).map((sida) => {
+                const h = landskap[sida]
+                return (
+                  <g key={sida} mask={`url(#${unikt}-${sida})`}>
+                    <svg x={h.x} y={h.y} width={h.bredd} height={h.hojd} viewBox={h.viewBox} preserveAspectRatio="none" overflow="hidden">
+                      <image href={landskapSrc(bit.landskap!)} x={0} y={0} width={BILD.bredd} height={BILD.hojd} />
+                    </svg>
+                  </g>
+                )
+              })}
             </g>
           )}
           <path
