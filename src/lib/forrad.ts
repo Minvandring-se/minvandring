@@ -420,25 +420,53 @@ export function medUnderkategori(falt: SakFalt, underkategori: string): SakFalt 
   return { ...falt, underkategori, typ: forvaldTyp(falt.kategori, underkategori) }
 }
 
+/**
+ * Jämför sakens vikt med katalogens. egen är sann när saken kommer från katalogen och användaren har
+ * en annan vikt än den som står där, till exempel efter att ha vägt sitt eget tält.
+ * Saker man har skrivit in själv, och produkter utan vikt i katalogen, har aldrig en egen vikt.
+ */
+export function viktjamforelse(sak: Forradssak): { egen: boolean; katalogG: number | null } {
+  const katalogG = sak.produkt_id && sak.produkter ? (sak.produkter.packvikt_g ?? null) : null
+  return { egen: katalogG !== null && sak.vikt_g !== katalogG, katalogG }
+}
+
 export interface Detaljrad {
   etikett: string
   varde: string
 }
 
+export interface Sakdetaljer {
+  /** Det som gäller alla saker: kategori, vikt, antal och hur saken räknas. */
+  grund: Detaljrad[]
+  /** De viktigaste egenskaperna för underkategorin. Tomt för saker man har skrivit in själv. */
+  viktiga: Detaljrad[]
+  /** Övriga uppgifter från katalogen, som visas under "Visa alla specifikationer". */
+  ovriga: Detaljrad[]
+}
+
 /**
- * Det som visas när en sak fälls ut. Först det som gäller alla saker, sedan produktens egenskaper
- * för saker ur katalogen. Egenskaperna beror på underkategorin, så ett tält och en tarp visar olika saker.
+ * Det som visas när en sak fälls ut. Egenskaperna kommer från katalogen och beror på underkategorin,
+ * så ett tält och en sovsäck visar olika saker.
  */
-export function sakdetaljer(sak: Forradssak): Detaljrad[] {
+export function sakdetaljer(sak: Forradssak): Sakdetaljer {
   const kategori = kategoriFor(sak.kategori)
   const under = underkategoriFor(sak.kategori, sak.underkategori)
-  const rader: Detaljrad[] = [{ etikett: 'Kategori', varde: under && under.etikett !== kategori.etikett ? `${kategori.etikett}, ${under.etikett}` : kategori.etikett }]
+  const { egen, katalogG } = viktjamforelse(sak)
+  const vikt = sak.vikt_g === null ? 'Saknas' : formateraVikt(sak.vikt_g)
+
+  const grund: Detaljrad[] = [
+    { etikett: 'Kategori', varde: under && under.etikett !== kategori.etikett ? `${kategori.etikett}, ${under.etikett}` : kategori.etikett },
+    { etikett: 'Vikt per styck', varde: egen && sak.vikt_g !== null ? `${vikt} (egen vikt)` : vikt },
+  ]
+  if (egen && katalogG !== null) grund.push({ etikett: 'Katalogens vikt', varde: formateraVikt(katalogG) })
+  grund.push({ etikett: 'Antal', varde: String(sak.antal) }, { etikett: 'Räknas som', varde: TYPNAMN[sak.typ] })
+
   const p = sak.produkter
-  if (p?.version) rader.push({ etikett: 'Version', varde: p.version })
-  rader.push({ etikett: 'Vikt per styck', varde: sak.vikt_g === null ? 'Saknas' : formateraVikt(sak.vikt_g) })
-  if (p?.minvikt_g) rader.push({ etikett: 'Minsta vikt', varde: formateraVikt(p.minvikt_g) })
-  rader.push({ etikett: 'Antal', varde: String(sak.antal) })
-  rader.push({ etikett: 'Räknas som', varde: TYPNAMN[sak.typ] })
-  if (p) rader.push(...visaEgenskaper(p.underkategori, p.egenskaper))
-  return rader
+  if (!p) return { grund, viktiga: [], ovriga: [] }
+  const egenskaper = visaEgenskaper(p.underkategori, p.egenskaper)
+  const ovriga: Detaljrad[] = []
+  if (p.version) ovriga.push({ etikett: 'Version', varde: p.version })
+  if (p.minvikt_g) ovriga.push({ etikett: 'Minsta vikt', varde: formateraVikt(p.minvikt_g) })
+  ovriga.push(...egenskaper.filter((e) => !e.viktig))
+  return { grund, viktiga: egenskaper.filter((e) => e.viktig), ovriga }
 }

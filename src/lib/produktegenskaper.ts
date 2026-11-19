@@ -11,8 +11,8 @@ interface Grund {
   etikett: string
   /** Behövs för att kunna jämföra produkter. Saknas den varnar valideringen, men stoppar inte. */
   forJamforelse?: boolean
-  /** Sparas i katalogen men visas inte när en sak fälls ut i förrådet. */
-  dold?: boolean
+  /** Visas direkt när en sak fälls ut i förrådet. Övriga ligger under "Visa alla specifikationer". */
+  viktig?: boolean
   /** Ett tillägg efter värdet när det visas, som beror på produktens övriga egenskaper. */
   tillagg?: (egenskaper: Record<string, unknown>) => string | null
 }
@@ -36,15 +36,15 @@ export const MATERIALTYPER = ['polyester', 'nylon', 'silnylon', 'silpoly', 'dcf'
 
 const TALT: Egenskap[] = [
   // De största kåtorna rymmer femton personer.
-  { nyckel: 'personer', etikett: 'Personer', sort: 'heltal', min: 1, max: 20, forJamforelse: true },
-  { nyckel: 'sasong', etikett: 'Säsonger', sort: 'heltal', min: 1, max: 4, forJamforelse: true },
-  { nyckel: 'konstruktion', etikett: 'Konstruktion', sort: 'val', val: KONSTRUKTIONER, forJamforelse: true },
-  { nyckel: 'fristaende', etikett: 'Fristående', sort: 'val', val: FRISTAENDE, forJamforelse: true },
+  { nyckel: 'personer', etikett: 'Personer', sort: 'heltal', min: 1, max: 20, forJamforelse: true, viktig: true },
+  { nyckel: 'sasong', etikett: 'Säsonger', sort: 'heltal', min: 1, max: 4, forJamforelse: true, viktig: true },
+  { nyckel: 'konstruktion', etikett: 'Konstruktion', sort: 'val', val: KONSTRUKTIONER, forJamforelse: true, viktig: true },
+  { nyckel: 'fristaende', etikett: 'Fristående', sort: 'val', val: FRISTAENDE, forJamforelse: true, viktig: true },
   { nyckel: 'kraver_stavar', etikett: 'Kräver vandringsstavar', sort: 'janej', forJamforelse: true },
-  { nyckel: 'golvyta_m2', etikett: 'Golvyta', sort: 'decimal', min: 0.5, max: 30, enhet: 'm²', forJamforelse: true },
+  { nyckel: 'golvyta_m2', etikett: 'Golvyta', sort: 'decimal', min: 0.5, max: 30, enhet: 'm²', forJamforelse: true, viktig: true },
   { nyckel: 'absidyta_m2', etikett: 'Absidyta', sort: 'decimal', min: 0, max: 20, enhet: 'm²', forJamforelse: true },
   { nyckel: 'ingangar', etikett: 'Ingångar', sort: 'heltal', min: 1, max: 4 },
-  { nyckel: 'absider', etikett: 'Absider', sort: 'heltal', min: 0, max: 4, forJamforelse: true },
+  { nyckel: 'absider', etikett: 'Absider', sort: 'heltal', min: 0, max: 4, forJamforelse: true, viktig: true },
   { nyckel: 'innerhojd_cm', etikett: 'Innerhöjd', sort: 'heltal', min: 40, max: 250, enhet: 'cm' },
   // Stora tält för sex personer är över fyra meter.
   { nyckel: 'langd_cm', etikett: 'Längd', sort: 'heltal', min: 150, max: 600, enhet: 'cm' },
@@ -59,9 +59,9 @@ const TALT: Egenskap[] = [
 
 /** Tarp och vindsäck: några få egenskaper, alla frivilliga. Tältens krav gäller bara underkategorin talt. */
 const SKYDD: Egenskap[] = [
-  { nyckel: 'personer', etikett: 'Personer', sort: 'heltal', min: 1, max: 20 },
-  { nyckel: 'langd_cm', etikett: 'Längd', sort: 'heltal', min: 100, max: 1000, enhet: 'cm' },
-  { nyckel: 'material_typ', etikett: 'Material', sort: 'val', val: MATERIALTYPER },
+  { nyckel: 'personer', etikett: 'Personer', sort: 'heltal', min: 1, max: 20, viktig: true },
+  { nyckel: 'langd_cm', etikett: 'Längd', sort: 'heltal', min: 100, max: 1000, enhet: 'cm', viktig: true },
+  { nyckel: 'material_typ', etikett: 'Material', sort: 'val', val: MATERIALTYPER, viktig: true },
   { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text' },
   { nyckel: 'vattenpelare_duk_mm', etikett: 'Vattenpelare duk', sort: 'heltal', min: 500, max: 30_000, enhet: 'mm' },
 ]
@@ -72,22 +72,21 @@ function ejIsoTestad(egenskaper: Record<string, unknown>): string | null {
 }
 
 /**
- * Sovsäckar och quilts. Fem egenskaper behövs för jämförelser. I förrådet visas temperaturerna,
- * fyllningen, formen och längden. Resten sparas men är dolt.
+ * Sovsäckar och quilts. Fem egenskaper behövs för jämförelser, och samma fem visas först i förrådet.
  */
 const SOVSACK: Egenskap[] = [
-  { nyckel: 'komfort_temp_c', etikett: 'Komforttemperatur', sort: 'heltal', min: -40, max: 25, enhet: '°C', forJamforelse: true, tillagg: ejIsoTestad },
-  { nyckel: 'limit_temp_c', etikett: 'Limittemperatur', sort: 'heltal', min: -50, max: 20, enhet: '°C', forJamforelse: true, tillagg: ejIsoTestad },
-  { nyckel: 'extrem_temp_c', etikett: 'Extremtemperatur', sort: 'heltal', min: -70, max: 15, enhet: '°C', dold: true },
-  { nyckel: 'temperaturstandard', etikett: 'Temperaturstandard', sort: 'val', val: ['iso', 'ej_angiven'], dold: true },
-  { nyckel: 'fyllning', etikett: 'Fyllning', sort: 'val', val: ['dun', 'syntet', 'blandning'], forJamforelse: true },
+  { nyckel: 'komfort_temp_c', etikett: 'Komforttemperatur', sort: 'heltal', min: -40, max: 25, enhet: '°C', forJamforelse: true, tillagg: ejIsoTestad, viktig: true },
+  { nyckel: 'limit_temp_c', etikett: 'Limittemperatur', sort: 'heltal', min: -50, max: 20, enhet: '°C', forJamforelse: true, tillagg: ejIsoTestad, viktig: true },
+  { nyckel: 'extrem_temp_c', etikett: 'Extremtemperatur', sort: 'heltal', min: -70, max: 15, enhet: '°C' },
+  { nyckel: 'temperaturstandard', etikett: 'Temperaturstandard', sort: 'val', val: ['iso', 'ej_angiven'] },
+  { nyckel: 'fyllning', etikett: 'Fyllning', sort: 'val', val: ['dun', 'syntet', 'blandning'], forJamforelse: true, viktig: true },
   { nyckel: 'fillpower_cuin', etikett: 'Fillpower', sort: 'heltal', min: 400, max: 1000, enhet: 'cuin' },
-  { nyckel: 'fyllnadsvikt_g', etikett: 'Fyllnadsvikt', sort: 'heltal', min: 50, max: 3000, enhet: 'g', dold: true },
-  { nyckel: 'form', etikett: 'Form', sort: 'val', val: ['mumie', 'rektangular', 'quilt', 'annat'], forJamforelse: true },
-  { nyckel: 'max_langd_cm', etikett: 'Max längd', sort: 'heltal', min: 140, max: 230, enhet: 'cm', forJamforelse: true },
-  { nyckel: 'dragkedja', etikett: 'Dragkedja', sort: 'val', val: ['vanster', 'hoger', 'ingen'], dold: true },
-  { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text', dold: true },
-  { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text', dold: true },
+  { nyckel: 'fyllnadsvikt_g', etikett: 'Fyllnadsvikt', sort: 'heltal', min: 50, max: 3000, enhet: 'g' },
+  { nyckel: 'form', etikett: 'Form', sort: 'val', val: ['mumie', 'rektangular', 'quilt', 'annat'], forJamforelse: true, viktig: true },
+  { nyckel: 'max_langd_cm', etikett: 'Max längd', sort: 'heltal', min: 140, max: 230, enhet: 'cm', forJamforelse: true, viktig: true },
+  { nyckel: 'dragkedja', etikett: 'Dragkedja', sort: 'val', val: ['vanster', 'hoger', 'ingen'] },
+  { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text' },
+  { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text' },
 ]
 
 /** Regler som gäller flera egenskaper på en gång. Ett brott mot en regel är ett fel och stoppar raden. */
@@ -247,6 +246,8 @@ export interface Egenskapsrad {
   nyckel: string
   etikett: string
   varde: string
+  /** Hör till de viktigaste för underkategorin och visas utan att man fäller ut alla specifikationer. */
+  viktig: boolean
 }
 
 /**
@@ -256,10 +257,9 @@ export interface Egenskapsrad {
 export function visaEgenskaper(underkategori: string, egenskaper: Record<string, unknown> | null | undefined): Egenskapsrad[] {
   if (!egenskaper) return []
   return egenskaperFor(underkategori).flatMap((e) => {
-    if (e.dold) return []
     const varde = visaVarde(e, egenskaper[e.nyckel])
     if (varde === null) return []
     const tillagg = e.tillagg?.(egenskaper)
-    return [{ nyckel: e.nyckel, etikett: e.etikett, varde: tillagg ? `${varde} (${tillagg})` : varde }]
+    return [{ nyckel: e.nyckel, etikett: e.etikett, varde: tillagg ? `${varde} (${tillagg})` : varde, viktig: e.viktig === true }]
   })
 }

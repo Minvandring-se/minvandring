@@ -20,6 +20,11 @@ export interface Forradssak {
 
 /** Det som förrådet visar om produkten en sak kommer från. */
 export interface ForradsProdukt {
+  id: string
+  marke: string
+  modell: string
+  /** Katalogens vikt. Jämförs med sakens egen vikt. */
+  packvikt_g: number | null
   kontrollerad: string | null
   version: string | null
   underkategori: string
