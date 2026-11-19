@@ -77,7 +77,7 @@ export function Forrad() {
           <TomtLage
             bild={<ForradIllustration className="block aspect-[8/5] w-full sm:aspect-[21/9]" />}
             rubrik="Lägg in din utrustning en gång"
-            text="Välj sedan vad som ska med på varje vandring. Börja gärna med det tyngsta: ryggsäck, tält och sovsäck."
+            text="Så har du koll på vad du har och vad allt väger. Börja gärna med det tyngsta: ryggsäck, tält och sovsäck."
             knapp={
               <div className="flex flex-wrap gap-2">
                 {BORJA_MED.map(({ text, forval }) => (

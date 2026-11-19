@@ -17,8 +17,11 @@ export type Egenskap = Grund &
     | { sort: 'val'; val: readonly string[] }
   )
 
-/** Tältets konstruktion. "annat" för det som inte passar in. */
-export const KONSTRUKTIONER = ['tunnel', 'kupol', 'geodetisk', 'ryggas', 'pyramid', 'hybrid', 'annat'] as const
+/** Tältets konstruktion. "stavtalt" reses med vandringsstavar, "annat" är det som inte passar in. */
+export const KONSTRUKTIONER = ['tunnel', 'kupol', 'geodetiskt', 'pyramid', 'stavtalt', 'annat'] as const
+
+/** Dukens material i grova drag, för jämförelser. Den exakta beskrivningen står i material_beskrivning. */
+export const MATERIALTYPER = ['polyester', 'nylon', 'silnylon', 'silpoly', 'dcf', 'kerlon', 'bomull', 'annat'] as const
 
 const TALT: Egenskap[] = [
   { nyckel: 'personer', etikett: 'Antal personer', sort: 'heltal', min: 1, max: 12, forJamforelse: true },
@@ -33,7 +36,8 @@ const TALT: Egenskap[] = [
   { nyckel: 'innerhojd_cm', etikett: 'Innerhöjd', sort: 'heltal', min: 40, max: 250, enhet: 'cm' },
   { nyckel: 'langd_cm', etikett: 'Längd', sort: 'heltal', min: 150, max: 400, enhet: 'cm' },
   { nyckel: 'yttertalt_forst', etikett: 'Yttertältet reses först', sort: 'janej' },
-  { nyckel: 'material', etikett: 'Material', sort: 'text', forJamforelse: true },
+  { nyckel: 'material_typ', etikett: 'Material', sort: 'val', val: MATERIALTYPER, forJamforelse: true },
+  { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text' },
   { nyckel: 'vattenpelare_duk_mm', etikett: 'Vattenpelare duk', sort: 'heltal', min: 500, max: 30_000, enhet: 'mm', forJamforelse: true },
   { nyckel: 'vattenpelare_golv_mm', etikett: 'Vattenpelare golv', sort: 'heltal', min: 500, max: 30_000, enhet: 'mm', forJamforelse: true },
   // Fri text, till exempel "45 x 15".

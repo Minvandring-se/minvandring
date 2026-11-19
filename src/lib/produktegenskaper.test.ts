@@ -14,14 +14,15 @@ const talt = {
   innerhojd_cm: 100,
   langd_cm: 220,
   yttertalt_forst: true,
-  material: 'Silikoniserad nylon',
+  material_typ: 'silnylon',
+  material_beskrivning: 'Silikoniserad nylon 20D',
   vattenpelare_duk_mm: 3000,
   vattenpelare_golv_mm: 10000,
   packmatt_cm: '45 x 15',
 }
 
 describe('egenskaper för tält', () => {
-  it('har de sexton egenskaperna, varav elva behövs för jämförelser', () => {
+  it('har de sjutton egenskaperna, varav elva behövs för jämförelser', () => {
     const alla = egenskaperFor('talt')
     expect(alla.map((e) => e.nyckel)).toEqual(Object.keys(talt))
     expect(alla.filter((e) => e.forJamforelse).map((e) => e.nyckel)).toEqual([
@@ -33,7 +34,7 @@ describe('egenskaper för tält', () => {
       'golvyta_m2',
       'absidyta_m2',
       'absider',
-      'material',
+      'material_typ',
       'vattenpelare_duk_mm',
       'vattenpelare_golv_mm',
     ])
@@ -44,14 +45,14 @@ describe('egenskaper för tält', () => {
   })
 
   it('varnar men stoppar inte när något som behövs för jämförelser saknas', () => {
-    const { golvyta_m2: _g, material: _m, ...rest } = talt
+    const { golvyta_m2: _g, material_typ: _m, ...rest } = talt
     const r = valideraEgenskaper('talt', { ...rest, absider: null })
     expect(r.fel).toEqual([])
-    expect(r.varningar.map((v) => v.split(':')[0])).toEqual(['golvyta_m2', 'absider', 'material'])
+    expect(r.varningar.map((v) => v.split(':')[0])).toEqual(['golvyta_m2', 'absider', 'material_typ'])
   })
 
   it('varnar inte när en frivillig egenskap saknas', () => {
-    const { ingangar: _i, innerhojd_cm: _h, langd_cm: _l, yttertalt_forst: _y, packmatt_cm: _p, ...rest } = talt
+    const { ingangar: _i, innerhojd_cm: _h, langd_cm: _l, yttertalt_forst: _y, material_beskrivning: _b, packmatt_cm: _p, ...rest } = talt
     expect(valideraEgenskaper('talt', rest)).toEqual({ fel: [], varningar: [] })
   })
 
@@ -67,7 +68,8 @@ describe('egenskaper för tält', () => {
       konstruktion: 'igloo',
       fristaende: 'ja',
       golvyta_m2: '2,8',
-      material: '  ',
+      material_typ: 'DCF',
+      material_beskrivning: '  ',
       vattenpelare_duk_mm: 3,
     })
     expect(r.fel.map((f) => f.split(':')[0])).toEqual([
@@ -76,9 +78,19 @@ describe('egenskaper för tält', () => {
       'konstruktion',
       'fristaende',
       'golvyta_m2',
-      'material',
+      'material_typ',
+      'material_beskrivning',
       'vattenpelare_duk_mm',
     ])
+  })
+
+  it('godtar konstruktionerna och materialtyperna som CSV:n använder', () => {
+    for (const konstruktion of ['tunnel', 'kupol', 'geodetiskt', 'pyramid', 'stavtalt', 'annat']) {
+      expect(valideraEgenskaper('talt', { ...talt, konstruktion }).fel, konstruktion).toEqual([])
+    }
+    for (const material_typ of ['polyester', 'nylon', 'silnylon', 'silpoly', 'dcf', 'kerlon', 'bomull', 'annat']) {
+      expect(valideraEgenskaper('talt', { ...talt, material_typ }).fel, material_typ).toEqual([])
+    }
   })
 
   it('ger fel för en egenskap som inte finns i underkategorin', () => {
