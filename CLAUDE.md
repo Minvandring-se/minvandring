@@ -28,6 +28,7 @@ Två grundare utvecklar med Cursor och Claude Code. Långsiktig vision finns i `
 
 ## Supabase och databas
 - Tabeller just nu (efter `grund`, `roller` och `inbjudningar`): `profiler`, `turer`, `deltagare` (med `roll`), `packrader`, `packstatus`, `varor`, `ratter`, `ingredienser`, `maltider`, `inbjudningar` (koden, bara ägare och redigerare ser den) och `inbjudningsforsok` (felaktiga koder i `ga_med`, ingen roll når den).
+- Mitt förråd (efter `produkter_och_forrad`): `forradssaker` (varje användares egna saker, bara ägaren når dem), `produkter` (katalogen, inloggade läser, fylls bara via migreringar) och `kategorier` och `underkategorier` (stängda för API:t, finns för främmande nycklar). Kategorinycklarna står också i `src/lib/forrad.ts`. En ny kategori läggs till på båda ställena, och ett test i `supabase/rls.test.ts` kontrollerar att de stämmer överens.
 - `deltagare.roll` är `owner` (ägare), `editor` (redigerare) eller `viewer` (läsare). Skaparen blir owner, den som går med via länk blir editor. Viewer får bara bocka av sin egen packning.
 - "Automatically expose new tables" är avstängt och automatisk RLS är påslagen.
 - Varje migrering som skapar en tabell måste därför innehålla GRANT till rollen `authenticated` (till `anon` bara om det verkligen behövs) och RLS-policyer som begränsar åtkomsten till rätt användare. Allt som hör till en tur läses med `public.ar_medlem(tur_id)`, ändras med `public.kan_andra(tur_id)` (owner och editor) och det som bara ägaren får göra skyddas med `public.ar_agare(tur_id)`.
@@ -74,7 +75,7 @@ Vid prioritering: 1) planera en vandring 2) planera tillsammans 3) packning och 
 - Logotypen är komponenten `Logotyp` med symbolerna i `public/brand/`. Källan ligger i `design/logo/`.
 - Tillgänglighet: labels på formulär, god kontrast, semantisk HTML, synligt fokus.
 - Använd inte tankstreck som paus i synliga texter.
-- Lova inte funktioner i appens texter som inte finns ännu. Undantag: korten på startsidan får visa planerade funktioner, till exempel Kom ihåg till nästa vandring och Ditt förråd.
+- Lova inte funktioner i appens texter som inte finns ännu. Undantag: korten på startsidan får visa planerade funktioner, till exempel Kom ihåg till nästa vandring och Mitt förråd.
 - Varje funktion ska svara ja på: gör detta det enklare att planera en riktig vandring?
 
 ## Arbetssätt

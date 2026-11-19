@@ -24,6 +24,30 @@ Tankar om hur:
 
 Bygg packlistan (punkt 4) så att det här går att lägga till senare utan ombyggnad.
 
+### Läget
+
+Mitt förråd finns (`/forrad`, tabellen `forradssaker`): man lägger in egna saker med kategori, underkategori, vikt, antal och typ. Produktkatalogen (`produkter`) finns som tabell men är tom. Sökningen i katalogen och startutbudet kommer i nästa steg. Kategorierna i två nivåer står i `src/lib/forrad.ts` och i tabellerna `kategorier` och `underkategorier`.
+
+### Nästa steg: sökning och startutbud (PR 2)
+
+Startutbudet kommer som en CSV som Oscar tar fram, med tillverkarens länk för varje rad. Semikolon som avgränsare. En importfunktion i `src/lib` läser CSV:n, validerar raderna och visar fel och varningar innan seed-SQL:en skapas.
+
+Kolumner: `marke;modell;version;underkategori;personer;sasong;konstruktion;fristaende;kraver_stavar;packvikt_g;minvikt_g;golvyta_m2;absidyta_m2;ingangar;absider;innerhojd_cm;langd_cm;yttertalt_forst;material_typ;material_beskrivning;vattenpelare_duk_mm;vattenpelare_golv_mm;packmatt_cm;pris_sek_ca;ean;kalla;kontrollerad_datum;kommentar`
+
+- `material_typ` (polyester, nylon, silnylon, silpoly, DCF, Kerlon, bomull, annat) och `material_beskrivning` ersätter `material`. `material_typ` behövs för jämförelser. Importen ska inte bry sig om stora och små bokstäver, i databasen sparas värdet med små.
+- En rad importeras bara om `kontrollerad_datum` är ifyllt. Datumet sätts när någon av oss har kontrollerat raden mot källan.
+- `kommentar` är till för oss och sparas inte i katalogen.
+
+### Kopplingen till packlistan (inte byggd)
+
+- "Hämta från Mitt förråd" i packlistan: kryssrutor grupperade per kategori. Valda saker kopieras in i `packrader` och bärs av den som hämtar dem.
+- `packrader` får `forradssak_id` (nullable, on delete set null) för att visa "redan tillagd" och undvika dubbletter.
+- `packrader.kategori` använder samma nycklar som förrådet. I dag är den fritext med förvalet 'Övrigt', så befintliga rader behöver flyttas över till nycklarna i samma migrering.
+- En rad skriven direkt i packlistan kan sparas till Mitt förråd med ett klick.
+- Bara owner och editor får hämta in saker (`kan_andra`).
+- Vem som helst i turen ser en hämtad rad, men aldrig resten av förrådet. Kopian i `packrader` är det enda gruppen når.
+- När "Hämta från Mitt förråd" finns ska texten i förrådets tomma läge få tillbaka löftet: "Lägg in din utrustning en gång, välj sedan vad som ska med på varje vandring." Tills dess står det "så har du koll på vad du har och vad allt väger", eftersom appen inte ska lova det som inte finns.
+
 ## Smarta tips i packlistan
 
 Idé från Hikt. Tre sorters tips, i den ordning de bör byggas.

@@ -80,6 +80,20 @@ Den här gången spelar ordningen mot appen ingen roll. Den gamla appen fungerar
 - [x] Prova "Ingen av dem": då blir man en ny deltagare som förut
 - [x] Kör Security Advisor igen. Förväntat: två nya avsiktliga varningar, för `inbjudan` och `ga_med`, som inloggade ska kunna anropa
 
+## 8. Kör migreringen för Mitt förråd
+
+Migreringen `20261119120000_produkter_och_forrad.sql` skapar fyra nya tabeller: `kategorier` och `underkategorier` (listan över utrustningskategorier, stängda för API:t), `produkter` (katalogen, tom tills vidare) och `forradssaker` (varje användares egna saker). Inget befintligt ändras.
+
+Kolla först med `npx supabase migration list --remote` att `20261116120000_agare_tas_inte_over.sql` är körd. Annars körs den i samma körning. Meddela Oscar när du kör.
+
+Ordningen mot appen: den gamla appen märker inget av de nya tabellerna, så kör gärna migreringen innan PR:en mergas. Mergas PR:en först visar Mitt förråd "Det gick inte att hämta ditt förråd" tills migreringen är körd.
+
+- [x] Läs SQL:en i PR:en "Mitt förråd"
+- [x] Kör `npx supabase db push --remote` (kördes av Oscar 2026-11-19, alla åtta migreringar är nu körda)
+- [ ] Prova: lägg till en sak i Mitt förråd, ändra den och ta bort den
+- [ ] Prova med två konton att det andra kontot inte ser sakerna
+- [ ] Kör Security Advisor igen. Förväntat: inga nya varningar. Om den anmärker på att `kategorier` och `underkategorier` har RLS utan policyer är det avsiktligt, ingen ska nå dem via API:t
+
 ## Anteckning från granskningen av migreringarna (Andreas Claude)
 
 Migreringarna kördes 2026-11-15. Security Advisor efteråt: 0 fel, 7 varningar. Sex är de avsiktliga (ar_agare, ar_medlem, kan_andra, ga_med, inbjudan, ny_inbjudningskod) och en gäller att skyddet mot läckta lösenord är avstängt i Auth. En sak att rätta i en ny migrering: en person utan konto kan få rollen owner av ägaren. Då kan den som har länken välja den personen i "Är du någon av de här?" och bli ägare av turen. Förslag: `ga_med` och `inbjudan` hoppar över deltagare med `roll = 'owner'`, med ett test i `supabase/rls.test.ts`.

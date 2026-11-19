@@ -270,7 +270,7 @@ export function Start() {
                     <ForradIllustration className="block aspect-[8/5] w-full" />
                   </Levande>
                   <div className="space-y-2 p-5">
-                    <h3 className="text-xl">Ditt förråd</h3>
+                    <h3 className="text-xl">Mitt förråd</h3>
                     <p className="text-muted-foreground">
                       Lägg in dina prylar en gång, sorterade i kategorier med vikt och anteckningar. Sedan väljer du bara vad som ska med på
                       nästa tur.
