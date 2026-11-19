@@ -1,7 +1,7 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { animera, vanta } from '@/components/start/stig/animationsko'
-import { arLandskap, beraknaStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
-import { Landskapsbild } from '@/components/start/stig/Landskapsbild'
+import { beraknaStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
+import { ritaLandskap } from '@/components/start/stig/landskap'
 import { Naturdetalj, Tass } from '@/components/start/stig/Naturdetalj'
 import { useStigKo } from '@/components/start/stig/stigKo'
 import { RITTID, tidVidAndel, VANTAN } from '@/components/start/stig/utritning'
@@ -59,7 +59,9 @@ export function Stigavsnitt({ id, bit }: Props) {
   const flammaRef = useRef<SVGPathElement>(null)
   const glodRef = useRef<SVGEllipseElement>(null)
   const [matt, setMatt] = useState<Matt | null>(null)
-  const maskId = `stigmask-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+  const unikt = useId().replace(/[^a-zA-Z0-9_-]/g, '')
+  const maskId = `stigmask-${unikt}`
+  const kantId = `landskapskant-${unikt}`
 
   // Mät mellanrummet och var panelerna börjar och slutar i det.
   useEffect(() => {
@@ -90,6 +92,7 @@ export function Stigavsnitt({ id, bit }: Props) {
   }, [])
 
   const stig = matt && beraknaStig(matt, bit, id)
+  const landskap = matt && stig && bit.landskap ? ritaLandskap(matt, bit.landskap, id) : []
   const d = stig?.d
   // Tältet eller brasan, som spelas efter utritningen. Ledkorset tonar in under den, tassarna efter.
   const huvud = stig?.figurer.detaljer.find((x) => x.typ === 'talt' || x.typ === 'eld')
@@ -299,14 +302,24 @@ export function Stigavsnitt({ id, bit }: Props) {
                 style={{ strokeDashoffset: minskad ? 0 : 1 }}
               />
             </mask>
+            {/* Landskapet tonar ut mot sidorna, så att det inte slutar med en hård kant. */}
+            <linearGradient id={`${kantId}-ton`} x1={matt.vanster} x2={matt.hoger} y1={0} y2={0} gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="white" stopOpacity={0} />
+              <stop offset="0.08" stopColor="white" stopOpacity={1} />
+              <stop offset="0.92" stopColor="white" stopOpacity={1} />
+              <stop offset="1" stopColor="white" stopOpacity={0} />
+            </linearGradient>
+            <mask id={kantId} maskUnits="userSpaceOnUse" x={0} y={0} width={matt.bredd} height={matt.hojd} style={{ maskType: 'alpha' }}>
+              <rect x={matt.vanster} y={0} width={matt.hoger - matt.vanster} height={matt.hojd} fill={`url(#${kantId}-ton)`} />
+            </mask>
           </defs>
-          {/* Landskapen ligger under leden, så att den går framför dem. De dyker upp när leden når dit. */}
-          {stig.figurer.detaljer.map((x) =>
-            arLandskap(x.typ) ? (
-              <g key={x.typ} data-dyker="landskap" data-andel={x.andel} style={{ opacity: 0 }}>
-                <Landskapsbild typ={x.typ} punkt={x.punkt} />
-              </g>
-            ) : null,
+          {landskap.length > 0 && (
+            // Under leden och figurerna. Tonar in när leden börjar ritas.
+            <g data-dyker="landskap" data-andel={0} mask={`url(#${kantId})`} strokeWidth={1} strokeLinejoin="round" style={{ opacity: minskad ? 1 : 0 }}>
+              {landskap.map((f, i) => (
+                <path key={i} d={f.d} className={f.klass} />
+              ))}
+            </g>
           )}
           <path
             d={stig.d}
@@ -331,7 +344,7 @@ export function Stigavsnitt({ id, bit }: Props) {
           {stig.figurer.detaljer.map((x) =>
             x.typ === 'talt' || x.typ === 'eld' ? (
               <Naturdetalj key={x.typ} typ={x.typ} punkt={x.punkt} detaljRef={detaljRef} flammaRef={flammaRef} glodRef={glodRef} />
-            ) : arLandskap(x.typ) ? null : x.typ === 'ledkors' ? (
+            ) : x.typ === 'ledkors' ? (
               <g key="ledkors" data-dyker="ledkors" data-andel={x.andel} style={{ opacity: 0 }}>
                 <Ledkryss x={x.punkt.x} y={x.punkt.y} />
               </g>
