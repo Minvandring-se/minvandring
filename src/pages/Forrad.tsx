@@ -232,6 +232,8 @@ function Sakrad({ sak, onAndra }: { sak: Forradssak; onAndra: () => void }) {
             {sak.namn}
             {sak.antal > 1 && <span className="font-normal text-muted-foreground"> × {sak.antal}</span>}
           </span>
+          {/* Versionen, till exempel Regular eller Red Label, står under namnet som i träfflistan. */}
+          {sak.produkter?.version && <span className="block text-sm break-words text-muted-foreground">{sak.produkter.version}</span>}
           {detaljer && <span className="block text-sm break-words text-muted-foreground">{detaljer}</span>}
         </span>
         {sak.vikt_g === null ? (

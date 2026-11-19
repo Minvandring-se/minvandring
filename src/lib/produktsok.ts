@@ -77,3 +77,49 @@ export function sakFranProdukt(p: Produkt): SakVarden & { produkt_id: string } {
     notering: null,
   }
 }
+
+/** En modell i träfflistan: alla produkter med samma märke och modell, till exempel en sovsäck i tre längder. */
+export interface Modell {
+  /** Märke och modell med små bokstäver. Unik i listan. */
+  nyckel: string
+  marke: string
+  modell: string
+  /** Varianterna (storlekarna), lättast först. Alltid minst en. */
+  varianter: Produkt[]
+}
+
+/**
+ * Slår ihop produkter med samma märke och modell till en rad. Modellerna står i den ordning de först
+ * förekommer, så sorteringen av träffarna behålls. Varianterna sorteras på vikt och sedan på version.
+ */
+export function grupperaModeller(produkter: Produkt[]): Modell[] {
+  const modeller = new Map<string, Modell>()
+  for (const p of produkter) {
+    const nyckel = `${p.marke.trim().toLowerCase()}|${p.modell.trim().toLowerCase()}`
+    const m = modeller.get(nyckel)
+    if (m) m.varianter.push(p)
+    else modeller.set(nyckel, { nyckel, marke: p.marke, modell: p.modell, varianter: [p] })
+  }
+  for (const m of modeller.values()) {
+    m.varianter.sort((a, b) => a.packvikt_g - b.packvikt_g || (a.version ?? '').localeCompare(b.version ?? '', 'sv', { numeric: true }))
+  }
+  return [...modeller.values()]
+}
+
+export interface Marke {
+  marke: string
+  /** Antal modeller, alltså lika många rader som listan visar för märket. */
+  antal: number
+}
+
+/** Märkena bland modellerna i bokstavsordning, med antal modeller. */
+export function markenMedAntal(modeller: Modell[]): Marke[] {
+  const antal = new Map<string, number>()
+  for (const m of modeller) antal.set(m.marke, (antal.get(m.marke) ?? 0) + 1)
+  return [...antal].map(([marke, n]) => ({ marke, antal: n })).sort((a, b) => a.marke.localeCompare(b.marke, 'sv'))
+}
+
+/** "1 produkt" eller "42 produkter", för raden ovanför träfflistan. */
+export function antalText(antal: number): string {
+  return antal === 1 ? '1 produkt' : `${antal} produkter`
+}
