@@ -1,9 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { animera, vanta } from '@/components/start/stig/animationsko'
-import { beraknaStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
-import { BAND } from '@/components/start/landskap/bilder'
-import { placeraBand } from '@/components/start/landskap/placering'
+import { beraknaStig, FIGUR, type Matt, type Stigbit } from '@/components/start/stig/geometri'
 import { Naturdetalj, Tass } from '@/components/start/stig/Naturdetalj'
+import { hojdkurvor, terrangMotiv, type Ruta } from '@/components/start/stig/terrang'
 import { useStigKo } from '@/components/start/stig/stigKo'
 import { RITTID, tidVidAndel, VANTAN } from '@/components/start/stig/utritning'
 import { Ledkryss, Vagvisare } from '@/components/start/stig/Vagvisare'
@@ -38,7 +37,7 @@ function useMinskadRorelse() {
 
 /** Luft utan led, till exempel mellan hero och första panelen. */
 export function Mellanrum() {
-  return <div aria-hidden data-luft className="h-12 lg:h-16" />
+  return <div aria-hidden className="h-12 lg:h-16" />
 }
 
 /**
@@ -62,6 +61,7 @@ export function Stigavsnitt({ id, bit }: Props) {
   const [matt, setMatt] = useState<Matt | null>(null)
   const unikt = useId().replace(/[^a-zA-Z0-9_-]/g, '')
   const maskId = `stigmask-${unikt}`
+  const kantId = `terrangkant-${unikt}`
 
   // Mät mellanrummet och var panelerna börjar och slutar i det.
   useEffect(() => {
@@ -92,7 +92,18 @@ export function Stigavsnitt({ id, bit }: Props) {
   }, [])
 
   const stig = matt && beraknaStig(matt, bit, id)
-  const band = matt && bit.landskap ? placeraBand(matt, BAND[bit.landskap]) : null
+  // Terrängen: höjdkurvor och ett motiv som inte krockar med ledens figurer.
+  const terrang = (() => {
+    if (!matt || !stig || !bit.terrang) return null
+    const ruta = (p: { x: number; y: number }, s: { bredd: number; hojd: number }): Ruta => ({ vanster: p.x - s.bredd / 2, hoger: p.x + s.bredd / 2, topp: p.y - s.hojd, botten: p.y })
+    const f = stig.figurer
+    const upptaget = [
+      ...(f.ledkryss ? [ruta(f.ledkryss, FIGUR.ledkryss)] : []),
+      ...(f.vagvisare ? [ruta(f.vagvisare, FIGUR.vagvisare)] : []),
+      ...f.detaljer.map((d) => (d.typ === 'tassar' ? ruta(d.punkt, { bredd: 100, hojd: 20 }) : ruta(d.punkt, d.typ === 'ledkors' ? FIGUR.ledkryss : FIGUR.detalj))),
+    ]
+    return { kurvor: hojdkurvor(matt, id), motiv: terrangMotiv(matt, bit.terrang, id, upptaget).former }
+  })()
   const d = stig?.d
   // Tältet eller brasan, som spelas efter utritningen. Ledkorset tonar in under den, tassarna efter.
   const huvud = stig?.figurer.detaljer.find((x) => x.typ === 'talt' || x.typ === 'eld')
@@ -275,7 +286,7 @@ export function Stigavsnitt({ id, bit }: Props) {
   }, [d, id, ko, minskad, typ, detaljNyckel])
 
   return (
-    <div ref={rotRef} aria-hidden data-glipa className={`pointer-events-none relative ${MELLANRUM}`}>
+    <div ref={rotRef} aria-hidden className={`pointer-events-none relative ${MELLANRUM}`}>
       {/* Samma bredd som panelerna, för att mäta var de börjar och slutar. */}
       <div ref={panelRef} className="mx-auto h-full max-w-6xl" />
       {matt && stig && (
@@ -302,41 +313,32 @@ export function Stigavsnitt({ id, bit }: Props) {
                 style={{ strokeDashoffset: minskad ? 0 : 1 }}
               />
             </mask>
-            {/* Delar av landskapet som beskärs på insidan tonar ut där, så att de inte slutar med en kant. */}
-            {band &&
-              (['vanster', 'hoger'] as const).map((sida) => {
-                const d = band[sida]
-                const inat = sida === 'vanster'
-                return (
-                  <mask key={sida} id={`${unikt}-${sida}`} maskUnits="userSpaceOnUse" x={0} y={0} width={matt.bredd} height={matt.hojd} style={{ maskType: 'alpha' }}>
-                    <linearGradient id={`${unikt}-${sida}-ton`} x1={d.klipp.vanster} x2={d.klipp.hoger} y1={0} y2={0} gradientUnits="userSpaceOnUse">
-                      <stop offset="0" stopColor="white" stopOpacity={inat || !d.beskuren ? 1 : 0} />
-                      <stop offset="0.3" stopColor="white" stopOpacity={1} />
-                      <stop offset="0.7" stopColor="white" stopOpacity={1} />
-                      <stop offset="1" stopColor="white" stopOpacity={!inat || !d.beskuren ? 1 : 0} />
-                    </linearGradient>
-                    <rect x={d.klipp.vanster} y={0} width={d.klipp.hoger - d.klipp.vanster} height={matt.hojd} fill={`url(#${unikt}-${sida}-ton)`} />
-                  </mask>
-                )
-              })}
+            {/* Höjdkurvorna tonar ut mot sidorna, så att de inte slutar med en kant. */}
+            <linearGradient id={`${kantId}-ton`} x1={0} x2={matt.bredd} y1={0} y2={0} gradientUnits="userSpaceOnUse">
+              <stop offset="0" stopColor="white" stopOpacity={0} />
+              <stop offset="0.15" stopColor="white" stopOpacity={1} />
+              <stop offset="0.85" stopColor="white" stopOpacity={1} />
+              <stop offset="1" stopColor="white" stopOpacity={0} />
+            </linearGradient>
+            <mask id={kantId} maskUnits="userSpaceOnUse" x={0} y={0} width={matt.bredd} height={matt.hojd} style={{ maskType: 'alpha' }}>
+              <rect x={0} y={0} width={matt.bredd} height={matt.hojd} fill={`url(#${kantId}-ton)`} />
+            </mask>
           </defs>
-          {/* Landskapet under leden: marken nere vid nästa panel, mitten fri. */}
-          {band &&
-            (['vanster', 'hoger'] as const).map((sida) => {
-              const d = band[sida]
-              return (
-                <image
-                  key={sida}
-                  href={d.bild.src}
-                  x={d.x}
-                  y={d.y}
-                  width={d.bredd}
-                  height={d.hojd}
-                  preserveAspectRatio="xMidYMid meet"
-                  mask={`url(#${unikt}-${sida})`}
-                />
-              )
-            })}
+          {terrang && (
+            // Under leden. Tonar in när leden börjar ritas.
+            <g data-dyker="terrang" data-andel={0} style={{ opacity: minskad ? 1 : 0 }} strokeLinejoin="round" strokeLinecap="round">
+              <g mask={`url(#${kantId})`} fill="none" strokeWidth={1.2}>
+                {terrang.kurvor.map((d, i) => (
+                  <path key={i} d={d} className={i % 2 ? 'stroke-sand' : 'stroke-primary-soft'} />
+                ))}
+              </g>
+              <g strokeWidth={1}>
+                {terrang.motiv.map((f, i) => (
+                  <path key={i} d={f.d} className={f.klass} />
+                ))}
+              </g>
+            </g>
+          )}
           <path
             d={stig.d}
             fill="none"
