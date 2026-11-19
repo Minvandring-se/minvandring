@@ -5,7 +5,7 @@ const talt = {
   personer: 2,
   sasong: 3,
   konstruktion: 'tunnel',
-  fristaende: false,
+  fristaende: 'nej',
   kraver_stavar: false,
   golvyta_m2: 2.8,
   absidyta_m2: 1.2,
@@ -57,7 +57,7 @@ describe('egenskaper för tält', () => {
   })
 
   it('räknar noll och nej som ifyllda värden', () => {
-    expect(valideraEgenskaper('talt', { ...talt, absider: 0, absidyta_m2: 0, fristaende: false }).varningar).toEqual([])
+    expect(valideraEgenskaper('talt', { ...talt, absider: 0, absidyta_m2: 0, kraver_stavar: false }).varningar).toEqual([])
   })
 
   it('ger fel för värden av fel sort eller utanför rimliga gränser', () => {
@@ -66,7 +66,7 @@ describe('egenskaper för tält', () => {
       personer: 2.5,
       sasong: 5,
       konstruktion: 'igloo',
-      fristaende: 'ja',
+      fristaende: true,
       golvyta_m2: '2,8',
       material_typ: 'DCF',
       material_beskrivning: '  ',
@@ -82,6 +82,14 @@ describe('egenskaper för tält', () => {
       'material_beskrivning',
       'vattenpelare_duk_mm',
     ])
+  })
+
+  it('fristående är ja, halvt eller nej', () => {
+    for (const fristaende of ['ja', 'halvt', 'nej']) expect(valideraEgenskaper('talt', { ...talt, fristaende }).fel, fristaende).toEqual([])
+    for (const fristaende of ['delvis', false, '']) {
+      const r = valideraEgenskaper('talt', { ...talt, fristaende })
+      expect([...r.fel, ...r.varningar].map((x) => x.split(':')[0]), String(fristaende)).toEqual(['fristaende'])
+    }
   })
 
   it('godtar konstruktionerna och materialtyperna som CSV:n använder', () => {

@@ -88,8 +88,8 @@ Kolla först med `npx supabase migration list --remote` att `20261116120000_agar
 
 Ordningen mot appen: den gamla appen märker inget av de nya tabellerna, så kör gärna migreringen innan PR:en mergas. Mergas PR:en först visar Mitt förråd "Det gick inte att hämta ditt förråd" tills migreringen är körd.
 
-- [ ] Läs SQL:en i PR:en "Mitt förråd"
-- [ ] Kör `npx supabase db push --remote`
+- [x] Läs SQL:en i PR:en "Mitt förråd"
+- [x] Kör `npx supabase db push --remote` (kördes av Oscar 2026-11-19, alla åtta migreringar är nu körda)
 - [ ] Prova: lägg till en sak i Mitt förråd, ändra den och ta bort den
 - [ ] Prova med två konton att det andra kontot inte ser sakerna
 - [ ] Kör Security Advisor igen. Förväntat: inga nya varningar. Om den anmärker på att `kategorier` och `underkategorier` har RLS utan policyer är det avsiktligt, ingen ska nå dem via API:t

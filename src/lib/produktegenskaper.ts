@@ -20,6 +20,9 @@ export type Egenskap = Grund &
 /** Tältets konstruktion. "stavtalt" reses med vandringsstavar, "annat" är det som inte passar in. */
 export const KONSTRUKTIONER = ['tunnel', 'kupol', 'geodetiskt', 'pyramid', 'stavtalt', 'annat'] as const
 
+/** Står tältet utan markpinnar? "halvt" är halvfristående: innertältet står självt, men absiden måste pinnas. */
+export const FRISTAENDE = ['ja', 'halvt', 'nej'] as const
+
 /** Dukens material i grova drag, för jämförelser. Den exakta beskrivningen står i material_beskrivning. */
 export const MATERIALTYPER = ['polyester', 'nylon', 'silnylon', 'silpoly', 'dcf', 'kerlon', 'bomull', 'annat'] as const
 
@@ -27,7 +30,7 @@ const TALT: Egenskap[] = [
   { nyckel: 'personer', etikett: 'Antal personer', sort: 'heltal', min: 1, max: 12, forJamforelse: true },
   { nyckel: 'sasong', etikett: 'Säsonger', sort: 'heltal', min: 1, max: 4, forJamforelse: true },
   { nyckel: 'konstruktion', etikett: 'Konstruktion', sort: 'val', val: KONSTRUKTIONER, forJamforelse: true },
-  { nyckel: 'fristaende', etikett: 'Fristående', sort: 'janej', forJamforelse: true },
+  { nyckel: 'fristaende', etikett: 'Fristående', sort: 'val', val: FRISTAENDE, forJamforelse: true },
   { nyckel: 'kraver_stavar', etikett: 'Kräver vandringsstavar', sort: 'janej', forJamforelse: true },
   { nyckel: 'golvyta_m2', etikett: 'Golvyta', sort: 'decimal', min: 0.5, max: 30, enhet: 'm²', forJamforelse: true },
   { nyckel: 'absidyta_m2', etikett: 'Absidyta', sort: 'decimal', min: 0, max: 20, enhet: 'm²', forJamforelse: true },
