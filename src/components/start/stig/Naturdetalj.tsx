@@ -16,6 +16,8 @@ export function Naturdetalj({ typ, punkt, detaljRef, flammaRef, glodRef }: Props
       <g ref={detaljRef} strokeWidth={1.3} strokeLinejoin="round" strokeLinecap="round" style={{ opacity: 0 }}>
         {typ === 'talt' ? (
           <>
+            {/* Lägerplatsen utmärkt som på en karta: en streckad ring runt tältet. */}
+            <ellipse cx={22} cy={33} rx={27} ry={6.5} className="fill-trail-marker/10 stroke-trail-marker/70" strokeDasharray="3 3" />
             <path d="M3 34 L17 6 L29 8 L42 34 Z" className="fill-sand stroke-foreground/80" />
             <path d="M17 6 L25 34 M29 8 L25 34" className="fill-none stroke-foreground/60" />
             <path d="M17 14 L12 34 H23 Z" className="fill-primary stroke-foreground/70" />
