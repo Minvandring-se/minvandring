@@ -22,6 +22,8 @@
   --color-illustration: #356854;
   /* Ledkrysset vid början av leden på startsidan. Dov roströd. */
   --color-trail-marker: #9e5a43;
+  /* Frodigt gräs, till exempel på fjällrävsgrytet vid leden. Dämpad, inte skrikig. */
+  --color-gras: #93b86b;
   --color-destructive: #c0392b;
   --color-border: #ddd7ca;
   --color-ring: #2e5945;
