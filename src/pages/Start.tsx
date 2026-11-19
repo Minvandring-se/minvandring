@@ -11,6 +11,7 @@ import { Bildspel } from '@/components/start/Bildspel'
 import { Levande } from '@/components/start/Levande'
 import { PacklistaSmakprov } from '@/components/start/PacklistaSmakprov'
 import { kopplaStig } from '@/components/start/stig/geometri'
+import { Landskapsresa } from '@/components/start/resa/Landskapsresa'
 import { Mellanrum, Stigavsnitt } from '@/components/start/stig/Stigavsnitt'
 import { StigProvider } from '@/components/start/stig/StigProvider'
 import { useSession } from '@/hooks/useSession'
@@ -128,17 +129,16 @@ const kortKlass =
  * - Vägvisaren står före den gröna avslutningen.
  */
 const [stigBorja, stigPackning, stigTanken, stigFragor] = kopplaStig([
-  { id: 'borja', landskap: 'fjall', detaljer: [{ typ: 'eld', lage: 0.72 }] },
+  { id: 'borja', detaljer: [{ typ: 'eld', lage: 0.72 }] },
   {
     id: 'packning',
-    landskap: 'skog',
     detaljer: [
       { typ: 'talt', lage: 0.3 },
       { typ: 'tassar', lage: 0.7 },
     ],
   },
-  { id: 'tanken', landskap: 'sjo', detaljer: [{ typ: 'ledkors', lage: 0.6 }] },
-  { id: 'fragor', landskap: 'fjall' },
+  { id: 'tanken', detaljer: [{ typ: 'ledkors', lage: 0.6 }] },
+  { id: 'fragor' },
 ] as const)
 
 /** Upplyft panel för sektionerna mellan hero och avslutningen. Samma innehållsbredd som förut. */
@@ -210,7 +210,9 @@ export function Start() {
         </section>
 
         {/* Panelerna mellan hero och avslutningen, med sidans bakgrund och leden i luften mellan dem. */}
-        <div className="px-3 sm:px-6">
+        <div className="relative isolate px-3 sm:px-6">
+          {/* Landskapet bakom panelerna: en lugn vandring från skog till fjäll. */}
+          <Landskapsresa />
           <Mellanrum />
           {/* Stegen 01–03 och Börja med din nästa tur i samma panel. Hero-länken Så fungerar det hoppar hit. */}
           <div id="sa-fungerar-det" className={`${panel} scroll-mt-4`}>

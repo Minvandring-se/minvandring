@@ -1,7 +1,6 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { animera, vanta } from '@/components/start/stig/animationsko'
 import { beraknaStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
-import { ritaLandskap } from '@/components/start/stig/landskap'
 import { Naturdetalj, Tass } from '@/components/start/stig/Naturdetalj'
 import { useStigKo } from '@/components/start/stig/stigKo'
 import { RITTID, tidVidAndel, VANTAN } from '@/components/start/stig/utritning'
@@ -37,7 +36,7 @@ function useMinskadRorelse() {
 
 /** Luft utan led, till exempel mellan hero och första panelen. */
 export function Mellanrum() {
-  return <div aria-hidden className="h-12 lg:h-16" />
+  return <div aria-hidden data-luft className="h-12 lg:h-16" />
 }
 
 /**
@@ -59,9 +58,7 @@ export function Stigavsnitt({ id, bit }: Props) {
   const flammaRef = useRef<SVGPathElement>(null)
   const glodRef = useRef<SVGEllipseElement>(null)
   const [matt, setMatt] = useState<Matt | null>(null)
-  const unikt = useId().replace(/[^a-zA-Z0-9_-]/g, '')
-  const maskId = `stigmask-${unikt}`
-  const kantId = `landskapskant-${unikt}`
+  const maskId = `stigmask-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
 
   // Mät mellanrummet och var panelerna börjar och slutar i det.
   useEffect(() => {
@@ -92,7 +89,6 @@ export function Stigavsnitt({ id, bit }: Props) {
   }, [])
 
   const stig = matt && beraknaStig(matt, bit, id)
-  const landskap = matt && stig && bit.landskap ? ritaLandskap(matt, bit.landskap, id) : []
   const d = stig?.d
   // Tältet eller brasan, som spelas efter utritningen. Ledkorset tonar in under den, tassarna efter.
   const huvud = stig?.figurer.detaljer.find((x) => x.typ === 'talt' || x.typ === 'eld')
@@ -275,7 +271,7 @@ export function Stigavsnitt({ id, bit }: Props) {
   }, [d, id, ko, minskad, typ, detaljNyckel])
 
   return (
-    <div ref={rotRef} aria-hidden className={`pointer-events-none relative ${MELLANRUM}`}>
+    <div ref={rotRef} aria-hidden data-glipa className={`pointer-events-none relative ${MELLANRUM}`}>
       {/* Samma bredd som panelerna, för att mäta var de börjar och slutar. */}
       <div ref={panelRef} className="mx-auto h-full max-w-6xl" />
       {matt && stig && (
@@ -302,25 +298,7 @@ export function Stigavsnitt({ id, bit }: Props) {
                 style={{ strokeDashoffset: minskad ? 0 : 1 }}
               />
             </mask>
-            {/* Landskapet tonar ut mot sidorna, så att det inte slutar med en hård kant. */}
-            <linearGradient id={`${kantId}-ton`} x1={matt.vanster} x2={matt.hoger} y1={0} y2={0} gradientUnits="userSpaceOnUse">
-              <stop offset="0" stopColor="white" stopOpacity={0} />
-              <stop offset="0.08" stopColor="white" stopOpacity={1} />
-              <stop offset="0.92" stopColor="white" stopOpacity={1} />
-              <stop offset="1" stopColor="white" stopOpacity={0} />
-            </linearGradient>
-            <mask id={kantId} maskUnits="userSpaceOnUse" x={0} y={0} width={matt.bredd} height={matt.hojd} style={{ maskType: 'alpha' }}>
-              <rect x={matt.vanster} y={0} width={matt.hoger - matt.vanster} height={matt.hojd} fill={`url(#${kantId}-ton)`} />
-            </mask>
           </defs>
-          {landskap.length > 0 && (
-            // Under leden och figurerna. Tonar in när leden börjar ritas.
-            <g data-dyker="landskap" data-andel={0} mask={`url(#${kantId})`} strokeWidth={1} strokeLinejoin="round" style={{ opacity: minskad ? 1 : 0 }}>
-              {landskap.map((f, i) => (
-                <path key={i} d={f.d} className={f.klass} />
-              ))}
-            </g>
-          )}
           <path
             d={stig.d}
             fill="none"

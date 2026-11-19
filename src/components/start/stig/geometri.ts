@@ -7,8 +7,6 @@
  * mått och ändras därför inte när fönstret ändrar storlek.
  */
 
-import type { Landskap } from '@/components/start/stig/landskap'
-
 export type Sida = 'vanster' | 'hoger'
 export type Detalj = 'talt' | 'eld' | 'tassar' | 'ledkors'
 
@@ -24,8 +22,6 @@ export interface StigVal {
   slut?: Sida
   /** Små detaljer längs biten. De placeras i tur och ordning och krockar aldrig med varandra. */
   detaljer?: readonly DetaljVal[]
-  /** Landskapet som leden går igenom, i bakgrunden inom panelernas bredd. */
-  landskap?: Landskap
 }
 
 export interface Stigbit extends StigVal {
