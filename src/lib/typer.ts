@@ -14,6 +14,8 @@ export interface Forradssak {
   vikt_g: number | null
   typ: Typ
   notering: string | null
+  /** När saken lades till, när listan hämtas med det. Används för sorteringen Senast tillagd. */
+  skapad?: string
   /** Produkten saken kommer från, när listan hämtas med den. Saknas för saker man har skrivit in själv. */
   produkter?: ForradsProdukt | null
 }

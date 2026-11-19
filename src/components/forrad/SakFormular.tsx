@@ -6,7 +6,6 @@ import {
   MAX_ANTAL,
   MAX_NAMN,
   MAX_NOTERING,
-  MAX_VIKT_G,
   TYPVAL,
   faltFran,
   kategoriFor,
@@ -19,6 +18,7 @@ import {
 } from '@/lib/forrad'
 import { supabase } from '@/lib/supabase'
 import type { Forradssak } from '@/lib/typer'
+import { tolkaVikt, visaTolkning } from '@/lib/viktfalt'
 import { cn } from '@/lib/utils'
 
 interface Props {
@@ -84,6 +84,8 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
   }
 
   const under = falt.kategori ? kategoriFor(falt.kategori).under : []
+  const vikt = tolkaVikt(falt.vikt)
+  const viktfel = vikt.ok ? null : vikt.fel
 
   return (
     <form onSubmit={spara} noValidate className="space-y-5 rounded-lg border border-border bg-card p-5 shadow-soft sm:p-6">
@@ -147,16 +149,23 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
       <div className="grid grid-cols-2 gap-3">
         <div className="space-y-1">
           <label htmlFor={`${id}-vikt`} className="block text-sm font-medium">
-            Vikt per styck (gram)
+            Vikt per styck
           </label>
+          {/* Vanligt tangentbord, så att det går att skriva kg. Siffror utan enhet är gram. */}
           <Input
             id={`${id}-vikt`}
-            inputMode="numeric"
-            placeholder="T.ex. 1250"
-            maxLength={String(MAX_VIKT_G).length}
+            autoComplete="off"
+            placeholder="1250 eller 1,25 kg"
+            maxLength={14}
             value={falt.vikt}
+            aria-invalid={viktfel !== null}
+            aria-describedby={`${id}-vikthjalp`}
             onChange={(e) => andra('vikt', e.target.value)}
           />
+          {/* Tolkningen visas medan man skriver, så att man ser vad som sparas. */}
+          <p id={`${id}-vikthjalp`} aria-live="polite" className={cn('min-h-5 text-sm', viktfel ? 'text-destructive' : 'text-muted-foreground')}>
+            {viktfel ?? visaTolkning(falt.vikt) ?? 'Gram, eller kilo med kg.'}
+          </p>
         </div>
         <div className="space-y-1">
           <label htmlFor={`${id}-antal`} className="block text-sm font-medium">

@@ -230,8 +230,14 @@ describe('tolkaSak', () => {
     expect(tolkaSak({ ...falt, antal: '99' }).ok).toBe(true)
   })
 
-  it('kräver vikten i hela gram och inte orimligt stor', () => {
-    for (const vikt of ['2,4', '2.4 kg', '-5', '100001']) expect(tolkaSak({ ...falt, vikt }).ok, vikt).toBe(false)
+  it('tar emot vikten i gram eller kilo', () => {
+    expect(tolkaSak({ ...falt, vikt: '2.4 kg' })).toMatchObject({ ok: true, varden: { vikt_g: 2400 } })
+    expect(tolkaSak({ ...falt, vikt: '1,2kg' })).toMatchObject({ ok: true, varden: { vikt_g: 1200 } })
+    expect(tolkaSak({ ...falt, vikt: '850 g' })).toMatchObject({ ok: true, varden: { vikt_g: 850 } })
+  })
+
+  it('sparar inte en vikt som inte går att tolka eller är orimligt stor', () => {
+    for (const vikt of ['2,4', 'tungt', '-5', '100001', '101 kg']) expect(tolkaSak({ ...falt, vikt }).ok, vikt).toBe(false)
   })
 
   it('begränsar anteckningens längd', () => {
