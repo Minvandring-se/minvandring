@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { gArAttSoka, produktnamn, sakFranProdukt, sokfilter, sokord, sorteraTraffar } from './produktsok'
+import { antalText, gArAttSoka, grupperaModeller, markenMedAntal, produktnamn, sakFranProdukt, sokfilter, sokord, sorteraTraffar } from './produktsok'
 import type { Produkt } from './typer'
 
 function produkt(marke: string, modell: string, delar: Partial<Produkt> = {}): Produkt {
@@ -113,5 +113,91 @@ describe('sakFranProdukt', () => {
 
   it('kortar ett namn som är längre än förrådet tillåter', () => {
     expect(sakFranProdukt(produkt('M', 'x'.repeat(200))).namn).toHaveLength(80)
+  })
+})
+
+describe('grupperaModeller', () => {
+  const regular = produkt('Rab', 'Neutrino -6 °C', { id: 'r', version: 'Regular', packvikt_g: 870 })
+  const lang = produkt('Rab', 'Neutrino -6 °C', { id: 'l', version: 'Long', packvikt_g: 930 })
+  const kort = produkt('Rab', 'Neutrino -6 °C', { id: 'k', version: 'Short', packvikt_g: 820 })
+  const akto = produkt('Hilleberg', 'Akto', { id: 'a', version: 'Red Label', packvikt_g: 1700 })
+
+  it('slår ihop samma märke och modell till en rad, med den lättaste varianten först', () => {
+    const [m, ...resten] = grupperaModeller([regular, lang, kort])
+    expect(resten).toEqual([])
+    expect(m).toMatchObject({ marke: 'Rab', modell: 'Neutrino -6 °C' })
+    expect(m.varianter.map((v) => [v.version, v.packvikt_g])).toEqual([
+      ['Short', 820],
+      ['Regular', 870],
+      ['Long', 930],
+    ])
+  })
+
+  it('en modell med en enda variant blir en rad med en variant', () => {
+    const modeller = grupperaModeller([akto])
+    expect(modeller).toHaveLength(1)
+    expect(modeller[0].varianter).toEqual([akto])
+  })
+
+  it('behåller ordningen på träffarna, efter modellens första förekomst', () => {
+    const nallo = produkt('Hilleberg', 'Nallo 2')
+    expect(grupperaModeller([regular, akto, lang, nallo, kort]).map((m) => m.modell)).toEqual(['Neutrino -6 °C', 'Akto', 'Nallo 2'])
+  })
+
+  it('skiljer inte på stora och små bokstäver eller blanktecken runt om', () => {
+    const modeller = grupperaModeller([produkt('Rab', 'Mythic', { id: '1' }), produkt('RAB', ' mythic ', { id: '2' })])
+    expect(modeller).toHaveLength(1)
+    expect(modeller[0].varianter).toHaveLength(2)
+  })
+
+  it('håller isär samma modellnamn hos olika märken, och olika modeller hos samma märke', () => {
+    const modeller = grupperaModeller([produkt('Rab', 'Alpine'), produkt('Marmot', 'Alpine'), produkt('Rab', 'Alpine 2')])
+    expect(modeller.map((m) => m.nyckel)).toEqual(['rab|alpine', 'marmot|alpine', 'rab|alpine 2'])
+  })
+
+  it('sorterar lika tunga varianter på version, och ger unika nycklar', () => {
+    const a = produkt('M', 'X', { id: '1', version: 'B', packvikt_g: 500 })
+    const b = produkt('M', 'X', { id: '2', version: 'A', packvikt_g: 500 })
+    expect(grupperaModeller([a, b])[0].varianter.map((v) => v.version)).toEqual(['A', 'B'])
+    const nycklar = grupperaModeller([regular, akto, lang]).map((m) => m.nyckel)
+    expect(new Set(nycklar).size).toBe(nycklar.length)
+  })
+
+  it('ändrar inte listan den får in, och ger en tom lista för inga produkter', () => {
+    const lista = [lang, kort]
+    grupperaModeller(lista)
+    expect(lista).toEqual([lang, kort])
+    expect(grupperaModeller([])).toEqual([])
+  })
+})
+
+describe('markenMedAntal', () => {
+  it('räknar modeller per märke, inte varianter, i bokstavsordning', () => {
+    const modeller = grupperaModeller([
+      produkt('Rab', 'Neutrino', { id: '1', version: 'Regular' }),
+      produkt('Rab', 'Neutrino', { id: '2', version: 'Long' }),
+      produkt('Rab', 'Alpine'),
+      produkt('Hilleberg', 'Akto'),
+      produkt('Älvdalen', 'Tält'),
+      produkt('Fjällräven', 'Abisko'),
+    ])
+    expect(markenMedAntal(modeller)).toEqual([
+      { marke: 'Fjällräven', antal: 1 },
+      { marke: 'Hilleberg', antal: 1 },
+      { marke: 'Rab', antal: 2 },
+      { marke: 'Älvdalen', antal: 1 },
+    ])
+  })
+
+  it('ger en tom lista utan modeller', () => {
+    expect(markenMedAntal([])).toEqual([])
+  })
+})
+
+describe('antalText', () => {
+  it('skiljer på en och flera', () => {
+    expect(antalText(1)).toBe('1 produkt')
+    expect(antalText(42)).toBe('42 produkter')
+    expect(antalText(0)).toBe('0 produkter')
   })
 })
