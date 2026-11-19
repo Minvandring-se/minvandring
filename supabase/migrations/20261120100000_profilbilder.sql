@@ -1,4 +1,5 @@
--- Profilbilder. Bilden ligger i en privat bucket i Supabase Storage som <user_id>/bild.webp.
+-- Profilbilder. Bilden ligger i en privat bucket i Supabase Storage som <user_id>/bild, utan filändelse.
+-- Den är WebP, eller JPEG i webbläsare som inte kan skapa WebP (Safari). Filtypen följer med som content type.
 -- Man ser sin egen bild och bilden för dem man delar minst en tur med. Bara man själv kan ladda upp, byta och ta bort.
 
 -- ─── När bilden senast byttes ────────────────────────────────────────────────
@@ -25,9 +26,9 @@ grant execute on function public.delar_tur(uuid) to authenticated;
 
 -- ─── Bucketen ────────────────────────────────────────────────────────────────
 -- Privat: inget går att nå utan inloggning och en policy som släpper fram det.
--- Appen förminskar bilden till 256 × 256 px WebP före uppladdning. Gränserna här stoppar allt annat.
+-- Appen förminskar bilden till 256 × 256 px WebP eller JPEG före uppladdning. Gränserna här stoppar allt annat.
 insert into storage.buckets (id, name, public, file_size_limit, allowed_mime_types)
-values ('profilbilder', 'profilbilder', false, 512000, array['image/webp'])
+values ('profilbilder', 'profilbilder', false, 512000, array['image/webp', 'image/jpeg'])
 on conflict (id) do nothing;
 
 -- ─── Vem får vad ─────────────────────────────────────────────────────────────
@@ -47,13 +48,13 @@ create policy "profilbilder: läsa sin egen och turkamraters" on storage.objects
     )
   );
 
--- Ladda upp, byta och ta bort: bara filen <eget user_id>/bild.webp.
+-- Ladda upp, byta och ta bort: bara filen <eget user_id>/bild.
 create policy "profilbilder: ladda upp sin egen" on storage.objects for insert to authenticated
-  with check (bucket_id = 'profilbilder' and name = (select auth.uid())::text || '/bild.webp');
+  with check (bucket_id = 'profilbilder' and name = (select auth.uid())::text || '/bild');
 
 create policy "profilbilder: byta sin egen" on storage.objects for update to authenticated
-  using (bucket_id = 'profilbilder' and name = (select auth.uid())::text || '/bild.webp')
-  with check (bucket_id = 'profilbilder' and name = (select auth.uid())::text || '/bild.webp');
+  using (bucket_id = 'profilbilder' and name = (select auth.uid())::text || '/bild')
+  with check (bucket_id = 'profilbilder' and name = (select auth.uid())::text || '/bild');
 
 create policy "profilbilder: ta bort sin egen" on storage.objects for delete to authenticated
-  using (bucket_id = 'profilbilder' and name = (select auth.uid())::text || '/bild.webp');
+  using (bucket_id = 'profilbilder' and name = (select auth.uid())::text || '/bild');

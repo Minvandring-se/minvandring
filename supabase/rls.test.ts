@@ -902,7 +902,7 @@ describe('profilbilder', () => {
   const P = '00000000-0000-0000-0000-0000000000a1'
   const Q = '00000000-0000-0000-0000-0000000000a2'
   const R = '00000000-0000-0000-0000-0000000000a3'
-  const fil = (anvandare: string) => `${anvandare}/bild.webp`
+  const fil = (anvandare: string) => `${anvandare}/bild`
   let tur: string
 
   const delar = (jag: string, annan: string) =>
@@ -948,14 +948,14 @@ describe('profilbilder', () => {
   })
 
   describe('lagringen', () => {
-    it('bucketen är privat och tar bara emot små WebP-bilder', async () => {
+    it('bucketen är privat och tar bara emot små bilder i WebP eller JPEG', async () => {
       const r = await db.query<{ public: boolean; file_size_limit: string; allowed_mime_types: string[] }>(
         `select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'profilbilder'`,
       )
       expect(r.rows).toHaveLength(1)
       expect(r.rows[0].public).toBe(false)
       expect(Number(r.rows[0].file_size_limit)).toBe(512000)
-      expect(r.rows[0].allowed_mime_types).toEqual(['image/webp'])
+      expect(r.rows[0].allowed_mime_types).toEqual(['image/webp', 'image/jpeg'])
     })
 
     it('man kan ladda upp sin egen bild, och ser den själv', async () => {
@@ -966,10 +966,11 @@ describe('profilbilder', () => {
     })
 
     it('man kan inte ladda upp i någon annans mapp eller under ett annat filnamn', async () => {
-      await forvantaFel(laddaUpp(R, `${P}/bild2.webp`))
-      await forvantaFel(laddaUpp(P, `${P}/annan.webp`))
-      await forvantaFel(laddaUpp(P, `${P}/undermapp/bild.webp`))
-      await forvantaFel(laddaUpp(P, 'bild.webp'))
+      await forvantaFel(laddaUpp(R, `${P}/bild2`))
+      await forvantaFel(laddaUpp(P, `${P}/annan`))
+      await forvantaFel(laddaUpp(P, `${P}/bild.webp`))
+      await forvantaFel(laddaUpp(P, `${P}/undermapp/bild`))
+      await forvantaFel(laddaUpp(P, 'bild'))
       await forvantaFel(som(P, (tx) => tx.query(`insert into storage.objects (bucket_id, name) values ('profilbilder', $1) on conflict do nothing`, [fil(R)])))
     })
 
@@ -994,20 +995,20 @@ describe('profilbilder', () => {
     })
 
     it('man kan inte flytta sin bild till någon annans mapp', async () => {
-      await forvantaFel(som(Q, (tx) => tx.query(`update storage.objects set name = $2 where bucket_id = 'profilbilder' and name = $1`, [fil(Q), `${P}/bild3.webp`])))
+      await forvantaFel(som(Q, (tx) => tx.query(`update storage.objects set name = $2 where bucket_id = 'profilbilder' and name = $1`, [fil(Q), `${P}/bild3`])))
     })
 
     it('utan inloggning syns ingenting, och inget går att ladda upp', async () => {
       const r = await somAnon((tx) => tx.query(`select name from storage.objects where bucket_id = 'profilbilder'`))
       expect(r.rows).toHaveLength(0)
-      await forvantaFel(somAnon((tx) => tx.query(`insert into storage.objects (bucket_id, name) values ('profilbilder', $1)`, [`${P}/bild.webp`])))
+      await forvantaFel(somAnon((tx) => tx.query(`insert into storage.objects (bucket_id, name) values ('profilbilder', $1)`, [fil(P)])))
     })
 
     it('en sökväg som inte börjar med ett user_id ger inget fel, den syns bara inte', async () => {
-      await db.query(`insert into storage.objects (bucket_id, name) values ('profilbilder', 'skrap/bild.webp')`)
+      await db.query(`insert into storage.objects (bucket_id, name) values ('profilbilder', 'skrap/bild')`)
       const r = await som(P, (tx) => tx.query<{ name: string }>(`select name from storage.objects where bucket_id = 'profilbilder' order by name`))
       expect(r.rows.map((x) => x.name)).toEqual([fil(P), fil(Q)].sort())
-      await db.query(`delete from storage.objects where name = 'skrap/bild.webp'`)
+      await db.query(`delete from storage.objects where name = 'skrap/bild'`)
     })
 
     it('policyerna gäller bara profilbilder: en fil i en annan bucket släpps inte fram', async () => {
