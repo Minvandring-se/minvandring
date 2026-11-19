@@ -62,6 +62,17 @@ beforeAll(async () => {
     grant execute on function auth.uid() to authenticated, anon;
     grant usage on schema public to authenticated, anon;
     create publication supabase_realtime;
+    -- En enkel kopia av Supabase Storage: tabellerna och funktionen som migreringarna och policyerna använder.
+    -- Som i Supabase har API-rollerna rättigheter på storage.objects, och RLS avgör vad de når.
+    create schema storage;
+    create table storage.buckets (id text primary key, name text not null, public boolean default false, file_size_limit bigint, allowed_mime_types text[]);
+    create table storage.objects (id uuid primary key default gen_random_uuid(), bucket_id text references storage.buckets (id), name text, unique (bucket_id, name));
+    alter table storage.objects enable row level security;
+    create function storage.foldername(name text) returns text[] language sql immutable as
+      $$ select (string_to_array(name, '/'))[1:array_length(string_to_array(name, '/'), 1) - 1] $$;
+    grant usage on schema storage to authenticated, anon;
+    grant select, insert, update, delete on storage.objects to authenticated, anon;
+    grant execute on function storage.foldername(text) to authenticated, anon;
     -- Som i Supabase: nya funktioner i public får execute för anon och authenticated.
     alter default privileges in schema public grant execute on functions to anon, authenticated;
     -- Supabase skapar rls_auto_enable själv (automatisk RLS). En kopia utan search_path, som i ett nytt projekt.
@@ -112,6 +123,7 @@ describe('funktionerna i public', () => {
     'public.ga_med(text, uuid)',
     'public.inbjudan(text)',
     'public.ny_inbjudningskod(uuid)',
+    'public.delar_tur(uuid)',
   ]
 
   it('går inte att anropa utan inloggning', async () => {
@@ -882,5 +894,171 @@ describe('Mitt förråd', () => {
     await db.query('delete from auth.users where id = $1', [H])
     const r = await db.query('select 1 from public.forradssaker where user_id = $1', [H])
     expect(r.rows).toHaveLength(0)
+  })
+})
+
+describe('profilbilder', () => {
+  // Egna användare, så att turerna i de andra testerna inte påverkar vem som delar tur med vem.
+  const P = '00000000-0000-0000-0000-0000000000a1'
+  const Q = '00000000-0000-0000-0000-0000000000a2'
+  const R = '00000000-0000-0000-0000-0000000000a3'
+  const fil = (anvandare: string) => `${anvandare}/bild.webp`
+  let tur: string
+
+  const delar = (jag: string, annan: string) =>
+    som(jag, (tx) => tx.query<{ d: boolean }>('select public.delar_tur($1) as d', [annan])).then((r) => r.rows[0].d)
+  const ser = (jag: string, vems: string) =>
+    som(jag, (tx) => tx.query(`select 1 from storage.objects where bucket_id = 'profilbilder' and name = $1`, [fil(vems)])).then((r) => r.rows.length === 1)
+  const laddaUpp = (jag: string, namn: string) =>
+    som(jag, (tx) => tx.query(`insert into storage.objects (bucket_id, name) values ('profilbilder', $1)`, [namn]))
+
+  beforeAll(async () => {
+    await db.exec(`insert into auth.users (id, email) values ('${P}', 'petra@exempel.se'), ('${Q}', 'quentin@exempel.se'), ('${R}', 'rut@exempel.se');`)
+    // Petra och Quentin delar en tur. Rut är inte med i någon av deras turer.
+    tur = await skapaTur(P, 'Tur med profilbilder')
+    const kod = await kodFor(tur)
+    await som(Q, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await skapaTur(R, 'Ruts egen tur')
+  })
+
+  describe('delar_tur', () => {
+    it('är sant åt båda håll för två som är med i samma tur', async () => {
+      expect(await delar(P, Q)).toBe(true)
+      expect(await delar(Q, P)).toBe(true)
+    })
+
+    it('är falskt för någon man inte delar en tur med, åt båda håll', async () => {
+      expect(await delar(P, R)).toBe(false)
+      expect(await delar(R, P)).toBe(false)
+      expect(await delar(R, Q)).toBe(false)
+    })
+
+    it('är falskt för en användare som inte finns', async () => {
+      expect(await delar(P, '00000000-0000-0000-0000-0000000000ff')).toBe(false)
+    })
+
+    it('räknar inte en person utan konto eller en hund i turen', async () => {
+      await som(P, (tx) => tx.query(`insert into public.deltagare (tur_id, namn, typ) values ($1, 'Platshållare', 'person'), ($1, 'Bamse', 'hund')`, [tur]))
+      expect(await delar(R, P)).toBe(false)
+    })
+
+    it('går inte att anropa utan inloggning', async () => {
+      await forvantaFel(somAnon((tx) => tx.query('select public.delar_tur($1)', [P])))
+    })
+  })
+
+  describe('lagringen', () => {
+    it('bucketen är privat och tar bara emot små WebP-bilder', async () => {
+      const r = await db.query<{ public: boolean; file_size_limit: string; allowed_mime_types: string[] }>(
+        `select public, file_size_limit, allowed_mime_types from storage.buckets where id = 'profilbilder'`,
+      )
+      expect(r.rows).toHaveLength(1)
+      expect(r.rows[0].public).toBe(false)
+      expect(Number(r.rows[0].file_size_limit)).toBe(512000)
+      expect(r.rows[0].allowed_mime_types).toEqual(['image/webp'])
+    })
+
+    it('man kan ladda upp sin egen bild, och ser den själv', async () => {
+      await laddaUpp(P, fil(P))
+      await laddaUpp(Q, fil(Q))
+      await laddaUpp(R, fil(R))
+      expect(await ser(P, P)).toBe(true)
+    })
+
+    it('man kan inte ladda upp i någon annans mapp eller under ett annat filnamn', async () => {
+      await forvantaFel(laddaUpp(R, `${P}/bild2.webp`))
+      await forvantaFel(laddaUpp(P, `${P}/annan.webp`))
+      await forvantaFel(laddaUpp(P, `${P}/undermapp/bild.webp`))
+      await forvantaFel(laddaUpp(P, 'bild.webp'))
+      await forvantaFel(som(P, (tx) => tx.query(`insert into storage.objects (bucket_id, name) values ('profilbilder', $1) on conflict do nothing`, [fil(R)])))
+    })
+
+    it('den man delar en tur med ser bilden, åt båda håll', async () => {
+      expect(await ser(Q, P)).toBe(true)
+      expect(await ser(P, Q)).toBe(true)
+    })
+
+    it('den man inte delar en tur med ser den inte', async () => {
+      expect(await ser(R, P)).toBe(false)
+      expect(await ser(P, R)).toBe(false)
+      const allt = await som(R, (tx) => tx.query<{ name: string }>(`select name from storage.objects where bucket_id = 'profilbilder'`))
+      expect(allt.rows.map((x) => x.name)).toEqual([fil(R)])
+    })
+
+    it('en turkamrat kan se bilden men inte byta eller ta bort den', async () => {
+      const bytt = await som(Q, (tx) => tx.query(`update storage.objects set name = name where bucket_id = 'profilbilder' and name = $1`, [fil(P)]))
+      expect(bytt.affectedRows).toBe(0)
+      const borta = await som(Q, (tx) => tx.query(`delete from storage.objects where bucket_id = 'profilbilder' and name = $1`, [fil(P)]))
+      expect(borta.affectedRows).toBe(0)
+      expect(await ser(P, P)).toBe(true)
+    })
+
+    it('man kan inte flytta sin bild till någon annans mapp', async () => {
+      await forvantaFel(som(Q, (tx) => tx.query(`update storage.objects set name = $2 where bucket_id = 'profilbilder' and name = $1`, [fil(Q), `${P}/bild3.webp`])))
+    })
+
+    it('utan inloggning syns ingenting, och inget går att ladda upp', async () => {
+      const r = await somAnon((tx) => tx.query(`select name from storage.objects where bucket_id = 'profilbilder'`))
+      expect(r.rows).toHaveLength(0)
+      await forvantaFel(somAnon((tx) => tx.query(`insert into storage.objects (bucket_id, name) values ('profilbilder', $1)`, [`${P}/bild.webp`])))
+    })
+
+    it('en sökväg som inte börjar med ett user_id ger inget fel, den syns bara inte', async () => {
+      await db.query(`insert into storage.objects (bucket_id, name) values ('profilbilder', 'skrap/bild.webp')`)
+      const r = await som(P, (tx) => tx.query<{ name: string }>(`select name from storage.objects where bucket_id = 'profilbilder' order by name`))
+      expect(r.rows.map((x) => x.name)).toEqual([fil(P), fil(Q)].sort())
+      await db.query(`delete from storage.objects where name = 'skrap/bild.webp'`)
+    })
+
+    it('policyerna gäller bara profilbilder: en fil i en annan bucket släpps inte fram', async () => {
+      await db.query(`insert into storage.buckets (id, name) values ('annat', 'annat')`)
+      await db.query(`insert into storage.objects (bucket_id, name) values ('annat', $1)`, [fil(P)])
+      const r = await som(P, (tx) => tx.query(`select 1 from storage.objects where bucket_id = 'annat'`))
+      expect(r.rows).toHaveLength(0)
+    })
+
+    it('ägaren kan byta och ta bort sin bild', async () => {
+      const bytt = await som(R, (tx) => tx.query(`update storage.objects set name = name where bucket_id = 'profilbilder' and name = $1`, [fil(R)]))
+      expect(bytt.affectedRows).toBe(1)
+      const borta = await som(R, (tx) => tx.query(`delete from storage.objects where bucket_id = 'profilbilder' and name = $1`, [fil(R)]))
+      expect(borta.affectedRows).toBe(1)
+    })
+  })
+
+  describe('när en deltagare tas bort ur turen', () => {
+    it('delar de inte längre tur, och ser inte varandras bilder', async () => {
+      await som(P, (tx) => tx.query('delete from public.deltagare where tur_id = $1 and user_id = $2', [tur, Q]))
+      expect(await delar(P, Q)).toBe(false)
+      expect(await delar(Q, P)).toBe(false)
+      expect(await ser(Q, P)).toBe(false)
+      expect(await ser(P, Q)).toBe(false)
+      // Var och en ser fortfarande sin egen.
+      expect(await ser(P, P)).toBe(true)
+      expect(await ser(Q, Q)).toBe(true)
+    })
+  })
+
+  describe('bild_uppdaterad i profilen', () => {
+    it('är tom från början, och ägaren kan sätta och tömma den', async () => {
+      const fore = await db.query<{ bild_uppdaterad: string | null }>('select bild_uppdaterad from public.profiler where id = $1', [P])
+      expect(fore.rows[0].bild_uppdaterad).toBeNull()
+      const satt = await som(P, (tx) => tx.query('update public.profiler set bild_uppdaterad = now() where id = $1', [P]))
+      expect(satt.affectedRows).toBe(1)
+      const tomd = await som(P, (tx) => tx.query('update public.profiler set bild_uppdaterad = null where id = $1', [P]))
+      expect(tomd.affectedRows).toBe(1)
+    })
+
+    it('ingen annan kan läsa eller ändra den', async () => {
+      const last = await som(Q, (tx) => tx.query('select bild_uppdaterad from public.profiler where id = $1', [P]))
+      expect(last.rows).toHaveLength(0)
+      const andrad = await som(Q, (tx) => tx.query('update public.profiler set bild_uppdaterad = now() where id = $1', [P]))
+      expect(andrad.affectedRows).toBe(0)
+    })
+
+    it('namnet i turerna är oförändrat när bara bilden ändras', async () => {
+      await som(P, (tx) => tx.query('update public.profiler set bild_uppdaterad = now() where id = $1', [P]))
+      const r = await db.query<{ namn: string }>('select namn from public.deltagare where tur_id = $1 and user_id = $2', [tur, P])
+      expect(r.rows).toEqual([{ namn: 'petra' }])
+    })
   })
 })
