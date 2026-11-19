@@ -1,7 +1,9 @@
 import { ArrowRight, CalendarDays, ChevronRight, MapPin } from 'lucide-react'
 import { Link } from 'react-router'
+import { useApp } from '@/components/app/appKontext'
 import { Namnbrickor } from '@/components/app/Namnbricka'
 import { TurBild } from '@/components/app/TurBild'
+import { useProfilbilder } from '@/hooks/useProfilbilder'
 import { datumrad, deltagareText, nastaEtikett } from '@/lib/turlista'
 
 /** En tur i listan Mina turer, med deltagarna från databasen. */
@@ -13,7 +15,7 @@ export interface TurMedDeltagare {
   hemkomst: string | null
   dagar: number | null
   skapad: string
-  deltagare: { namn: string; typ: 'person' | 'hund' }[]
+  deltagare: { namn: string; typ: 'person' | 'hund'; user_id?: string | null }[]
 }
 
 /** Följer med när en tur öppnas från listan, så att Tillbaka i turen leder till samma plats i listan. */
@@ -24,7 +26,10 @@ const FRAN_LISTA = { franLista: true }
  * Den gula etiketten säger hur långt det är kvar: "Nästa vandring · om 15 dagar" eller "Pågår nu · dag 2 av 3".
  */
 export function NastaTurKort({ tur, idag }: { tur: TurMedDeltagare; idag: string }) {
-  const personer = tur.deltagare.filter((d) => d.typ === 'person').map((d) => d.namn)
+  const { bildUppdaterad } = useApp()
+  const deltagare = tur.deltagare.filter((d) => d.typ === 'person')
+  const bilder = useProfilbilder(deltagare.map((d) => d.user_id), bildUppdaterad)
+  const personer = deltagare.map((d) => ({ namn: d.namn, bild: d.user_id ? bilder[d.user_id] : null }))
   return (
     <article className="relative grid overflow-hidden rounded-lg border border-border bg-card shadow-soft md:grid-cols-[1.15fr_1fr]">
       <div className="relative">
@@ -49,7 +54,7 @@ export function NastaTurKort({ tur, idag }: { tur: TurMedDeltagare; idag: string
         </div>
         <div className="mt-auto flex flex-wrap items-center justify-between gap-4">
           <div className="flex items-center gap-3">
-            <Namnbrickor namn={personer} />
+            <Namnbrickor personer={personer} />
             <span className="text-sm text-muted-foreground">{deltagareText(tur.deltagare)}</span>
           </div>
           {/* Länken täcker hela kortet, så att det går att trycka var som helst på det. */}

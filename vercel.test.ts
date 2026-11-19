@@ -30,6 +30,9 @@ describe('säkerhetsrubriker', () => {
     expect(csp).not.toContain('unsafe-inline')
     expect(csp).not.toContain('unsafe-eval')
     expect(csp).toMatch(/connect-src 'self' https:\/\/[a-z0-9]+\.supabase\.co wss:\/\/[a-z0-9]+\.supabase\.co;/)
+    // Profilbilder: förhandsvisningen är en blob, och de sparade bilderna kommer från projektets lagring.
+    expect(csp).toMatch(/img-src 'self' data: blob: https:\/\/[a-z0-9]+\.supabase\.co;/)
+    expect(/img-src[^;]*\*/.test(csp)).toBe(false)
     expect(rubriker['X-Frame-Options']).toBe('DENY')
     expect(rubriker['X-Content-Type-Options']).toBe('nosniff')
     expect(rubriker['Referrer-Policy']).toBe('strict-origin-when-cross-origin')

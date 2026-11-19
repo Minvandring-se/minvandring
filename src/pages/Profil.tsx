@@ -2,17 +2,17 @@ import { LogOut } from 'lucide-react'
 import { useEffect, useId, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
-import { Namnbricka } from '@/components/app/Namnbricka'
 import { SidRubrik } from '@/components/app/SidRubrik'
+import { Profilbildsval } from '@/components/profil/Profilbildsval'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { supabase } from '@/lib/supabase'
 
-/** Ändra sitt visningsnamn och logga ut. Namnet följer med till alla turer man är med i. */
+/** Ändra sitt visningsnamn och sin profilbild, och logga ut. Namnet följer med till alla turer man är med i. */
 export function Profil() {
-  const { anvandarId, epost, setNamn: setNamnIRamen } = useApp()
+  const { anvandarId, epost, setNamn: setNamnIRamen, bildUppdaterad, setBildUppdaterad } = useApp()
   const navigate = useNavigate()
   const id = useId()
   const [namn, setNamn] = useState('')
@@ -51,8 +51,8 @@ export function Profil() {
       <SidRubrik rubrik="Profil" text="Ditt namn och ditt konto." />
 
       <Card className="space-y-5 sm:p-6">
-        <div className="flex items-center gap-4">
-          <Namnbricka namn={namn || epost || '?'} className="size-14 text-base" />
+        <Profilbildsval anvandarId={anvandarId} namn={namn || epost || '?'} bildUppdaterad={bildUppdaterad} onAndrad={setBildUppdaterad} />
+        <div className="border-t border-border pt-4">
           <div className="min-w-0">
             <p className="truncate font-heading text-lg font-semibold">
               {namn || (status === 'laddar' ? 'Hämtar …' : status === 'laddfel' ? 'Namnet gick inte att hämta' : 'Inget namn än')}

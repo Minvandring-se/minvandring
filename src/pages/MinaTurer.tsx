@@ -29,7 +29,7 @@ export function MinaTurer() {
   useEffect(() => {
     supabase
       ?.from('turer')
-      .select('id, namn, destination, avresa, hemkomst, dagar, skapad, deltagare(namn, typ, sortering)')
+      .select('id, namn, destination, avresa, hemkomst, dagar, skapad, deltagare(namn, typ, sortering, user_id)')
       .order('sortering', { referencedTable: 'deltagare' })
       .then(({ data, error }) => {
         const hamtade = (data as TurMedDeltagare[] | null) ?? []

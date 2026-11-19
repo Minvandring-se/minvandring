@@ -123,3 +123,11 @@ Att lösa innan:
 - Turens startpunkt är bara text i dag. Vi behöver koordinater, till exempel genom att man väljer platsen på en karta eller söker upp den.
 - Säkerhetsrubrikerna i vercel.json (CSP, connect-src) måste tillåta de nya adresserna.
 - Ange källan där datan visas.
+
+## Radera kontot, och profilbilden med det
+
+Appen har inget sätt att radera sitt konto i dag. Den som vill sluta får mejla oss.
+
+När kontoradering byggs ska profilbilden tas bort samtidigt. Den ligger i Supabase Storage (bucketen `profilbilder`, filen `<user_id>/bild`) och försvinner inte av sig själv när raden i `auth.users` tas bort, till skillnad från profilen, deltagarraderna och förrådet som följer med genom främmande nycklar. Tills dess: ta bort filen för hand i Storage när ett konto raderas.
+
+Profilbilden visas med signerade adresser som gäller i en timme. En turkamrat som tas bort ur en tur kan alltså ha en adress som fungerar upp till en timme till.

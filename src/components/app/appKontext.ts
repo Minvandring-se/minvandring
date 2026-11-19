@@ -8,6 +8,10 @@ export interface AppKontext {
   namn: string
   /** Uppdaterar namnet i ramen efter att profilen har sparats. */
   setNamn: (namn: string) => void
+  /** När den egna profilbilden senast byttes. null när bild saknas eller inte är hämtad än. */
+  bildUppdaterad: string | null
+  /** Uppdaterar ramen efter att bilden har sparats eller tagits bort. */
+  setBildUppdaterad: (bildUppdaterad: string | null) => void
 }
 
 export function useApp(): AppKontext {
