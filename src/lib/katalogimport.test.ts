@@ -221,8 +221,7 @@ describe('importera', () => {
   })
 
   it('stoppar en för lång rad när kommentaren inte står sist', () => {
-    const r = importera('marke;modell;underkategori;packvikt_g;kommentar;kalla
-A;B;talt;100;x;https://exempel.se;extra')
+    const r = importera('marke;modell;underkategori;packvikt_g;kommentar;kalla\nA;B;talt;100;x;https://exempel.se;extra')
     expect(r.rader[0].produkt).toBeNull()
     expect(r.rader[0].fel[0]).toContain('7 fält')
   })
