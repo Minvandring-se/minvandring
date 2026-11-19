@@ -1,6 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { animera, vanta } from '@/components/start/stig/animationsko'
 import { beraknaStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
+import { BAND } from '@/components/start/landskap/bilder'
+import { placeraBand } from '@/components/start/landskap/placering'
 import { Naturdetalj, Tass } from '@/components/start/stig/Naturdetalj'
 import { useStigKo } from '@/components/start/stig/stigKo'
 import { RITTID, tidVidAndel, VANTAN } from '@/components/start/stig/utritning'
@@ -58,7 +60,8 @@ export function Stigavsnitt({ id, bit }: Props) {
   const flammaRef = useRef<SVGPathElement>(null)
   const glodRef = useRef<SVGEllipseElement>(null)
   const [matt, setMatt] = useState<Matt | null>(null)
-  const maskId = `stigmask-${useId().replace(/[^a-zA-Z0-9_-]/g, '')}`
+  const unikt = useId().replace(/[^a-zA-Z0-9_-]/g, '')
+  const maskId = `stigmask-${unikt}`
 
   // Mät mellanrummet och var panelerna börjar och slutar i det.
   useEffect(() => {
@@ -89,6 +92,7 @@ export function Stigavsnitt({ id, bit }: Props) {
   }, [])
 
   const stig = matt && beraknaStig(matt, bit, id)
+  const band = matt && bit.landskap ? placeraBand(matt, BAND[bit.landskap]) : null
   const d = stig?.d
   // Tältet eller brasan, som spelas efter utritningen. Ledkorset tonar in under den, tassarna efter.
   const huvud = stig?.figurer.detaljer.find((x) => x.typ === 'talt' || x.typ === 'eld')
@@ -298,7 +302,41 @@ export function Stigavsnitt({ id, bit }: Props) {
                 style={{ strokeDashoffset: minskad ? 0 : 1 }}
               />
             </mask>
+            {/* Delar av landskapet som beskärs på insidan tonar ut där, så att de inte slutar med en kant. */}
+            {band &&
+              (['vanster', 'hoger'] as const).map((sida) => {
+                const d = band[sida]
+                const inat = sida === 'vanster'
+                return (
+                  <mask key={sida} id={`${unikt}-${sida}`} maskUnits="userSpaceOnUse" x={0} y={0} width={matt.bredd} height={matt.hojd} style={{ maskType: 'alpha' }}>
+                    <linearGradient id={`${unikt}-${sida}-ton`} x1={d.klipp.vanster} x2={d.klipp.hoger} y1={0} y2={0} gradientUnits="userSpaceOnUse">
+                      <stop offset="0" stopColor="white" stopOpacity={inat || !d.beskuren ? 1 : 0} />
+                      <stop offset="0.3" stopColor="white" stopOpacity={1} />
+                      <stop offset="0.7" stopColor="white" stopOpacity={1} />
+                      <stop offset="1" stopColor="white" stopOpacity={!inat || !d.beskuren ? 1 : 0} />
+                    </linearGradient>
+                    <rect x={d.klipp.vanster} y={0} width={d.klipp.hoger - d.klipp.vanster} height={matt.hojd} fill={`url(#${unikt}-${sida}-ton)`} />
+                  </mask>
+                )
+              })}
           </defs>
+          {/* Landskapet under leden: marken nere vid nästa panel, mitten fri. */}
+          {band &&
+            (['vanster', 'hoger'] as const).map((sida) => {
+              const d = band[sida]
+              return (
+                <image
+                  key={sida}
+                  href={d.bild.src}
+                  x={d.x}
+                  y={d.y}
+                  width={d.bredd}
+                  height={d.hojd}
+                  preserveAspectRatio="xMidYMid meet"
+                  mask={`url(#${unikt}-${sida})`}
+                />
+              )
+            })}
           <path
             d={stig.d}
             fill="none"

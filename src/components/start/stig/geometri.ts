@@ -7,6 +7,8 @@
  * mått och ändras därför inte när fönstret ändrar storlek.
  */
 
+import type { BAND } from '@/components/start/landskap/bilder'
+
 export type Sida = 'vanster' | 'hoger'
 export type Detalj = 'talt' | 'eld' | 'tassar' | 'ledkors'
 
@@ -22,6 +24,8 @@ export interface StigVal {
   slut?: Sida
   /** Små detaljer längs biten. De placeras i tur och ordning och krockar aldrig med varandra. */
   detaljer?: readonly DetaljVal[]
+  /** Landskapet i mellanrummet, under leden. Bilderna ligger i public/landskap. */
+  landskap?: keyof typeof BAND
 }
 
 export interface Stigbit extends StigVal {
