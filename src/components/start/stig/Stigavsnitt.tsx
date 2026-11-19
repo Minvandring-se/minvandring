@@ -1,7 +1,8 @@
 import { useEffect, useId, useRef, useState } from 'react'
 import { animera, vanta } from '@/components/start/stig/animationsko'
 import { beraknaStig, type Matt, type Stigbit } from '@/components/start/stig/geometri'
-import { landskapSrc, placeraLandskap, BILD } from '@/components/start/stig/landskapsbild'
+import { Fjallrav } from '@/components/start/stig/Fjallrav'
+import { kartSrc, placeraKarta } from '@/components/start/stig/karta'
 import { Naturdetalj, Tass } from '@/components/start/stig/Naturdetalj'
 import { useStigKo } from '@/components/start/stig/stigKo'
 import { RITTID, tidVidAndel, VANTAN } from '@/components/start/stig/utritning'
@@ -91,7 +92,7 @@ export function Stigavsnitt({ id, bit }: Props) {
   }, [])
 
   const stig = matt && beraknaStig(matt, bit, id)
-  const landskap = matt && bit.landskap ? placeraLandskap(matt) : null
+  const karta = matt && bit.karta ? placeraKarta(matt) : null
   const d = stig?.d
   // Tältet eller brasan, som spelas efter utritningen. Ledkorset tonar in under den, tassarna efter.
   const huvud = stig?.figurer.detaljer.find((x) => x.typ === 'talt' || x.typ === 'eld')
@@ -301,41 +302,45 @@ export function Stigavsnitt({ id, bit }: Props) {
                 style={{ strokeDashoffset: minskad ? 0 : 1 }}
               />
             </mask>
-            {/* Bilderna tonar ut vid ytterkanterna, så att deras dis inte slutar med en rak kant. I smala
-                fönster faller mitten bort, och då tonar halvorna också ut mot mitten. */}
-            {landskap &&
-              (['vanster', 'hoger'] as const).map((sida) => {
-                const h = landskap[sida]
-                const kant = Math.min(0.08, 24 / h.bredd)
-                const mitt = landskap.beskuren ? 0.25 : 0
-                // Från vänster till höger i halvan: ytterkant och insida byter plats mellan halvorna.
-                const [fore, efter] = sida === 'vanster' ? [kant, mitt] : [mitt, kant]
-                return (
-                  <mask key={sida} id={`${unikt}-${sida}`} maskUnits="userSpaceOnUse" x={h.x} y={h.y} width={h.bredd} height={h.hojd} style={{ maskType: 'alpha' }}>
-                    <linearGradient id={`${unikt}-${sida}-ton`} x1={h.x} x2={h.x + h.bredd} y1={0} y2={0} gradientUnits="userSpaceOnUse">
-                      <stop offset={0} stopColor="white" stopOpacity={fore > 0 ? 0 : 1} />
-                      <stop offset={fore} stopColor="white" stopOpacity={1} />
-                      <stop offset={1 - efter} stopColor="white" stopOpacity={1} />
-                      <stop offset={1} stopColor="white" stopOpacity={efter > 0 ? 0 : 1} />
-                    </linearGradient>
-                    <rect x={h.x} y={h.y} width={h.bredd} height={h.hojd} fill={`url(#${unikt}-${sida}-ton)`} />
-                  </mask>
-                )
-              })}
+            {/* Kartan tonar ut mot sidans bakgrund vid alla kanter, så att ingen skarv syns. */}
+            {karta && (
+              <>
+                <linearGradient id={`${unikt}-sid`} x1={karta.x} x2={karta.x + karta.bredd} y1={0} y2={0} gradientUnits="userSpaceOnUse">
+                  <stop offset={0} stopColor="white" stopOpacity={0} />
+                  <stop offset={karta.sidtoning / karta.bredd} stopColor="white" stopOpacity={1} />
+                  <stop offset={1 - karta.sidtoning / karta.bredd} stopColor="white" stopOpacity={1} />
+                  <stop offset={1} stopColor="white" stopOpacity={0} />
+                </linearGradient>
+                <linearGradient id={`${unikt}-hojd`} x1={0} x2={0} y1={karta.y} y2={karta.y + karta.hojd} gradientUnits="userSpaceOnUse">
+                  <stop offset={0} stopColor="white" stopOpacity={0} />
+                  <stop offset={karta.hojdtoning / karta.hojd} stopColor="white" stopOpacity={1} />
+                  <stop offset={1 - karta.hojdtoning / karta.hojd} stopColor="white" stopOpacity={1} />
+                  <stop offset={1} stopColor="white" stopOpacity={0} />
+                </linearGradient>
+                <mask id={`${unikt}-sidmask`} maskUnits="userSpaceOnUse" x={karta.x} y={karta.y} width={karta.bredd} height={karta.hojd} style={{ maskType: 'alpha' }}>
+                  <rect x={karta.x} y={karta.y} width={karta.bredd} height={karta.hojd} fill={`url(#${unikt}-sid)`} />
+                </mask>
+                <mask id={`${unikt}-hojdmask`} maskUnits="userSpaceOnUse" x={karta.x} y={karta.y} width={karta.bredd} height={karta.hojd} style={{ maskType: 'alpha' }}>
+                  <rect x={karta.x} y={karta.y} width={karta.bredd} height={karta.hojd} fill={`url(#${unikt}-hojd)`} />
+                </mask>
+              </>
+            )}
           </defs>
-          {landskap && bit.landskap && (
-            // Under leden, med marken nere vid nästa panel. Tonar in när leden börjar ritas.
-            <g data-dyker="landskap" data-andel={0} style={{ opacity: minskad ? 1 : 0 }}>
-              {(['vanster', 'hoger'] as const).map((sida) => {
-                const h = landskap[sida]
-                return (
-                  <g key={sida} mask={`url(#${unikt}-${sida})`}>
-                    <svg x={h.x} y={h.y} width={h.bredd} height={h.hojd} viewBox={h.viewBox} preserveAspectRatio="none" overflow="hidden">
-                      <image href={landskapSrc(bit.landskap!)} x={0} y={0} width={BILD.bredd} height={BILD.hojd} />
-                    </svg>
-                  </g>
-                )
-              })}
+          {karta && bit.karta && (
+            // Under leden. Tonar in när leden börjar ritas.
+            <g data-dyker="karta" data-andel={0} style={{ opacity: minskad ? 1 : 0 }}>
+              <g mask={`url(#${unikt}-sidmask)`}>
+                <g mask={`url(#${unikt}-hojdmask)`}>
+                  <image
+                    href={kartSrc(bit.karta)}
+                    x={karta.x}
+                    y={karta.y}
+                    width={karta.bredd}
+                    height={karta.hojd}
+                    preserveAspectRatio="xMidYMid slice"
+                  />
+                </g>
+              </g>
             </g>
           )}
           <path
@@ -361,6 +366,10 @@ export function Stigavsnitt({ id, bit }: Props) {
           {stig.figurer.detaljer.map((x) =>
             x.typ === 'talt' || x.typ === 'eld' ? (
               <Naturdetalj key={x.typ} typ={x.typ} punkt={x.punkt} detaljRef={detaljRef} flammaRef={flammaRef} glodRef={glodRef} />
+            ) : x.typ === 'gryt' ? (
+              <g key="gryt" data-dyker="gryt" data-andel={x.andel} style={{ opacity: 0 }}>
+                <Fjallrav punkt={x.punkt} />
+              </g>
             ) : x.typ === 'ledkors' ? (
               <g key="ledkors" data-dyker="ledkors" data-andel={x.andel} style={{ opacity: 0 }}>
                 <Ledkryss x={x.punkt.x} y={x.punkt.y} />

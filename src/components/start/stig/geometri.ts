@@ -7,10 +7,10 @@
  * mått och ändras därför inte när fönstret ändrar storlek.
  */
 
-import type { Landskap } from '@/components/start/stig/landskapsbild'
+import type { Karta } from '@/components/start/stig/karta'
 
 export type Sida = 'vanster' | 'hoger'
-export type Detalj = 'talt' | 'eld' | 'tassar' | 'ledkors'
+export type Detalj = 'talt' | 'eld' | 'tassar' | 'ledkors' | 'gryt'
 
 export interface DetaljVal {
   typ: Detalj
@@ -24,8 +24,8 @@ export interface StigVal {
   slut?: Sida
   /** Små detaljer längs biten. De placeras i tur och ordning och krockar aldrig med varandra. */
   detaljer?: readonly DetaljVal[]
-  /** Landskapsbilden i mellanrummet, under leden. */
-  landskap?: Landskap
+  /** Kartbakgrunden i mellanrummet, under leden. */
+  karta?: Karta
 }
 
 export interface Stigbit extends StigVal {
@@ -87,6 +87,8 @@ export const FIGUR = {
   vagvisare: { bredd: 48, hojd: 60 },
   detalj: { bredd: 44, hojd: 36 },
   tass: { bredd: 10, hojd: 10 },
+  /** Fjällrävsgryt med en fjällräv som sitter bredvid. */
+  gryt: { bredd: 60, hojd: 36 },
 }
 
 /** Antal tassavtryck och avståndet mellan dem längs leden, i px. */
@@ -320,7 +322,7 @@ export function beraknaStig(m: Matt, bit: Stigbit, fro = bit.id ?? '') {
       continue
     }
     // Ledkorset är samma röda kryss som vid ledens början.
-    const storlek = val.typ === 'ledkors' ? FIGUR.ledkryss : FIGUR.detalj
+    const storlek = val.typ === 'ledkors' ? FIGUR.ledkryss : val.typ === 'gryt' ? FIGUR.gryt : FIGUR.detalj
     const p = narmast(val.lage).find((q) => passar(q, storlek))
     const punkt = ta(p, storlek)
     if (p && punkt) detaljer.push({ typ: val.typ, punkt: { x: punkt.x, y: punkt.y }, andel: p.andel })
