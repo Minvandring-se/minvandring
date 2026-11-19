@@ -1,5 +1,6 @@
-import { ChevronDown, ExternalLink, Pencil, Plus, RotateCcw } from 'lucide-react'
+import { ChevronDown, ExternalLink, Pencil, Plus, RotateCcw, Search } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
+import { useSearchParams } from 'react-router'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Granskad } from '@/components/forrad/Granskad'
@@ -7,8 +8,21 @@ import { ProduktSok } from '@/components/forrad/ProduktSok'
 import { SakFormular } from '@/components/forrad/SakFormular'
 import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { formateraVikt, forradsrad, fyraTunga, sakdetaljer, summeraForrad, underkategoriFor, viktjamforelse, type Detaljrad, type Forval, type KategoriNyckel, type Kategorigrupp } from '@/lib/forrad'
+import {
+  MIN_FOR_VERKTYG,
+  SORTERINGAR,
+  adressFranVal,
+  filtrera,
+  harVal,
+  kategorierIForradet,
+  sortera,
+  valFranAdress,
+  FORVALDA_VAL,
+  type Listval,
+} from '@/lib/forradslista'
 import { felrapportLank } from '@/lib/kontakt'
 import { supabase } from '@/lib/supabase'
 import type { Forradssak } from '@/lib/typer'
@@ -39,7 +53,7 @@ export function Forrad() {
   useEffect(() => {
     supabase
       ?.from('forradssaker')
-      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, produkter(id, marke, modell, packvikt_g, kontrollerad, version, underkategori, minvikt_g, kalla, egenskaper)')
+      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, skapad, produkter(id, marke, modell, packvikt_g, kontrollerad, version, underkategori, minvikt_g, kalla, egenskaper)')
       .then(({ data, error }) => {
         setLaddfel(!!error)
         if (!error) setSaker((data as unknown as Forradssak[] | null) ?? [])
@@ -56,7 +70,18 @@ export function Forrad() {
     hamtaOm()
   }
 
+  // Summeringen överst och De fyra tunga räknas alltid på hela förrådet, oavsett sök och filter.
   const summa = summeraForrad(saker ?? [])
+
+  // Sök, sortering och kategori sparas i adressen, så att de finns kvar vid omladdning.
+  // Verktygen visas först när förrådet är stort nog. Innan dess gäller alltid grundläget.
+  const [parametrar, setParametrar] = useSearchParams()
+  const harVerktyg = (saker?.length ?? 0) >= MIN_FOR_VERKTYG
+  const val = harVerktyg ? valFranAdress(parametrar) : FORVALDA_VAL
+  const setVal = (nytt: Listval) => setParametrar(adressFranVal(nytt), { replace: true })
+  const visade = filtrera(saker ?? [], val)
+  const oppenSak = oppet !== null && 'sakId' in oppet ? oppet.sakId : null
+  const radhjalp = { oppenSak, onOppna: (sakId: string) => setOppet({ sakId }), onKlar: klar, onAndrad: hamtaOm, onAvbryt: () => setOppet(null) }
   const sokOppen = oppet !== null && 'sok' in oppet
   const ny = oppet !== null && 'ny' in oppet ? oppet.ny : null
   const laggerTill = sokOppen || ny !== null
@@ -179,22 +204,128 @@ export function Forrad() {
             </section>
           )}
 
-          <div className="space-y-6">
-            {summa.grupper.map((grupp) => (
-              <Kategoridel
-                key={grupp.kategori.nyckel}
-                grupp={grupp}
-                oppenSak={oppet !== null && 'sakId' in oppet ? oppet.sakId : null}
-                onOppna={(sakId) => setOppet({ sakId })}
-                onKlar={klar}
-                onAndrad={hamtaOm}
-                onAvbryt={() => setOppet(null)}
-              />
-            ))}
-          </div>
+          {harVerktyg && <Verktyg val={val} onVal={setVal} kategorier={kategorierIForradet(saker)} visas={visade.length} av={saker.length} />}
+
+          {visade.length === 0 ? (
+            <div className="space-y-2 rounded-lg border border-dashed border-border px-5 py-6">
+              <p className="text-muted-foreground">Inga saker i förrådet matchar.</p>
+              <Button variant="outline" onClick={() => setVal(FORVALDA_VAL)}>
+                Visa hela förrådet
+              </Button>
+            </div>
+          ) : val.sortering === 'kategori' ? (
+            <div className="space-y-6">
+              {summeraForrad(visade).grupper.map((grupp) => (
+                <Kategoridel key={grupp.kategori.nyckel} grupp={grupp} {...radhjalp} />
+              ))}
+            </div>
+          ) : (
+            // Med en annan sortering än Kategori visas en enda lista utan kategorirubriker.
+            <Saklista saker={sortera(visade, val.sortering)} {...radhjalp} />
+          )}
         </>
       )}
     </div>
+  )
+}
+
+interface Radhjalp {
+  oppenSak: string | null
+  onOppna: (sakId: string) => void
+  onKlar: () => void
+  /** Något har sparats direkt från raden, så listan ska hämtas igen. */
+  onAndrad: () => void
+  onAvbryt: () => void
+}
+
+/** Sök, sortering och val av kategori. Visas när förrådet är stort nog för att behöva dem. */
+function Verktyg({
+  val,
+  onVal,
+  kategorier,
+  visas,
+  av,
+}: {
+  val: Listval
+  onVal: (val: Listval) => void
+  kategorier: { nyckel: string; etikett: string }[]
+  visas: number
+  av: number
+}) {
+  const id = useId()
+  const valKlass =
+    'h-11 w-full rounded-md border border-border bg-card px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20'
+  return (
+    <section aria-label="Sök och sortera" className="space-y-2">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
+        <div className="space-y-1">
+          <label htmlFor={`${id}-sok`} className="block text-sm font-medium">
+            Sök i ditt förråd
+          </label>
+          <div className="relative">
+            <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+            <Input
+              id={`${id}-sok`}
+              type="search"
+              autoComplete="off"
+              enterKeyHint="search"
+              maxLength={80}
+              className="pl-10"
+              value={val.sok}
+              onChange={(e) => onVal({ ...val, sok: e.target.value })}
+            />
+          </div>
+        </div>
+        <div className="space-y-1">
+          <label htmlFor={`${id}-sortera`} className="block text-sm font-medium">
+            Sortera
+          </label>
+          <select id={`${id}-sortera`} className={valKlass} value={val.sortering} onChange={(e) => onVal({ ...val, sortering: e.target.value as Listval['sortering'] })}>
+            {SORTERINGAR.map((s) => (
+              <option key={s.varde} value={s.varde}>
+                {s.etikett}
+              </option>
+            ))}
+          </select>
+        </div>
+        <div className="space-y-1">
+          <label htmlFor={`${id}-kategori`} className="block text-sm font-medium">
+            Visa
+          </label>
+          <select id={`${id}-kategori`} className={valKlass} value={val.kategori} onChange={(e) => onVal({ ...val, kategori: e.target.value as Listval['kategori'] })}>
+            <option value="">Alla kategorier</option>
+            {kategorier.map((k) => (
+              <option key={k.nyckel} value={k.nyckel}>
+                {k.etikett}
+              </option>
+            ))}
+          </select>
+        </div>
+      </div>
+      {/* Säger hur mycket av förrådet som visas, så att det märks att ett filter är på. */}
+      <p role="status" className="min-h-5 text-sm text-muted-foreground">
+        {harVal({ ...val, sortering: 'kategori' }) && `Visar ${visas} av ${av} rader.`}
+      </p>
+    </section>
+  )
+}
+
+/** Raderna med saker. Den sak som ändras visas som ett formulär i stället för sin rad. */
+function Saklista({ saker, oppenSak, onOppna, onKlar, onAndrad, onAvbryt }: { saker: Forradssak[] } & Radhjalp) {
+  return (
+    <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card shadow-soft">
+      {saker.map((sak) =>
+        oppenSak === sak.id ? (
+          <li key={sak.id} className="p-2">
+            <SakFormular sak={sak} onKlar={onKlar} onAvbryt={onAvbryt} />
+          </li>
+        ) : (
+          <li key={sak.id}>
+            <Sakrad sak={sak} onAndra={() => onOppna(sak.id)} onAndrad={onAndrad} />
+          </li>
+        ),
+      )}
+    </ul>
   )
 }
 
@@ -231,19 +362,7 @@ function Kategoridel({
           </p>
         </div>
       </div>
-      <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card shadow-soft">
-        {saker.map((sak) =>
-          oppenSak === sak.id ? (
-            <li key={sak.id} className="p-2">
-              <SakFormular sak={sak} onKlar={onKlar} onAvbryt={onAvbryt} />
-            </li>
-          ) : (
-            <li key={sak.id}>
-              <Sakrad sak={sak} onAndra={() => onOppna(sak.id)} onAndrad={onAndrad} />
-            </li>
-          ),
-        )}
-      </ul>
+      <Saklista saker={saker} oppenSak={oppenSak} onOppna={onOppna} onKlar={onKlar} onAndrad={onAndrad} onAvbryt={onAvbryt} />
     </section>
   )
 }

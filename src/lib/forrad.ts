@@ -18,6 +18,7 @@ import {
 } from 'lucide-react'
 import { visaEgenskaper } from './produktegenskaper'
 import type { Forradssak } from './typer'
+import { tolkaVikt } from './viktfalt'
 import type { Typ } from './vikt'
 
 export interface Underkategori {
@@ -350,11 +351,11 @@ export type SakVarden = Pick<Forradssak, 'namn' | 'kategori' | 'underkategori' |
 export const MAX_NAMN = 80
 export const MAX_NOTERING = 300
 export const MAX_ANTAL = 99
-export const MAX_VIKT_G = 100_000
+export { MAX_VIKT_G } from './viktfalt'
 
 const HELTAL = /^\d+$/
 
-/** Kontrollerar formuläret och gör om det till det som sparas. Underkategorin och vikten får vara tomma. */
+/** Kontrollerar formuläret och gör om det till det som sparas. Underkategorin och vikten får vara tomma. Ett ogiltigt värde sparas aldrig. */
 export function tolkaSak(falt: SakFalt): { ok: true; varden: SakVarden } | { ok: false; fel: string } {
   const namn = falt.namn.trim()
   if (!namn) return { ok: false, fel: 'Skriv vad saken heter.' }
@@ -368,12 +369,10 @@ export function tolkaSak(falt: SakFalt): { ok: true; varden: SakVarden } | { ok:
   const antal = HELTAL.test(antalText) ? Number(antalText) : NaN
   if (!(antal >= 1 && antal <= MAX_ANTAL)) return { ok: false, fel: `Antal ska vara ett heltal mellan 1 och ${MAX_ANTAL}.` }
 
-  const viktText = falt.vikt.trim()
-  let vikt_g: number | null = null
-  if (viktText) {
-    vikt_g = HELTAL.test(viktText) ? Number(viktText) : NaN
-    if (!(vikt_g <= MAX_VIKT_G)) return { ok: false, fel: 'Skriv vikten i hela gram, till exempel 1250.' }
-  }
+  // Vikten får skrivas i gram eller kilo: "1250", "1250 g" eller "1,25 kg".
+  const vikt = tolkaVikt(falt.vikt)
+  if (!vikt.ok) return { ok: false, fel: vikt.fel }
+  const vikt_g = vikt.g
 
   const notering = falt.notering.trim()
   if (notering.length > MAX_NOTERING) return { ok: false, fel: `Anteckningen får vara högst ${MAX_NOTERING} tecken.` }
