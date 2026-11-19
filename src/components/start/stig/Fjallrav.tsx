@@ -16,9 +16,9 @@ const STRAN: [number, number, number][] = [
 ]
 
 /**
- * Fjällrävsgryt med en vit fjällräv som står bredvid, 60 × 36 px.
+ * Fjällrävsgryt med en fjällräv i sommarpäls som står bredvid, 60 × 36 px.
  * Grytet är en låg, ojämn och frodig kulle med flera ingångar, jordhögar framför dem och stenar runt
- * omkring, som de riktiga gryten på kalfjället. Räven står på alla fyra med huvudet vänt mot besökaren.
+ * omkring, som de riktiga gryten på kalfjället. Räven står på alla fyra, med huvudet åt höger vänt mot besökaren.
  * Samma linjestil som tältet och vägvisaren. punkt är marken mitt under.
  */
 export function Fjallrav({ punkt }: { punkt: Punkt }) {
@@ -40,29 +40,36 @@ export function Fjallrav({ punkt }: { punkt: Punkt }) {
       <circle cx={25} cy={23.6} r={0.9} className="fill-accent stroke-none" />
       <circle cx={33.8} cy={28.6} r={0.8} className="fill-card stroke-none" />
 
-      {/* Svansen: lång, tjock och buskig, bakom kroppen. */}
-      <path d="M52.6 25.4 C57.6 23 61.6 26.4 60.8 31 C60.2 34.6 55.6 35.6 52.2 33.6 C53.8 33.4 54.6 32.6 54.4 32 C56.6 31.6 57.6 30 56.8 28.4 C56 27 53.8 27.2 51.6 28.4 Z" className="fill-card stroke-foreground/70" />
-      <path d="M58.2 27.6 C59 29 58.8 30.8 57.6 32" className="fill-none stroke-foreground/20" strokeWidth={0.9} />
-      {/* Benen, korta. De bortre är lite mörkare. */}
-      <path d="M50.4 29.6 L50.6 34.8 H52.6 L52.8 29.4 Z M44 29.8 L44 34.8 H46 L45.8 29.8 Z" className="fill-muted stroke-foreground/60" strokeWidth={1.1} />
-      <path d="M47.6 29.8 L47.4 34.8 H49.6 L50.2 29.6 Z M40.8 29.4 L40.6 34.8 H42.8 L42.8 29.6 Z" className="fill-card stroke-foreground/70" strokeWidth={1.1} />
-      {/* Kroppen, kompakt och lurvig. */}
-      <path d="M38.6 26.4 C38.8 23.4 42.4 22.2 46.6 22.4 C51 22.6 54 23.8 54.2 26.8 C54.4 29.6 52 31.2 47.6 31.2 C43 31.2 38.4 30 38.6 26.4 Z" className="fill-card stroke-foreground/70" />
-      <path d="M41.4 30 C44.6 31 49.4 31.1 52.4 29.9 M50.6 23.6 L51.4 22.8 L51.8 23.8" className="fill-none stroke-foreground/20" strokeWidth={1} />
-      {/* Öronen, små och rundade, med grå insida. */}
-      <path d="M34.4 15.6 L33.8 11.4 C33.8 10.4 34.7 10 35.4 10.6 L37.6 13.6 Z M39.8 13.6 L42 10.6 C42.7 10 43.6 10.4 43.6 11.4 L43 15.6 Z" className="fill-card stroke-foreground/70" />
-      <path d="M35 13.8 L34.8 11.8 L36.4 13.6 Z M41.2 13.6 L42.6 11.8 L42.4 13.8 Z" className="fill-foreground/25 stroke-none" />
-      {/* Huvudet, vänt mot besökaren, med lurvig päls på kinderna och bröstet. */}
-      <path d="M33.6 18.8 C33.6 15.4 36 13.4 38.7 13.4 C41.4 13.4 43.8 15.4 43.8 18.8 C43.8 19.8 44.6 20.6 44.4 21.2 L43.2 22.2 L42.2 21.8 L41.2 23.4 L39.8 22.8 L38.7 24 L37.6 22.8 L36.2 23.4 L35.2 21.8 L34.2 22.2 L33 21.2 C32.8 20.6 33.6 19.8 33.6 18.8 Z" className="fill-card stroke-foreground/70" />
-      <path d="M36.2 23.2 C37 25.8 39.6 27 41.8 26.2" className="fill-none stroke-foreground/25" strokeWidth={0.9} />
-      {/* Nospartiet, lite spetsigt. */}
-      <path d="M36.6 20.2 C37.2 21.6 38 22.2 38.7 22.2 C39.4 22.2 40.2 21.6 40.8 20.2" className="fill-none stroke-foreground/30" strokeWidth={0.8} />
-      {/* Mörka ögon med glimt, nos och mun. */}
-      <circle cx={36.8} cy={17.8} r={0.95} className="fill-foreground stroke-none" />
-      <circle cx={40.6} cy={17.8} r={0.95} className="fill-foreground stroke-none" />
-      <circle cx={37.1} cy={17.5} r={0.3} className="fill-card stroke-none" />
-      <circle cx={40.9} cy={17.5} r={0.3} className="fill-card stroke-none" />
-      <path d="M38 19.9 C38 19.4 39.4 19.4 39.4 19.9 C39.4 20.5 38.9 20.9 38.7 20.9 C38.5 20.9 38 20.5 38 19.9 Z" className="fill-foreground stroke-none" />
+      {/* Räven, i sommarpäls: gråbrun rygg, ljus mage och svans, grått ansikte med vita kinder.
+          Den står med huvudet åt höger och tittar mot besökaren. */}
+      <g transform="translate(-1 0)">
+        {/* Svansen, ljus och buskig, hänger bakåt. */}
+        <path d="M43 23.8 C37.4 23.6 34.2 28 34.2 32.4 C34.2 35.4 37.4 35.8 38.8 33.8 C39.8 31 41.6 28.8 44.2 27.8 Z" className="fill-sand stroke-foreground/70" />
+        <path d="M36.6 32 C37.2 29.6 38.6 27.8 40.6 26.6" className="fill-none stroke-foreground/20" strokeWidth={0.9} />
+        {/* De bortre benen, mörkare. */}
+        <path d="M45.2 28.8 L44.8 34.8 H46.8 L47.4 29 Z M54 28.6 L54.2 34.8 H56.2 L56.2 28.4 Z" className="fill-rav/70 stroke-foreground/60" strokeWidth={1.1} />
+        {/* Kroppen med gråbrun rygg och ljus mage. */}
+        <path d="M42 25.6 C42.4 22.4 46.4 21.2 50.4 21.4 C54 21.6 57 22.6 57.2 25.8 C57.4 28.6 55 30 50.8 30 C46.4 30 41.6 29 42 25.6 Z" className="fill-rav stroke-foreground/70" />
+        <path d="M43.8 28.4 C47 29.8 51.8 29.8 56 28.2 C57 26.6 57 25.2 56.6 24.4 C55 26.6 50.8 27.6 46.4 27.2 C45.2 27.4 44.2 27.8 43.8 28.4 Z" className="fill-sand stroke-none" />
+        {/* De närmre benen. */}
+        <path d="M43.2 28.4 L43 34.8 H45.2 L45.6 28.8 Z M52 28.8 L51.8 34.8 H54 L54.2 29 Z" className="fill-rav stroke-foreground/70" strokeWidth={1.1} />
+        {/* Ljus hals och bröst. */}
+        <path d="M53.4 21.6 C53.6 24.2 55 26 57.4 26.4 C57.6 25 57.4 23.4 57 22 Z" className="fill-sand stroke-none" />
+        {/* Öronen, små och rundade, med ljus insida. */}
+        <path d="M51.8 14.8 L51.4 10.6 C51.4 9.6 52.2 9.2 52.8 9.8 L54.8 12.8 Z M57 12.8 L59 9.8 C59.6 9.2 60.4 9.6 60.4 10.6 L60 14.8 Z" className="fill-rav stroke-foreground/70" />
+        <path d="M52.4 13 L52.2 11 L53.6 12.8 Z M58.4 12.8 L59.6 11 L59.4 13 Z" className="fill-card stroke-none" />
+        {/* Huvudet, grått med lurviga kinder. */}
+        <path d="M50.8 18 C50.8 14.6 53.2 12.6 55.9 12.6 C58.6 12.6 61 14.6 61 18 C61 19 61.6 19.8 61.4 20.4 L60.2 21.4 L59.2 21 L58.2 22.6 L56.8 22 L55.9 23.2 L55 22 L53.6 22.6 L52.6 21 L51.6 21.4 L50.4 20.4 C50.2 19.8 50.8 19 50.8 18 Z" className="fill-muted stroke-foreground/70" />
+        {/* Vita kinder och nos. */}
+        <path d="M51.6 19.4 C52.6 21.4 54.2 22.2 55.9 22.2 C57.6 22.2 59.2 21.4 60.2 19.4 C59 18.4 57.6 18 55.9 18 C54.2 18 52.8 18.4 51.6 19.4 Z" className="fill-card stroke-none" />
+        {/* Mörka ögon med glimt, nos och mun. */}
+        <circle cx={54} cy={16.9} r={0.95} className="fill-foreground stroke-none" />
+        <circle cx={57.8} cy={16.9} r={0.95} className="fill-foreground stroke-none" />
+        <circle cx={54.3} cy={16.6} r={0.3} className="fill-card stroke-none" />
+        <circle cx={58.1} cy={16.6} r={0.3} className="fill-card stroke-none" />
+        <path d="M55.2 19 C55.2 18.5 56.6 18.5 56.6 19 C56.6 19.6 56.1 20 55.9 20 C55.7 20 55.2 19.6 55.2 19 Z" className="fill-foreground stroke-none" />
+        <path d="M55.9 20 V20.5 M55.1 20.8 C55.5 21.1 55.8 21 55.9 20.5 C56 21 56.3 21.1 56.7 20.8" className="fill-none stroke-foreground/60" strokeWidth={0.6} />
+      </g>
     </g>
   )
 }
