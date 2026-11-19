@@ -87,8 +87,8 @@ export const FIGUR = {
   vagvisare: { bredd: 48, hojd: 60 },
   detalj: { bredd: 44, hojd: 36 },
   tass: { bredd: 10, hojd: 10 },
-  /** Fjällrävsgryt med en fjällräv som sitter bredvid. */
-  gryt: { bredd: 60, hojd: 36 },
+  /** Fjällrävsgryt med en fjällräv som står bredvid. Samma mått som FJALLRAV_STORLEK. */
+  gryt: { bredd: 80, hojd: 32 },
 }
 
 /** Antal tassavtryck och avståndet mellan dem längs leden, i px. */
