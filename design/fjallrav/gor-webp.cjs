@@ -6,9 +6,10 @@
 const path = require('node:path')
 const sharp = require('sharp')
 
+// De färgade versionerna, gjorda med farga.py. Bredden är tre gånger visningsbredden.
 const bilder = [
-  ['fjallrav-gryt', 'gryt', 150],
-  ['fjallrav-staende', 'fjallrav-staende', 120],
+  ['fjallrav-gryt-farg', 'gryt', 225],
+  ['fjallrav-staende-farg', 'fjallrav-staende', 210],
 ]
 
 ;(async () => {

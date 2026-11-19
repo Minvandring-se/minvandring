@@ -88,7 +88,7 @@ export const FIGUR = {
   detalj: { bredd: 44, hojd: 36 },
   tass: { bredd: 10, hojd: 10 },
   /** Fjällrävsgryt med en fjällräv som står bredvid (Fjallrav.tsx). */
-  gryt: { bredd: 80, hojd: 32 },
+  gryt: { bredd: 120, hojd: 48 },
 }
 
 /** Antal tassavtryck och avståndet mellan dem längs leden, i px. */
