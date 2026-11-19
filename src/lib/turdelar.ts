@@ -7,7 +7,7 @@ export interface TurdelInfo {
   namn: string
   /** Delen av adressen efter turens id. Tom för översikten. */
   sokvag: string
-  /** false tills delen är byggd. Då visas den nedtonad och sidan säger "Kommer snart". */
+  /** false tills delen är byggd. Då visas den inte bland flikarna, och sidan säger "Kommer snart" om man går dit ändå. */
   byggd: boolean
 }
 
@@ -28,4 +28,13 @@ export function turdelAdress(turId: string, del: Turdel): string {
 export function aktivTurdel(pathname: string): Turdel {
   const sista = /^\/tur\/[^/]+\/([^/]+)/.exec(pathname)?.[1]
   return TURDELAR.find((d) => d.sokvag !== '' && d.sokvag === sista)?.del ?? 'oversikt'
+}
+
+/**
+ * Flikarna som visas i en tur: bara de delar som är byggda.
+ * Finns bara en del visas ingen flikrad alls, eftersom det inte finns något att välja mellan.
+ */
+export function synligaFlikar(delar: readonly TurdelInfo[] = TURDELAR): TurdelInfo[] {
+  const byggda = delar.filter((d) => d.byggd)
+  return byggda.length > 1 ? byggda : []
 }

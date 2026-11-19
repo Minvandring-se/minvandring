@@ -7,7 +7,7 @@ import { Button } from '@/components/ui/button'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { tolkaRad } from '@/lib/hamtning'
 import { supabase } from '@/lib/supabase'
-import { aktivTurdel, turdelAdress, TURDELAR } from '@/lib/turdelar'
+import { aktivTurdel, synligaFlikar, turdelAdress, TURDELAR } from '@/lib/turdelar'
 import { datumrad } from '@/lib/turlista'
 import type { DeltagareRad, Tur } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -99,6 +99,7 @@ function Ram({ id }: { id: string | undefined }) {
   }, [id, visa])
 
   const delnamn = TURDELAR.find((d) => d.del === aktiv)!.namn
+  const flikar = synligaFlikar()
   useSidtitel(typeof tur === 'object' ? (aktiv === 'oversikt' ? tur.namn : `${delnamn} · ${tur.namn}`) : tur === undefined ? 'Hämtar turen' : 'Tur')
 
   if (tur === undefined)
@@ -162,30 +163,32 @@ function Ram({ id }: { id: string | undefined }) {
         </div>
       </header>
 
-      {/* Flikarna byter del utan att lägga till ett steg i historiken, så att bakåt alltid leder ut ur turen. */}
-      <nav aria-label="Turens delar" className="border-b border-border">
-        <ul className="-mb-px flex gap-1 sm:gap-2">
-          {TURDELAR.map(({ del, namn, byggd }) => (
-            <li key={del}>
-              <Link
-                to={turdelAdress(tur.id, del)}
-                replace
-                state={state}
-                aria-current={aktiv === del ? 'page' : undefined}
-                className={cn(
-                  'flex min-h-11 items-center border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:px-4 sm:text-base',
-                  aktiv === del
-                    ? 'border-primary text-primary'
-                    : cn('border-transparent hover:border-border hover:text-foreground', byggd ? 'text-foreground' : 'text-muted-foreground'),
-                )}
-              >
-                {namn}
-                {!byggd && <span className="sr-only">, kommer snart</span>}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      {/*
+        Bara byggda delar visas, och ingen flikrad alls när det bara finns en.
+        Flikarna byter del utan att lägga till ett steg i historiken, så att bakåt alltid leder ut ur turen.
+      */}
+      {flikar.length > 0 && (
+        <nav aria-label="Turens delar" className="border-b border-border">
+          <ul className="-mb-px flex gap-1 sm:gap-2">
+            {flikar.map(({ del, namn }) => (
+              <li key={del}>
+                <Link
+                  to={turdelAdress(tur.id, del)}
+                  replace
+                  state={state}
+                  aria-current={aktiv === del ? 'page' : undefined}
+                  className={cn(
+                    'flex min-h-11 items-center border-b-2 px-3 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:px-4 sm:text-base',
+                    aktiv === del ? 'border-primary text-primary' : 'border-transparent text-foreground hover:border-border',
+                  )}
+                >
+                  {namn}
+                </Link>
+              </li>
+            ))}
+          </ul>
+        </nav>
+      )}
 
       <Outlet context={kontext} />
     </div>

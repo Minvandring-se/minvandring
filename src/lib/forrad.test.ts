@@ -4,6 +4,7 @@ import {
   arKategori,
   faltFran,
   formateraVikt,
+  forradsrad,
   forvaldTyp,
   kategoriFor,
   kategoriForUnder,
@@ -431,5 +432,22 @@ describe('sakdetaljer', () => {
       'Max längd: 185 cm',
     ])
     expect(text(d.ovriga)).toEqual(['Version: 185 cm', 'Extremtemperatur: \u221228 °C', 'Temperaturstandard: Inte angiven', 'Fillpower: 800 cuin', 'Dragkedja: Vänster'])
+  })
+})
+
+describe('forradsrad', () => {
+  it('säger hur många saker som finns, med singular för en', () => {
+    expect(forradsrad({ antal: 1, utanVikt: 0 })).toEqual({ saker: '1 sak i förrådet', saknarVikt: null })
+    expect(forradsrad({ antal: 4, utanVikt: 0 })).toEqual({ saker: '4 saker i förrådet', saknarVikt: null })
+  })
+
+  it('lägger till hur många som saknar vikt när det är minst en', () => {
+    expect(forradsrad({ antal: 4, utanVikt: 2 })).toEqual({ saker: '4 saker i förrådet', saknarVikt: '2 saknar vikt' })
+    expect(forradsrad({ antal: 1, utanVikt: 1 }).saknarVikt).toBe('1 saknar vikt')
+  })
+
+  it('räknar från samma summering som listan', () => {
+    const summa = summeraForrad([sak({ vikt_g: null }), sak({ vikt_g: 100, antal: 3 })])
+    expect(forradsrad(summa)).toEqual({ saker: '4 saker i förrådet', saknarVikt: '1 saknar vikt' })
   })
 })
