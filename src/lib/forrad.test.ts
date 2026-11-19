@@ -26,16 +26,22 @@ function sak(delar: Partial<Forradssak>): Forradssak {
 describe('kategorier', () => {
   const under = KATEGORIER.flatMap((k) => k.under.map((u) => ({ ...u, kategori: k.nyckel })))
 
-  it('har tretton huvudkategorier med unika nycklar, och Övrigt sist', () => {
+  it('har fjorton huvudkategorier med unika nycklar, Vinter mellan medicin och hygien, och Övrigt sist', () => {
     const nycklar = KATEGORIER.map((k) => k.nyckel)
-    expect(nycklar).toHaveLength(13)
-    expect(new Set(nycklar).size).toBe(13)
-    expect(nycklar.at(-1)).toBe('ovrigt')
+    expect(nycklar).toHaveLength(14)
+    expect(new Set(nycklar).size).toBe(14)
+    expect(nycklar.slice(-4)).toEqual(['medicin', 'vinter', 'hygien', 'ovrigt'])
+  })
+
+  it('snöskor ligger under Vinter, och broddar är kvar under Skor med samma nyckel', () => {
+    expect(kategoriForUnder('snoskor')?.nyckel).toBe('vinter')
+    expect(underkategoriFor('skor', 'broddar')?.etikett).toBe('Broddar')
+    expect(KATEGORIER.find((k) => k.nyckel === 'ovrigt')?.under.at(-1)?.nyckel).toBe('ovrigt')
   })
 
   it('har inga dubbletter bland underkategorierna, så varje underkategori hör till exakt en huvudkategori', () => {
     const nycklar = under.map((u) => u.nyckel)
-    expect(nycklar).toHaveLength(67)
+    expect(nycklar).toHaveLength(78)
     expect(new Set(nycklar).size).toBe(nycklar.length)
     for (const u of under) expect(kategoriForUnder(u.nyckel)?.nyckel, u.nyckel).toBe(u.kategori)
     expect(kategoriForUnder('finns-inte')).toBeNull()
@@ -85,15 +91,15 @@ describe('forvaldTyp', () => {
     expect(under.filter((u) => u.typ === 'forbrukas').map((u) => u.nyckel)).toEqual(['bransle', 'rening', 'skavsar', 'mediciner', 'sol_mygg'])
   })
 
-  it('bara kängor har man på sig, övriga skor ligger i ryggsäcken', () => {
+  it('bara solglasögon och kängor har man på sig, övriga skor ligger i ryggsäcken', () => {
     const under = KATEGORIER.flatMap((k) => k.under.map((u) => ({ nyckel: u.nyckel, typ: forvaldTyp(k.nyckel, u.nyckel) })))
-    expect(under.filter((u) => u.typ === 'kropp').map((u) => u.nyckel)).toEqual(['kangor'])
+    expect(under.filter((u) => u.typ === 'kropp').map((u) => u.nyckel)).toEqual(['solglasogon', 'kangor'])
     for (const u of ['lagerskor', 'damasker', 'broddar']) expect(forvaldTyp('skor', u), u).toBe('ryggsack')
   })
 
   it('alla andra underkategorier ligger i ryggsäcken', () => {
     const under = KATEGORIER.flatMap((k) => k.under.map((u) => forvaldTyp(k.nyckel, u.nyckel)))
-    expect(under.filter((t) => t === 'ryggsack')).toHaveLength(67 - 6)
+    expect(under.filter((t) => t === 'ryggsack')).toHaveLength(78 - 7)
   })
 
   it('en underkategori från en annan huvudkategori påverkar inte typen', () => {

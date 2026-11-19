@@ -10,6 +10,7 @@ import {
   Footprints,
   Package,
   Shirt,
+  Snowflake,
   SprayCan,
   Tent,
   Wrench,
@@ -76,6 +77,8 @@ export const KATEGORIER = [
       { nyckel: 'liggunderlag', etikett: 'Liggunderlag' },
       { nyckel: 'kudde', etikett: 'Kudde' },
       { nyckel: 'lakan', etikett: 'Lakan (liner)' },
+      { nyckel: 'sittunderlag', etikett: 'Sittunderlag och stol' },
+      { nyckel: 'pump', etikett: 'Pump och pumpsäck' },
     ],
   },
   {
@@ -91,6 +94,7 @@ export const KATEGORIER = [
       { nyckel: 'bestick', etikett: 'Bestick' },
       { nyckel: 'kaffe', etikett: 'Kaffe och te' },
       { nyckel: 'disk', etikett: 'Disk' },
+      { nyckel: 'matforvaring', etikett: 'Matförvaring' },
     ],
   },
   {
@@ -124,6 +128,7 @@ export const KATEGORIER = [
       { nyckel: 'huvudbonad', etikett: 'Mössa och keps' },
       { nyckel: 'handskar', etikett: 'Handskar och vantar' },
       { nyckel: 'myggklader', etikett: 'Myggnät och myggkläder' },
+      { nyckel: 'solglasogon', etikett: 'Solglasögon', typ: 'kropp' },
     ],
   },
   {
@@ -135,7 +140,7 @@ export const KATEGORIER = [
       { nyckel: 'kangor', etikett: 'Kängor och vandringsskor', typ: 'kropp' },
       { nyckel: 'lagerskor', etikett: 'Lägerskor och sandaler', typ: 'ryggsack' },
       { nyckel: 'damasker', etikett: 'Damasker', typ: 'ryggsack' },
-      { nyckel: 'broddar', etikett: 'Broddar och snöskor', typ: 'ryggsack' },
+      { nyckel: 'broddar', etikett: 'Broddar', typ: 'ryggsack' },
     ],
   },
   {
@@ -190,6 +195,19 @@ export const KATEGORIER = [
     ],
   },
   {
+    nyckel: 'vinter',
+    etikett: 'Vinter',
+    ikon: Snowflake,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'skidor', etikett: 'Skidor och stighudar' },
+      { nyckel: 'pulka', etikett: 'Pulka och dragsele' },
+      { nyckel: 'snoskor', etikett: 'Snöskor' },
+      { nyckel: 'snospade', etikett: 'Snöspade och snösåg' },
+      { nyckel: 'lavin', etikett: 'Lavinutrustning' },
+    ],
+  },
+  {
     nyckel: 'hygien',
     etikett: 'Hygien',
     ikon: SprayCan,
@@ -201,7 +219,17 @@ export const KATEGORIER = [
       { nyckel: 'sol_mygg', etikett: 'Solkräm och myggmedel', typ: 'forbrukas' },
     ],
   },
-  { nyckel: 'ovrigt', etikett: 'Övrigt', ikon: Package, typ: 'ryggsack', under: [{ nyckel: 'ovrigt', etikett: 'Övrigt' }] },
+  {
+    nyckel: 'ovrigt',
+    etikett: 'Övrigt',
+    ikon: Package,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'fiske', etikett: 'Fiske' },
+      { nyckel: 'bocker', etikett: 'Böcker och spel' },
+      { nyckel: 'ovrigt', etikett: 'Övrigt' },
+    ],
+  },
 ] as const satisfies readonly Kategori[]
 
 export type KategoriNyckel = (typeof KATEGORIER)[number]['nyckel']
