@@ -47,6 +47,10 @@ export function Integritet() {
       <Avsnitt rubrik="Vad vi sparar">
         <ul className="list-disc space-y-1 pl-5">
           <li>Ditt namn och din mejladress.</li>
+          <li>
+            Din profilbild, om du har lagt in en. Den syns bara för dig och dem du delar en tur med, och du kan ta bort den när som helst
+            i Profil.
+          </li>
           <li>Ditt lösenord. Det sparas krypterat hos Supabase, så varken vi eller någon annan kan se det.</li>
           <li>Dina turer och det ni lägger in i dem: deltagare, packning och mat.</li>
           <li>Namn på deltagare utan konto, som någon annan i turen har lagt till, till exempel en kompis eller en hund.</li>

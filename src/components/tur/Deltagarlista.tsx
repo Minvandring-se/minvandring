@@ -1,5 +1,6 @@
-import { Dog, Plus, UserPlus, UserRound, X } from 'lucide-react'
+import { Dog, Plus, UserPlus, X } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
+import { Namnbricka } from '@/components/app/Namnbricka'
 import { Inbjudan } from '@/components/tur/Inbjudan'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -11,6 +12,8 @@ import type { DeltagareRad, Tur } from '@/lib/typer'
 interface Props {
   tur: Tur
   deltagare: DeltagareRad[]
+  /** Adresser till profilbilderna, per user_id. Bara de som har en bild finns med. */
+  bilder: Record<string, string>
   minRoll: Roll | null
   mittUserId: string
   onAndrad: () => void
@@ -19,7 +22,7 @@ interface Props {
 
 const ROLLER: Roll[] = ['owner', 'editor', 'viewer']
 
-export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, onLamnat }: Props) {
+export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onAndrad, onLamnat }: Props) {
   const [nyttNamn, setNyttNamn] = useState('')
   const [nyTyp, setNyTyp] = useState<'person' | 'hund'>('hund')
   const [fel, setFel] = useState('')
@@ -97,9 +100,12 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
           return (
             <li key={d.id} className="flex min-h-14 items-center gap-3 py-2">
               {d.typ === 'hund' ? (
-                <Dog className="size-5 shrink-0 text-primary" aria-label="Hund" />
+                <span className="inline-flex size-9 shrink-0 items-center justify-center">
+                  <Dog className="size-5 text-primary" aria-label="Hund" />
+                </span>
               ) : (
-                <UserRound className="size-5 shrink-0 text-primary" aria-hidden />
+                // Profilbilden när den finns, annars bokstaven. Personer utan konto har alltid bokstaven.
+                <Namnbricka namn={d.namn} bild={d.user_id ? bilder[d.user_id] : null} />
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">

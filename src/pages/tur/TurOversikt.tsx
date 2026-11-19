@@ -1,6 +1,7 @@
 import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
+import { useApp } from '@/components/app/appKontext'
 import { Namnbrickor } from '@/components/app/Namnbricka'
 import { TurBild } from '@/components/app/TurBild'
 import { glomTurlistan } from '@/components/app/turlistaMinne'
@@ -10,6 +11,7 @@ import { TurUppgifter } from '@/components/tur/TurUppgifter'
 import { Button } from '@/components/ui/button'
 import { ROLLNAMN, arAgare, kanAndra } from '@/lib/roller'
 import { supabase } from '@/lib/supabase'
+import { useProfilbilder } from '@/hooks/useProfilbilder'
 import { deltagareText } from '@/lib/turlista'
 
 /** Turens översikt: bilden, gruppen, turens uppgifter och deltagarna med inbjudan. */
@@ -17,7 +19,9 @@ export function TurOversikt() {
   const navigate = useNavigate()
   const { tur, deltagare, minRoll, mittUserId, setTur, uppdateraDeltagare } = useTur()
   const [raderfel, setRaderfel] = useState(false)
-  const personer = deltagare.filter((d) => d.typ === 'person').map((d) => d.namn)
+  const { bildUppdaterad } = useApp()
+  const bilder = useProfilbilder(deltagare.map((d) => d.user_id), bildUppdaterad)
+  const personer = deltagare.filter((d) => d.typ === 'person').map((d) => ({ namn: d.namn, bild: d.user_id ? bilder[d.user_id] : null }))
 
   async function radera() {
     if (!supabase) return
@@ -45,7 +49,7 @@ export function TurOversikt() {
             href="#deltagare"
             className="inline-flex min-h-11 items-center gap-3 rounded-md font-medium text-primary underline underline-offset-4 hover:text-primary-hover focus-visible:outline-2 focus-visible:outline-ring"
           >
-            <Namnbrickor namn={personer} />
+            <Namnbrickor personer={personer} />
             Gruppen · {deltagareText(deltagare)}
           </a>
         )}
@@ -60,6 +64,7 @@ export function TurOversikt() {
           <Deltagarlista
             tur={tur}
             deltagare={deltagare}
+            bilder={bilder}
             minRoll={minRoll}
             mittUserId={mittUserId}
             onAndrad={uppdateraDeltagare}
