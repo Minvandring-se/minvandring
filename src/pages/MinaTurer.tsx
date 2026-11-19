@@ -11,7 +11,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { supabase } from '@/lib/supabase'
-import { delaUppTurer, flerTurer, lage, lokaltDatum } from '@/lib/turlista'
+import { delaUppTurer, flerTurer, halsning, lokaltDatum } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
 
 export function MinaTurer() {
@@ -47,16 +47,7 @@ export function MinaTurer() {
 
   const idag = lokaltDatum()
   const { nasta, kommande, tidigare } = delaUppTurer(turer ?? [], idag)
-  const hej = mittNamn ? `Hej ${mittNamn}.` : 'Hej.'
-  const halsning = turer === null || laddfel
-    ? hej
-    : turer.length === 0
-    ? `${hej} Här samlar du vandringarna du planerar.`
-    : nasta && lage(nasta, idag) === 'pagar'
-      ? `${hej} Du är ute på tur just nu.`
-      : nasta
-        ? `${hej} Här är din nästa vandring.`
-        : `${hej} Dags att planera nästa vandring?`
+  const halsningstext = halsning(mittNamn, turer === null || laddfel ? 'laddar' : turer.length === 0 ? 'inga-turer' : nasta ? 'nasta-visas' : 'bara-tidigare')
 
   // På dator finns Ny tur i sidomenyn, så knappen i sidhuvudet visas bara i mobil.
   const nyTurKnapp = !formularOppet && (
@@ -72,7 +63,7 @@ export function MinaTurer() {
 
   return (
     <div className="space-y-8">
-      <SidRubrik rubrik="Mina turer" text={halsning} knappar={turer?.length ? nyTurKnapp : null} />
+      <SidRubrik rubrik="Mina turer" text={halsningstext ?? undefined} knappar={turer?.length ? nyTurKnapp : null} />
 
       {besked && (
         <p role="status" className="rounded-md bg-primary-soft px-4 py-3 text-sm font-medium text-primary">

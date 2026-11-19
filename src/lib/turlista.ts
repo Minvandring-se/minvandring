@@ -179,3 +179,17 @@ export function nastaEtikett(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'daga
   if (text.startsWith('Pågår nu')) return text.replace(', ', ' · ')
   return `Nästa vandring · ${text[0].toLowerCase()}${text.slice(1)}`
 }
+
+/**
+ * Hälsningen under rubriken Mina turer. När kortet för nästa vandring visas räcker "Hej Oscar!",
+ * eftersom kortets etikett redan säger vad det är. Utan namn visas då ingen hälsning alls.
+ * I övriga lägen säger hälsningen vad sidan är till för.
+ */
+export function halsning(namn: string, lage: 'laddar' | 'inga-turer' | 'nasta-visas' | 'bara-tidigare'): string | null {
+  const tilltal = namn.trim()
+  if (lage === 'nasta-visas') return tilltal ? `Hej ${tilltal}!` : null
+  const hej = tilltal ? `Hej ${tilltal}.` : 'Hej.'
+  if (lage === 'inga-turer') return `${hej} Här samlar du vandringarna du planerar.`
+  if (lage === 'bara-tidigare') return `${hej} Dags att planera nästa vandring?`
+  return hej
+}
