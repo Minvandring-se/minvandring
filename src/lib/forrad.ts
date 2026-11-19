@@ -1,0 +1,370 @@
+// Mitt förråd: kategorierna, summeringarna och valideringen av en sak. Rena funktioner utan databas.
+import {
+  Backpack,
+  BedDouble,
+  BriefcaseMedical,
+  Compass,
+  CookingPot,
+  Droplets,
+  Flashlight,
+  Footprints,
+  Package,
+  Shirt,
+  SprayCan,
+  Tent,
+  Wrench,
+  type LucideIcon,
+} from 'lucide-react'
+import type { Forradssak } from './typer'
+import type { Typ } from './vikt'
+
+export interface Underkategori {
+  /** Det som sparas i databasen. Unik bland alla underkategorier, så den hör till exakt en huvudkategori. */
+  nyckel: string
+  etikett: string
+  /** Bara när underkategorin har en annan förvald typ än sin huvudkategori. */
+  typ?: Typ
+}
+
+export interface Kategori {
+  /** Det som sparas i databasen. Samma nycklar finns i tabellerna kategorier och underkategorier. */
+  nyckel: string
+  etikett: string
+  ikon: LucideIcon
+  /** Typen en ny sak i kategorin får, tills man väljer en annan. */
+  typ: Typ
+  under: readonly Underkategori[]
+}
+
+/** Huvudkategorierna med sina underkategorier, i den ordning de visas. */
+export const KATEGORIER = [
+  {
+    nyckel: 'packning',
+    etikett: 'Ryggsäck och packning',
+    ikon: Backpack,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'ryggsack', etikett: 'Ryggsäck' },
+      { nyckel: 'dagsryggsack', etikett: 'Dagsryggsäck' },
+      { nyckel: 'packpasar', etikett: 'Packpåsar och organisering' },
+      { nyckel: 'regnskydd', etikett: 'Regnskydd och innersäck' },
+      { nyckel: 'ryggsackstillbehor', etikett: 'Tillbehör' },
+    ],
+  },
+  {
+    nyckel: 'talt',
+    etikett: 'Tält och vindskydd',
+    ikon: Tent,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'talt', etikett: 'Tält' },
+      { nyckel: 'tarp', etikett: 'Tarp' },
+      { nyckel: 'vindsack', etikett: 'Vindsäck och bivacksäck' },
+      { nyckel: 'hangmatta', etikett: 'Hängmatta' },
+      { nyckel: 'talttillbehor', etikett: 'Tältpinnar, stänger och tillbehör' },
+    ],
+  },
+  {
+    nyckel: 'sova',
+    etikett: 'Sova',
+    ikon: BedDouble,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'sovsack', etikett: 'Sovsäck' },
+      { nyckel: 'quilt', etikett: 'Quilt' },
+      { nyckel: 'liggunderlag', etikett: 'Liggunderlag' },
+      { nyckel: 'kudde', etikett: 'Kudde' },
+      { nyckel: 'lakan', etikett: 'Lakan (liner)' },
+    ],
+  },
+  {
+    nyckel: 'kok',
+    etikett: 'Kök',
+    ikon: CookingPot,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'brannare', etikett: 'Kök och brännare' },
+      { nyckel: 'bransle', etikett: 'Bränsle', typ: 'forbrukas' },
+      { nyckel: 'kastrull', etikett: 'Kastrull och stekpanna' },
+      { nyckel: 'kasa', etikett: 'Kåsa och mugg' },
+      { nyckel: 'bestick', etikett: 'Bestick' },
+      { nyckel: 'kaffe', etikett: 'Kaffe och te' },
+      { nyckel: 'disk', etikett: 'Disk' },
+    ],
+  },
+  {
+    nyckel: 'vatten',
+    etikett: 'Vatten',
+    ikon: Droplets,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'flaska', etikett: 'Flaska' },
+      { nyckel: 'dricksystem', etikett: 'Vattensäck och dricksystem' },
+      { nyckel: 'filter', etikett: 'Filter' },
+      { nyckel: 'rening', etikett: 'Reningstabletter' },
+      { nyckel: 'vattendunk', etikett: 'Vattendunk och behållare' },
+    ],
+  },
+  {
+    nyckel: 'klader',
+    etikett: 'Kläder',
+    ikon: Shirt,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'understall', etikett: 'Underställ' },
+      { nyckel: 'mellanlager', etikett: 'Mellanlager och fleece' },
+      { nyckel: 'isolering', etikett: 'Dun- och syntetjacka' },
+      { nyckel: 'vindklader', etikett: 'Vindkläder' },
+      { nyckel: 'regnklader', etikett: 'Regnkläder' },
+      { nyckel: 'byxor', etikett: 'Byxor och shorts' },
+      { nyckel: 'trojor', etikett: 'Tröjor och t-shirts' },
+      { nyckel: 'underklader', etikett: 'Underkläder' },
+      { nyckel: 'strumpor', etikett: 'Strumpor' },
+      { nyckel: 'huvudbonad', etikett: 'Mössa och keps' },
+      { nyckel: 'handskar', etikett: 'Handskar och vantar' },
+      { nyckel: 'myggklader', etikett: 'Myggnät och myggkläder' },
+    ],
+  },
+  {
+    nyckel: 'skor',
+    etikett: 'Skor',
+    ikon: Footprints,
+    typ: 'kropp',
+    under: [
+      { nyckel: 'kangor', etikett: 'Kängor och vandringsskor' },
+      { nyckel: 'lagerskor', etikett: 'Lägerskor och sandaler', typ: 'ryggsack' },
+      { nyckel: 'damasker', etikett: 'Damasker' },
+      { nyckel: 'broddar', etikett: 'Broddar och snöskor', typ: 'ryggsack' },
+    ],
+  },
+  {
+    nyckel: 'prylar',
+    etikett: 'Prylar och elektronik',
+    ikon: Flashlight,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'pannlampa', etikett: 'Pannlampa och belysning' },
+      { nyckel: 'powerbank', etikett: 'Powerbank och batterier' },
+      { nyckel: 'laddning', etikett: 'Laddare och kablar' },
+      { nyckel: 'solpanel', etikett: 'Solpanel' },
+      { nyckel: 'kommunikation', etikett: 'GPS, nödsändare och satellit' },
+      { nyckel: 'klocka', etikett: 'Klocka' },
+      { nyckel: 'ljud', etikett: 'Hörlurar och högtalare' },
+      { nyckel: 'kamera', etikett: 'Kamera och tillbehör' },
+    ],
+  },
+  {
+    nyckel: 'sakerhet',
+    etikett: 'Säkerhet och navigation',
+    ikon: Compass,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'karta', etikett: 'Karta och kompass' },
+      { nyckel: 'eld', etikett: 'Eld och tändare' },
+      { nyckel: 'nodutrustning', etikett: 'Nödutrustning (visselpipa, räddningsfilt)' },
+    ],
+  },
+  {
+    nyckel: 'verktyg',
+    etikett: 'Verktyg',
+    ikon: Wrench,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'kniv', etikett: 'Kniv och multiverktyg' },
+      { nyckel: 'stavar', etikett: 'Vandringsstavar' },
+      { nyckel: 'lagning', etikett: 'Lagning' },
+      { nyckel: 'yxa', etikett: 'Yxa och såg' },
+    ],
+  },
+  {
+    nyckel: 'medicin',
+    etikett: 'Första hjälpen och medicin',
+    ikon: BriefcaseMedical,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'forband', etikett: 'Förbandslåda och förband' },
+      { nyckel: 'skavsar', etikett: 'Skavsår' },
+      { nyckel: 'mediciner', etikett: 'Mediciner' },
+      { nyckel: 'salvor', etikett: 'Salvor och krämer' },
+    ],
+  },
+  {
+    nyckel: 'hygien',
+    etikett: 'Hygien',
+    ikon: SprayCan,
+    typ: 'ryggsack',
+    under: [
+      { nyckel: 'toalett', etikett: 'Toalett och tandvård' },
+      { nyckel: 'tvatt', etikett: 'Tvål och tvätt' },
+      { nyckel: 'personlig', etikett: 'Personlig vård' },
+      { nyckel: 'sol_mygg', etikett: 'Solkräm och myggmedel' },
+    ],
+  },
+  { nyckel: 'ovrigt', etikett: 'Övrigt', ikon: Package, typ: 'ryggsack', under: [{ nyckel: 'ovrigt', etikett: 'Övrigt' }] },
+] as const satisfies readonly Kategori[]
+
+export type KategoriNyckel = (typeof KATEGORIER)[number]['nyckel']
+export type UnderkategoriNyckel = (typeof KATEGORIER)[number]['under'][number]['nyckel']
+
+/** Samma lista utan de exakta nyckeltyperna, för uppslag med vanlig text. */
+const ALLA: readonly Kategori[] = KATEGORIER
+
+export const TYPNAMN: Record<Typ, string> = {
+  ryggsack: 'I ryggsäcken',
+  kropp: 'På kroppen',
+  forbrukas: 'Förbrukas',
+}
+
+export function arKategori(varde: unknown): varde is KategoriNyckel {
+  return ALLA.some((k) => k.nyckel === varde)
+}
+
+/** Kategorin för en nyckel. En okänd nyckel räknas som Övrigt, så att saken ändå syns. */
+export function kategoriFor(nyckel: string): Kategori {
+  return ALLA.find((k) => k.nyckel === nyckel) ?? ALLA[ALLA.length - 1]
+}
+
+/** Underkategorin i en huvudkategori, eller null om den inte finns där. */
+export function underkategoriFor(kategori: string, underkategori: string | null): Underkategori | null {
+  if (!underkategori) return null
+  return ALLA.find((k) => k.nyckel === kategori)?.under.find((u) => u.nyckel === underkategori) ?? null
+}
+
+/** Huvudkategorin som en underkategori hör till, eller null om underkategorin inte finns. */
+export function kategoriForUnder(underkategori: string): Kategori | null {
+  return ALLA.find((k) => k.under.some((u) => u.nyckel === underkategori)) ?? null
+}
+
+/** Typen en ny sak får: underkategorins förval om det finns ett, annars huvudkategorins. */
+export function forvaldTyp(kategori: string, underkategori: string | null = null): Typ {
+  return underkategoriFor(kategori, underkategori)?.typ ?? kategoriFor(kategori).typ
+}
+
+/** Vikt i gram, eller i kilo från 1000 g: "850 g", "1 kg", "1,25 kg". */
+export function formateraVikt(g: number): string {
+  if (g < 1000) return `${Math.round(g)} g`
+  const kg = (g / 1000).toFixed(2).replace(/\.?0+$/, '')
+  return `${kg.replace('.', ',')} kg`
+}
+
+export interface Kategorigrupp {
+  kategori: Kategori
+  /** Sakerna i kategorin, i bokstavsordning. */
+  saker: Forradssak[]
+  /** Antal saker, där tre flaskor räknas som tre. */
+  antal: number
+  viktG: number
+  /** Antal rader som saknar vikt och därför inte är med i summan. */
+  utanVikt: number
+}
+
+export interface Forradssumma {
+  /** Huvudkategorier som har saker, i KATEGORIER-ordning. */
+  grupper: Kategorigrupp[]
+  antal: number
+  viktG: number
+  utanVikt: number
+}
+
+/** Grupperar förrådet per huvudkategori och summerar antal och vikt. Saker utan vikt räknas som 0 g. */
+export function summeraForrad(saker: Forradssak[]): Forradssumma {
+  const grupper: Kategorigrupp[] = []
+  for (const kategori of ALLA) {
+    const egna = saker
+      .filter((s) => kategoriFor(s.kategori).nyckel === kategori.nyckel)
+      .sort((a, b) => a.namn.localeCompare(b.namn, 'sv'))
+    if (egna.length === 0) continue
+    grupper.push({
+      kategori,
+      saker: egna,
+      antal: egna.reduce((s, x) => s + x.antal, 0),
+      viktG: egna.reduce((s, x) => s + x.antal * (x.vikt_g ?? 0), 0),
+      utanVikt: egna.filter((x) => x.vikt_g === null).length,
+    })
+  }
+  return {
+    grupper,
+    antal: grupper.reduce((s, g) => s + g.antal, 0),
+    viktG: grupper.reduce((s, g) => s + g.viktG, 0),
+    utanVikt: grupper.reduce((s, g) => s + g.utanVikt, 0),
+  }
+}
+
+/** Det som står i formuläret, som text. Tom kategori betyder att ingen är vald än, tom underkategori att den hoppas över. */
+export interface SakFalt {
+  namn: string
+  kategori: string
+  underkategori: string
+  typ: string
+  antal: string
+  vikt: string
+  notering: string
+}
+
+/** Det som sparas i forradssaker. */
+export type SakVarden = Pick<Forradssak, 'namn' | 'kategori' | 'underkategori' | 'typ' | 'antal' | 'vikt_g' | 'notering'>
+
+export const MAX_NAMN = 80
+export const MAX_NOTERING = 300
+export const MAX_ANTAL = 99
+export const MAX_VIKT_G = 100_000
+
+const HELTAL = /^\d+$/
+
+/** Kontrollerar formuläret och gör om det till det som sparas. Underkategorin och vikten får vara tomma. */
+export function tolkaSak(falt: SakFalt): { ok: true; varden: SakVarden } | { ok: false; fel: string } {
+  const namn = falt.namn.trim()
+  if (!namn) return { ok: false, fel: 'Skriv vad saken heter.' }
+  if (namn.length > MAX_NAMN) return { ok: false, fel: `Namnet får vara högst ${MAX_NAMN} tecken.` }
+  if (!arKategori(falt.kategori)) return { ok: false, fel: 'Välj en kategori.' }
+  const underkategori = falt.underkategori || null
+  if (underkategori && !underkategoriFor(falt.kategori, underkategori)) return { ok: false, fel: 'Underkategorin hör inte till den valda kategorin.' }
+  if (!Object.hasOwn(TYPNAMN, falt.typ)) return { ok: false, fel: 'Välj var saken bärs.' }
+
+  const antalText = falt.antal.trim()
+  const antal = HELTAL.test(antalText) ? Number(antalText) : NaN
+  if (!(antal >= 1 && antal <= MAX_ANTAL)) return { ok: false, fel: `Antal ska vara ett heltal mellan 1 och ${MAX_ANTAL}.` }
+
+  const viktText = falt.vikt.trim()
+  let vikt_g: number | null = null
+  if (viktText) {
+    vikt_g = HELTAL.test(viktText) ? Number(viktText) : NaN
+    if (!(vikt_g <= MAX_VIKT_G)) return { ok: false, fel: 'Skriv vikten i hela gram, till exempel 1250.' }
+  }
+
+  const notering = falt.notering.trim()
+  if (notering.length > MAX_NOTERING) return { ok: false, fel: `Anteckningen får vara högst ${MAX_NOTERING} tecken.` }
+
+  return {
+    ok: true,
+    varden: { namn, kategori: falt.kategori, underkategori, typ: falt.typ as Typ, antal, vikt_g, notering: notering || null },
+  }
+}
+
+/** Formulärets startvärden: en befintlig sak, eller en ny med eventuellt förvald kategori och underkategori. */
+export function faltFran(sak?: Forradssak, forval?: { kategori: KategoriNyckel; underkategori?: UnderkategoriNyckel }): SakFalt {
+  if (!sak) {
+    const kategori = forval?.kategori ?? ''
+    const underkategori = forval?.underkategori ?? ''
+    return { namn: '', kategori, underkategori, typ: forvaldTyp(kategori, underkategori), antal: '1', vikt: '', notering: '' }
+  }
+  return {
+    namn: sak.namn,
+    kategori: kategoriFor(sak.kategori).nyckel,
+    underkategori: underkategoriFor(sak.kategori, sak.underkategori)?.nyckel ?? '',
+    typ: sak.typ,
+    antal: String(sak.antal),
+    vikt: sak.vikt_g === null ? '' : String(sak.vikt_g),
+    notering: sak.notering ?? '',
+  }
+}
+
+/** Formuläret efter att en huvudkategori har valts: underkategorin nollställs och typen följer kategorin. */
+export function medKategori(falt: SakFalt, kategori: string): SakFalt {
+  return { ...falt, kategori, underkategori: '', typ: forvaldTyp(kategori) }
+}
+
+/** Formuläret efter att en underkategori har valts eller valts bort (tom text). Typen följer valet. */
+export function medUnderkategori(falt: SakFalt, underkategori: string): SakFalt {
+  return { ...falt, underkategori, typ: forvaldTyp(falt.kategori, underkategori) }
+}

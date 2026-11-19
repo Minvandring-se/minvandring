@@ -6,6 +6,7 @@ import path from 'node:path'
 import { PGlite, type Transaction } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { beforeAll, describe, expect, it } from 'vitest'
+import { KATEGORIER } from '../src/lib/forrad'
 
 const A = '00000000-0000-0000-0000-00000000000a'
 const B = '00000000-0000-0000-0000-00000000000b'
@@ -590,5 +591,224 @@ describe('ta över en person utan konto', () => {
     for (let i = 0; i < 10; i++) expect(await inbjudan(F, `gissning-${i}`)).toBeNull()
     await forvantaFel(som(F, (tx) => tx.query('select public.inbjudan($1)', [riktig])))
     await forvantaFel(som(F, (tx) => tx.query('select public.ga_med($1)', [riktig])))
+  })
+})
+
+describe('produktkatalogen', () => {
+  let produkt: string
+
+  beforeAll(async () => {
+    // Katalogen fylls via migreringar, som körs som databasens ägare.
+    const r = await db.query<{ id: string }>(
+      `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, kontrollerad, egenskaper)
+       values ('Testmärke', 'Testtält 2', 'talt', 'talt', 2400, 'https://exempel.se/testtalt-2', '2026-11-19', '{"personer": 2}')
+       returning id`,
+    )
+    produkt = r.rows[0].id
+  })
+
+  it('inloggade kan läsa katalogen', async () => {
+    const r = await som(A, (tx) => tx.query<{ modell: string }>('select modell from public.produkter where id = $1', [produkt]))
+    expect(r.rows).toEqual([{ modell: 'Testtält 2' }])
+  })
+
+  it('ingen användare kan lägga till, ändra eller ta bort produkter', async () => {
+    await forvantaFel(
+      som(A, (tx) =>
+        tx.query(
+          `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, kontrollerad)
+           values ('Eget', 'Påhitt', 'talt', 'talt', 1, 'https://exempel.se', '2026-11-19')`,
+        ),
+      ),
+    )
+    await forvantaFel(som(A, (tx) => tx.query('update public.produkter set packvikt_g = 1 where id = $1', [produkt])))
+    await forvantaFel(som(A, (tx) => tx.query('delete from public.produkter where id = $1', [produkt])))
+    const r = await db.query<{ packvikt_g: number }>('select packvikt_g from public.produkter where id = $1', [produkt])
+    expect(r.rows).toEqual([{ packvikt_g: 2400 }])
+  })
+
+  it('går inte att läsa eller skriva utan inloggning', async () => {
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.produkter')))
+    await forvantaFel(somAnon((tx) => tx.query('delete from public.produkter')))
+  })
+
+  it('samma märke, modell och version går inte att lägga in två gånger', async () => {
+    await forvantaFel(
+      db.query(
+        `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, kontrollerad)
+         values ('TESTMÄRKE', 'testtält 2', 'talt', 'talt', 2500, 'https://exempel.se/igen', '2026-11-19')`,
+      ),
+    )
+  })
+
+  it('kräver en vikt, en källa och egenskaper som ett objekt', async () => {
+    const lagg = (kolumner: string, varden: string) =>
+      db.query(
+        `insert into public.produkter (marke, modell, kontrollerad, kategori, underkategori, ${kolumner})
+         values ('M', '${crypto.randomUUID()}', '2026-11-19', 'talt', 'talt', ${varden})`,
+      )
+    await lagg('packvikt_g, kalla', `100, 'https://exempel.se'`)
+    await forvantaFel(lagg('packvikt_g, kalla', `0, 'https://exempel.se'`))
+    await forvantaFel(lagg('packvikt_g, kalla', `100, 'exempel.se'`))
+    await forvantaFel(lagg('packvikt_g', `100`))
+    await forvantaFel(lagg('packvikt_g, kalla, egenskaper', `100, 'https://exempel.se', '[1]'`))
+  })
+
+  it('kräver både kategori och underkategori, och att de hör ihop', async () => {
+    const lagg = (kategori: string | null, underkategori: string | null) =>
+      db.query(
+        `insert into public.produkter (marke, modell, kontrollerad, packvikt_g, kalla, kategori, underkategori)
+         values ('M', $1, '2026-11-19', 100, 'https://exempel.se', $2, $3)`,
+        [crypto.randomUUID(), kategori, underkategori],
+      )
+    await lagg('sova', 'sovsack')
+    await forvantaFel(lagg('talt', 'sovsack'))
+    await forvantaFel(lagg('talt', null))
+    await forvantaFel(lagg(null, 'talt'))
+    await forvantaFel(lagg('Tält', 'talt'))
+    await forvantaFel(lagg('talt', 'finns-inte'))
+  })
+})
+
+describe('kategorierna i databasen', () => {
+  it('är samma som i src/lib/forrad.ts, med varje underkategori under rätt huvudkategori', async () => {
+    const k = await db.query<{ nyckel: string }>('select nyckel from public.kategorier')
+    expect(k.rows.map((r) => r.nyckel).sort()).toEqual(KATEGORIER.map((x) => x.nyckel).sort())
+    const u = await db.query<{ par: string }>(`select kategori || '/' || nyckel as par from public.underkategorier`)
+    expect(u.rows.map((r) => r.par).sort()).toEqual(KATEGORIER.flatMap((x) => x.under.map((y) => `${x.nyckel}/${y.nyckel}`)).sort())
+  })
+
+  it('en underkategori kan inte läggas under en andra huvudkategori', async () => {
+    await forvantaFel(db.query(`insert into public.underkategorier (kategori, nyckel) values ('sova', 'tarp')`))
+  })
+
+  it('går inte att läsa eller ändra via API:t, varken inloggad eller utan inloggning', async () => {
+    for (const tabell of ['kategorier', 'underkategorier']) {
+      await forvantaFel(som(A, (tx) => tx.query(`select nyckel from public.${tabell}`)))
+      await forvantaFel(som(A, (tx) => tx.query(`delete from public.${tabell}`)))
+      await forvantaFel(somAnon((tx) => tx.query(`select nyckel from public.${tabell}`)))
+    }
+    await forvantaFel(som(A, (tx) => tx.query(`insert into public.kategorier (nyckel) values ('egen')`)))
+  })
+})
+
+describe('Mitt förråd', () => {
+  // En egen användare som kan tas bort utan att röra de andra testerna.
+  const H = '00000000-0000-0000-0000-000000000011'
+  let tur: string
+  let annasSak: string
+
+  const annasRad = () => db.query<{ namn: string; user_id: string }>('select namn, user_id from public.forradssaker where id = $1', [annasSak])
+
+  beforeAll(async () => {
+    await db.query(`insert into auth.users (id, email) values ('${H}', 'hanna@exempel.se')`)
+    // Anna och Bertil delar en tur. Det ska inte ge Bertil någon åtkomst till Annas förråd.
+    tur = await skapaTur(A, 'Tur med förråd')
+    const kod = await kodFor(tur)
+    await som(B, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const r = await som(A, (tx) =>
+      tx.query<{ id: string }>(`insert into public.forradssaker (namn, kategori, underkategori, vikt_g) values ('Annas tält', 'talt', 'talt', 2400) returning id`),
+    )
+    annasSak = r.rows[0].id
+  })
+
+  it('saken blir ens egen utan att user_id anges, och man ser den själv', async () => {
+    expect((await annasRad()).rows).toEqual([{ namn: 'Annas tält', user_id: A }])
+    const r = await som(A, (tx) => tx.query<{ id: string }>('select id from public.forradssaker'))
+    expect(r.rows.map((x) => x.id)).toContain(annasSak)
+  })
+
+  it('ägaren kan ändra och ta bort sina saker', async () => {
+    const r = await som(A, (tx) => tx.query<{ id: string }>(`insert into public.forradssaker (namn, kategori) values ('Tillfällig', 'ovrigt') returning id`))
+    const id = r.rows[0].id
+    const andrad = await som(A, (tx) => tx.query('update public.forradssaker set antal = 2, vikt_g = 150 where id = $1', [id]))
+    expect(andrad.affectedRows).toBe(1)
+    const borta = await som(A, (tx) => tx.query('delete from public.forradssaker where id = $1', [id]))
+    expect(borta.affectedRows).toBe(1)
+  })
+
+  it('någon annan ser inte sakerna, inte ens i samma tur', async () => {
+    const delar = await som(B, (tx) => tx.query('select id from public.turer where id = $1', [tur]))
+    expect(delar.rows).toHaveLength(1)
+    for (const vem of [B, C]) {
+      const r = await som(vem, (tx) => tx.query('select id from public.forradssaker'))
+      expect(r.rows).toHaveLength(0)
+    }
+  })
+
+  it('någon annan kan inte ändra eller ta bort sakerna', async () => {
+    const andrad = await som(B, (tx) => tx.query(`update public.forradssaker set namn = 'Bertils nu' where id = $1`, [annasSak]))
+    expect(andrad.affectedRows).toBe(0)
+    const borta = await som(B, (tx) => tx.query('delete from public.forradssaker where id = $1', [annasSak]))
+    expect(borta.affectedRows).toBe(0)
+    expect((await annasRad()).rows).toEqual([{ namn: 'Annas tält', user_id: A }])
+  })
+
+  it('man kan inte lägga en sak i någon annans förråd eller ge bort sin egen', async () => {
+    await forvantaFel(som(B, (tx) => tx.query(`insert into public.forradssaker (namn, kategori, user_id) values ('Smugglad', 'ovrigt', '${A}')`)))
+    await forvantaFel(som(A, (tx) => tx.query(`update public.forradssaker set user_id = '${B}' where id = $1`, [annasSak])))
+    expect((await annasRad()).rows[0].user_id).toBe(A)
+  })
+
+  it('går inte att nå utan inloggning', async () => {
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.forradssaker')))
+    await forvantaFel(somAnon((tx) => tx.query(`insert into public.forradssaker (namn, kategori, user_id) values ('Anonym', 'ovrigt', '${A}')`)))
+  })
+
+  it('tar emot alla kategorier och underkategorier i src/lib/forrad.ts, med eller utan underkategori', async () => {
+    const par = KATEGORIER.flatMap((k) => k.under.map((u) => [k.nyckel, u.nyckel] as const))
+    await som(H, async (tx) => {
+      for (const k of KATEGORIER) await tx.query('insert into public.forradssaker (namn, kategori) values ($1, $2)', [k.etikett, k.nyckel])
+      for (const [k, u] of par) await tx.query('insert into public.forradssaker (namn, kategori, underkategori) values ($1, $2, $3)', [u, k, u])
+    })
+    const r = await som(H, (tx) => tx.query('select id from public.forradssaker'))
+    expect(r.rows).toHaveLength(KATEGORIER.length + par.length)
+  })
+
+  it('kräver en känd kategori, och en underkategori som hör till den', async () => {
+    const lagg = (kolumner: string, varden: string) =>
+      som(A, (tx) => tx.query(`insert into public.forradssaker (namn, ${kolumner}) values ('Fel', ${varden})`))
+    await forvantaFel(som(A, (tx) => tx.query(`insert into public.forradssaker (namn) values ('Utan kategori')`)))
+    await forvantaFel(lagg('kategori', `'Tält'`))
+    await forvantaFel(lagg('kategori, underkategori', `'talt', 'sovsack'`))
+    await forvantaFel(lagg('kategori, underkategori', `'talt', 'finns-inte'`))
+    // Det går inte heller att flytta en sak till en kategori som underkategorin inte hör till.
+    await forvantaFel(som(A, (tx) => tx.query(`update public.forradssaker set kategori = 'sova' where id = $1`, [annasSak])))
+    const flyttad = await som(A, (tx) =>
+      tx.query(`update public.forradssaker set kategori = 'sova', underkategori = 'sovsack' where id = $1`, [annasSak]),
+    )
+    expect(flyttad.affectedRows).toBe(1)
+    await som(A, (tx) => tx.query(`update public.forradssaker set kategori = 'talt', underkategori = 'talt' where id = $1`, [annasSak]))
+  })
+
+  it('kräver ett namn, minst en i antal, en vikt som inte är negativ och en känd typ', async () => {
+    const lagg = (kolumner: string, varden: string) =>
+      som(A, (tx) => tx.query(`insert into public.forradssaker (kategori, ${kolumner}) values ('ovrigt', ${varden})`))
+    await forvantaFel(lagg('namn', `'  '`))
+    await forvantaFel(lagg('namn, antal', `'Noll', 0`))
+    await forvantaFel(lagg('namn, vikt_g', `'Minus', -1`))
+    await forvantaFel(lagg('namn, typ', `'Fel typ', 'slapas'`))
+  })
+
+  it('en sak från katalogen finns kvar när produkten tas bort', async () => {
+    const p = await db.query<{ id: string }>(
+      `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, kontrollerad)
+       values ('Testmärke', 'Utgående sovsäck', 'sova', 'sovsack', 900, 'https://exempel.se/sovsack', '2026-11-19') returning id`,
+    )
+    const s = await som(A, (tx) =>
+      tx.query<{ id: string }>(
+        `insert into public.forradssaker (produkt_id, namn, kategori, vikt_g) values ($1, 'Testmärke Utgående sovsäck', 'sova', 900) returning id`,
+        [p.rows[0].id],
+      ),
+    )
+    await db.query('delete from public.produkter where id = $1', [p.rows[0].id])
+    const r = await db.query<{ produkt_id: string | null; vikt_g: number }>('select produkt_id, vikt_g from public.forradssaker where id = $1', [s.rows[0].id])
+    expect(r.rows).toEqual([{ produkt_id: null, vikt_g: 900 }])
+  })
+
+  it('förrådet försvinner när kontot tas bort', async () => {
+    await db.query('delete from auth.users where id = $1', [H])
+    const r = await db.query('select 1 from public.forradssaker where user_id = $1', [H])
+    expect(r.rows).toHaveLength(0)
   })
 })
