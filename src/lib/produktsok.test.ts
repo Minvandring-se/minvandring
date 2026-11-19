@@ -45,7 +45,7 @@ describe('sokfilter', () => {
 
   it('tar med hela huvudkategorin när ordet finns i dess namn', () => {
     expect(sokfilter('tält')).toContain('underkategori.in.(talt,tarp,vindsack,hangmatta,talttillbehor)')
-    expect(sokfilter('sova')).toContain('underkategori.in.(sovsack,quilt,liggunderlag,kudde,lakan)')
+    expect(sokfilter('sova')).toContain('underkategori.in.(sovsack,quilt,liggunderlag,kudde,lakan,sittunderlag,pump)')
   })
 
   it('gissar inte kategori på ett eller två tecken', () => {
