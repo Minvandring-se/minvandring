@@ -385,3 +385,64 @@ describe('liggunderlag i importen', () => {
     expect(godkanda(r)).toHaveLength(1)
   })
 })
+
+describe('ryggsäckar i importen', () => {
+  const RYGGSACK: Record<string, string> = {
+    marke: 'Testmärke',
+    modell: 'Fjällsäck 55',
+    version: 'M/L',
+    underkategori: 'ryggsack',
+    packvikt_g: '2100',
+    volym_l: '55',
+    passform: 'Unisex',
+    torso_min_cm: '42',
+    torso_max_cm: '58',
+    justerbar_rygg: 'ja',
+    ram: 'intern',
+    max_last_kg: '20',
+    hoftbalte: 'fast',
+    atkomst: 'topp_och_front',
+    regnskydd_ingar: 'nej',
+    material_beskrivning: 'Vinylon F',
+    kalla: 'https://exempel.se/fjallsack-55',
+    kommentar: 'Bara för oss.',
+  }
+
+  it('lägger ryggsäcken under packning, utan kommentaren', () => {
+    const r = tolkaRad(2, RYGGSACK)
+    expect(r.fel).toEqual([])
+    expect(r.varningar).toEqual([])
+    expect(r.produkt).toMatchObject({
+      kategori: 'packning',
+      underkategori: 'ryggsack',
+      packvikt_g: 2100,
+      egenskaper: { volym_l: 55, passform: 'unisex', torso_min_cm: 42, torso_max_cm: 58, justerbar_rygg: true, ram: 'intern', max_last_kg: 20, regnskydd_ingar: false },
+    })
+    expect(JSON.stringify(r.produkt)).not.toContain('Bara för oss')
+  })
+
+  it('en dagsryggsäck hamnar också under packning', () => {
+    expect(tolkaRad(2, { ...RYGGSACK, underkategori: 'dagsryggsack', volym_l: '22,5' }).produkt).toMatchObject({
+      kategori: 'packning',
+      underkategori: 'dagsryggsack',
+      egenskaper: { volym_l: 22.5 },
+    })
+  })
+
+  it('stoppar raden när den minsta rygglängden är större än den största', () => {
+    expect(tolkaRad(2, { ...RYGGSACK, torso_min_cm: '60', torso_max_cm: '50' })).toMatchObject({ produkt: null, fel: ['torso_min_cm: får inte vara större än torso_max_cm'] })
+  })
+
+  it('varnar men importerar en ryggsäck utan passform och rygglängd', () => {
+    const r = tolkaRad(2, { ...RYGGSACK, passform: '', torso_min_cm: '', torso_max_cm: '' })
+    expect(r.produkt).not.toBeNull()
+    expect(r.varningar.map((v) => v.split(':')[0])).toEqual(['passform', 'torso_min_cm', 'torso_max_cm'])
+  })
+
+  it('läser en fil med ryggsäckarnas kolumner', () => {
+    const kolumner = Object.keys(RYGGSACK)
+    const r = importera([kolumner.join(';'), kolumner.map((k) => RYGGSACK[k]).join(';')].join('\n'))
+    expect(r.filfel).toEqual([])
+    expect(godkanda(r)).toHaveLength(1)
+  })
+})
