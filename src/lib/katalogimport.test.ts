@@ -266,3 +266,68 @@ describe('rapport', () => {
     expect(text).toContain('Summa: 2 av 3 rader importeras (1 granskade, 1 inte granskade). 1 stoppas av fel, 1 har varningar.')
   })
 })
+
+describe('sovsäckar i importen', () => {
+  const SOVSACK: Record<string, string> = {
+    marke: 'Testmärke',
+    modell: 'Fjällsäck',
+    version: '185 cm',
+    underkategori: 'sovsack',
+    packvikt_g: '1050',
+    komfort_temp_c: '-3',
+    limit_temp_c: '-9',
+    extrem_temp_c: '-28',
+    temperaturstandard: 'ISO',
+    fyllning: 'Dun',
+    fillpower_cuin: '800',
+    fyllnadsvikt_g: '480',
+    form: 'mumie',
+    max_langd_cm: '185',
+    dragkedja: 'vanster',
+    material_beskrivning: 'Yttertyg i 20D nylon',
+    packmatt_cm: '30 x 17',
+    kalla: 'https://exempel.se/fjallsack',
+    kommentar: 'Bara för oss.',
+  }
+
+  it('lägger sovsäcken under sova, med minusgrader som tal och utan kommentaren', () => {
+    const r = tolkaRad(2, SOVSACK)
+    expect(r.fel).toEqual([])
+    expect(r.varningar).toEqual([])
+    expect(r.produkt).toMatchObject({
+      kategori: 'sova',
+      underkategori: 'sovsack',
+      packvikt_g: 1050,
+      egenskaper: { komfort_temp_c: -3, limit_temp_c: -9, extrem_temp_c: -28, temperaturstandard: 'iso', fyllning: 'dun', fillpower_cuin: 800, form: 'mumie', max_langd_cm: 185 },
+    })
+    expect(JSON.stringify(r.produkt)).not.toContain('Bara för oss')
+  })
+
+  it('en quilt hamnar också under sova', () => {
+    expect(tolkaRad(2, { ...SOVSACK, underkategori: 'quilt', form: 'quilt' }).produkt).toMatchObject({ kategori: 'sova', underkategori: 'quilt' })
+  })
+
+  it('stoppar raden när limit är högre än komfort eller extrem högre än limit', () => {
+    expect(tolkaRad(2, { ...SOVSACK, komfort_temp_c: '-9', limit_temp_c: '-3' })).toMatchObject({ produkt: null, fel: ['limit_temp_c: får inte vara högre än komfort_temp_c'] })
+    expect(tolkaRad(2, { ...SOVSACK, extrem_temp_c: '-5' })).toMatchObject({ produkt: null, fel: ['extrem_temp_c: får inte vara högre än limit_temp_c'] })
+  })
+
+  it('stoppar raden när fillpower står på en syntetsäck', () => {
+    expect(tolkaRad(2, { ...SOVSACK, fyllning: 'syntet' }).fel).toEqual(['fillpower_cuin: anges bara när fyllning är dun eller blandning'])
+    expect(tolkaRad(2, { ...SOVSACK, fyllning: 'blandning' }).fel).toEqual([])
+  })
+
+  it('varnar men importerar en säck utan temperaturer', () => {
+    const r = tolkaRad(2, { ...SOVSACK, komfort_temp_c: '', limit_temp_c: '', extrem_temp_c: '' })
+    expect(r.produkt).not.toBeNull()
+    expect(r.varningar.map((v) => v.split(':')[0])).toEqual(['komfort_temp_c', 'limit_temp_c'])
+  })
+
+  it('läser en fil med sovsäckarnas kolumner, utan tältens', () => {
+    const kolumner = Object.keys(SOVSACK)
+    const text = [kolumner.join(';'), kolumner.map((k) => SOVSACK[k]).join(';')].join('\n')
+    const r = importera(text)
+    expect(r.filfel).toEqual([])
+    expect(godkanda(r)).toHaveLength(1)
+  })
+})

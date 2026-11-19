@@ -343,4 +343,33 @@ describe('sakdetaljer', () => {
     })
     expect(rader(tarp).slice(-1)).toEqual(['Längd: 300 cm'])
   })
+
+  it('visar temperaturer och fyllning för en sovsäck ur katalogen', () => {
+    const sovsack = sak({
+      kategori: 'sova',
+      underkategori: 'sovsack',
+      vikt_g: 1050,
+      produkter: {
+        kontrollerad: null,
+        version: '185 cm',
+        underkategori: 'sovsack',
+        minvikt_g: null,
+        kalla: 'https://exempel.se/fjallsack',
+        egenskaper: { komfort_temp_c: -3, limit_temp_c: -9, extrem_temp_c: -28, temperaturstandard: 'ej_angiven', fyllning: 'dun', fillpower_cuin: 800, form: 'mumie', max_langd_cm: 185, dragkedja: 'vanster' },
+      },
+    })
+    expect(rader(sovsack)).toEqual([
+      'Kategori: Sova, Sovsäck',
+      'Version: 185 cm',
+      'Vikt per styck: 1,05 kg',
+      'Antal: 1',
+      'Räknas som: I ryggsäcken',
+      'Komforttemperatur: \u22123 °C (ej ISO-testad)',
+      'Limittemperatur: \u22129 °C (ej ISO-testad)',
+      'Fyllning: Dun',
+      'Fillpower: 800 cuin',
+      'Form: Mumie',
+      'Max längd: 185 cm',
+    ])
+  })
 })

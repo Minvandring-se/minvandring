@@ -32,8 +32,12 @@ try {
     const namn = process.argv[i + 1]
     if (!namn || !/^[a-z0-9_]+$/.test(namn)) throw new Error('Ange ett namn utan å, ä, ö och mellanslag, till exempel: --skriv katalog_talt')
     if (filfel) throw new Error('Rätta felen i filen först. Ingen migrering skrevs.')
-    const nu = new Date().toISOString().replace(/\D/g, '').slice(0, 14)
-    const mal = path.join(rot, 'supabase', 'migrations', `${nu}_${namn}.sql`)
+    // Tidsstämpeln måste vara senare än den senaste migreringen, annars vägrar db push köra filen.
+    const migreringar = path.join(rot, 'supabase', 'migrations')
+    const senaste = fs.readdirSync(migreringar).map((f) => f.slice(0, 14)).filter((t) => /^\d{14}$/.test(t)).sort().at(-1) ?? ''
+    const klockan = new Date().toISOString().replace(/\D/g, '').slice(0, 14)
+    const nu = klockan > senaste ? klockan : String(BigInt(senaste) + 1n)
+    const mal = path.join(migreringar, `${nu}_${namn}.sql`)
     fs.writeFileSync(mal, seedSql(produkter, filer.map((f) => `supabase/katalog/${f}`)))
     console.log(`Skrev ${path.relative(rot, mal)} med ${produkter.length} produkter.`)
   }

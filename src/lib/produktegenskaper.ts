@@ -2,11 +2,19 @@
 // De sparas i produkter.egenskaper (jsonb). Här står vilka som finns och hur de kontrolleras.
 import type { UnderkategoriNyckel } from './forrad'
 
+function saknas(varde: unknown): boolean {
+  return varde === undefined || varde === null || varde === ''
+}
+
 interface Grund {
   nyckel: string
   etikett: string
   /** Behövs för att kunna jämföra produkter. Saknas den varnar valideringen, men stoppar inte. */
   forJamforelse?: boolean
+  /** Sparas i katalogen men visas inte när en sak fälls ut i förrådet. */
+  dold?: boolean
+  /** Ett tillägg efter värdet när det visas, som beror på produktens övriga egenskaper. */
+  tillagg?: (egenskaper: Record<string, unknown>) => string | null
 }
 
 export type Egenskap = Grund &
@@ -58,11 +66,59 @@ const SKYDD: Egenskap[] = [
   { nyckel: 'vattenpelare_duk_mm', etikett: 'Vattenpelare duk', sort: 'heltal', min: 500, max: 30_000, enhet: 'mm' },
 ]
 
+/** Temperaturer som tillverkaren anger utan att ha testat enligt ISO 23537 går inte att jämföra rakt av. */
+function ejIsoTestad(egenskaper: Record<string, unknown>): string | null {
+  return egenskaper.temperaturstandard === 'ej_angiven' ? 'ej ISO-testad' : null
+}
+
+/**
+ * Sovsäckar och quilts. Fem egenskaper behövs för jämförelser. I förrådet visas temperaturerna,
+ * fyllningen, formen och längden. Resten sparas men är dolt.
+ */
+const SOVSACK: Egenskap[] = [
+  { nyckel: 'komfort_temp_c', etikett: 'Komforttemperatur', sort: 'heltal', min: -40, max: 25, enhet: '°C', forJamforelse: true, tillagg: ejIsoTestad },
+  { nyckel: 'limit_temp_c', etikett: 'Limittemperatur', sort: 'heltal', min: -50, max: 20, enhet: '°C', forJamforelse: true, tillagg: ejIsoTestad },
+  { nyckel: 'extrem_temp_c', etikett: 'Extremtemperatur', sort: 'heltal', min: -70, max: 15, enhet: '°C', dold: true },
+  { nyckel: 'temperaturstandard', etikett: 'Temperaturstandard', sort: 'val', val: ['iso', 'ej_angiven'], dold: true },
+  { nyckel: 'fyllning', etikett: 'Fyllning', sort: 'val', val: ['dun', 'syntet', 'blandning'], forJamforelse: true },
+  { nyckel: 'fillpower_cuin', etikett: 'Fillpower', sort: 'heltal', min: 400, max: 1000, enhet: 'cuin' },
+  { nyckel: 'fyllnadsvikt_g', etikett: 'Fyllnadsvikt', sort: 'heltal', min: 50, max: 3000, enhet: 'g', dold: true },
+  { nyckel: 'form', etikett: 'Form', sort: 'val', val: ['mumie', 'rektangular', 'quilt', 'annat'], forJamforelse: true },
+  { nyckel: 'max_langd_cm', etikett: 'Max längd', sort: 'heltal', min: 140, max: 230, enhet: 'cm', forJamforelse: true },
+  { nyckel: 'dragkedja', etikett: 'Dragkedja', sort: 'val', val: ['vanster', 'hoger', 'ingen'], dold: true },
+  { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text', dold: true },
+  { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text', dold: true },
+]
+
+/** Regler som gäller flera egenskaper på en gång. Ett brott mot en regel är ett fel och stoppar raden. */
+function sovsacksregler(e: Record<string, unknown>): string[] {
+  const fel: string[] = []
+  const tal = (nyckel: string) => (typeof e[nyckel] === 'number' ? (e[nyckel] as number) : null)
+  const komfort = tal('komfort_temp_c')
+  const limit = tal('limit_temp_c')
+  const extrem = tal('extrem_temp_c')
+  if (komfort !== null && limit !== null && limit > komfort) fel.push('limit_temp_c: får inte vara högre än komfort_temp_c')
+  if (limit !== null && extrem !== null && extrem > limit) fel.push('extrem_temp_c: får inte vara högre än limit_temp_c')
+  if (!saknas(e.fillpower_cuin) && e.fyllning !== 'dun' && e.fyllning !== 'blandning') fel.push('fillpower_cuin: anges bara när fyllning är dun eller blandning')
+  return fel
+}
+
 /**
  * Underkategorierna som har egna egenskaper. Övriga har inga än.
  * Nyckeln är underkategorin, inte huvudkategorin: en tarp eller en hängmatta har inte tältets egenskaper.
  */
-export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = { talt: TALT, tarp: SKYDD, vindsack: SKYDD }
+export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
+  talt: TALT,
+  tarp: SKYDD,
+  vindsack: SKYDD,
+  sovsack: SOVSACK,
+  quilt: SOVSACK,
+}
+
+const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, unknown>) => string[]>> = {
+  sovsack: sovsacksregler,
+  quilt: sovsacksregler,
+}
 
 /** Alla nycklar som finns som egenskap i någon underkategori. */
 export const ALLA_EGENSKAPSNYCKLAR: ReadonlySet<string> = new Set(
@@ -73,15 +129,17 @@ export type Egenskapsvarde = string | number | boolean
 
 /**
  * Gör om text, till exempel en cell i en CSV, till egenskapens värde.
- * Tal får ha punkt eller komma som decimaltecken, och val och ja/nej får skrivas med stora bokstäver ("DCF").
+ * Tal får ha punkt eller komma som decimaltecken och ett minustecken först, och val och ja/nej får skrivas
+ * med stora bokstäver ("DCF").
  */
 export function tolkaEgenskap(e: Egenskap, text: string): { varde: Egenskapsvarde } | { fel: string } {
-  const t = text.trim()
+  // Ett typografiskt minus (−) räknas som ett vanligt.
+  const t = text.trim().replace('\u2212', '-')
   switch (e.sort) {
     case 'heltal':
-      return /^\d+$/.test(t) ? { varde: Number(t) } : { fel: 'ska vara ett heltal' }
+      return /^-?\d+$/.test(t) ? { varde: Number(t) } : { fel: 'ska vara ett heltal' }
     case 'decimal':
-      return /^\d+([.,]\d+)?$/.test(t) ? { varde: Number(t.replace(',', '.')) } : { fel: 'ska vara ett tal' }
+      return /^-?\d+([.,]\d+)?$/.test(t) ? { varde: Number(t.replace(',', '.')) } : { fel: 'ska vara ett tal' }
     case 'janej': {
       const v = t.toLowerCase()
       return v === 'ja' ? { varde: true } : v === 'nej' ? { varde: false } : { fel: 'ska vara ja eller nej' }
@@ -106,10 +164,6 @@ export interface Validering {
   varningar: string[]
 }
 
-function saknas(varde: unknown): boolean {
-  return varde === undefined || varde === null || varde === ''
-}
-
 /** Vad som är fel med värdet, eller null om det stämmer. */
 function felIVarde(e: Egenskap, varde: unknown): string | null {
   switch (e.sort) {
@@ -131,7 +185,8 @@ function felIVarde(e: Egenskap, varde: unknown): string | null {
 
 /**
  * Kontrollerar egenskaperna för en produkt i en underkategori.
- * Fel värden och okända nycklar blir fel. En egenskap som behövs för jämförelser men saknas blir en varning.
+ * Fel värden, okända nycklar och brott mot underkategorins regler blir fel.
+ * En egenskap som behövs för jämförelser men saknas blir en varning.
  */
 export function valideraEgenskaper(underkategori: string, egenskaper: Record<string, unknown>): Validering {
   const definitioner = egenskaperFor(underkategori)
@@ -150,6 +205,8 @@ export function valideraEgenskaper(underkategori: string, egenskaper: Record<str
     const problem = felIVarde(e, varde)
     if (problem) fel.push(`${e.nyckel}: ${problem}`)
   }
+  const regler = Object.hasOwn(REGLER, underkategori) ? REGLER[underkategori as UnderkategoriNyckel] : undefined
+  if (regler) fel.push(...regler(egenskaper))
   return { fel, varningar }
 }
 
@@ -159,10 +216,16 @@ const VALNAMN: Record<string, string> = {
   stavtalt: 'Stavtält',
   halvt: 'Halvt',
   dcf: 'DCF',
+  rektangular: 'Rektangulär',
+  vanster: 'Vänster',
+  hoger: 'Höger',
+  iso: 'ISO',
+  ej_angiven: 'Inte angiven',
 }
 
+/** Tal med decimalkomma och ett riktigt minustecken. */
 function visaTal(varde: number): string {
-  return String(varde).replace('.', ',')
+  return String(varde).replace('.', ',').replace('-', '\u2212')
 }
 
 /** Värdet som text, till exempel "2,6 m²", "Ja" eller "Tunnel". null om värdet inte går att visa. */
@@ -188,12 +251,15 @@ export interface Egenskapsrad {
 
 /**
  * Egenskaperna som ska visas för en produkt, i den ordning de står för underkategorin.
- * Bara de som har ett värde tas med, så ett tält visar personer och säsonger medan en tarp visar längd och material.
+ * Bara de som har ett värde tas med, så ett tält visar personer och säsonger medan en sovsäck visar temperaturer och fyllning.
  */
 export function visaEgenskaper(underkategori: string, egenskaper: Record<string, unknown> | null | undefined): Egenskapsrad[] {
   if (!egenskaper) return []
   return egenskaperFor(underkategori).flatMap((e) => {
+    if (e.dold) return []
     const varde = visaVarde(e, egenskaper[e.nyckel])
-    return varde === null ? [] : [{ nyckel: e.nyckel, etikett: e.etikett, varde }]
+    if (varde === null) return []
+    const tillagg = e.tillagg?.(egenskaper)
+    return [{ nyckel: e.nyckel, etikett: e.etikett, varde: tillagg ? `${varde} (${tillagg})` : varde }]
   })
 }
