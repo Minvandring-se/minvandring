@@ -1,5 +1,5 @@
-import { Pencil, Plus } from 'lucide-react'
-import { useEffect, useState } from 'react'
+import { ChevronDown, ExternalLink, Pencil, Plus } from 'lucide-react'
+import { useEffect, useId, useState } from 'react'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Granskad } from '@/components/forrad/Granskad'
@@ -8,9 +8,10 @@ import { SakFormular } from '@/components/forrad/SakFormular'
 import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
 import { Button } from '@/components/ui/button'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { formateraVikt, summeraForrad, underkategoriFor, type Forval, type Kategorigrupp } from '@/lib/forrad'
+import { formateraVikt, sakdetaljer, summeraForrad, underkategoriFor, type Forval, type Kategorigrupp } from '@/lib/forrad'
 import { supabase } from '@/lib/supabase'
 import type { Forradssak } from '@/lib/typer'
+import { cn } from '@/lib/utils'
 
 /**
  * Vad som är öppet: sökningen i katalogen (första steget i Lägg till), formuläret för en egen sak,
@@ -37,7 +38,7 @@ export function Forrad() {
   useEffect(() => {
     supabase
       ?.from('forradssaker')
-      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, produkter(kontrollerad)')
+      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, produkter(kontrollerad, version, underkategori, minvikt_g, kalla, egenskaper)')
       .then(({ data, error }) => {
         setLaddfel(!!error)
         if (!error) setSaker((data as unknown as Forradssak[] | null) ?? [])
@@ -81,9 +82,9 @@ export function Forrad() {
             setTillagd({ sakId, namn })
             hamtaOm()
           }}
-          onEgen={(soktext) => {
+          onEgen={(soktext, kategori) => {
             setTillagd(null)
-            setOppet({ ny: { namn: soktext } })
+            setOppet({ ny: { namn: soktext, kategori } })
           }}
           onStang={() => setOppet(null)}
         />
@@ -202,9 +203,7 @@ function Kategoridel({
             </li>
           ) : (
             <li key={sak.id}>
-              <Sakrad sak={sak} onOppna={() => onOppna(sak.id)} />
-              {/* Bara saker från katalogen har en märkning. Den ligger utanför knappen, eftersom etiketten själv går att trycka på. */}
-              {sak.produkter && <Granskad kontrollerad={sak.produkter.kontrollerad} className="px-4 pb-2" />}
+              <Sakrad sak={sak} onAndra={() => onOppna(sak.id)} />
             </li>
           ),
         )}
@@ -213,30 +212,67 @@ function Kategoridel({
   )
 }
 
-/** En sak i listan. Hela raden öppnar formuläret där saken ändras eller tas bort. */
-function Sakrad({ sak, onOppna }: { sak: Forradssak; onOppna: () => void }) {
+/** En sak i listan. Ett tryck på raden fäller ut informationen om saken, där den också går att ändra. */
+function Sakrad({ sak, onAndra }: { sak: Forradssak; onAndra: () => void }) {
+  const id = useId()
+  const [utfalld, setUtfalld] = useState(false)
   // Underkategorin och anteckningen står diskret under namnet.
   const detaljer = [underkategoriFor(sak.kategori, sak.underkategori)?.etikett, sak.notering].filter(Boolean).join(' · ')
   return (
-    <button
-      type="button"
-      onClick={onOppna}
-      className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
-    >
-      <span className="min-w-0 flex-1">
-        <span className="block font-medium break-words">
-          <span className="sr-only">Ändra </span>
-          {sak.namn}
-          {sak.antal > 1 && <span className="font-normal text-muted-foreground"> × {sak.antal}</span>}
+    <>
+      <button
+        type="button"
+        aria-expanded={utfalld}
+        aria-controls={id}
+        onClick={() => setUtfalld((u) => !u)}
+        className="flex min-h-14 w-full items-center gap-3 px-4 py-2 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+      >
+        <span className="min-w-0 flex-1">
+          <span className="block font-medium break-words">
+            {sak.namn}
+            {sak.antal > 1 && <span className="font-normal text-muted-foreground"> × {sak.antal}</span>}
+          </span>
+          {detaljer && <span className="block text-sm break-words text-muted-foreground">{detaljer}</span>}
         </span>
-        {detaljer && <span className="block text-sm break-words text-muted-foreground">{detaljer}</span>}
-      </span>
-      {sak.vikt_g === null ? (
-        <span className="shrink-0 text-sm text-muted-foreground italic">vikt saknas</span>
-      ) : (
-        <span className="shrink-0 text-sm font-medium">{formateraVikt(sak.antal * sak.vikt_g)}</span>
-      )}
-      <Pencil className="size-4 shrink-0 text-muted-foreground" aria-hidden />
-    </button>
+        {sak.vikt_g === null ? (
+          <span className="shrink-0 text-sm text-muted-foreground italic">vikt saknas</span>
+        ) : (
+          <span className="shrink-0 text-sm font-medium">{formateraVikt(sak.antal * sak.vikt_g)}</span>
+        )}
+        <ChevronDown className={cn('size-5 shrink-0 text-muted-foreground transition-transform', utfalld && 'rotate-180')} aria-hidden />
+      </button>
+
+      {/* Bara saker från katalogen har en märkning. Den ligger utanför knappen, eftersom etiketten själv går att trycka på. */}
+      {sak.produkter && <Granskad kontrollerad={sak.produkter.kontrollerad} className="px-4 pb-2" />}
+
+      <div id={id} hidden={!utfalld} className="space-y-3 border-t border-border bg-muted/40 px-4 py-3">
+        <dl className="text-sm">
+          {sakdetaljer(sak).map((rad) => (
+            <div key={rad.etikett} className="flex justify-between gap-4 border-b border-border py-1.5 last:border-0">
+              <dt className="text-muted-foreground">{rad.etikett}</dt>
+              <dd className="min-w-0 text-right font-medium break-words">{rad.varde}</dd>
+            </div>
+          ))}
+        </dl>
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <Button variant="outline" onClick={onAndra}>
+            <Pencil className="size-4" aria-hidden />
+            Ändra
+          </Button>
+          {sak.produkter && (
+            <a
+              href={sak.produkter.kalla}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            >
+              Tillverkarens sida
+              <ExternalLink className="size-4" aria-hidden />
+              <span className="sr-only">(öppnas i ny flik)</span>
+            </a>
+          )}
+        </div>
+      </div>
+    </>
   )
 }

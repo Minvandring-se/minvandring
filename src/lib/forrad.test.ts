@@ -9,6 +9,7 @@ import {
   kategoriForUnder,
   medKategori,
   medUnderkategori,
+  sakdetaljer,
   summeraForrad,
   tolkaSak,
   typEfterVal,
@@ -281,5 +282,59 @@ describe('val av kategori i formuläret', () => {
 
   it('rör inte det man redan har skrivit', () => {
     expect(medKategori({ ...start, namn: 'Trangia', vikt: '330' }, 'kok')).toMatchObject({ namn: 'Trangia', vikt: '330' })
+  })
+})
+
+describe('sakdetaljer', () => {
+  const rader = (s: Forradssak) => sakdetaljer(s).map((r) => `${r.etikett}: ${r.varde}`)
+
+  it('visar kategori, vikt, antal och typ för en sak man har skrivit in själv', () => {
+    expect(rader(sak({ kategori: 'kok', underkategori: 'bransle', vikt_g: 230, antal: 2, typ: 'forbrukas' }))).toEqual([
+      'Kategori: Kök, Bränsle',
+      'Vikt per styck: 230 g',
+      'Antal: 2',
+      'Räknas som: Förbrukas',
+    ])
+  })
+
+  it('säger att vikten saknas, och upprepar inte kategorin när underkategorin heter likadant eller saknas', () => {
+    expect(rader(sak({ kategori: 'ovrigt', underkategori: 'ovrigt' }))).toEqual(['Kategori: Övrigt', 'Vikt per styck: Saknas', 'Antal: 1', 'Räknas som: I ryggsäcken'])
+    expect(rader(sak({ kategori: 'sova' }))[0]).toBe('Kategori: Sova')
+  })
+
+  it('lägger till version, minsta vikt och tältets egenskaper för ett tält ur katalogen', () => {
+    const talt = sak({
+      kategori: 'talt',
+      underkategori: 'talt',
+      vikt_g: 1700,
+      produkter: {
+        kontrollerad: null,
+        version: 'Red Label',
+        underkategori: 'talt',
+        minvikt_g: 1300,
+        kalla: 'https://exempel.se/akto',
+        egenskaper: { personer: 1, sasong: 4, konstruktion: 'tunnel', golvyta_m2: 1.7 },
+      },
+    })
+    expect(rader(talt)).toEqual([
+      'Kategori: Tält och vindskydd, Tält',
+      'Version: Red Label',
+      'Vikt per styck: 1,7 kg',
+      'Minsta vikt: 1,3 kg',
+      'Antal: 1',
+      'Räknas som: I ryggsäcken',
+      'Personer: 1',
+      'Säsonger: 4',
+      'Konstruktion: Tunnel',
+      'Golvyta: 1,7 m²',
+    ])
+  })
+
+  it('visar produktens egenskaper efter produktens underkategori, även om man har flyttat sin sak', () => {
+    const tarp = sak({
+      kategori: 'ovrigt',
+      produkter: { kontrollerad: null, version: null, underkategori: 'tarp', minvikt_g: null, kalla: 'https://exempel.se/tarp', egenskaper: { langd_cm: 300, konstruktion: 'annat' } },
+    })
+    expect(rader(tarp).slice(-1)).toEqual(['Längd: 300 cm'])
   })
 })
