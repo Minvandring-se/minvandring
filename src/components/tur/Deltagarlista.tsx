@@ -106,7 +106,7 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
                   {d.namn}
                   {jag && <span className="font-normal text-muted-foreground"> (du)</span>}
                 </p>
-                {!harKonto && d.typ === 'person' && <p className="text-xs text-muted-foreground">Har inte gått med själv</p>}
+                {!harKonto && d.typ === 'person' && <p className="text-sm text-muted-foreground">Har inte gått med själv</p>}
               </div>
 
               {harKonto &&
@@ -124,7 +124,7 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
                     ))}
                   </select>
                 ) : (
-                  <span className="rounded-full bg-primary-soft px-3 py-1 text-xs font-medium">
+                  <span className="rounded-full bg-primary-soft px-3 py-1 text-sm font-medium">
                     {ROLLNAMN[d.roll]}
                   </span>
                 ))}

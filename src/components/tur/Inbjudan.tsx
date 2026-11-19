@@ -77,7 +77,7 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
             <RefreshCw className="size-4" aria-hidden />
             Skapa ny länk
           </Button>
-          <p className="text-xs text-muted-foreground">Gör att den gamla länken slutar fungera.</p>
+          <p className="text-sm text-muted-foreground">Gör att den gamla länken slutar fungera.</p>
         </div>
       )}
       <p role="status" className="text-sm">
