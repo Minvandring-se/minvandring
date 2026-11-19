@@ -15,7 +15,18 @@ export interface Forradssak {
   typ: Typ
   notering: string | null
   /** Produkten saken kommer från, när listan hämtas med den. Saknas för saker man har skrivit in själv. */
-  produkter?: { kontrollerad: string | null } | null
+  produkter?: ForradsProdukt | null
+}
+
+/** Det som förrådet visar om produkten en sak kommer från. */
+export interface ForradsProdukt {
+  kontrollerad: string | null
+  version: string | null
+  underkategori: string
+  minvikt_g: number | null
+  /** Tillverkarens sida. */
+  kalla: string
+  egenskaper: Record<string, unknown>
 }
 
 /** En produkt i katalogen, med det som sökningen visar. */

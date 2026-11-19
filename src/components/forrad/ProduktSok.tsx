@@ -3,7 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Granskad } from '@/components/forrad/Granskad'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
-import { formateraVikt, kategoriFor } from '@/lib/forrad'
+import { KATEGORIER, arKategori, formateraVikt, kategoriFor, type KategoriNyckel } from '@/lib/forrad'
 import { gArAttSoka, produktnamn, sakFranProdukt, sokfilter, sokord, sorteraTraffar } from '@/lib/produktsok'
 import { supabase } from '@/lib/supabase'
 import type { Produkt } from '@/lib/typer'
@@ -13,29 +13,37 @@ interface Props {
   finnsRedan: ReadonlySet<string>
   /** En produkt har lagts i förrådet. */
   onTillagd: (sakId: string, namn: string) => void
-  /** Användaren vill skriva in saken själv. Söktexten följer med som namn. */
-  onEgen: (soktext: string) => void
+  /** Användaren vill skriva in saken själv. Söktexten följer med som namn, och den valda kategorin som förval. */
+  onEgen: (soktext: string, kategori?: KategoriNyckel) => void
   onStang: () => void
 }
 
-const MAX_TRAFFAR = 20
+const MAX_TRAFFAR = 30
 /** Väntan efter senaste tangenttryckningen innan sökningen skickas. */
 const FORDROJNING_MS = 250
 
-type Lage = { text: string; traffar: Produkt[] } | { text: string; fel: true } | null
+/** Resultatet av en sökning. nyckel säger vilken kategori och söktext det hör till. */
+type Lage = { nyckel: string; traffar: Produkt[] } | { nyckel: string; fel: true } | null
 
-/** Första steget i Lägg till: sök i produktkatalogen. Ett tryck på en träff lägger saken i förrådet. */
+/**
+ * Första steget i Lägg till: välj kategori och sök i produktkatalogen. Ett tryck på en träff lägger saken i förrådet.
+ * Med en kategori vald visas kategorins produkter redan innan man har skrivit något.
+ */
 export function ProduktSok({ finnsRedan, onTillagd, onEgen, onStang }: Props) {
   const id = useId()
   const falt = useRef<HTMLInputElement>(null)
   const [text, setText] = useState('')
+  const [kategori, setKategori] = useState<KategoriNyckel | ''>('')
   const [lage, setLage] = useState<Lage>(null)
   const [laggerTill, setLaggerTill] = useState<string | null>(null)
   const [fel, setFel] = useState('')
 
   useEffect(() => falt.current?.focus(), [])
 
-  const sokbar = gArAttSoka(text)
+  // Det går att söka när en kategori är vald eller när texten är lång nog.
+  const harText = gArAttSoka(text)
+  const sokbar = harText || kategori !== ''
+  const nyckel = `${kategori}|${text}`
 
   useEffect(() => {
     if (!supabase || !sokbar) return
@@ -43,16 +51,17 @@ export function ProduktSok({ finnsRedan, onTillagd, onEgen, onStang }: Props) {
     let avbruten = false
     const timer = window.setTimeout(async () => {
       let fraga = klient.from('produkter').select('id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad').limit(MAX_TRAFFAR)
-      for (const ord of sokord(text)) fraga = fraga.or(sokfilter(ord))
-      const { data, error } = await fraga
+      if (kategori) fraga = fraga.eq('kategori', kategori)
+      if (harText) for (const ord of sokord(text)) fraga = fraga.or(sokfilter(ord))
+      const { data, error } = await fraga.order('marke').order('modell')
       if (avbruten) return
-      setLage(error ? { text, fel: true } : { text, traffar: sorteraTraffar((data as Produkt[] | null) ?? [], text) })
+      setLage(error ? { nyckel, fel: true } : { nyckel, traffar: sorteraTraffar((data as Produkt[] | null) ?? [], harText ? text : '') })
     }, FORDROJNING_MS)
     return () => {
       avbruten = true
       window.clearTimeout(timer)
     }
-  }, [text, sokbar])
+  }, [text, kategori, harText, sokbar, nyckel])
 
   async function laggTill(p: Produkt) {
     if (!supabase || laggerTill) return
@@ -68,8 +77,8 @@ export function ProduktSok({ finnsRedan, onTillagd, onEgen, onStang }: Props) {
     onTillagd((data as { id: string }).id, sak.namn)
   }
 
-  // Resultatet gäller bara om det hör till texten som står i rutan just nu.
-  const aktuellt = sokbar && lage?.text === text ? lage : null
+  // Resultatet gäller bara om det hör till kategorin och texten som är valda just nu.
+  const aktuellt = sokbar && lage?.nyckel === nyckel ? lage : null
   const traffar = aktuellt && 'traffar' in aktuellt ? aktuellt.traffar : null
 
   return (
@@ -81,6 +90,25 @@ export function ProduktSok({ finnsRedan, onTillagd, onEgen, onStang }: Props) {
         <Button type="button" variant="ghost" className="-mt-2 -mr-2 size-11 px-0" aria-label="Stäng" onClick={onStang}>
           <X className="size-5" aria-hidden />
         </Button>
+      </div>
+
+      <div className="space-y-1">
+        <label htmlFor={`${id}-kategori`} className="block text-sm font-medium">
+          Kategori
+        </label>
+        <select
+          id={`${id}-kategori`}
+          className="h-11 w-full rounded-md border border-border bg-card px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20"
+          value={kategori}
+          onChange={(e) => setKategori(arKategori(e.target.value) ? e.target.value : '')}
+        >
+          <option value="">Alla kategorier</option>
+          {KATEGORIER.map((k) => (
+            <option key={k.nyckel} value={k.nyckel}>
+              {k.etikett}
+            </option>
+          ))}
+        </select>
       </div>
 
       <div className="space-y-1">
@@ -106,7 +134,13 @@ export function ProduktSok({ finnsRedan, onTillagd, onEgen, onStang }: Props) {
       <div aria-live="polite" className="space-y-3">
         {sokbar && !aktuellt && <p className="text-sm text-muted-foreground">Söker …</p>}
         {aktuellt && 'fel' in aktuellt && <p className="text-sm text-destructive">Det gick inte att söka. Försök igen.</p>}
-        {traffar?.length === 0 && <p className="text-sm text-muted-foreground">Inga produkter matchar ”{text.trim()}”.</p>}
+        {traffar?.length === 0 && (
+          <p className="text-sm text-muted-foreground">
+            {harText
+              ? `Inga produkter${kategori ? ` i ${kategoriFor(kategori).etikett}` : ''} matchar ”${text.trim()}”.`
+              : `Katalogen har inga produkter i ${kategoriFor(kategori).etikett} än.`}
+          </p>
+        )}
         {traffar && traffar.length > 0 && (
           <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
             {traffar.map((p) => {
@@ -149,7 +183,7 @@ export function ProduktSok({ finnsRedan, onTillagd, onEgen, onStang }: Props) {
 
       <div className="space-y-2 border-t border-border pt-4">
         <p className="text-sm font-medium">Hittar du inte din produkt?</p>
-        <Button type="button" variant="outline" onClick={() => onEgen(text)}>
+        <Button type="button" variant="outline" onClick={() => onEgen(text, kategori || undefined)}>
           <Plus className="size-4" aria-hidden />
           Lägg till den själv
         </Button>

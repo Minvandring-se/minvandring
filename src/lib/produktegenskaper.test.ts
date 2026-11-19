@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ALLA_EGENSKAPSNYCKLAR, EGENSKAPER, egenskaperFor, tolkaEgenskap, valideraEgenskaper, type Egenskap } from './produktegenskaper'
+import { ALLA_EGENSKAPSNYCKLAR, EGENSKAPER, egenskaperFor, tolkaEgenskap, valideraEgenskaper, visaEgenskaper, type Egenskap } from './produktegenskaper'
 
 const talt = {
   personer: 2,
@@ -164,5 +164,54 @@ describe('underkategorier utan egna egenskaper', () => {
     expect(valideraEgenskaper('sovsack', { komforttemp_c: -5 }).fel).toHaveLength(1)
     // En hängmatta ligger i samma huvudkategori som tält men har inga egna egenskaper.
     expect(valideraEgenskaper('hangmatta', { personer: 2 }).fel).toHaveLength(1)
+  })
+})
+
+describe('visaEgenskaper', () => {
+  const rader = (under: string, egenskaper: Record<string, unknown> | null) => visaEgenskaper(under, egenskaper).map((r) => `${r.etikett}: ${r.varde}`)
+
+  it('visar tältets egenskaper som text, med enheter, decimalkomma och ja eller nej', () => {
+    expect(rader('talt', talt)).toEqual([
+      'Personer: 2',
+      'Säsonger: 3',
+      'Konstruktion: Tunnel',
+      'Fristående: Nej',
+      'Kräver vandringsstavar: Nej',
+      'Golvyta: 2,8 m²',
+      'Absidyta: 1,2 m²',
+      'Ingångar: 1',
+      'Absider: 1',
+      'Innerhöjd: 100 cm',
+      'Längd: 220 cm',
+      'Yttertältet reses först: Ja',
+      'Material: Silnylon',
+      'Materialbeskrivning: Silikoniserad nylon 20D',
+      'Vattenpelare duk: 3000 mm',
+      'Vattenpelare golv: 10000 mm',
+      'Packmått (cm): 45 x 15',
+    ])
+  })
+
+  it('skriver ut val som inte bara ska ha stor bokstav', () => {
+    expect(rader('talt', { konstruktion: 'stavtalt', fristaende: 'halvt', material_typ: 'dcf' })).toEqual([
+      'Konstruktion: Stavtält',
+      'Fristående: Halvt',
+      'Material: DCF',
+    ])
+  })
+
+  it('tar bara med det som har ett värde, och noll räknas som ett värde', () => {
+    expect(rader('talt', { personer: 1, sasong: null, absider: 0, material_beskrivning: '  ' })).toEqual(['Personer: 1', 'Absider: 0'])
+  })
+
+  it('anpassar sig efter underkategorin: en tarp visar inte tältets egenskaper', () => {
+    const tarp = { langd_cm: 450, material_typ: 'silnylon', vattenpelare_duk_mm: 3000, konstruktion: 'annat' }
+    expect(rader('tarp', tarp)).toEqual(['Längd: 450 cm', 'Material: Silnylon', 'Vattenpelare duk: 3000 mm'])
+  })
+
+  it('ger ingenting för en underkategori utan egenskaper eller en produkt utan uppgifter', () => {
+    expect(rader('sovsack', { personer: 1 })).toEqual([])
+    expect(rader('talt', null)).toEqual([])
+    expect(rader('talt', {})).toEqual([])
   })
 })

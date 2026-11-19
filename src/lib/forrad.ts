@@ -15,6 +15,7 @@ import {
   Wrench,
   type LucideIcon,
 } from 'lucide-react'
+import { visaEgenskaper } from './produktegenskaper'
 import type { Forradssak } from './typer'
 import type { Typ } from './vikt'
 
@@ -389,4 +390,27 @@ export function medKategori(falt: SakFalt, kategori: string): SakFalt {
 /** Formuläret efter att en underkategori har valts eller valts bort (tom text). Typen följer valet. */
 export function medUnderkategori(falt: SakFalt, underkategori: string): SakFalt {
   return { ...falt, underkategori, typ: forvaldTyp(falt.kategori, underkategori) }
+}
+
+export interface Detaljrad {
+  etikett: string
+  varde: string
+}
+
+/**
+ * Det som visas när en sak fälls ut. Först det som gäller alla saker, sedan produktens egenskaper
+ * för saker ur katalogen. Egenskaperna beror på underkategorin, så ett tält och en tarp visar olika saker.
+ */
+export function sakdetaljer(sak: Forradssak): Detaljrad[] {
+  const kategori = kategoriFor(sak.kategori)
+  const under = underkategoriFor(sak.kategori, sak.underkategori)
+  const rader: Detaljrad[] = [{ etikett: 'Kategori', varde: under && under.etikett !== kategori.etikett ? `${kategori.etikett}, ${under.etikett}` : kategori.etikett }]
+  const p = sak.produkter
+  if (p?.version) rader.push({ etikett: 'Version', varde: p.version })
+  rader.push({ etikett: 'Vikt per styck', varde: sak.vikt_g === null ? 'Saknas' : formateraVikt(sak.vikt_g) })
+  if (p?.minvikt_g) rader.push({ etikett: 'Minsta vikt', varde: formateraVikt(p.minvikt_g) })
+  rader.push({ etikett: 'Antal', varde: String(sak.antal) })
+  rader.push({ etikett: 'Räknas som', varde: TYPNAMN[sak.typ] })
+  if (p) rader.push(...visaEgenskaper(p.underkategori, p.egenskaper))
+  return rader
 }

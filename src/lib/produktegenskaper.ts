@@ -27,7 +27,7 @@ export const FRISTAENDE = ['ja', 'halvt', 'nej'] as const
 export const MATERIALTYPER = ['polyester', 'nylon', 'silnylon', 'silpoly', 'dcf', 'kerlon', 'bomull', 'annat'] as const
 
 const TALT: Egenskap[] = [
-  { nyckel: 'personer', etikett: 'Antal personer', sort: 'heltal', min: 1, max: 12, forJamforelse: true },
+  { nyckel: 'personer', etikett: 'Personer', sort: 'heltal', min: 1, max: 12, forJamforelse: true },
   { nyckel: 'sasong', etikett: 'Säsonger', sort: 'heltal', min: 1, max: 4, forJamforelse: true },
   { nyckel: 'konstruktion', etikett: 'Konstruktion', sort: 'val', val: KONSTRUKTIONER, forJamforelse: true },
   { nyckel: 'fristaende', etikett: 'Fristående', sort: 'val', val: FRISTAENDE, forJamforelse: true },
@@ -50,7 +50,7 @@ const TALT: Egenskap[] = [
 
 /** Tarp och vindsäck: några få egenskaper, alla frivilliga. Tältens krav gäller bara underkategorin talt. */
 const SKYDD: Egenskap[] = [
-  { nyckel: 'personer', etikett: 'Antal personer', sort: 'heltal', min: 1, max: 12 },
+  { nyckel: 'personer', etikett: 'Personer', sort: 'heltal', min: 1, max: 12 },
   { nyckel: 'langd_cm', etikett: 'Längd', sort: 'heltal', min: 100, max: 1000, enhet: 'cm' },
   { nyckel: 'material_typ', etikett: 'Material', sort: 'val', val: MATERIALTYPER },
   { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text' },
@@ -150,4 +150,49 @@ export function valideraEgenskaper(underkategori: string, egenskaper: Record<str
     if (problem) fel.push(`${e.nyckel}: ${problem}`)
   }
   return { fel, varningar }
+}
+
+/** Hur värdena i ett val visas. Det som inte står här visas med stor första bokstav. */
+const VALNAMN: Record<string, string> = {
+  geodetiskt: 'Geodetiskt',
+  stavtalt: 'Stavtält',
+  halvt: 'Halvt',
+  dcf: 'DCF',
+}
+
+function visaTal(varde: number): string {
+  return String(varde).replace('.', ',')
+}
+
+/** Värdet som text, till exempel "2,6 m²", "Ja" eller "Tunnel". null om värdet inte går att visa. */
+function visaVarde(e: Egenskap, varde: unknown): string | null {
+  switch (e.sort) {
+    case 'heltal':
+    case 'decimal':
+      return typeof varde === 'number' ? `${visaTal(varde)}${e.enhet ? ` ${e.enhet}` : ''}` : null
+    case 'janej':
+      return typeof varde === 'boolean' ? (varde ? 'Ja' : 'Nej') : null
+    case 'val':
+      return typeof varde === 'string' && varde ? (VALNAMN[varde] ?? varde[0].toUpperCase() + varde.slice(1)) : null
+    case 'text':
+      return typeof varde === 'string' && varde.trim() ? varde.trim() : null
+  }
+}
+
+export interface Egenskapsrad {
+  nyckel: string
+  etikett: string
+  varde: string
+}
+
+/**
+ * Egenskaperna som ska visas för en produkt, i den ordning de står för underkategorin.
+ * Bara de som har ett värde tas med, så ett tält visar personer och säsonger medan en tarp visar längd och material.
+ */
+export function visaEgenskaper(underkategori: string, egenskaper: Record<string, unknown> | null | undefined): Egenskapsrad[] {
+  if (!egenskaper) return []
+  return egenskaperFor(underkategori).flatMap((e) => {
+    const varde = visaVarde(e, egenskaper[e.nyckel])
+    return varde === null ? [] : [{ nyckel: e.nyckel, etikett: e.etikett, varde }]
+  })
 }
