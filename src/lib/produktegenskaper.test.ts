@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { EGENSKAPER, egenskaperFor, valideraEgenskaper } from './produktegenskaper'
+import { ALLA_EGENSKAPSNYCKLAR, EGENSKAPER, egenskaperFor, tolkaEgenskap, valideraEgenskaper, type Egenskap } from './produktegenskaper'
 
 const talt = {
   personer: 2,
@@ -106,15 +106,63 @@ describe('egenskaper för tält', () => {
   })
 })
 
+describe('egenskaper för tarp och vindsäck', () => {
+  it('har fem enkla egenskaper som alla är frivilliga', () => {
+    for (const under of ['tarp', 'vindsack']) {
+      expect(egenskaperFor(under).map((e) => e.nyckel)).toEqual(['personer', 'langd_cm', 'material_typ', 'material_beskrivning', 'vattenpelare_duk_mm'])
+      expect(egenskaperFor(under).some((e) => e.forJamforelse)).toBe(false)
+      expect(valideraEgenskaper(under, {})).toEqual({ fel: [], varningar: [] })
+    }
+  })
+
+  it('godtar en lång tarp men inte tältets egenskaper', () => {
+    expect(valideraEgenskaper('tarp', { langd_cm: 450, material_typ: 'silnylon', vattenpelare_duk_mm: 3000 }).fel).toEqual([])
+    expect(valideraEgenskaper('tarp', { konstruktion: 'annat' }).fel).toEqual(['konstruktion: okänd egenskap för underkategorin'])
+  })
+})
+
+describe('tolkaEgenskap', () => {
+  const falt = (nyckel: string): Egenskap => egenskaperFor('talt').find((e) => e.nyckel === nyckel)!
+
+  it('godtar både komma och punkt som decimaltecken', () => {
+    expect(tolkaEgenskap(falt('golvyta_m2'), '2,8')).toEqual({ varde: 2.8 })
+    expect(tolkaEgenskap(falt('golvyta_m2'), '2.8')).toEqual({ varde: 2.8 })
+    expect(tolkaEgenskap(falt('golvyta_m2'), ' 3 ')).toEqual({ varde: 3 })
+    expect(tolkaEgenskap(falt('golvyta_m2'), '2,8 m2')).toHaveProperty('fel')
+  })
+
+  it('kräver hela tal där det ska vara heltal', () => {
+    expect(tolkaEgenskap(falt('personer'), '2')).toEqual({ varde: 2 })
+    expect(tolkaEgenskap(falt('personer'), '2,5')).toHaveProperty('fel')
+    expect(tolkaEgenskap(falt('personer'), 'två')).toHaveProperty('fel')
+  })
+
+  it('gör om ja och nej, och val med stora bokstäver till små', () => {
+    expect(tolkaEgenskap(falt('kraver_stavar'), 'Ja')).toEqual({ varde: true })
+    expect(tolkaEgenskap(falt('kraver_stavar'), 'nej')).toEqual({ varde: false })
+    expect(tolkaEgenskap(falt('kraver_stavar'), 'halvt')).toHaveProperty('fel')
+    expect(tolkaEgenskap(falt('material_typ'), 'DCF')).toEqual({ varde: 'dcf' })
+    expect(tolkaEgenskap(falt('material_typ'), 'Kerlon')).toEqual({ varde: 'kerlon' })
+    expect(tolkaEgenskap(falt('material_typ'), 'plast')).toHaveProperty('fel')
+    expect(tolkaEgenskap(falt('fristaende'), 'halvt')).toEqual({ varde: 'halvt' })
+  })
+
+  it('behåller fri text som den är, utan blanktecken runt om', () => {
+    expect(tolkaEgenskap(falt('packmatt_cm'), ' 43 x 13 ')).toEqual({ varde: '43 x 13' })
+  })
+})
+
 describe('underkategorier utan egna egenskaper', () => {
-  it('har bara tält än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt'])
+  it('bara tält, tarp och vindsäck har egenskaper än så länge', () => {
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack'])
+    expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
+    expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
 
   it('godkänner tomma egenskaper och ger fel om något ändå anges', () => {
     expect(valideraEgenskaper('sovsack', {})).toEqual({ fel: [], varningar: [] })
     expect(valideraEgenskaper('sovsack', { komforttemp_c: -5 }).fel).toHaveLength(1)
-    // En tarp ligger i samma huvudkategori som tält men har inte tältets egenskaper.
-    expect(valideraEgenskaper('tarp', { personer: 2 }).fel).toHaveLength(1)
+    // En hängmatta ligger i samma huvudkategori som tält men har inga egna egenskaper.
+    expect(valideraEgenskaper('hangmatta', { personer: 2 }).fel).toHaveLength(1)
   })
 })

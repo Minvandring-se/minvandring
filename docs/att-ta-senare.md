@@ -26,17 +26,22 @@ Bygg packlistan (punkt 4) så att det här går att lägga till senare utan omby
 
 ### Läget
 
-Mitt förråd finns (`/forrad`, tabellen `forradssaker`): man lägger in egna saker med kategori, underkategori, vikt, antal och typ. Produktkatalogen (`produkter`) finns som tabell men är tom. Sökningen i katalogen och startutbudet kommer i nästa steg. Kategorierna i två nivåer står i `src/lib/forrad.ts` och i tabellerna `kategorier` och `underkategorier`.
+Mitt förråd finns (`/forrad`, tabellen `forradssaker`). Lägg till börjar med en sökning i produktkatalogen (`produkter`). Ett tryck på en träff lägger saken i förrådet med namn, kategori, vikt och typ ifyllda. Hittar man inte sin produkt skriver man in den själv, och den hamnar då bara i ens eget förråd. Kategorierna i två nivåer står i `src/lib/forrad.ts` och i tabellerna `kategorier` och `underkategorier`.
 
-### Nästa steg: sökning och startutbud (PR 2)
+### Katalogen
 
-Startutbudet kommer som en CSV som Oscar tar fram, med tillverkarens länk för varje rad. Semikolon som avgränsare. En importfunktion i `src/lib` läser CSV:n, validerar raderna och visar fel och varningar innan seed-SQL:en skapas.
+CSV-filerna i `supabase/katalog/` är huvudlistan. Semikolon som avgränsare, kolumnerna läses efter namn, och tal får ha punkt eller komma som decimaltecken. Kolumnen `kommentar` är till för oss och sparas inte.
 
-Kolumner: `marke;modell;version;underkategori;personer;sasong;konstruktion;fristaende;kraver_stavar;packvikt_g;minvikt_g;golvyta_m2;absidyta_m2;ingangar;absider;innerhojd_cm;langd_cm;yttertalt_forst;material_typ;material_beskrivning;vattenpelare_duk_mm;vattenpelare_golv_mm;packmatt_cm;pris_sek_ca;ean;kalla;kontrollerad_datum;kommentar`
+- `npm run katalog` visar varje rad med fel och varningar utan att skriva något. Fel stoppar raden, varningar (fält som saknas för jämförelser) gör det inte.
+- `npm run katalog -- --skriv katalog_<namn>` skapar dessutom en ny seed-migrering. Den uppdaterar produkter som redan finns, så hela listan kan köras igen när en CSV har ändrats.
+- Ett test (`supabase/katalog.test.ts`) faller om en CSV ändras utan att en ny migrering skapas.
+- En produkt som tas bort ur CSV:n försvinner inte ur databasen av sig själv. Det kräver en egen migrering.
 
-- `material_typ` (polyester, nylon, silnylon, silpoly, DCF, Kerlon, bomull, annat) och `material_beskrivning` ersätter `material`. `material_typ` behövs för jämförelser. Importen ska inte bry sig om stora och små bokstäver, i databasen sparas värdet med små.
-- En rad importeras bara om `kontrollerad_datum` är ifyllt. Datumet sätts när någon av oss har kontrollerat raden mot källan.
-- `kommentar` är till för oss och sparas inte i katalogen.
+Granskning: `kontrollerad_datum` sätts när någon av oss har kontrollerat raden mot tillverkarens sida. Tomt betyder inte granskad. Sådana produkter importeras och syns i sökningen, märkta "Inte granskad än". Granskade får etiketten "Granskad".
+
+Jämförelser senare ("likvärdigt tält som väger mindre") ska bara använda granskade produkter (`kontrollerad is not null`). Vikter och mått som ingen har kontrollerat får inte ligga till grund för ett råd.
+
+Egenskaper per underkategori står i `src/lib/produktegenskaper.ts`. Tält har flest, och elva av dem behövs för jämförelser. Tarp och vindsäck har fem enkla, alla frivilliga. Övriga underkategorier har inga än.
 
 ### Kopplingen till packlistan (inte byggd)
 
@@ -46,6 +51,7 @@ Kolumner: `marke;modell;version;underkategori;personer;sasong;konstruktion;frist
 - En rad skriven direkt i packlistan kan sparas till Mitt förråd med ett klick.
 - Bara owner och editor får hämta in saker (`kan_andra`).
 - Vem som helst i turen ser en hämtad rad, men aldrig resten av förrådet. Kopian i `packrader` är det enda gruppen når.
+- Kryssrutorna "Går åt under turen" och "Jag har den på mig" från förrådets formulär används också i packlistan. Där ska de gå att ändra per tur, till exempel regnjackan som ibland är på och ibland ligger i ryggsäcken. Valet i förrådet är bara förvalet när saken hämtas in.
 - När "Hämta från Mitt förråd" finns ska texten i förrådets tomma läge få tillbaka löftet: "Lägg in din utrustning en gång, välj sedan vad som ska med på varje vandring." Tills dess står det "så har du koll på vad du har och vad allt väger", eftersom appen inte ska lova det som inte finns.
 
 ## Smarta tips i packlistan

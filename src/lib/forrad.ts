@@ -101,7 +101,7 @@ export const KATEGORIER = [
       { nyckel: 'flaska', etikett: 'Flaska' },
       { nyckel: 'dricksystem', etikett: 'Vattensäck och dricksystem' },
       { nyckel: 'filter', etikett: 'Filter' },
-      { nyckel: 'rening', etikett: 'Reningstabletter' },
+      { nyckel: 'rening', etikett: 'Reningstabletter', typ: 'forbrukas' },
       { nyckel: 'vattendunk', etikett: 'Vattendunk och behållare' },
     ],
   },
@@ -131,9 +131,9 @@ export const KATEGORIER = [
     ikon: Footprints,
     typ: 'kropp',
     under: [
-      { nyckel: 'kangor', etikett: 'Kängor och vandringsskor' },
+      { nyckel: 'kangor', etikett: 'Kängor och vandringsskor', typ: 'kropp' },
       { nyckel: 'lagerskor', etikett: 'Lägerskor och sandaler', typ: 'ryggsack' },
-      { nyckel: 'damasker', etikett: 'Damasker' },
+      { nyckel: 'damasker', etikett: 'Damasker', typ: 'ryggsack' },
       { nyckel: 'broddar', etikett: 'Broddar och snöskor', typ: 'ryggsack' },
     ],
   },
@@ -183,8 +183,8 @@ export const KATEGORIER = [
     typ: 'ryggsack',
     under: [
       { nyckel: 'forband', etikett: 'Förbandslåda och förband' },
-      { nyckel: 'skavsar', etikett: 'Skavsår' },
-      { nyckel: 'mediciner', etikett: 'Mediciner' },
+      { nyckel: 'skavsar', etikett: 'Skavsår', typ: 'forbrukas' },
+      { nyckel: 'mediciner', etikett: 'Mediciner', typ: 'forbrukas' },
       { nyckel: 'salvor', etikett: 'Salvor och krämer' },
     ],
   },
@@ -197,7 +197,7 @@ export const KATEGORIER = [
       { nyckel: 'toalett', etikett: 'Toalett och tandvård' },
       { nyckel: 'tvatt', etikett: 'Tvål och tvätt' },
       { nyckel: 'personlig', etikett: 'Personlig vård' },
-      { nyckel: 'sol_mygg', etikett: 'Solkräm och myggmedel' },
+      { nyckel: 'sol_mygg', etikett: 'Solkräm och myggmedel', typ: 'forbrukas' },
     ],
   },
   { nyckel: 'ovrigt', etikett: 'Övrigt', ikon: Package, typ: 'ryggsack', under: [{ nyckel: 'ovrigt', etikett: 'Övrigt' }] },
@@ -213,6 +213,20 @@ export const TYPNAMN: Record<Typ, string> = {
   ryggsack: 'I ryggsäcken',
   kropp: 'På kroppen',
   forbrukas: 'Förbrukas',
+}
+
+/**
+ * De två kryssrutorna som bestämmer typen i formuläret. Ingen ikryssad betyder att saken ligger i ryggsäcken.
+ * De utesluter varandra, eftersom en sak bara har en typ.
+ */
+export const TYPVAL = [
+  { typ: 'forbrukas', etikett: 'Går åt under turen', hjalp: 'Räknas inte in i basvikten' },
+  { typ: 'kropp', etikett: 'Jag har den på mig', hjalp: 'Räknas inte in i ryggsäcken' },
+] as const satisfies readonly { typ: Exclude<Typ, 'ryggsack'>; etikett: string; hjalp: string }[]
+
+/** Typen efter att en av kryssrutorna har kryssats i eller ur. Kryssas den ena i avmarkeras den andra. */
+export function typEfterVal(val: Exclude<Typ, 'ryggsack'>, ikryssad: boolean): Typ {
+  return ikryssad ? val : 'ryggsack'
 }
 
 export function arKategori(varde: unknown): varde is KategoriNyckel {
@@ -341,12 +355,20 @@ export function tolkaSak(falt: SakFalt): { ok: true; varden: SakVarden } | { ok:
   }
 }
 
-/** Formulärets startvärden: en befintlig sak, eller en ny med eventuellt förvald kategori och underkategori. */
-export function faltFran(sak?: Forradssak, forval?: { kategori: KategoriNyckel; underkategori?: UnderkategoriNyckel }): SakFalt {
+/** Det som kan vara ifyllt i förväg i formuläret för en ny sak. */
+export interface Forval {
+  namn?: string
+  kategori?: KategoriNyckel
+  underkategori?: UnderkategoriNyckel
+}
+
+/** Formulärets startvärden: en befintlig sak, eller en ny med eventuellt förvalt namn, kategori och underkategori. */
+export function faltFran(sak?: Forradssak, forval?: Forval): SakFalt {
   if (!sak) {
     const kategori = forval?.kategori ?? ''
     const underkategori = forval?.underkategori ?? ''
-    return { namn: '', kategori, underkategori, typ: forvaldTyp(kategori, underkategori), antal: '1', vikt: '', notering: '' }
+    const namn = (forval?.namn ?? '').trim().slice(0, MAX_NAMN)
+    return { namn, kategori, underkategori, typ: forvaldTyp(kategori, underkategori), antal: '1', vikt: '', notering: '' }
   }
   return {
     namn: sak.namn,

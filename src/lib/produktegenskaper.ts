@@ -37,7 +37,8 @@ const TALT: Egenskap[] = [
   { nyckel: 'ingangar', etikett: 'Ingångar', sort: 'heltal', min: 1, max: 4 },
   { nyckel: 'absider', etikett: 'Absider', sort: 'heltal', min: 0, max: 4, forJamforelse: true },
   { nyckel: 'innerhojd_cm', etikett: 'Innerhöjd', sort: 'heltal', min: 40, max: 250, enhet: 'cm' },
-  { nyckel: 'langd_cm', etikett: 'Längd', sort: 'heltal', min: 150, max: 400, enhet: 'cm' },
+  // Stora tält för sex personer är över fyra meter.
+  { nyckel: 'langd_cm', etikett: 'Längd', sort: 'heltal', min: 150, max: 600, enhet: 'cm' },
   { nyckel: 'yttertalt_forst', etikett: 'Yttertältet reses först', sort: 'janej' },
   { nyckel: 'material_typ', etikett: 'Material', sort: 'val', val: MATERIALTYPER, forJamforelse: true },
   { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text' },
@@ -47,11 +48,51 @@ const TALT: Egenskap[] = [
   { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text' },
 ]
 
+/** Tarp och vindsäck: några få egenskaper, alla frivilliga. Tältens krav gäller bara underkategorin talt. */
+const SKYDD: Egenskap[] = [
+  { nyckel: 'personer', etikett: 'Antal personer', sort: 'heltal', min: 1, max: 12 },
+  { nyckel: 'langd_cm', etikett: 'Längd', sort: 'heltal', min: 100, max: 1000, enhet: 'cm' },
+  { nyckel: 'material_typ', etikett: 'Material', sort: 'val', val: MATERIALTYPER },
+  { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text' },
+  { nyckel: 'vattenpelare_duk_mm', etikett: 'Vattenpelare duk', sort: 'heltal', min: 500, max: 30_000, enhet: 'mm' },
+]
+
 /**
  * Underkategorierna som har egna egenskaper. Övriga har inga än.
  * Nyckeln är underkategorin, inte huvudkategorin: en tarp eller en hängmatta har inte tältets egenskaper.
  */
-export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = { talt: TALT }
+export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = { talt: TALT, tarp: SKYDD, vindsack: SKYDD }
+
+/** Alla nycklar som finns som egenskap i någon underkategori. */
+export const ALLA_EGENSKAPSNYCKLAR: ReadonlySet<string> = new Set(
+  Object.values(EGENSKAPER).flatMap((lista) => lista.map((e) => e.nyckel)),
+)
+
+export type Egenskapsvarde = string | number | boolean
+
+/**
+ * Gör om text, till exempel en cell i en CSV, till egenskapens värde.
+ * Tal får ha punkt eller komma som decimaltecken, och val och ja/nej får skrivas med stora bokstäver ("DCF").
+ */
+export function tolkaEgenskap(e: Egenskap, text: string): { varde: Egenskapsvarde } | { fel: string } {
+  const t = text.trim()
+  switch (e.sort) {
+    case 'heltal':
+      return /^\d+$/.test(t) ? { varde: Number(t) } : { fel: 'ska vara ett heltal' }
+    case 'decimal':
+      return /^\d+([.,]\d+)?$/.test(t) ? { varde: Number(t.replace(',', '.')) } : { fel: 'ska vara ett tal' }
+    case 'janej': {
+      const v = t.toLowerCase()
+      return v === 'ja' ? { varde: true } : v === 'nej' ? { varde: false } : { fel: 'ska vara ja eller nej' }
+    }
+    case 'val': {
+      const v = t.toLowerCase()
+      return e.val.includes(v) ? { varde: v } : { fel: `ska vara något av: ${e.val.join(', ')}` }
+    }
+    case 'text':
+      return { varde: t }
+  }
+}
 
 export function egenskaperFor(underkategori: string): Egenskap[] {
   return Object.hasOwn(EGENSKAPER, underkategori) ? (EGENSKAPER[underkategori as UnderkategoriNyckel] ?? []) : []
