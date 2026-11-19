@@ -15,7 +15,7 @@ import { cn } from '@/lib/utils'
 const DELAR: { del: Del; till: string; namn: string; kortNamn: string; ikon: LucideIcon; kommerSnart?: boolean }[] = [
   { del: 'turer', till: '/turer', namn: 'Mina turer', kortNamn: 'Mina turer', ikon: Karta },
   { del: 'profil', till: '/profil', namn: 'Profil', kortNamn: 'Profil', ikon: UserRound },
-  { del: 'forrad', till: '/forrad', namn: 'Ditt förråd', kortNamn: 'Förråd', ikon: Backpack, kommerSnart: true },
+  { del: 'forrad', till: '/forrad', namn: 'Mitt förråd', kortNamn: 'Förråd', ikon: Backpack, kommerSnart: true },
 ]
 
 /**

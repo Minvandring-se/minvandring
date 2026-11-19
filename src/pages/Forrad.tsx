@@ -4,12 +4,12 @@ import { ForradIllustration } from '@/components/illustrationer/ForradIllustrati
 import { Levande } from '@/components/start/Levande'
 import { useSidtitel } from '@/hooks/useSidtitel'
 
-/** Ditt förråd. Finns inte än, så sidan säger det rakt ut och pekar tillbaka till turerna. */
+/** Mitt förråd. Finns inte än, så sidan säger det rakt ut och pekar tillbaka till turerna. */
 export function Forrad() {
-  useSidtitel('Ditt förråd')
+  useSidtitel('Mitt förråd')
   return (
     <div className="space-y-8">
-      <SidRubrik rubrik="Ditt förråd" text="Din egen utrustning, samlad på ett ställe." />
+      <SidRubrik rubrik="Mitt förråd" text="Din egen utrustning, samlad på ett ställe." />
 
       <div className="grid overflow-hidden rounded-lg border border-border bg-primary-soft/60 shadow-soft md:grid-cols-2">
         <Levande>

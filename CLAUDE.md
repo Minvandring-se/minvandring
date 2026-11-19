@@ -74,7 +74,7 @@ Vid prioritering: 1) planera en vandring 2) planera tillsammans 3) packning och 
 - Logotypen är komponenten `Logotyp` med symbolerna i `public/brand/`. Källan ligger i `design/logo/`.
 - Tillgänglighet: labels på formulär, god kontrast, semantisk HTML, synligt fokus.
 - Använd inte tankstreck som paus i synliga texter.
-- Lova inte funktioner i appens texter som inte finns ännu. Undantag: korten på startsidan får visa planerade funktioner, till exempel Kom ihåg till nästa vandring och Ditt förråd.
+- Lova inte funktioner i appens texter som inte finns ännu. Undantag: korten på startsidan får visa planerade funktioner, till exempel Kom ihåg till nästa vandring och Mitt förråd.
 - Varje funktion ska svara ja på: gör detta det enklare att planera en riktig vandring?
 
 ## Arbetssätt
