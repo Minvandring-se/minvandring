@@ -191,12 +191,17 @@ export function importera(text: string): Importresultat {
 
   const sedda = new Map<string, number>()
   const seddaEan = new Map<string, number>()
-  const resultat = rader.map(({ rad, falt, antalFalt }) => {
-    if (antalFalt !== kolumner.length) {
+  // Kommentaren är fri text och står sist. Innehåller den ett semikolon utan citattecken blir raden för lång,
+  // men alla andra kolumner står rätt. Då räcker en varning, eftersom kommentaren ändå inte sparas.
+  const kommentarSist = kolumner.at(-1) === 'kommentar'
+  const resultat = rader.map(({ rad, falt, antalFalt }): Radresultat => {
+    const forLang = antalFalt > kolumner.length && kommentarSist
+    if (antalFalt !== kolumner.length && !forLang) {
       const namn = [falt.marke, falt.modell].filter(Boolean).join(' ') || '(utan namn)'
       return { rad, namn, produkt: null, fel: [`raden har ${antalFalt} fält, rubrikraden har ${kolumner.length}`], varningar: [] }
     }
     const r = tolkaRad(rad, falt)
+    if (forLang) r.varningar.push('kommentar: innehåller semikolon, sätt den inom citattecken')
     if (!r.produkt) return r
     const nyckel = produktnyckel(r.produkt)
     const forra = sedda.get(nyckel)

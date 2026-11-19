@@ -213,6 +213,20 @@ describe('importera', () => {
     expect(okand.rader).toEqual([])
   })
 
+  it('varnar men importerar när kommentaren sist på raden innehåller ett semikolon', () => {
+    const r = importera(csv({ ...TALT, kommentar: 'Först; sedan mer; och mer' }))
+    expect(r.rader[0].produkt).toMatchObject({ modell: 'Fjälltält 2', kalla: 'https://exempel.se/fjalltalt-2', kontrollerad: '2026-11-19' })
+    expect(r.rader[0].fel).toEqual([])
+    expect(r.rader[0].varningar).toEqual(['kommentar: innehåller semikolon, sätt den inom citattecken'])
+  })
+
+  it('stoppar en för lång rad när kommentaren inte står sist', () => {
+    const r = importera('marke;modell;underkategori;packvikt_g;kommentar;kalla
+A;B;talt;100;x;https://exempel.se;extra')
+    expect(r.rader[0].produkt).toBeNull()
+    expect(r.rader[0].fel[0]).toContain('7 fält')
+  })
+
   it('stoppar en rad med fel antal fält', () => {
     const r = importera(`${RUBRIK}\nTestmärke;Halv rad;;talt`)
     expect(r.rader[0].produkt).toBeNull()
