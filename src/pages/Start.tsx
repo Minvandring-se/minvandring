@@ -128,16 +128,17 @@ const kortKlass =
  * - Vägvisaren står före den gröna avslutningen.
  */
 const [stigBorja, stigPackning, stigTanken, stigFragor] = kopplaStig([
-  { id: 'borja', detaljer: [{ typ: 'eld', lage: 0.72 }] },
+  { id: 'borja', karta: 'skog', detaljer: [{ typ: 'eld', lage: 0.72 }] },
   {
     id: 'packning',
+    karta: 'sjo',
     detaljer: [
       { typ: 'talt', lage: 0.3 },
       { typ: 'tassar', lage: 0.7 },
     ],
   },
-  { id: 'tanken', detaljer: [{ typ: 'ledkors', lage: 0.6 }] },
-  { id: 'fragor' },
+  { id: 'tanken', karta: 'hostbjorkar', detaljer: [{ typ: 'ledkors', lage: 0.6 }] },
+  { id: 'fragor', karta: 'fjall', detaljer: [{ typ: 'gryt', lage: 0.5 }] },
 ] as const)
 
 /** Upplyft panel för sektionerna mellan hero och avslutningen. Samma innehållsbredd som förut. */
