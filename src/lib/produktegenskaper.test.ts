@@ -153,15 +153,15 @@ describe('tolkaEgenskap', () => {
 })
 
 describe('underkategorier utan egna egenskaper', () => {
-  it('bara tält, tarp och vindsäck har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack'])
+  it('bara tält, tarp, vindsäck, sovsäck och quilt har egenskaper än så länge', () => {
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
 
   it('godkänner tomma egenskaper och ger fel om något ändå anges', () => {
-    expect(valideraEgenskaper('sovsack', {})).toEqual({ fel: [], varningar: [] })
-    expect(valideraEgenskaper('sovsack', { komforttemp_c: -5 }).fel).toHaveLength(1)
+    expect(valideraEgenskaper('liggunderlag', {})).toEqual({ fel: [], varningar: [] })
+    expect(valideraEgenskaper('liggunderlag', { r_varde: 4 }).fel).toHaveLength(1)
     // En hängmatta ligger i samma huvudkategori som tält men har inga egna egenskaper.
     expect(valideraEgenskaper('hangmatta', { personer: 2 }).fel).toHaveLength(1)
   })
@@ -210,8 +210,150 @@ describe('visaEgenskaper', () => {
   })
 
   it('ger ingenting för en underkategori utan egenskaper eller en produkt utan uppgifter', () => {
-    expect(rader('sovsack', { personer: 1 })).toEqual([])
+    expect(rader('liggunderlag', { personer: 1 })).toEqual([])
     expect(rader('talt', null)).toEqual([])
     expect(rader('talt', {})).toEqual([])
+  })
+})
+
+describe('egenskaper för sovsäck och quilt', () => {
+  const sovsack = {
+    komfort_temp_c: -3,
+    limit_temp_c: -9,
+    extrem_temp_c: -28,
+    temperaturstandard: 'iso',
+    fyllning: 'dun',
+    fillpower_cuin: 800,
+    fyllnadsvikt_g: 480,
+    form: 'mumie',
+    max_langd_cm: 185,
+    dragkedja: 'vanster',
+    material_beskrivning: 'Yttertyg i 20D nylon',
+    packmatt_cm: '30 x 17',
+  }
+  const falt = (nyckel: string): Egenskap => egenskaperFor('sovsack').find((e) => e.nyckel === nyckel)!
+  const felnycklar = (e: Record<string, unknown>, under = 'sovsack') => valideraEgenskaper(under, e).fel.map((f) => f.split(':')[0])
+
+  it('har samma tolv egenskaper för sovsäck och quilt, varav fem behövs för jämförelser', () => {
+    for (const under of ['sovsack', 'quilt']) {
+      expect(egenskaperFor(under).map((e) => e.nyckel)).toEqual(Object.keys(sovsack))
+      expect(egenskaperFor(under).filter((e) => e.forJamforelse).map((e) => e.nyckel)).toEqual([
+        'komfort_temp_c',
+        'limit_temp_c',
+        'fyllning',
+        'form',
+        'max_langd_cm',
+      ])
+    }
+  })
+
+  it('godkänner en komplett sovsäck utan fel eller varningar', () => {
+    expect(valideraEgenskaper('sovsack', sovsack)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('varnar men stoppar inte när det som behövs för jämförelser saknas', () => {
+    const r = valideraEgenskaper('quilt', { fyllnadsvikt_g: 300 })
+    expect(r.fel).toEqual([])
+    expect(r.varningar.map((v) => v.split(':')[0])).toEqual(['komfort_temp_c', 'limit_temp_c', 'fyllning', 'form', 'max_langd_cm'])
+  })
+
+  it('tolkar minusgrader, även med typografiskt minustecken', () => {
+    expect(tolkaEgenskap(falt('komfort_temp_c'), '-3')).toEqual({ varde: -3 })
+    expect(tolkaEgenskap(falt('komfort_temp_c'), '\u22123')).toEqual({ varde: -3 })
+    expect(tolkaEgenskap(falt('komfort_temp_c'), '0')).toEqual({ varde: 0 })
+    expect(tolkaEgenskap(falt('komfort_temp_c'), '-3,5')).toHaveProperty('fel')
+    expect(tolkaEgenskap(falt('komfort_temp_c'), '--3')).toHaveProperty('fel')
+  })
+
+  it.each([
+    ['komfort_temp_c', -41, -45],
+    ['komfort_temp_c', 26, 20],
+    ['limit_temp_c', -51, undefined],
+    ['extrem_temp_c', -71, undefined],
+    ['fillpower_cuin', 399, undefined],
+    ['fillpower_cuin', 1001, undefined],
+    ['fyllnadsvikt_g', 49, undefined],
+    ['fyllnadsvikt_g', 3001, undefined],
+    ['max_langd_cm', 139, undefined],
+    ['max_langd_cm', 231, undefined],
+  ])('ger fel när %s är %s', (nyckel, varde, limit) => {
+    // Extrem och limit sätts så lågt att bara gränsen för den provade egenskapen bryts.
+    const e = { ...sovsack, extrem_temp_c: -70, ...(limit === undefined ? {} : { limit_temp_c: limit }), [nyckel]: varde }
+    expect(felnycklar(e)).toEqual([nyckel])
+  })
+
+  it('godtar gränsvärdena', () => {
+    expect(felnycklar({ komfort_temp_c: 25, limit_temp_c: 20, extrem_temp_c: 15 })).toEqual([])
+    expect(felnycklar({ komfort_temp_c: -40, limit_temp_c: -50, extrem_temp_c: -70 })).toEqual([])
+    expect(felnycklar({ fyllning: 'dun', fillpower_cuin: 400, fyllnadsvikt_g: 50, max_langd_cm: 140 })).toEqual([])
+    expect(felnycklar({ fyllning: 'dun', fillpower_cuin: 1000, fyllnadsvikt_g: 3000, max_langd_cm: 230 })).toEqual([])
+  })
+
+  it('godtar bara de val som finns', () => {
+    expect(felnycklar({ ...sovsack, temperaturstandard: 'en' })).toEqual(['temperaturstandard'])
+    expect(felnycklar({ ...sovsack, fyllning: 'ull', fillpower_cuin: undefined })).toEqual(['fyllning'])
+    expect(felnycklar({ ...sovsack, form: 'kokong' })).toEqual(['form'])
+    expect(felnycklar({ ...sovsack, dragkedja: 'mitten' })).toEqual(['dragkedja'])
+    for (const form of ['mumie', 'rektangular', 'quilt', 'annat']) expect(felnycklar({ ...sovsack, form }), form).toEqual([])
+    for (const dragkedja of ['vanster', 'hoger', 'ingen']) expect(felnycklar({ ...sovsack, dragkedja }), dragkedja).toEqual([])
+    expect(felnycklar({ ...sovsack, temperaturstandard: 'ej_angiven' })).toEqual([])
+  })
+
+  it('limit får inte vara högre än komfort', () => {
+    expect(felnycklar({ ...sovsack, komfort_temp_c: -9, limit_temp_c: -3 })).toEqual(['limit_temp_c'])
+    expect(felnycklar({ ...sovsack, komfort_temp_c: -5, limit_temp_c: -5 })).toEqual([])
+  })
+
+  it('extrem får inte vara högre än limit', () => {
+    expect(felnycklar({ ...sovsack, limit_temp_c: -9, extrem_temp_c: -5 })).toEqual(['extrem_temp_c'])
+    expect(felnycklar({ ...sovsack, limit_temp_c: -9, extrem_temp_c: -9 })).toEqual([])
+  })
+
+  it('jämför bara temperaturer som är ifyllda', () => {
+    expect(felnycklar({ komfort_temp_c: -3, extrem_temp_c: 2 })).toEqual([])
+    expect(felnycklar({ limit_temp_c: 5 })).toEqual([])
+  })
+
+  it('fillpower anges bara för dun', () => {
+    expect(felnycklar({ ...sovsack, fyllning: 'syntet' })).toEqual(['fillpower_cuin'])
+    expect(felnycklar({ ...sovsack, fyllning: 'blandning' })).toEqual(['fillpower_cuin'])
+    expect(felnycklar({ fillpower_cuin: 800 })).toEqual(['fillpower_cuin'])
+    const { fillpower_cuin: _f, ...utan } = sovsack
+    expect(felnycklar({ ...utan, fyllning: 'syntet' })).toEqual([])
+  })
+
+  it('reglerna gäller också quilts, men inte tält', () => {
+    expect(felnycklar({ komfort_temp_c: -9, limit_temp_c: -3 }, 'quilt')).toEqual(['limit_temp_c'])
+    expect(valideraEgenskaper('talt', { personer: 2 }).fel).toEqual([])
+  })
+
+  describe('i förrådets utfällning', () => {
+    const rader = (e: Record<string, unknown>) => visaEgenskaper('sovsack', e).map((r) => `${r.etikett}: ${r.varde}`)
+
+    it('visar temperaturer, fyllning, fillpower, form och längd, och döljer resten', () => {
+      expect(rader(sovsack)).toEqual([
+        'Komforttemperatur: \u22123 °C',
+        'Limittemperatur: \u22129 °C',
+        'Fyllning: Dun',
+        'Fillpower: 800 cuin',
+        'Form: Mumie',
+        'Max längd: 185 cm',
+      ])
+    })
+
+    it('skriver ej ISO-testad vid temperaturerna när standarden inte är angiven', () => {
+      expect(rader({ ...sovsack, temperaturstandard: 'ej_angiven' }).slice(0, 2)).toEqual([
+        'Komforttemperatur: \u22123 °C (ej ISO-testad)',
+        'Limittemperatur: \u22129 °C (ej ISO-testad)',
+      ])
+      const { temperaturstandard: _t, ...utan } = sovsack
+      expect(rader(utan)[0]).toBe('Komforttemperatur: \u22123 °C')
+    })
+
+    it('visar bara det som har ett värde, och plusgrader utan tecken', () => {
+      expect(rader({ komfort_temp_c: 12, fyllning: 'syntet', form: 'rektangular' })).toEqual(['Komforttemperatur: 12 °C', 'Fyllning: Syntet', 'Form: Rektangulär'])
+      expect(rader({ limit_temp_c: 0 })).toEqual(['Limittemperatur: 0 °C'])
+      expect(rader({})).toEqual([])
+    })
   })
 })
