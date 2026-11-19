@@ -37,7 +37,9 @@ CSV-filerna i `supabase/katalog/` är huvudlistan. Semikolon som avgränsare, ko
 - Ett test (`supabase/katalog.test.ts`) faller om en CSV ändras utan att en ny migrering skapas.
 - En produkt som tas bort ur CSV:n försvinner inte ur databasen av sig själv. Det kräver en egen migrering.
 
-Granskning: `kontrollerad_datum` sätts när någon av oss har kontrollerat raden mot tillverkarens sida. Tomt betyder inte granskad. Sådana produkter importeras och syns i sökningen, märkta "Inte granskad än". Granskade får etiketten "Granskad".
+Granskning görs alltid i CSV:n och förs in med en ny seed-migrering, aldrig direkt i databasen. Seeden skriver över `kontrollerad` för varje produkt, så ett datum som bara satts i databasen försvinner vid nästa körning.
+
+`kontrollerad_datum` sätts när någon av oss har kontrollerat raden mot tillverkarens sida. Tomt betyder inte granskad. Sådana produkter importeras och syns i sökningen, märkta "Inte granskad än". Granskade får etiketten "Granskad".
 
 Jämförelser senare ("likvärdigt tält som väger mindre") ska bara använda granskade produkter (`kontrollerad is not null`). Vikter och mått som ingen har kontrollerat får inte ligga till grund för ett råd.
 

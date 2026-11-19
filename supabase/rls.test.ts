@@ -696,6 +696,18 @@ describe('startutbudet i katalogen', () => {
     expect(r.rows).toEqual([{ modell: 'Akto', packvikt_g: 1700, underkategori: 'talt', kontrollerad: null, personer: 1 }])
   })
 
+  it('inloggade kan läsa även produkter som inte är granskade, men ingen kan skriva eller markera dem som granskade', async () => {
+    const ogranskade = await som(A, (tx) => tx.query<{ id: string }>('select id from public.produkter where kontrollerad is null'))
+    expect(ogranskade.rows.length).toBeGreaterThanOrEqual(iKatalogen)
+    const id = ogranskade.rows[0].id
+    await forvantaFel(som(A, (tx) => tx.query(`update public.produkter set kontrollerad = '2026-11-20' where id = $1`, [id])))
+    await forvantaFel(som(A, (tx) => tx.query('update public.produkter set packvikt_g = 1 where id = $1', [id])))
+    await forvantaFel(som(A, (tx) => tx.query('delete from public.produkter where id = $1', [id])))
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.produkter where kontrollerad is null')))
+    const kvar = await db.query<{ n: number }>('select count(*)::int as n from public.produkter where kontrollerad is not null and marke <> $1 and marke <> $2', ['Testmärke', 'M'])
+    expect(kvar.rows[0].n).toBe(0)
+  })
+
   it('en produkt får sakna kontrollerad, och den går att sätta senare', async () => {
     const r = await db.query<{ n: number }>('select count(*)::int as n from public.produkter where kontrollerad is null')
     expect(r.rows[0].n).toBeGreaterThan(0)
