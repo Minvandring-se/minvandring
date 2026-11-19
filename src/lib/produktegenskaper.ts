@@ -118,6 +118,38 @@ const LIGGUNDERLAG: Egenskap[] = [
   { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text' },
 ]
 
+/** Rygglängden som ett spann, "42–58 cm", eller bara det ena värdet när det andra saknas. */
+function rygglangd(e: Record<string, unknown>): { etikett: string; varde: string } | null {
+  const min = typeof e.torso_min_cm === 'number' ? e.torso_min_cm : null
+  const max = typeof e.torso_max_cm === 'number' ? e.torso_max_cm : null
+  if (min === null && max === null) return null
+  const varde = min !== null && max !== null && min !== max ? `${min}\u2013${max} cm` : `${min ?? max} cm`
+  return { etikett: 'Rygglängd', varde }
+}
+
+/** Ryggsäckar och dagsryggsäckar. Volym, passform, rygglängd och ram behövs för jämförelser. */
+const RYGGSACK: Egenskap[] = [
+  { nyckel: 'volym_l', etikett: 'Volym', sort: 'decimal', min: 1, max: 150, enhet: 'l', forJamforelse: true, viktig: true },
+  { nyckel: 'passform', etikett: 'Passform', sort: 'val', val: ['dam', 'herr', 'unisex'], forJamforelse: true, viktig: true },
+  { nyckel: 'torso_min_cm', etikett: 'Rygglängd från', sort: 'heltal', min: 25, max: 75, enhet: 'cm', forJamforelse: true, viktig: true, visaIhop: rygglangd },
+  // Visas ihop med den minsta rygglängden när den finns, annars för sig som Rygglängd.
+  { nyckel: 'torso_max_cm', etikett: 'Rygglängd till', sort: 'heltal', min: 25, max: 75, enhet: 'cm', forJamforelse: true, viktig: true, ingarI: 'torso_min_cm', visaIhop: rygglangd },
+  { nyckel: 'justerbar_rygg', etikett: 'Justerbar rygg', sort: 'janej' },
+  { nyckel: 'ram', etikett: 'Ram', sort: 'val', val: ['intern', 'ingen', 'extern', 'annat'], forJamforelse: true, viktig: true },
+  { nyckel: 'max_last_kg', etikett: 'Maxlast', sort: 'decimal', min: 1, max: 60, enhet: 'kg', viktig: true },
+  { nyckel: 'hoftbalte', etikett: 'Höftbälte', sort: 'val', val: ['fast', 'avtagbart', 'enkelt', 'inget'] },
+  { nyckel: 'atkomst', etikett: 'Åtkomst', sort: 'val', val: ['topp', 'topp_och_front', 'topp_och_sida', 'front', 'annat'] },
+  { nyckel: 'regnskydd_ingar', etikett: 'Regnskydd ingår', sort: 'janej' },
+  { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text' },
+]
+
+/** Den minsta rygglängden kan inte vara större än den största. */
+function ryggsacksregler(e: Record<string, unknown>): string[] {
+  return typeof e.torso_min_cm === 'number' && typeof e.torso_max_cm === 'number' && e.torso_min_cm > e.torso_max_cm
+    ? ['torso_min_cm: får inte vara större än torso_max_cm']
+    : []
+}
+
 /** Ett underlag av skum har ingen ventil. */
 function liggunderlagsregler(e: Record<string, unknown>): string[] {
   return e.typ === 'skum' && !saknas(e.ventil) && e.ventil !== 'ingen' ? ['ventil: ska vara ingen när typ är skum'] : []
@@ -147,12 +179,16 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   sovsack: SOVSACK,
   quilt: SOVSACK,
   liggunderlag: LIGGUNDERLAG,
+  ryggsack: RYGGSACK,
+  dagsryggsack: RYGGSACK,
 }
 
 const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, unknown>) => string[]>> = {
   sovsack: sovsacksregler,
   quilt: sovsacksregler,
   liggunderlag: liggunderlagsregler,
+  ryggsack: ryggsacksregler,
+  dagsryggsack: ryggsacksregler,
 }
 
 /** Alla nycklar som finns som egenskap i någon underkategori. */
@@ -258,6 +294,8 @@ const VALNAMN: Record<string, string> = {
   ej_angiven: 'Inte angiven',
   sjalvuppblasande: 'Självuppblåsande',
   astm: 'ASTM',
+  topp_och_front: 'Topp och front',
+  topp_och_sida: 'Topp och sida',
 }
 
 /** Tal med decimalkomma och ett riktigt minustecken. */
@@ -296,6 +334,8 @@ export function visaEgenskaper(underkategori: string, egenskaper: Record<string,
   if (!egenskaper) return []
   return egenskaperFor(underkategori).flatMap((e) => {
     const viktig = e.viktig === true
+    // En egenskap utan eget värde visas aldrig, inte heller ihop med en annan.
+    if (saknas(egenskaper[e.nyckel])) return []
     if (e.ingarI && !saknas(egenskaper[e.ingarI])) return []
     const ihop = e.visaIhop?.(egenskaper)
     if (ihop) return [{ nyckel: e.nyckel, etikett: ihop.etikett, varde: ihop.varde, viktig }]

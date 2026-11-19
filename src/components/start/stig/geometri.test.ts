@@ -130,7 +130,7 @@ describe('figurer', () => {
       ],
     },
     { detaljer: [{ typ: 'ledkors', lage: 0.6 }] },
-    { detaljer: [{ typ: 'gryt', lage: 0.5 }] },
+    {},
   ]
   const ids = ['borja', 'packning', 'tanken', 'fragor']
 
@@ -151,7 +151,7 @@ describe('figurer', () => {
       ...f.detaljer.flatMap((d) =>
         d.typ === 'tassar'
           ? (d.tassar ?? []).map((t, i) => ruta(`tass ${i}`, { x: t.punkt.x, y: t.punkt.y + 5 }, FIGUR.tass))
-          : [ruta(d.typ, d.punkt, d.typ === 'ledkors' ? FIGUR.ledkryss : d.typ === 'gryt' ? FIGUR.gryt : FIGUR.detalj)],
+          : [ruta(d.typ, d.punkt, d.typ === 'ledkors' ? FIGUR.ledkryss : FIGUR.detalj)],
       ),
     ]
   }

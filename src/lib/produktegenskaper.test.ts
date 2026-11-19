@@ -153,8 +153,8 @@ describe('tolkaEgenskap', () => {
 })
 
 describe('underkategorier utan egna egenskaper', () => {
-  it('bara tält, tarp, vindsäck, sovsäck, quilt och liggunderlag har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag'])
+  it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag och ryggsäckar har egenskaper än så länge', () => {
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
@@ -506,5 +506,119 @@ describe('egenskaper för liggunderlag', () => {
 
   it('är de viktigaste: typ, R-värde, längd, bredd och tjocklek', () => {
     expect(egenskaperFor('liggunderlag').filter((e) => e.viktig).map((e) => e.nyckel)).toEqual(['typ', 'r_varde', 'langd_cm', 'bredd_cm', 'tjocklek_cm'])
+  })
+})
+
+describe('egenskaper för ryggsäck och dagsryggsäck', () => {
+  const ryggsack = {
+    volym_l: 55,
+    passform: 'unisex',
+    torso_min_cm: 42,
+    torso_max_cm: 58,
+    justerbar_rygg: true,
+    ram: 'intern',
+    max_last_kg: 20,
+    hoftbalte: 'fast',
+    atkomst: 'topp_och_front',
+    regnskydd_ingar: true,
+    material_beskrivning: 'Vinylon F',
+  }
+  const falt = (nyckel: string): Egenskap => egenskaperFor('ryggsack').find((e) => e.nyckel === nyckel)!
+  const felnycklar = (e: Record<string, unknown>, under = 'ryggsack') => valideraEgenskaper(under, e).fel.map((f) => f.split(':')[0])
+
+  it('har samma elva egenskaper för ryggsäck och dagsryggsäck, varav fem behövs för jämförelser', () => {
+    for (const under of ['ryggsack', 'dagsryggsack']) {
+      expect(egenskaperFor(under).map((e) => e.nyckel)).toEqual(Object.keys(ryggsack))
+      expect(egenskaperFor(under).filter((e) => e.forJamforelse).map((e) => e.nyckel)).toEqual(['volym_l', 'passform', 'torso_min_cm', 'torso_max_cm', 'ram'])
+    }
+  })
+
+  it('godkänner en komplett ryggsäck utan fel eller varningar', () => {
+    expect(valideraEgenskaper('ryggsack', ryggsack)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('varnar men stoppar inte när det som behövs för jämförelser saknas', () => {
+    const r = valideraEgenskaper('dagsryggsack', { hoftbalte: 'inget' })
+    expect(r.fel).toEqual([])
+    expect(r.varningar.map((v) => v.split(':')[0])).toEqual(['volym_l', 'passform', 'torso_min_cm', 'torso_max_cm', 'ram'])
+  })
+
+  it('tolkar volym och maxlast med decimalkomma eller punkt', () => {
+    expect(tolkaEgenskap(falt('volym_l'), '22,5')).toEqual({ varde: 22.5 })
+    expect(tolkaEgenskap(falt('volym_l'), '22.5')).toEqual({ varde: 22.5 })
+    expect(tolkaEgenskap(falt('max_last_kg'), '18')).toEqual({ varde: 18 })
+    expect(tolkaEgenskap(falt('torso_min_cm'), '42,5')).toHaveProperty('fel')
+    expect(tolkaEgenskap(falt('justerbar_rygg'), 'Nej')).toEqual({ varde: false })
+  })
+
+  it.each([
+    ['volym_l', 0.5],
+    ['volym_l', 151],
+    ['torso_min_cm', 24],
+    ['torso_max_cm', 76],
+    ['max_last_kg', 0.5],
+    ['max_last_kg', 61],
+  ])('ger fel när %s är %s', (nyckel, varde) => {
+    expect(felnycklar({ ...ryggsack, [nyckel]: varde })).toEqual([nyckel])
+  })
+
+  it('godtar gränsvärdena', () => {
+    expect(felnycklar({ ...ryggsack, volym_l: 1, torso_min_cm: 25, torso_max_cm: 25, max_last_kg: 1 })).toEqual([])
+    expect(felnycklar({ ...ryggsack, volym_l: 150, torso_min_cm: 75, torso_max_cm: 75, max_last_kg: 60 })).toEqual([])
+  })
+
+  it('godtar bara de val som finns', () => {
+    expect(felnycklar({ ...ryggsack, passform: 'barn' })).toEqual(['passform'])
+    expect(felnycklar({ ...ryggsack, ram: 'aluminium' })).toEqual(['ram'])
+    expect(felnycklar({ ...ryggsack, hoftbalte: 'ja' })).toEqual(['hoftbalte'])
+    expect(felnycklar({ ...ryggsack, atkomst: 'botten' })).toEqual(['atkomst'])
+    expect(felnycklar({ ...ryggsack, regnskydd_ingar: 'ja' })).toEqual(['regnskydd_ingar'])
+    for (const passform of ['dam', 'herr', 'unisex']) expect(felnycklar({ ...ryggsack, passform }), passform).toEqual([])
+    for (const ram of ['intern', 'ingen', 'extern', 'annat']) expect(felnycklar({ ...ryggsack, ram }), ram).toEqual([])
+    for (const hoftbalte of ['fast', 'avtagbart', 'enkelt', 'inget']) expect(felnycklar({ ...ryggsack, hoftbalte }), hoftbalte).toEqual([])
+    for (const atkomst of ['topp', 'topp_och_front', 'topp_och_sida', 'front', 'annat']) expect(felnycklar({ ...ryggsack, atkomst }), atkomst).toEqual([])
+  })
+
+  it('den minsta rygglängden får inte vara större än den största', () => {
+    expect(felnycklar({ ...ryggsack, torso_min_cm: 60, torso_max_cm: 50 })).toEqual(['torso_min_cm'])
+    expect(felnycklar({ ...ryggsack, torso_min_cm: 50, torso_max_cm: 50 })).toEqual([])
+    expect(felnycklar({ torso_min_cm: 60, torso_max_cm: 50 }, 'dagsryggsack')).toEqual(['torso_min_cm'])
+  })
+
+  it('jämför bara rygglängderna när båda är ifyllda', () => {
+    expect(felnycklar({ torso_min_cm: 60 })).toEqual([])
+    expect(felnycklar({ torso_max_cm: 30 })).toEqual([])
+  })
+
+  describe('i förrådets utfällning', () => {
+    const rader = (e: Record<string, unknown>, bara?: 'viktiga' | 'ovriga') =>
+      visaEgenskaper('ryggsack', e)
+        .filter((r) => (bara === 'viktiga' ? r.viktig : bara === 'ovriga' ? !r.viktig : true))
+        .map((r) => `${r.etikett}: ${r.varde}`)
+
+    it('visar volym, passform, rygglängd, ram och maxlast först', () => {
+      expect(rader(ryggsack, 'viktiga')).toEqual(['Volym: 55 l', 'Passform: Unisex', 'Rygglängd: 42\u201358 cm', 'Ram: Intern', 'Maxlast: 20 kg'])
+    })
+
+    it('lägger resten bland alla specifikationer', () => {
+      expect(rader(ryggsack, 'ovriga')).toEqual([
+        'Justerbar rygg: Ja',
+        'Höftbälte: Fast',
+        'Åtkomst: Topp och front',
+        'Regnskydd ingår: Ja',
+        'Materialbeskrivning: Vinylon F',
+      ])
+    })
+
+    it('visar bara den ena rygglängden när den andra saknas, och ett värde när de är lika', () => {
+      expect(rader({ torso_min_cm: 42 })).toEqual(['Rygglängd: 42 cm'])
+      expect(rader({ torso_max_cm: 58 })).toEqual(['Rygglängd: 58 cm'])
+      expect(rader({ torso_min_cm: 48, torso_max_cm: 48 })).toEqual(['Rygglängd: 48 cm'])
+    })
+
+    it('visar bara det som har ett värde, och volym med decimalkomma', () => {
+      expect(rader({ volym_l: 22.5, atkomst: 'topp_och_sida', regnskydd_ingar: false })).toEqual(['Volym: 22,5 l', 'Åtkomst: Topp och sida', 'Regnskydd ingår: Nej'])
+      expect(rader({})).toEqual([])
+    })
   })
 })
