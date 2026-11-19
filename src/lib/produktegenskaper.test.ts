@@ -153,15 +153,15 @@ describe('tolkaEgenskap', () => {
 })
 
 describe('underkategorier utan egna egenskaper', () => {
-  it('bara tält, tarp, vindsäck, sovsäck och quilt har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt'])
+  it('bara tält, tarp, vindsäck, sovsäck, quilt och liggunderlag har egenskaper än så länge', () => {
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
 
   it('godkänner tomma egenskaper och ger fel om något ändå anges', () => {
-    expect(valideraEgenskaper('liggunderlag', {})).toEqual({ fel: [], varningar: [] })
-    expect(valideraEgenskaper('liggunderlag', { r_varde: 4 }).fel).toHaveLength(1)
+    expect(valideraEgenskaper('kudde', {})).toEqual({ fel: [], varningar: [] })
+    expect(valideraEgenskaper('kudde', { r_varde: 4 }).fel).toHaveLength(1)
     // En hängmatta ligger i samma huvudkategori som tält men har inga egna egenskaper.
     expect(valideraEgenskaper('hangmatta', { personer: 2 }).fel).toHaveLength(1)
   })
@@ -210,7 +210,7 @@ describe('visaEgenskaper', () => {
   })
 
   it('ger ingenting för en underkategori utan egenskaper eller en produkt utan uppgifter', () => {
-    expect(rader('liggunderlag', { personer: 1 })).toEqual([])
+    expect(rader('kudde', { personer: 1 })).toEqual([])
     expect(rader('talt', null)).toEqual([])
     expect(rader('talt', {})).toEqual([])
   })
@@ -380,5 +380,131 @@ describe('de viktigaste egenskaperna per underkategori', () => {
 
   it('tarp och vindsäck: personer, längd och material', () => {
     for (const under of ['tarp', 'vindsack']) expect(viktiga(under)).toEqual(['personer', 'langd_cm', 'material_typ'])
+  })
+})
+
+describe('egenskaper för liggunderlag', () => {
+  const underlag = {
+    typ: 'luft',
+    r_varde: 4.2,
+    r_varde_standard: 'astm',
+    langd_cm: 183,
+    bredd_cm: 51,
+    tjocklek_cm: 7.5,
+    form: 'mumie',
+    ventil: 'platt',
+    pumpsack_ingar: true,
+    material_beskrivning: '30D ripstopnylon',
+    packmatt_cm: '23 x 10',
+  }
+  const falt = (nyckel: string): Egenskap => egenskaperFor('liggunderlag').find((e) => e.nyckel === nyckel)!
+  const felnycklar = (e: Record<string, unknown>) => valideraEgenskaper('liggunderlag', e).fel.map((f) => f.split(':')[0])
+
+  it('har elva egenskaper, varav fem behövs för jämförelser', () => {
+    expect(egenskaperFor('liggunderlag').map((e) => e.nyckel)).toEqual(Object.keys(underlag))
+    expect(egenskaperFor('liggunderlag').filter((e) => e.forJamforelse).map((e) => e.nyckel)).toEqual(['typ', 'r_varde', 'langd_cm', 'bredd_cm', 'tjocklek_cm'])
+  })
+
+  it('godkänner ett komplett liggunderlag utan fel eller varningar', () => {
+    expect(valideraEgenskaper('liggunderlag', underlag)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('varnar men stoppar inte när det som behövs för jämförelser saknas', () => {
+    const r = valideraEgenskaper('liggunderlag', { form: 'mumie' })
+    expect(r.fel).toEqual([])
+    expect(r.varningar.map((v) => v.split(':')[0])).toEqual(['typ', 'r_varde', 'langd_cm', 'bredd_cm', 'tjocklek_cm'])
+  })
+
+  it('tolkar R-värde och tjocklek med decimalkomma eller punkt', () => {
+    expect(tolkaEgenskap(falt('r_varde'), '4,2')).toEqual({ varde: 4.2 })
+    expect(tolkaEgenskap(falt('r_varde'), '4.2')).toEqual({ varde: 4.2 })
+    expect(tolkaEgenskap(falt('tjocklek_cm'), '0,4')).toEqual({ varde: 0.4 })
+    expect(tolkaEgenskap(falt('pumpsack_ingar'), 'ja')).toEqual({ varde: true })
+    expect(tolkaEgenskap(falt('r_varde_standard'), 'ASTM')).toEqual({ varde: 'astm' })
+  })
+
+  it.each([
+    ['r_varde', 0],
+    ['r_varde', 12.1],
+    ['langd_cm', 99],
+    ['langd_cm', 231],
+    ['bredd_cm', 29],
+    ['bredd_cm', 151],
+    ['tjocklek_cm', 0.1],
+    ['tjocklek_cm', 20.5],
+    ['langd_cm', 183.5],
+  ])('ger fel när %s är %s', (nyckel, varde) => {
+    expect(felnycklar({ ...underlag, [nyckel]: varde })).toEqual([nyckel])
+  })
+
+  it('godtar gränsvärdena', () => {
+    expect(felnycklar({ ...underlag, r_varde: 0.1, langd_cm: 100, bredd_cm: 30, tjocklek_cm: 0.2 })).toEqual([])
+    expect(felnycklar({ ...underlag, r_varde: 12, langd_cm: 230, bredd_cm: 150, tjocklek_cm: 20 })).toEqual([])
+  })
+
+  it('godtar bara de val som finns', () => {
+    expect(felnycklar({ ...underlag, typ: 'dun' })).toEqual(['typ'])
+    expect(felnycklar({ ...underlag, r_varde_standard: 'en' })).toEqual(['r_varde_standard'])
+    expect(felnycklar({ ...underlag, form: 'quilt' })).toEqual(['form'])
+    expect(felnycklar({ ...underlag, ventil: 'dubbel' })).toEqual(['ventil'])
+    expect(felnycklar({ ...underlag, pumpsack_ingar: 'ja' })).toEqual(['pumpsack_ingar'])
+    for (const typ of ['luft', 'sjalvuppblasande', 'annat']) expect(felnycklar({ ...underlag, typ }), typ).toEqual([])
+    for (const ventil of ['platt', 'traditionell', 'ingen', 'annat']) expect(felnycklar({ ...underlag, ventil }), ventil).toEqual([])
+    for (const form of ['rektangular', 'mumie', 'annat']) expect(felnycklar({ ...underlag, form }), form).toEqual([])
+  })
+
+  it('ett underlag av skum får inte ha en ventil', () => {
+    expect(felnycklar({ ...underlag, typ: 'skum', ventil: 'platt' })).toEqual(['ventil'])
+    expect(felnycklar({ ...underlag, typ: 'skum', ventil: 'annat' })).toEqual(['ventil'])
+    expect(felnycklar({ ...underlag, typ: 'skum', ventil: 'ingen' })).toEqual([])
+    const { ventil: _v, ...utanVentil } = underlag
+    expect(felnycklar({ ...utanVentil, typ: 'skum' })).toEqual([])
+  })
+
+  it('andra typer får ha vilken ventil som helst, även ingen', () => {
+    expect(felnycklar({ ...underlag, typ: 'luft', ventil: 'ingen' })).toEqual([])
+    expect(felnycklar({ ...underlag, typ: 'sjalvuppblasande', ventil: 'traditionell' })).toEqual([])
+  })
+
+  describe('i förrådets utfällning', () => {
+    const rader = (e: Record<string, unknown>, bara?: 'viktiga' | 'ovriga') =>
+      visaEgenskaper('liggunderlag', e)
+        .filter((r) => (bara === 'viktiga' ? r.viktig : bara === 'ovriga' ? !r.viktig : true))
+        .map((r) => `${r.etikett}: ${r.varde}`)
+
+    it('visar typ, R-värde, längd x bredd och tjocklek först', () => {
+      expect(rader(underlag, 'viktiga')).toEqual(['Typ: Luft', 'R-värde: 4,2', 'Längd x bredd: 183 x 51 cm', 'Tjocklek: 7,5 cm'])
+    })
+
+    it('lägger resten bland alla specifikationer', () => {
+      expect(rader(underlag, 'ovriga')).toEqual([
+        'Standard för R-värde: ASTM',
+        'Form: Mumie',
+        'Ventil: Platt',
+        'Pumpsäck ingår: Ja',
+        'Materialbeskrivning: 30D ripstopnylon',
+        'Packmått (cm): 23 x 10',
+      ])
+    })
+
+    it('skriver ej ASTM-testat vid R-värdet när standarden inte är angiven', () => {
+      expect(rader({ ...underlag, r_varde_standard: 'ej_angiven' })[1]).toBe('R-värde: 4,2 (ej ASTM-testat)')
+      const { r_varde_standard: _s, ...utan } = underlag
+      expect(rader(utan)[1]).toBe('R-värde: 4,2')
+    })
+
+    it('visar längd och bredd var för sig när bara den ena finns', () => {
+      expect(rader({ langd_cm: 183 })).toEqual(['Längd: 183 cm'])
+      expect(rader({ bredd_cm: 51 })).toEqual(['Bredd: 51 cm'])
+    })
+
+    it('skriver ut självuppblåsande med å, ä och ö, och visar bara det som har ett värde', () => {
+      expect(rader({ typ: 'sjalvuppblasande', pumpsack_ingar: false })).toEqual(['Typ: Självuppblåsande', 'Pumpsäck ingår: Nej'])
+      expect(rader({})).toEqual([])
+    })
+  })
+
+  it('är de viktigaste: typ, R-värde, längd, bredd och tjocklek', () => {
+    expect(egenskaperFor('liggunderlag').filter((e) => e.viktig).map((e) => e.nyckel)).toEqual(['typ', 'r_varde', 'langd_cm', 'bredd_cm', 'tjocklek_cm'])
   })
 })

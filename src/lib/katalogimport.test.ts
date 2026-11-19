@@ -331,3 +331,57 @@ describe('sovsäckar i importen', () => {
     expect(godkanda(r)).toHaveLength(1)
   })
 })
+
+describe('liggunderlag i importen', () => {
+  const UNDERLAG: Record<string, string> = {
+    marke: 'Testmärke',
+    modell: 'Luftbädd',
+    version: 'Regular',
+    underkategori: 'liggunderlag',
+    packvikt_g: '440',
+    typ: 'luft',
+    r_varde: '4,2',
+    r_varde_standard: 'ASTM',
+    langd_cm: '183',
+    bredd_cm: '51',
+    tjocklek_cm: '7,5',
+    form: 'mumie',
+    ventil: 'platt',
+    pumpsack_ingar: 'ja',
+    material_beskrivning: '30D ripstopnylon',
+    packmatt_cm: '23 x 10',
+    kalla: 'https://exempel.se/luftbadd',
+    kommentar: 'Bara för oss.',
+  }
+
+  it('lägger underlaget under sova, med decimaltal som tal och utan kommentaren', () => {
+    const r = tolkaRad(2, UNDERLAG)
+    expect(r.fel).toEqual([])
+    expect(r.varningar).toEqual([])
+    expect(r.produkt).toMatchObject({
+      kategori: 'sova',
+      underkategori: 'liggunderlag',
+      packvikt_g: 440,
+      egenskaper: { typ: 'luft', r_varde: 4.2, r_varde_standard: 'astm', langd_cm: 183, bredd_cm: 51, tjocklek_cm: 7.5, pumpsack_ingar: true },
+    })
+    expect(JSON.stringify(r.produkt)).not.toContain('Bara för oss')
+  })
+
+  it('stoppar ett skumunderlag med ventil', () => {
+    expect(tolkaRad(2, { ...UNDERLAG, typ: 'skum' })).toMatchObject({ produkt: null, fel: ['ventil: ska vara ingen när typ är skum'] })
+    expect(tolkaRad(2, { ...UNDERLAG, typ: 'skum', ventil: 'ingen' }).fel).toEqual([])
+  })
+
+  it('varnar men importerar ett underlag utan R-värde', () => {
+    const r = tolkaRad(2, { ...UNDERLAG, r_varde: '' })
+    expect(r.produkt).not.toBeNull()
+    expect(r.varningar).toEqual(['r_varde: saknas, behövs för jämförelser'])
+  })
+
+  it('läser en fil med liggunderlagens kolumner', () => {
+    const kolumner = Object.keys(UNDERLAG)
+    const r = importera([kolumner.join(';'), kolumner.map((k) => UNDERLAG[k]).join(';')].join('\n'))
+    expect(r.filfel).toEqual([])
+    expect(godkanda(r)).toHaveLength(1)
+  })
+})

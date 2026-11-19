@@ -15,6 +15,10 @@ interface Grund {
   viktig?: boolean
   /** Ett tillägg efter värdet när det visas, som beror på produktens övriga egenskaper. */
   tillagg?: (egenskaper: Record<string, unknown>) => string | null
+  /** Visar egenskapen ihop med en annan, till exempel längd och bredd på en rad. null = visa som vanligt. */
+  visaIhop?: (egenskaper: Record<string, unknown>) => { etikett: string; varde: string } | null
+  /** Egenskapen visas inte för sig när den här andra egenskapen har ett värde, eftersom den då visas ihop med den. */
+  ingarI?: string
 }
 
 export type Egenskap = Grund &
@@ -89,6 +93,36 @@ const SOVSACK: Egenskap[] = [
   { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text' },
 ]
 
+/** R-värden som inte är mätta enligt ASTM F3340 går inte att jämföra rakt av. */
+function ejAstmTestat(egenskaper: Record<string, unknown>): string | null {
+  return egenskaper.r_varde_standard === 'ej_angiven' ? 'ej ASTM-testat' : null
+}
+
+/** Längd och bredd på en rad: "183 x 51 cm". */
+function langdOchBredd(e: Record<string, unknown>): { etikett: string; varde: string } | null {
+  return typeof e.langd_cm === 'number' && typeof e.bredd_cm === 'number' ? { etikett: 'Längd x bredd', varde: `${e.langd_cm} x ${e.bredd_cm} cm` } : null
+}
+
+/** Liggunderlag. Typ, R-värde, mått och tjocklek behövs för jämförelser och visas först i förrådet. */
+const LIGGUNDERLAG: Egenskap[] = [
+  { nyckel: 'typ', etikett: 'Typ', sort: 'val', val: ['luft', 'sjalvuppblasande', 'skum', 'annat'], forJamforelse: true, viktig: true },
+  { nyckel: 'r_varde', etikett: 'R-värde', sort: 'decimal', min: 0.1, max: 12, forJamforelse: true, viktig: true, tillagg: ejAstmTestat },
+  { nyckel: 'r_varde_standard', etikett: 'Standard för R-värde', sort: 'val', val: ['astm', 'ej_angiven'] },
+  { nyckel: 'langd_cm', etikett: 'Längd', sort: 'heltal', min: 100, max: 230, enhet: 'cm', forJamforelse: true, viktig: true, visaIhop: langdOchBredd },
+  { nyckel: 'bredd_cm', etikett: 'Bredd', sort: 'heltal', min: 30, max: 150, enhet: 'cm', forJamforelse: true, viktig: true, ingarI: 'langd_cm' },
+  { nyckel: 'tjocklek_cm', etikett: 'Tjocklek', sort: 'decimal', min: 0.2, max: 20, enhet: 'cm', forJamforelse: true, viktig: true },
+  { nyckel: 'form', etikett: 'Form', sort: 'val', val: ['rektangular', 'mumie', 'annat'] },
+  { nyckel: 'ventil', etikett: 'Ventil', sort: 'val', val: ['platt', 'traditionell', 'ingen', 'annat'] },
+  { nyckel: 'pumpsack_ingar', etikett: 'Pumpsäck ingår', sort: 'janej' },
+  { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text' },
+  { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text' },
+]
+
+/** Ett underlag av skum har ingen ventil. */
+function liggunderlagsregler(e: Record<string, unknown>): string[] {
+  return e.typ === 'skum' && !saknas(e.ventil) && e.ventil !== 'ingen' ? ['ventil: ska vara ingen när typ är skum'] : []
+}
+
 /** Regler som gäller flera egenskaper på en gång. Ett brott mot en regel är ett fel och stoppar raden. */
 function sovsacksregler(e: Record<string, unknown>): string[] {
   const fel: string[] = []
@@ -112,11 +146,13 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   vindsack: SKYDD,
   sovsack: SOVSACK,
   quilt: SOVSACK,
+  liggunderlag: LIGGUNDERLAG,
 }
 
 const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, unknown>) => string[]>> = {
   sovsack: sovsacksregler,
   quilt: sovsacksregler,
+  liggunderlag: liggunderlagsregler,
 }
 
 /** Alla nycklar som finns som egenskap i någon underkategori. */
@@ -220,6 +256,8 @@ const VALNAMN: Record<string, string> = {
   hoger: 'Höger',
   iso: 'ISO',
   ej_angiven: 'Inte angiven',
+  sjalvuppblasande: 'Självuppblåsande',
+  astm: 'ASTM',
 }
 
 /** Tal med decimalkomma och ett riktigt minustecken. */
@@ -257,9 +295,13 @@ export interface Egenskapsrad {
 export function visaEgenskaper(underkategori: string, egenskaper: Record<string, unknown> | null | undefined): Egenskapsrad[] {
   if (!egenskaper) return []
   return egenskaperFor(underkategori).flatMap((e) => {
+    const viktig = e.viktig === true
+    if (e.ingarI && !saknas(egenskaper[e.ingarI])) return []
+    const ihop = e.visaIhop?.(egenskaper)
+    if (ihop) return [{ nyckel: e.nyckel, etikett: ihop.etikett, varde: ihop.varde, viktig }]
     const varde = visaVarde(e, egenskaper[e.nyckel])
     if (varde === null) return []
     const tillagg = e.tillagg?.(egenskaper)
-    return [{ nyckel: e.nyckel, etikett: e.etikett, varde: tillagg ? `${varde} (${tillagg})` : varde, viktig: e.viktig === true }]
+    return [{ nyckel: e.nyckel, etikett: e.etikett, varde: tillagg ? `${varde} (${tillagg})` : varde, viktig }]
   })
 }
