@@ -104,7 +104,7 @@ export function MinaTurer() {
         )
       ) : (
         <>
-          {nasta && <NastaTurKort tur={nasta} pagar={lage(nasta, idag) === 'pagar'} />}
+          {nasta && <NastaTurKort tur={nasta} idag={idag} />}
 
           {!nasta && (
             <p className="rounded-lg border border-dashed border-border px-5 py-6 text-muted-foreground">
@@ -115,9 +115,9 @@ export function MinaTurer() {
           {fler.visa && (
           <section aria-labelledby="fler-turer" className="space-y-4">
             <h2 id="fler-turer" className="text-2xl">
-              {nasta ? 'Fler turer' : 'Dina turer'}
+              {nasta ? 'Övriga turer' : 'Dina turer'}
             </h2>
-            <div role="tablist" aria-label="Fler turer" className="flex gap-2">
+            <div role="tablist" aria-label="Övriga turer" className="flex gap-2">
               {(
                 [
                   ['kommande', 'Kommande', kommande.length],

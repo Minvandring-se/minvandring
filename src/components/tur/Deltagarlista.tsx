@@ -1,4 +1,4 @@
-import { Dog, Plus, UserRound, X } from 'lucide-react'
+import { Dog, Plus, UserPlus, UserRound, X } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
 import { Inbjudan } from '@/components/tur/Inbjudan'
 import { Button } from '@/components/ui/button'
@@ -23,7 +23,10 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
   const [nyttNamn, setNyttNamn] = useState('')
   const [nyTyp, setNyTyp] = useState<'person' | 'hund'>('hund')
   const [fel, setFel] = useState('')
+  const [bjuderIn, setBjuderIn] = useState(false)
   const faltId = useId()
+  // Samma roller som får bjuda in i dag: ägare och redigerare.
+  const farBjudaIn = minRoll !== null && kanAndra(minRoll)
 
   const alla = deltagare.map((d) => ({ id: d.id, roll: d.roll, userId: d.user_id }))
 
@@ -70,7 +73,22 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
 
   return (
     <Card className="space-y-4">
-      <h2 className="text-xl">Vilka följer med</h2>
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
+        <h2 className="text-xl">Deltagare</h2>
+        {farBjudaIn && (
+          <Button variant="outline" aria-expanded={bjuderIn} aria-controls={`${faltId}-inbjudan`} onClick={() => setBjuderIn((b) => !b)}>
+            <UserPlus className="size-4" aria-hidden />
+            Bjud in
+          </Button>
+        )}
+      </div>
+
+      {farBjudaIn && minRoll && (
+        <div id={`${faltId}-inbjudan`} hidden={!bjuderIn}>
+          {/* Länken hämtas först när rutan öppnas. */}
+          {bjuderIn && <Inbjudan turId={tur.id} minRoll={minRoll} />}
+        </div>
+      )}
 
       <ul className="divide-y divide-border">
         {deltagare.map((d) => {
@@ -174,7 +192,6 @@ export function Deltagarlista({ tur, deltagare, minRoll, mittUserId, onAndrad, o
         </form>
       )}
 
-      {minRoll && kanAndra(minRoll) && <Inbjudan turId={tur.id} minRoll={minRoll} />}
     </Card>
   )
 }

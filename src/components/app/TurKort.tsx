@@ -2,7 +2,7 @@ import { ArrowRight, CalendarDays, ChevronRight, MapPin } from 'lucide-react'
 import { Link } from 'react-router'
 import { Namnbrickor } from '@/components/app/Namnbricka'
 import { TurBild } from '@/components/app/TurBild'
-import { datumrad, deltagareText } from '@/lib/turlista'
+import { datumrad, deltagareText, nastaEtikett } from '@/lib/turlista'
 
 /** En tur i listan Mina turer, med deltagarna från databasen. */
 export interface TurMedDeltagare {
@@ -19,15 +19,18 @@ export interface TurMedDeltagare {
 /** Följer med när en tur öppnas från listan, så att Tillbaka i turen leder till samma plats i listan. */
 const FRAN_LISTA = { franLista: true }
 
-/** Det stora kortet för nästa (eller pågående) vandring. Bild till vänster på dator, överst i mobil. */
-export function NastaTurKort({ tur, pagar }: { tur: TurMedDeltagare; pagar: boolean }) {
+/**
+ * Det stora kortet för nästa (eller pågående) vandring. Bild till vänster på dator, överst i mobil.
+ * Den gula etiketten säger hur långt det är kvar: "Nästa vandring · om 15 dagar" eller "Pågår nu · dag 2 av 3".
+ */
+export function NastaTurKort({ tur, idag }: { tur: TurMedDeltagare; idag: string }) {
   const personer = tur.deltagare.filter((d) => d.typ === 'person').map((d) => d.namn)
   return (
     <article className="relative grid overflow-hidden rounded-lg border border-border bg-card shadow-soft md:grid-cols-[1.15fr_1fr]">
       <div className="relative">
         <TurBild turId={tur.id} sizes="(min-width: 768px) 560px, 100vw" prioritet className="aspect-[16/9] h-full w-full md:aspect-auto md:min-h-72" />
         <span className="absolute top-3 left-3 rounded-full bg-accent-soft px-3 py-1 text-sm font-semibold text-foreground shadow-soft">
-          {pagar ? 'Pågår nu' : 'Nästa vandring'}
+          {nastaEtikett(tur, idag)}
         </span>
       </div>
       <div className="flex min-w-0 flex-col gap-4 p-5 sm:p-6">
