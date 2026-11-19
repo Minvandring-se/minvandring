@@ -99,7 +99,7 @@ function sovsacksregler(e: Record<string, unknown>): string[] {
   const extrem = tal('extrem_temp_c')
   if (komfort !== null && limit !== null && limit > komfort) fel.push('limit_temp_c: får inte vara högre än komfort_temp_c')
   if (limit !== null && extrem !== null && extrem > limit) fel.push('extrem_temp_c: får inte vara högre än limit_temp_c')
-  if (!saknas(e.fillpower_cuin) && e.fyllning !== 'dun') fel.push('fillpower_cuin: anges bara när fyllning är dun')
+  if (!saknas(e.fillpower_cuin) && e.fyllning !== 'dun' && e.fyllning !== 'blandning') fel.push('fillpower_cuin: anges bara när fyllning är dun eller blandning')
   return fel
 }
 

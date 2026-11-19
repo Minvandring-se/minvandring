@@ -314,9 +314,10 @@ describe('egenskaper för sovsäck och quilt', () => {
     expect(felnycklar({ limit_temp_c: 5 })).toEqual([])
   })
 
-  it('fillpower anges bara för dun', () => {
+  it('fillpower anges bara för dun och blandning', () => {
+    expect(felnycklar({ ...sovsack, fyllning: 'dun' })).toEqual([])
+    expect(felnycklar({ ...sovsack, fyllning: 'blandning' })).toEqual([])
     expect(felnycklar({ ...sovsack, fyllning: 'syntet' })).toEqual(['fillpower_cuin'])
-    expect(felnycklar({ ...sovsack, fyllning: 'blandning' })).toEqual(['fillpower_cuin'])
     expect(felnycklar({ fillpower_cuin: 800 })).toEqual(['fillpower_cuin'])
     const { fillpower_cuin: _f, ...utan } = sovsack
     expect(felnycklar({ ...utan, fyllning: 'syntet' })).toEqual([])

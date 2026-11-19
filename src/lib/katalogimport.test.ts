@@ -313,7 +313,8 @@ describe('sovsäckar i importen', () => {
   })
 
   it('stoppar raden när fillpower står på en syntetsäck', () => {
-    expect(tolkaRad(2, { ...SOVSACK, fyllning: 'syntet' }).fel).toEqual(['fillpower_cuin: anges bara när fyllning är dun'])
+    expect(tolkaRad(2, { ...SOVSACK, fyllning: 'syntet' }).fel).toEqual(['fillpower_cuin: anges bara när fyllning är dun eller blandning'])
+    expect(tolkaRad(2, { ...SOVSACK, fyllning: 'blandning' }).fel).toEqual([])
   })
 
   it('varnar men importerar en säck utan temperaturer', () => {

@@ -43,7 +43,7 @@ Granskning görs alltid i CSV:n och förs in med en ny seed-migrering, aldrig di
 
 Jämförelser senare ("likvärdigt tält som väger mindre") ska bara använda granskade produkter (`kontrollerad is not null`). Vikter och mått som ingen har kontrollerat får inte ligga till grund för ett råd.
 
-Egenskaper per underkategori står i `src/lib/produktegenskaper.ts`. Tält har flest, och elva av dem behövs för jämförelser. Tarp och vindsäck har fem enkla, alla frivilliga. Sovsäck och quilt har tolv, varav fem behövs för jämförelser (komfort- och limittemperatur, fyllning, form och max längd). Där finns också regler mellan fälten: limit får inte vara högre än komfort, extrem inte högre än limit, och fillpower anges bara för dun. Övriga underkategorier har inga än.
+Egenskaper per underkategori står i `src/lib/produktegenskaper.ts`. Tält har flest, och elva av dem behövs för jämförelser. Tarp och vindsäck har fem enkla, alla frivilliga. Sovsäck och quilt har tolv, varav fem behövs för jämförelser (komfort- och limittemperatur, fyllning, form och max längd). Där finns också regler mellan fälten: limit får inte vara högre än komfort, extrem inte högre än limit, och fillpower anges bara för dun och blandning. Övriga underkategorier har inga än.
 
 ### Kopplingen till packlistan (inte byggd)
 
