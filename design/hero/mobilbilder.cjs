@@ -3,7 +3,7 @@
 const sharp = require('sharp')
 const path = require('path')
 const dir = process.argv[2]
-const bilder = { '1-grupp': 0.6, '2-sommarfjall': 0.7, '4-kust': 0.2, '5-norrsken': 0.3, '3-utsikt': 0.45 }
+const bilder = { '2-sommarfjall': 0.7, '4-kust': 0.2, '5-norrsken': 0.3, '3-utsikt': 0.45 }
 ;(async () => {
   for (const [namn, fx] of Object.entries(bilder)) {
     const src = path.join(dir, `${namn}-2560.webp`)
