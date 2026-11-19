@@ -11,6 +11,8 @@ import {
   medUnderkategori,
   summeraForrad,
   tolkaSak,
+  typEfterVal,
+  TYPVAL,
   underkategoriFor,
   type SakFalt,
 } from './forrad'
@@ -74,18 +76,51 @@ describe('forvaldTyp', () => {
     expect(forvaldTyp('kok', 'bransle')).toBe('forbrukas')
     expect(forvaldTyp('kok', 'kastrull')).toBe('ryggsack')
     expect(forvaldTyp('skor', 'kangor')).toBe('kropp')
-    expect(forvaldTyp('skor', 'damasker')).toBe('kropp')
     expect(forvaldTyp('skor', 'lagerskor')).toBe('ryggsack')
-    expect(forvaldTyp('skor', 'broddar')).toBe('ryggsack')
   })
 
-  it('bara bränsle, lägerskor och broddar har ett eget förval', () => {
-    const egna = KATEGORIER.flatMap((k) => k.under.filter((u) => 'typ' in u).map((u) => u.nyckel))
-    expect(egna).toEqual(['bransle', 'lagerskor', 'broddar'])
+  it('det som går åt under turen är bränsle, reningstabletter, skavsår, mediciner och solkräm', () => {
+    const under = KATEGORIER.flatMap((k) => k.under.map((u) => ({ nyckel: u.nyckel, typ: forvaldTyp(k.nyckel, u.nyckel) })))
+    expect(under.filter((u) => u.typ === 'forbrukas').map((u) => u.nyckel)).toEqual(['bransle', 'rening', 'skavsar', 'mediciner', 'sol_mygg'])
+  })
+
+  it('bara kängor har man på sig, övriga skor ligger i ryggsäcken', () => {
+    const under = KATEGORIER.flatMap((k) => k.under.map((u) => ({ nyckel: u.nyckel, typ: forvaldTyp(k.nyckel, u.nyckel) })))
+    expect(under.filter((u) => u.typ === 'kropp').map((u) => u.nyckel)).toEqual(['kangor'])
+    for (const u of ['lagerskor', 'damasker', 'broddar']) expect(forvaldTyp('skor', u), u).toBe('ryggsack')
+  })
+
+  it('alla andra underkategorier ligger i ryggsäcken', () => {
+    const under = KATEGORIER.flatMap((k) => k.under.map((u) => forvaldTyp(k.nyckel, u.nyckel)))
+    expect(under.filter((t) => t === 'ryggsack')).toHaveLength(67 - 6)
   })
 
   it('en underkategori från en annan huvudkategori påverkar inte typen', () => {
     expect(forvaldTyp('talt', 'bransle')).toBe('ryggsack')
+  })
+})
+
+describe('kryssrutorna för typ', () => {
+  it('är två: går åt under turen och har den på mig', () => {
+    expect(TYPVAL.map((v) => [v.typ, v.etikett, v.hjalp])).toEqual([
+      ['forbrukas', 'Går åt under turen', 'Räknas inte in i basvikten'],
+      ['kropp', 'Jag har den på mig', 'Räknas inte in i ryggsäcken'],
+    ])
+  })
+
+  it('ingen ikryssad betyder ryggsäcken', () => {
+    expect(typEfterVal('forbrukas', false)).toBe('ryggsack')
+    expect(typEfterVal('kropp', false)).toBe('ryggsack')
+  })
+
+  it('utesluter varandra: kryssas den ena i är den andra inte längre vald', () => {
+    for (const forst of TYPVAL) {
+      for (const sedan of TYPVAL) {
+        const typ = typEfterVal(sedan.typ, true)
+        expect(typ).toBe(sedan.typ)
+        expect(TYPVAL.filter((v) => v.typ === typ), `${forst.typ} sedan ${sedan.typ}`).toHaveLength(1)
+      }
+    }
   })
 })
 
@@ -199,6 +234,11 @@ describe('faltFran', () => {
     expect(faltFran()).toEqual({ namn: '', kategori: '', underkategori: '', typ: 'ryggsack', antal: '1', vikt: '', notering: '' })
   })
 
+  it('fyller i ett förvalt namn, till exempel söktexten, utan att välja kategori', () => {
+    expect(faltFran(undefined, { namn: '  Trangia 27  ' })).toMatchObject({ namn: 'Trangia 27', kategori: '', underkategori: '' })
+    expect(faltFran(undefined, { namn: 'x'.repeat(200) }).namn).toHaveLength(80)
+  })
+
   it('ger en ny sak med förval typen som hör till valet', () => {
     expect(faltFran(undefined, { kategori: 'skor' })).toMatchObject({ kategori: 'skor', underkategori: '', typ: 'kropp' })
     expect(faltFran(undefined, { kategori: 'kok', underkategori: 'bransle' })).toMatchObject({ underkategori: 'bransle', typ: 'forbrukas' })
@@ -236,6 +276,7 @@ describe('val av kategori i formuläret', () => {
     expect(medUnderkategori(skor, 'lagerskor').typ).toBe('ryggsack')
     expect(medUnderkategori(skor, 'kangor').typ).toBe('kropp')
     expect(medUnderkategori(medUnderkategori(skor, 'lagerskor'), '').typ).toBe('kropp')
+    expect(medUnderkategori(medKategori(start, 'medicin'), 'mediciner').typ).toBe('forbrukas')
   })
 
   it('rör inte det man redan har skrivit', () => {

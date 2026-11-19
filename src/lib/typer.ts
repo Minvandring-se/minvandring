@@ -14,6 +14,21 @@ export interface Forradssak {
   vikt_g: number | null
   typ: Typ
   notering: string | null
+  /** Produkten saken kommer från, när listan hämtas med den. Saknas för saker man har skrivit in själv. */
+  produkter?: { kontrollerad: string | null } | null
+}
+
+/** En produkt i katalogen, med det som sökningen visar. */
+export interface Produkt {
+  id: string
+  marke: string
+  modell: string
+  version: string | null
+  kategori: string
+  underkategori: string
+  packvikt_g: number
+  /** Dagen produkten kontrollerades mot tillverkarens uppgifter. null = inte granskad än. */
+  kontrollerad: string | null
 }
 
 export interface Tur {

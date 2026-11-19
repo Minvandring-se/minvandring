@@ -7,6 +7,7 @@ import { PGlite, type Transaction } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { KATEGORIER } from '../src/lib/forrad'
+import { godkanda, importera } from '../src/lib/katalogimport'
 
 const A = '00000000-0000-0000-0000-00000000000a'
 const B = '00000000-0000-0000-0000-00000000000b'
@@ -667,6 +668,77 @@ describe('produktkatalogen', () => {
     await forvantaFel(lagg(null, 'talt'))
     await forvantaFel(lagg('Tält', 'talt'))
     await forvantaFel(lagg('talt', 'finns-inte'))
+  })
+})
+
+describe('startutbudet i katalogen', () => {
+  const seedfil = () => {
+    const mapp = path.join(import.meta.dirname, 'migrations')
+    const senaste = fs.readdirSync(mapp).filter((f) => /_katalog_.*\.sql$/.test(f)).sort().at(-1)!
+    return fs.readFileSync(path.join(mapp, senaste), 'utf8')
+  }
+  // Så många produkter som CSV-filerna i supabase/katalog ger.
+  const iKatalogen = (() => {
+    const mapp = path.join(import.meta.dirname, 'katalog')
+    return fs.readdirSync(mapp).filter((f) => f.endsWith('.csv')).flatMap((f) => godkanda(importera(fs.readFileSync(path.join(mapp, f), 'utf8')))).length
+  })()
+  const antal = async () => (await db.query<{ n: number }>(`select count(*)::int as n from public.produkter where marke <> 'Testmärke' and marke <> 'M'`)).rows[0].n
+
+  it('ligger i katalogen efter migreringarna, och inloggade hittar produkterna', async () => {
+    expect(iKatalogen).toBeGreaterThanOrEqual(20)
+    expect(await antal()).toBe(iKatalogen)
+    const r = await som(A, (tx) =>
+      tx.query<{ modell: string; packvikt_g: number; underkategori: string; kontrollerad: string | null; personer: number }>(
+        `select modell, packvikt_g, underkategori, kontrollerad, (egenskaper ->> 'personer')::int as personer
+         from public.produkter where marke ilike '%hilleberg%' and modell ilike '%akto%'`,
+      ),
+    )
+    expect(r.rows).toEqual([{ modell: 'Akto', packvikt_g: 1700, underkategori: 'talt', kontrollerad: null, personer: 1 }])
+  })
+
+  it('inloggade kan läsa även produkter som inte är granskade, men ingen kan skriva eller markera dem som granskade', async () => {
+    const ogranskade = await som(A, (tx) => tx.query<{ id: string }>('select id from public.produkter where kontrollerad is null'))
+    expect(ogranskade.rows.length).toBeGreaterThanOrEqual(iKatalogen)
+    const id = ogranskade.rows[0].id
+    await forvantaFel(som(A, (tx) => tx.query(`update public.produkter set kontrollerad = '2026-11-20' where id = $1`, [id])))
+    await forvantaFel(som(A, (tx) => tx.query('update public.produkter set packvikt_g = 1 where id = $1', [id])))
+    await forvantaFel(som(A, (tx) => tx.query('delete from public.produkter where id = $1', [id])))
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.produkter where kontrollerad is null')))
+    const kvar = await db.query<{ n: number }>('select count(*)::int as n from public.produkter where kontrollerad is not null and marke <> $1 and marke <> $2', ['Testmärke', 'M'])
+    expect(kvar.rows[0].n).toBe(0)
+  })
+
+  it('en produkt får sakna kontrollerad, och den går att sätta senare', async () => {
+    const r = await db.query<{ n: number }>('select count(*)::int as n from public.produkter where kontrollerad is null')
+    expect(r.rows[0].n).toBeGreaterThan(0)
+    await db.query(`update public.produkter set kontrollerad = '2026-11-20' where modell = 'Soulo'`)
+    await db.query(`update public.produkter set kontrollerad = null where modell = 'Soulo'`)
+  })
+
+  it('går att köra igen utan dubbletter, och uppdaterar då produkterna som finns', async () => {
+    await db.query(`update public.produkter set packvikt_g = 1 where modell = 'Akto'`)
+    await db.exec(seedfil())
+    expect(await antal()).toBe(iKatalogen)
+    const r = await db.query<{ packvikt_g: number }>(`select packvikt_g from public.produkter where modell = 'Akto'`)
+    expect(r.rows).toEqual([{ packvikt_g: 1700 }])
+  })
+
+  it('en sak som valts ur katalogen följer med märkningen, men bara för ägaren', async () => {
+    const p = await db.query<{ id: string }>(`select id from public.produkter where modell = 'Enan'`)
+    await som(C, (tx) =>
+      tx.query(`insert into public.forradssaker (produkt_id, namn, kategori, underkategori, vikt_g) values ($1, 'Hilleberg Enan', 'talt', 'talt', 1200)`, [
+        p.rows[0].id,
+      ]),
+    )
+    const egen = await som(C, (tx) =>
+      tx.query<{ namn: string; kontrollerad: string | null }>(
+        'select s.namn, p.kontrollerad from public.forradssaker s join public.produkter p on p.id = s.produkt_id',
+      ),
+    )
+    expect(egen.rows).toEqual([{ namn: 'Hilleberg Enan', kontrollerad: null }])
+    const annan = await som(B, (tx) => tx.query('select s.id from public.forradssaker s join public.produkter p on p.id = s.produkt_id'))
+    expect(annan.rows).toHaveLength(0)
+    await som(C, (tx) => tx.query('delete from public.forradssaker'))
   })
 })
 

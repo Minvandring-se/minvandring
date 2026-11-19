@@ -7,37 +7,28 @@ import {
   MAX_NAMN,
   MAX_NOTERING,
   MAX_VIKT_G,
-  TYPNAMN,
+  TYPVAL,
   faltFran,
   kategoriFor,
   medKategori,
   medUnderkategori,
   tolkaSak,
-  type KategoriNyckel,
+  typEfterVal,
+  type Forval,
   type SakFalt,
-  type UnderkategoriNyckel,
 } from '@/lib/forrad'
 import { supabase } from '@/lib/supabase'
 import type { Forradssak } from '@/lib/typer'
-import type { Typ } from '@/lib/vikt'
 import { cn } from '@/lib/utils'
-
-export interface Forval {
-  kategori: KategoriNyckel
-  underkategori?: UnderkategoriNyckel
-}
 
 interface Props {
   /** Saken som ändras. Utelämnas för en ny sak. */
   sak?: Forradssak
-  /** Förvald kategori och underkategori för en ny sak. */
+  /** Förvalt namn, kategori och underkategori för en ny sak. */
   forval?: Forval
   onKlar: () => void
   onAvbryt: () => void
 }
-
-const valKlass =
-  'h-11 w-full rounded-md border border-border bg-card px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20'
 
 /** Ett val som ser ut som en knapp men är en radioknapp eller kryssruta, så att det går att nå med tangentbord och skärmläsare. */
 const valbarKlass =
@@ -181,17 +172,25 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
         </div>
       </div>
 
+      {/* Två kryssrutor som utesluter varandra. Ingen ikryssad betyder att saken ligger i ryggsäcken. */}
       <div className="space-y-1">
-        <label htmlFor={`${id}-typ`} className="block text-sm font-medium">
-          Var bärs den?
-        </label>
-        <select id={`${id}-typ`} className={valKlass} value={falt.typ} onChange={(e) => andra('typ', e.target.value)}>
-          {(Object.keys(TYPNAMN) as Typ[]).map((t) => (
-            <option key={t} value={t}>
-              {TYPNAMN[t]}
-            </option>
-          ))}
-        </select>
+        {TYPVAL.map((v) => (
+          <label key={v.typ} className="flex min-h-11 cursor-pointer items-center gap-3 py-1">
+            <input
+              type="checkbox"
+              className="size-5 shrink-0 accent-primary"
+              checked={falt.typ === v.typ}
+              aria-describedby={`${id}-${v.typ}`}
+              onChange={(e) => andra('typ', typEfterVal(v.typ, e.target.checked))}
+            />
+            <span>
+              <span className="block text-sm font-medium">{v.etikett}</span>
+              <span id={`${id}-${v.typ}`} className="block text-sm text-muted-foreground">
+                {v.hjalp}
+              </span>
+            </span>
+          </label>
+        ))}
       </div>
 
       <div className="space-y-1">

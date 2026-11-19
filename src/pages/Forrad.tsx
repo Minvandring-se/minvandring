@@ -2,23 +2,21 @@ import { Pencil, Plus } from 'lucide-react'
 import { useEffect, useState } from 'react'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
-import { SakFormular, type Forval } from '@/components/forrad/SakFormular'
+import { Granskad } from '@/components/forrad/Granskad'
+import { ProduktSok } from '@/components/forrad/ProduktSok'
+import { SakFormular } from '@/components/forrad/SakFormular'
 import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
 import { Button } from '@/components/ui/button'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { formateraVikt, summeraForrad, underkategoriFor, type Kategorigrupp } from '@/lib/forrad'
+import { formateraVikt, summeraForrad, underkategoriFor, type Forval, type Kategorigrupp } from '@/lib/forrad'
 import { supabase } from '@/lib/supabase'
 import type { Forradssak } from '@/lib/typer'
 
-/** De tyngsta sakerna, som det lönar sig att börja med. */
-const BORJA_MED: { text: string; forval: Forval }[] = [
-  { text: 'Ryggsäck', forval: { kategori: 'packning', underkategori: 'ryggsack' } },
-  { text: 'Tält', forval: { kategori: 'talt', underkategori: 'talt' } },
-  { text: 'Sovsäck', forval: { kategori: 'sova', underkategori: 'sovsack' } },
-]
-
-/** Vad som är öppet: formuläret för en ny sak (med eller utan förval) eller för en sak som ändras. */
-type Oppet = { ny: Forval | null } | { sakId: string } | null
+/**
+ * Vad som är öppet: sökningen i katalogen (första steget i Lägg till), formuläret för en egen sak,
+ * eller formuläret för en sak som ändras.
+ */
+type Oppet = { sok: true } | { ny: Forval } | { sakId: string } | null
 
 function antalText(antal: number) {
   return antal === 1 ? '1 sak' : `${antal} saker`
@@ -30,6 +28,8 @@ export function Forrad() {
   const [saker, setSaker] = useState<Forradssak[] | null>(null)
   const [laddfel, setLaddfel] = useState(false)
   const [oppet, setOppet] = useState<Oppet>(null)
+  // Det senaste som lades till från katalogen, så att man kan gå vidare och ändra antal eller anteckning.
+  const [tillagd, setTillagd] = useState<{ sakId: string; namn: string } | null>(null)
 
   // Räknas upp när något har sparats eller tagits bort, så att listan hämtas igen.
   const [omgang, setOmgang] = useState(0)
@@ -37,32 +37,75 @@ export function Forrad() {
   useEffect(() => {
     supabase
       ?.from('forradssaker')
-      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering')
+      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, produkter(kontrollerad)')
       .then(({ data, error }) => {
         setLaddfel(!!error)
-        if (!error) setSaker((data as Forradssak[] | null) ?? [])
+        if (!error) setSaker((data as unknown as Forradssak[] | null) ?? [])
       })
   }, [omgang])
 
-  function klar() {
-    setOppet(null)
+  function hamtaOm() {
     setOmgang((n) => n + 1)
   }
 
+  function klar() {
+    setOppet(null)
+    setTillagd(null)
+    hamtaOm()
+  }
+
   const summa = summeraForrad(saker ?? [])
-  const ny = oppet !== null && 'ny' in oppet ? oppet : null
-  const laggTillKnapp = !ny && (
-    <Button onClick={() => setOppet({ ny: null })}>
+  const sokOppen = oppet !== null && 'sok' in oppet
+  const ny = oppet !== null && 'ny' in oppet ? oppet.ny : null
+  const laggerTill = sokOppen || ny !== null
+  const oppnaSok = () => {
+    setTillagd(null)
+    setOppet({ sok: true })
+  }
+  const laggTillKnapp = !laggerTill && (
+    <Button onClick={oppnaSok}>
       <Plus className="size-4" aria-hidden />
       Lägg till
     </Button>
   )
+  const finnsRedan = new Set((saker ?? []).flatMap((s) => (s.produkt_id ? [s.produkt_id] : [])))
 
   return (
     <div className="space-y-8">
       <SidRubrik rubrik="Mitt förråd" text="Din egen utrustning, samlad på ett ställe." knappar={saker?.length ? laggTillKnapp : null} />
 
-      {ny && <SakFormular key={ny.ny?.underkategori ?? 'ny'} forval={ny.ny ?? undefined} onKlar={klar} onAvbryt={() => setOppet(null)} />}
+      {sokOppen && (
+        <ProduktSok
+          finnsRedan={finnsRedan}
+          onTillagd={(sakId, namn) => {
+            setTillagd({ sakId, namn })
+            hamtaOm()
+          }}
+          onEgen={(soktext) => {
+            setTillagd(null)
+            setOppet({ ny: { namn: soktext } })
+          }}
+          onStang={() => setOppet(null)}
+        />
+      )}
+
+      {ny && <SakFormular forval={ny} onKlar={klar} onAvbryt={oppnaSok} />}
+
+      {tillagd && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-md bg-primary-soft px-4 py-2 text-sm text-primary">
+          <p className="font-medium">{tillagd.namn} ligger nu i ditt förråd.</p>
+          <button
+            type="button"
+            className="min-h-11 font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            onClick={() => {
+              setOppet({ sakId: tillagd.sakId })
+              setTillagd(null)
+            }}
+          >
+            Ändra antal eller anteckning
+          </button>
+        </div>
+      )}
 
       {laddfel ? (
         <p role="alert" className="text-destructive">
@@ -73,23 +116,16 @@ export function Forrad() {
           Hämtar ditt förråd …
         </p>
       ) : saker.length === 0 ? (
-        !ny && (
+        !laggerTill && (
           <TomtLage
             bild={<ForradIllustration className="block aspect-[8/5] w-full sm:aspect-[21/9]" />}
             rubrik="Lägg in din utrustning en gång"
             text="Så har du koll på vad du har och vad allt väger. Börja gärna med det tyngsta: ryggsäck, tält och sovsäck."
             knapp={
-              <div className="flex flex-wrap gap-2">
-                {BORJA_MED.map(({ text, forval }) => (
-                  <Button key={text} variant="outline" onClick={() => setOppet({ ny: forval })}>
-                    <Plus className="size-4" aria-hidden />
-                    {text}
-                  </Button>
-                ))}
-                <Button variant="ghost" onClick={() => setOppet({ ny: null })}>
-                  Något annat
-                </Button>
-              </div>
+              <Button size="lg" onClick={oppnaSok}>
+                <Plus className="size-5" aria-hidden />
+                Lägg till din första sak
+              </Button>
             }
           />
         )
@@ -167,6 +203,8 @@ function Kategoridel({
           ) : (
             <li key={sak.id}>
               <Sakrad sak={sak} onOppna={() => onOppna(sak.id)} />
+              {/* Bara saker från katalogen har en märkning. Den ligger utanför knappen, eftersom etiketten själv går att trycka på. */}
+              {sak.produkter && <Granskad kontrollerad={sak.produkter.kontrollerad} className="px-4 pb-2" />}
             </li>
           ),
         )}
