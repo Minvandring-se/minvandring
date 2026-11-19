@@ -12,6 +12,8 @@ import {
   initialer,
   lage,
   lokaltDatum,
+  nastaEtikett,
+  nedrakning,
   sistaDag,
   TURBILDER,
   type TurIListan,
@@ -85,7 +87,7 @@ describe('texter', () => {
     expect(datumIntervall('2027-12-30', '2028-01-02')).toBe('30 december 2027 till 2 januari 2028')
     expect(datumIntervall('2027-08-12', '2027-08-12')).toBe('12 augusti 2027')
     expect(datumIntervall('2027-08-12', null)).toBe('Från 12 augusti 2027')
-    expect(datumIntervall(null, null)).toBe('Inga datum än')
+    expect(datumIntervall(null, null)).toBe('Datum ej bestämt')
   })
 
   it('räknar dagar, deltagare och hundar', () => {
@@ -122,12 +124,14 @@ describe('datumrad', () => {
     expect(datumrad({ avresa: '2027-08-12', hemkomst: '2027-08-16', dagar: 5 })).toBe('12–16 augusti 2027 · 5 dagar')
   })
 
-  it('visar bara "Inga datum än" på en ny tur, där dagarna inte är angivna', () => {
-    expect(datumrad({ avresa: null, hemkomst: null, dagar: null })).toBe('Inga datum än')
+  it('visar bara "Datum ej bestämt" på en ny tur, där dagarna inte är angivna', () => {
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: null })).toBe('Datum ej bestämt')
   })
 
   it('visar dagarna när någon har angett dem, även utan datum', () => {
-    expect(datumrad({ avresa: null, hemkomst: null, dagar: 4 })).toBe('Inga datum än · 4 dagar')
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: 4 })).toBe('Datum ej bestämt · 4 dagar')
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: 3 })).toBe('Datum ej bestämt · 3 dagar')
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: 1 })).toBe('Datum ej bestämt · 1 dag')
   })
 
   it('visar bara avresan när varken hemkomst eller dagar är angivna', () => {
@@ -166,5 +170,97 @@ describe('vandringsdagar som inte är angivna', () => {
   it('en tur med avresa men utan dagar räknas som en dag lång', () => {
     expect(sistaDag({ avresa: '2027-08-12', hemkomst: null, dagar: null })).toBe('2027-08-12')
     expect(lage({ avresa: '2027-08-12', hemkomst: null, dagar: null }, '2027-08-13')).toBe('tidigare')
+  })
+})
+
+describe('nedrakning', () => {
+  const idag = '2027-08-10'
+  const tur = (avresa: string | null, hemkomst: string | null = null, dagar: number | null = null) => ({ avresa, hemkomst, dagar })
+
+  it('säger I dag när turen börjar i dag', () => {
+    expect(nedrakning(tur('2027-08-10', '2027-08-12', 3), idag)).toBe('I dag')
+    expect(nedrakning(tur('2027-08-10'), idag)).toBe('I dag')
+  })
+
+  it('säger I morgon dagen före', () => {
+    expect(nedrakning(tur('2027-08-11', '2027-08-13', 3), idag)).toBe('I morgon')
+  })
+
+  it('räknar dagarna till avresan', () => {
+    expect(nedrakning(tur('2027-08-12', '2027-08-14', 3), idag)).toBe('Om 2 dagar')
+    expect(nedrakning(tur('2027-08-25', '2027-08-27', 3), idag)).toBe('Om 15 dagar')
+    expect(nedrakning(tur('2028-08-10'), idag)).toBe('Om 366 dagar')
+  })
+
+  it('räknar över månadsskiften och sommartid utan att tappa en dag', () => {
+    expect(nedrakning(tur('2027-09-01'), '2027-08-31')).toBe('I morgon')
+    expect(nedrakning(tur('2027-03-29'), '2027-03-27')).toBe('Om 2 dagar')
+    expect(nedrakning(tur('2027-11-01'), '2027-10-30')).toBe('Om 2 dagar')
+  })
+
+  it('säger vilken dag det är när turen pågår', () => {
+    expect(nedrakning(tur('2027-08-09', '2027-08-11', 3), idag)).toBe('Pågår nu, dag 2 av 3')
+  })
+
+  it('räknar sista dagen som pågående', () => {
+    expect(nedrakning(tur('2027-08-08', '2027-08-10', 3), idag)).toBe('Pågår nu, dag 3 av 3')
+  })
+
+  it('räknar längden från antal dagar när hemkomsten saknas', () => {
+    expect(nedrakning(tur('2027-08-09', null, 5), idag)).toBe('Pågår nu, dag 2 av 5')
+  })
+
+  it('låter hemkomsten gå före antal dagar när de inte stämmer överens', () => {
+    expect(nedrakning(tur('2027-08-09', '2027-08-12', 2), idag)).toBe('Pågår nu, dag 2 av 4')
+  })
+
+  it('visar ingen nedräkning för en odaterad tur', () => {
+    expect(nedrakning(tur(null), idag)).toBeNull()
+    expect(nedrakning(tur(null, null, 3), idag)).toBeNull()
+  })
+
+  it('säger bara I dag när dagarna saknas och turen börjar i dag, och ingenting dagen efter', () => {
+    expect(nedrakning(tur('2027-08-10'), idag)).toBe('I dag')
+    expect(nedrakning(tur('2027-08-09'), idag)).toBeNull()
+  })
+
+  it('visar ingen nedräkning när turen är över', () => {
+    expect(nedrakning(tur('2027-08-07', '2027-08-09', 3), idag)).toBeNull()
+  })
+
+  it('en dagstur i dag är I dag, inte dag 1 av 1', () => {
+    expect(nedrakning(tur('2027-08-10', '2027-08-10', 1), idag)).toBe('I dag')
+  })
+})
+
+describe('nastaEtikett', () => {
+  const idag = '2027-08-10'
+
+  it('sätter nedräkningen efter Nästa vandring, med liten bokstav', () => {
+    expect(nastaEtikett({ avresa: '2027-08-25', hemkomst: null, dagar: 3 }, idag)).toBe('Nästa vandring · om 15 dagar')
+    expect(nastaEtikett({ avresa: '2027-08-11', hemkomst: null, dagar: 3 }, idag)).toBe('Nästa vandring · i morgon')
+    expect(nastaEtikett({ avresa: '2027-08-10', hemkomst: null, dagar: 3 }, idag)).toBe('Nästa vandring · i dag')
+  })
+
+  it('säger Pågår nu med dagen när turen pågår', () => {
+    expect(nastaEtikett({ avresa: '2027-08-09', hemkomst: '2027-08-11', dagar: 3 }, idag)).toBe('Pågår nu · dag 2 av 3')
+  })
+
+  it('säger bara Nästa vandring för en odaterad tur', () => {
+    expect(nastaEtikett({ avresa: null, hemkomst: null, dagar: 3 }, idag)).toBe('Nästa vandring')
+  })
+})
+
+describe('antalen i Kommande och Tidigare', () => {
+  it('räknas från samma listor som visas, utan turen i det stora kortet', () => {
+    const tur = (id: string, avresa: string | null, hemkomst: string | null = null) => ({ id, namn: id, avresa, hemkomst, dagar: 3, skapad: `2027-01-0${id}` })
+    const turer = [tur('1', '2027-08-12', '2027-08-14'), tur('2', '2027-09-01', '2027-09-03'), tur('3', null), tur('4', '2027-06-01', '2027-06-03'), tur('5', null)]
+    const { nasta, kommande, tidigare } = delaUppTurer(turer, '2027-08-10')
+    expect(nasta?.id).toBe('1')
+    expect(kommande.map((t) => t.id)).toEqual(['2', '5', '3'])
+    expect(tidigare.map((t) => t.id)).toEqual(['4'])
+    // Varje tur finns på exakt ett ställe, så antalen i flikarna stämmer med det listan visar.
+    expect(1 + kommande.length + tidigare.length).toBe(turer.length)
+    expect(flerTurer(kommande.length, tidigare.length)).toEqual({ visa: true, forvald: 'kommande' })
   })
 })

@@ -66,9 +66,9 @@ function delar(iso: string) {
   return { ar, manad: MANADER[manad - 1], dag }
 }
 
-/** "12–16 augusti 2027", "30 juli till 3 augusti 2027", "Från 12 augusti 2027" eller "Inga datum än". */
+/** "12–16 augusti 2027", "30 juli till 3 augusti 2027", "Från 12 augusti 2027" eller "Datum ej bestämt". */
 export function datumIntervall(avresa: string | null, hemkomst: string | null): string {
-  if (!avresa) return 'Inga datum än'
+  if (!avresa) return 'Datum ej bestämt'
   const a = delar(avresa)
   if (!hemkomst || hemkomst < avresa) return `Från ${a.dag} ${a.manad} ${a.ar}`
   const h = delar(hemkomst)
@@ -116,7 +116,7 @@ export function bildForTur(id: string): (typeof TURBILDER)[number] {
 
 /**
  * Raden med datum under turens namn: "12–16 augusti 2027 · 5 dagar".
- * Utan avresa står "Inga datum än", med antalet dagar efter om någon har angett det.
+ * Utan avresa står "Datum ej bestämt", med längden efter om någon har angett den: "Datum ej bestämt · 3 dagar".
  */
 export function datumrad(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'>): string {
   const datum = datumIntervall(tur.avresa, tur.hemkomst)
@@ -144,4 +144,38 @@ export function antalFranFalt(text: string): number | null {
  */
 export function flerTurer(kommande: number, tidigare: number): { visa: boolean; forvald: 'kommande' | 'tidigare' } {
   return { visa: kommande + tidigare > 0, forvald: kommande === 0 && tidigare > 0 ? 'tidigare' : 'kommande' }
+}
+
+/** Antal dagar från ett datum till ett annat. Negativt om det andra ligger före det första. */
+function dagarEmellan(fran: string, till: string): number {
+  return Math.round((Date.parse(`${till}T12:00:00Z`) - Date.parse(`${fran}T12:00:00Z`)) / 86_400_000)
+}
+
+/**
+ * Hur långt det är kvar till turen, eller hur långt den har kommit:
+ * "I dag", "I morgon", "Om 15 dagar" eller "Pågår nu, dag 2 av 3".
+ * null när turen saknar datum eller redan är över. Är längden okänd under en pågående tur står bara "Pågår nu".
+ */
+export function nedrakning(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'>, idag: string): string | null {
+  const slut = sistaDag(tur)
+  if (!tur.avresa || !slut || slut < idag) return null
+  const kvar = dagarEmellan(idag, tur.avresa)
+  if (kvar === 0) return 'I dag'
+  if (kvar === 1) return 'I morgon'
+  if (kvar > 1) return `Om ${kvar} dagar`
+  // Turen pågår. Längden är känd när det finns en hemkomst eller ett antal dagar.
+  const kandLangd = (tur.hemkomst !== null && tur.hemkomst >= tur.avresa) || tur.dagar !== null
+  if (!kandLangd) return 'Pågår nu'
+  return `Pågår nu, dag ${1 - kvar} av ${dagarEmellan(tur.avresa, slut) + 1}`
+}
+
+/**
+ * Etiketten på kortet för nästa vandring: "Nästa vandring · om 15 dagar" eller "Pågår nu · dag 2 av 3".
+ * Utan datum står bara "Nästa vandring".
+ */
+export function nastaEtikett(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'>, idag: string): string {
+  const text = nedrakning(tur, idag)
+  if (!text) return 'Nästa vandring'
+  if (text.startsWith('Pågår nu')) return text.replace(', ', ' · ')
+  return `Nästa vandring · ${text[0].toLowerCase()}${text.slice(1)}`
 }

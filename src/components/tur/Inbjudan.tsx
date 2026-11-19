@@ -58,7 +58,7 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
 
   return (
     <div className="space-y-2 rounded-md bg-muted p-3">
-      <p className="text-sm font-medium">Bjud in fler</p>
+      <p className="text-sm font-medium">Dela länken med de som ska med</p>
       <p className="text-sm text-muted-foreground">Den som går med via länken blir redigerare. Ägaren kan ändra rollen efteråt.</p>
       {kod === undefined && <p className="text-sm text-muted-foreground">Hämtar länken …</p>}
       {kod === null && <p className="text-sm text-destructive">Det gick inte att hämta länken.</p>}

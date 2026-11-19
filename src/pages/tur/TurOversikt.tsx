@@ -35,7 +35,8 @@ export function TurOversikt() {
         turId={tur.id}
         sizes="(min-width: 1024px) 960px, 100vw"
         prioritet
-        className="aspect-[2/1] w-full rounded-lg shadow-soft sm:aspect-[21/8] lg:aspect-[3/1]"
+        // Lägre i mobil, så att datum, gruppen och uppgifterna syns tidigare.
+        className="aspect-[5/2] max-h-40 w-full rounded-lg shadow-soft sm:aspect-[21/8] sm:max-h-none lg:aspect-[3/1]"
       />
 
       <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
