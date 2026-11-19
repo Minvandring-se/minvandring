@@ -481,3 +481,56 @@ export function forradsrad(summa: Pick<Forradssumma, 'antal' | 'utanVikt'>): { s
     saknarVikt: summa.utanVikt > 0 ? `${summa.utanVikt} saknar vikt` : null,
   }
 }
+
+/** De fyra tyngsta sakerna i en packning. Underkategorierna i varje grupp räknas som samma sorts sak. */
+const TUNGA = [
+  { grupp: 'ryggsack', under: ['ryggsack'], kategori: 'packning', laggTill: 'Lägg till en ryggsäck', fyllI: 'Fyll i vikten på din ryggsäck' },
+  { grupp: 'talt', under: ['talt'], kategori: 'talt', laggTill: 'Lägg till ett tält', fyllI: 'Fyll i vikten på ditt tält' },
+  { grupp: 'sovsack', under: ['sovsack', 'quilt'], kategori: 'sova', laggTill: 'Lägg till en sovsäck', fyllI: 'Fyll i vikten på din sovsäck' },
+  { grupp: 'liggunderlag', under: ['liggunderlag'], kategori: 'sova', laggTill: 'Lägg till ett liggunderlag', fyllI: 'Fyll i vikten på ditt liggunderlag' },
+] as const satisfies readonly { grupp: string; under: readonly UnderkategoriNyckel[]; kategori: KategoriNyckel; laggTill: string; fyllI: string }[]
+
+export type TungGrupp = (typeof TUNGA)[number]['grupp']
+
+/** Något som saknas bland de fyra tunga: en sak att lägga till, eller en vikt att fylla i på en sak som finns. */
+export type Uppmaning = { grupp: TungGrupp; text: string } & ({ gor: 'laggTill'; kategori: KategoriNyckel } | { gor: 'fyllIVikt'; sakId: string })
+
+export interface FyraTunga {
+  /** Summan av den lättaste saken med vikt i varje grupp. */
+  viktG: number
+  /** Alla fyra grupperna har en sak med vikt. */
+  komplett: boolean
+  /** "De fyra tunga: 7,4 kg", eller "De fyra tunga: minst 5,2 kg" när något saknas, så att summan inte ser komplett ut. */
+  text: string
+  uppmaningar: Uppmaning[]
+}
+
+/**
+ * De fyra tunga: ryggsäck, tält, sovsäck (eller quilt) och liggunderlag. Har man flera i en grupp räknas
+ * den lättaste som har vikt, eftersom det är den man tar med när vikten spelar roll. Saker utan vikt räknas inte.
+ * En dagsryggsäck räknas inte som ryggsäck. null när förrådet är tomt.
+ */
+export function fyraTunga(saker: readonly Forradssak[]): FyraTunga | null {
+  if (saker.length === 0) return null
+  let viktG = 0
+  let antalMedVikt = 0
+  const uppmaningar: Uppmaning[] = []
+  for (const t of TUNGA) {
+    const under: readonly string[] = t.under
+    const iGruppen = saker.filter((s) => s.underkategori !== null && under.includes(s.underkategori))
+    const vikter = iGruppen.flatMap((s) => (s.vikt_g === null ? [] : [s.vikt_g]))
+    if (vikter.length > 0) {
+      viktG += Math.min(...vikter)
+      antalMedVikt++
+    } else if (iGruppen.length > 0) {
+      const forsta = [...iGruppen].sort((a, b) => a.namn.localeCompare(b.namn, 'sv'))[0]
+      uppmaningar.push({ grupp: t.grupp, text: forsta.underkategori === 'quilt' ? 'Fyll i vikten på din quilt' : t.fyllI, gor: 'fyllIVikt', sakId: forsta.id })
+    } else {
+      const baraDagsryggsack = t.grupp === 'ryggsack' && saker.some((s) => s.underkategori === 'dagsryggsack')
+      uppmaningar.push({ grupp: t.grupp, text: baraDagsryggsack ? 'Lägg till en vandringsryggsäck' : t.laggTill, gor: 'laggTill', kategori: t.kategori })
+    }
+  }
+  const komplett = antalMedVikt === TUNGA.length
+  const text = antalMedVikt === 0 ? 'De fyra tunga' : `De fyra tunga: ${komplett ? '' : 'minst '}${formateraVikt(viktG)}`
+  return { viktG, komplett, text, uppmaningar }
+}

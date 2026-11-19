@@ -8,7 +8,7 @@ import { SakFormular } from '@/components/forrad/SakFormular'
 import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
 import { Button } from '@/components/ui/button'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { formateraVikt, forradsrad, sakdetaljer, summeraForrad, underkategoriFor, viktjamforelse, type Detaljrad, type Forval, type Kategorigrupp } from '@/lib/forrad'
+import { formateraVikt, forradsrad, fyraTunga, sakdetaljer, summeraForrad, underkategoriFor, viktjamforelse, type Detaljrad, type Forval, type KategoriNyckel, type Kategorigrupp } from '@/lib/forrad'
 import { felrapportLank } from '@/lib/kontakt'
 import { supabase } from '@/lib/supabase'
 import type { Forradssak } from '@/lib/typer'
@@ -18,7 +18,7 @@ import { cn } from '@/lib/utils'
  * Vad som är öppet: sökningen i katalogen (första steget i Lägg till), formuläret för en egen sak,
  * eller formuläret för en sak som ändras.
  */
-type Oppet = { sok: true } | { ny: Forval } | { sakId: string } | null
+type Oppet = { sok: true; kategori?: KategoriNyckel } | { ny: Forval } | { sakId: string } | null
 
 function antalText(antal: number) {
   return antal === 1 ? '1 sak' : `${antal} saker`
@@ -60,12 +60,14 @@ export function Forrad() {
   const sokOppen = oppet !== null && 'sok' in oppet
   const ny = oppet !== null && 'ny' in oppet ? oppet.ny : null
   const laggerTill = sokOppen || ny !== null
-  const oppnaSok = () => {
+  const oppnaSok = (kategori?: KategoriNyckel) => {
     setTillagd(null)
-    setOppet({ sok: true })
+    setOppet({ sok: true, kategori })
   }
+  const sokKategori = oppet !== null && 'sok' in oppet ? oppet.kategori : undefined
+  const tunga = fyraTunga(saker ?? [])
   const laggTillKnapp = !laggerTill && (
-    <Button onClick={oppnaSok}>
+    <Button onClick={() => oppnaSok()}>
       <Plus className="size-4" aria-hidden />
       Lägg till utrustning
     </Button>
@@ -96,6 +98,9 @@ export function Forrad() {
 
       {sokOppen && (
         <ProduktSok
+          // En uppmaning i De fyra tunga öppnar rutan med rätt kategori vald, även om den redan är öppen.
+          key={sokKategori ?? 'alla'}
+          startKategori={sokKategori}
           finnsRedan={finnsRedan}
           onTillagd={(sakId, namn) => {
             setTillagd({ sakId, namn })
@@ -109,7 +114,7 @@ export function Forrad() {
         />
       )}
 
-      {ny && <SakFormular forval={ny} onKlar={klar} onAvbryt={oppnaSok} />}
+      {ny && <SakFormular forval={ny} onKlar={klar} onAvbryt={() => oppnaSok()} />}
 
       {tillagd && (
         <div role="status" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-md bg-primary-soft px-4 py-2 text-sm text-primary">
@@ -139,18 +144,41 @@ export function Forrad() {
         !laggerTill && (
           <TomtLage
             bild={<ForradIllustration className="block aspect-[8/5] w-full sm:aspect-[21/9]" />}
-            rubrik="Lägg in din utrustning en gång"
-            text="Så har du koll på vad du har och vad allt väger. Börja gärna med det tyngsta: ryggsäck, tält och sovsäck."
+            rubrik="Ditt förråd är tomt"
             knapp={
-              <Button size="lg" onClick={oppnaSok}>
+              <Button size="lg" onClick={() => oppnaSok()}>
                 <Plus className="size-5" aria-hidden />
-                Lägg till din första sak
+                Lägg till utrustning
               </Button>
             }
           />
         )
       ) : (
         <>
+          {tunga && (
+            <section aria-labelledby="fyra-tunga" className="space-y-2">
+              <h2 id="fyra-tunga" className="text-lg font-semibold">
+                {tunga.text}
+              </h2>
+              {/* Det som saknas står i en gul ruta: här finns något att göra. Texten är mörk för kontrastens skull. */}
+              {tunga.uppmaningar.length > 0 && (
+                <ul className="flex flex-wrap gap-x-5 rounded-md bg-accent-soft px-4 py-1 text-sm text-foreground">
+                  {tunga.uppmaningar.map((u) => (
+                    <li key={u.grupp}>
+                      <button
+                        type="button"
+                        className="min-h-11 font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+                        onClick={() => (u.gor === 'laggTill' ? oppnaSok(u.kategori) : setOppet({ sakId: u.sakId }))}
+                      >
+                        {u.text}
+                      </button>
+                    </li>
+                  ))}
+                </ul>
+              )}
+            </section>
+          )}
+
           <div className="space-y-6">
             {summa.grupper.map((grupp) => (
               <Kategoridel
@@ -191,14 +219,17 @@ function Kategoridel({
   const rubrikId = `kategori-${kategori.nyckel}`
   return (
     <section aria-labelledby={rubrikId} className="space-y-2">
-      <div className="flex items-center gap-3">
-        <Ikon className="size-5 shrink-0 text-primary" aria-hidden />
-        <h2 id={rubrikId} className="min-w-0 flex-1 text-xl">
-          {kategori.etikett}
-        </h2>
-        <p className="shrink-0 text-sm text-muted-foreground">
-          {antalText(antal)} · {formateraVikt(viktG)}
-        </p>
+      {/* Summeringen står intill rubriken, och under den i mobil. */}
+      <div className="flex items-start gap-3">
+        <Ikon className="mt-1 size-5 shrink-0 text-primary" aria-hidden />
+        <div className="flex min-w-0 flex-col sm:flex-row sm:items-baseline sm:gap-3">
+          <h2 id={rubrikId} className="text-xl">
+            {kategori.etikett}
+          </h2>
+          <p className="text-sm text-muted-foreground">
+            {antalText(antal)} · {formateraVikt(viktG)}
+          </p>
+        </div>
       </div>
       <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card shadow-soft">
         {saker.map((sak) =>

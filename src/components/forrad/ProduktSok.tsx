@@ -26,6 +26,8 @@ interface Props {
   finnsRedan: ReadonlySet<string>
   /** En produkt har lagts i förrådet. */
   onTillagd: (sakId: string, namn: string) => void
+  /** Kategorin som är vald när rutan öppnas, till exempel från en uppmaning i De fyra tunga. */
+  startKategori?: KategoriNyckel
   /** Användaren vill skriva in saken själv. Söktexten följer med som namn, och den valda kategorin som förval. */
   onEgen: (soktext: string, kategori?: KategoriNyckel) => void
   onStang: () => void
@@ -48,11 +50,11 @@ const radKlass =
  * Första steget i Lägg till: välj kategori och märke och sök i produktkatalogen.
  * Varje modell är en rad. Har den flera storlekar väljer man en av dem, annars läggs saken till direkt.
  */
-export function ProduktSok({ finnsRedan, onTillagd, onEgen, onStang }: Props) {
+export function ProduktSok({ finnsRedan, startKategori, onTillagd, onEgen, onStang }: Props) {
   const id = useId()
   const falt = useRef<HTMLInputElement>(null)
   const [text, setText] = useState('')
-  const [kategori, setKategori] = useState<KategoriNyckel | ''>('')
+  const [kategori, setKategori] = useState<KategoriNyckel | ''>(startKategori ?? '')
   const [marke, setMarke] = useState('')
   // Märkena i den valda kategorin. Hör till kategorin i `for`, så att en gammal lista inte visas för en ny kategori.
   const [marken, setMarken] = useState<{ for: string; lista: Marke[] } | null>(null)
@@ -137,17 +139,22 @@ export function ProduktSok({ finnsRedan, onTillagd, onEgen, onStang }: Props) {
   const upptagen = laggerTill !== null
 
   return (
-    <section aria-labelledby={`${id}-rubrik`} className="space-y-4 rounded-lg border border-border bg-card p-5 shadow-soft sm:p-6">
+    <section aria-labelledby={`${id}-rubrik`} className="@container space-y-4 rounded-lg border border-border bg-card p-5 shadow-soft sm:p-6">
       <div className="flex items-start justify-between gap-4">
         <h2 id={`${id}-rubrik`} className="text-xl">
-          Lägg till en sak
+          Lägg till utrustning
         </h2>
         <Button type="button" variant="ghost" className="-mt-2 -mr-2 size-11 px-0" aria-label="Stäng" onClick={onStang}>
           <X className="size-5" aria-hidden />
         </Button>
       </div>
 
-      <div className="grid gap-4 sm:grid-cols-2">
+      {/*
+        När rutan är bred nog står kategori och märke i en smal kolumn bredvid sökningen och träffarna.
+        Annars ligger allt i en kolumn. Det är samma fält i båda lägena, så söktext och val finns kvar när bredden ändras.
+      */}
+      <div className="grid gap-4 @2xl:grid-cols-[220px_minmax(0,1fr)] @2xl:gap-6">
+      <div className="grid content-start gap-4 @md:grid-cols-2 @2xl:grid-cols-1">
         <div className="space-y-1">
           <label htmlFor={`${id}-kategori`} className="block text-sm font-medium">
             Kategori
@@ -188,6 +195,7 @@ export function ProduktSok({ finnsRedan, onTillagd, onEgen, onStang }: Props) {
         )}
       </div>
 
+      <div className="min-w-0 space-y-4">
       <div className="space-y-1">
         <label htmlFor={`${id}-sok`} className="block text-sm font-medium">
           Sök din produkt, till exempel tält eller sovsäck
@@ -214,9 +222,8 @@ export function ProduktSok({ finnsRedan, onTillagd, onEgen, onStang }: Props) {
           {aktuellt && 'fel' in aktuellt && <p className="text-destructive">Det gick inte att söka. Försök igen.</p>}
           {modeller?.length === 0 && (
             <p>
-              {harText
-                ? `Inga produkter matchar ”${text.trim()}”${kategori || marke ? ' med de val du har gjort' : ''}.`
-                : `Katalogen har inga produkter i ${kategoriFor(kategori).etikett} än.`}
+              {/* "Inga produkter matchar" sägs bara när man har sökt. En kategori utan produkter är något annat. */}
+              {harText ? 'Inga produkter matchar din sökning.' : `Katalogen har inga produkter i ${kategoriFor(kategori).etikett} än.`}
             </p>
           )}
           {modeller && modeller.length > 0 && (
@@ -262,6 +269,9 @@ export function ProduktSok({ finnsRedan, onTillagd, onEgen, onStang }: Props) {
             </ul>
           </div>
         )}
+      </div>
+
+      </div>
       </div>
 
       {fel && (
