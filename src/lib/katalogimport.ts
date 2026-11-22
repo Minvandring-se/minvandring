@@ -231,7 +231,8 @@ function sqlTal(varde: number | null): string {
 const KOLUMNER = ['marke', 'modell', 'version', 'kategori', 'underkategori', 'packvikt_g', 'minvikt_g', 'pris_sek_ca', 'ean', 'kalla', 'kontrollerad', 'egenskaper']
 
 /**
- * Seed-SQL för produkterna. En produkt som redan finns (samma märke, modell och version) uppdateras,
+ * Seed-SQL för produkterna. En produkt som redan finns (samma märke, modell och version, utan hänsyn till
+ * stora och små bokstäver) uppdateras, också stavningen av namnet,
  * så samma lista kan köras igen i en ny migrering när CSV:n har ändrats.
  */
 export function seedSql(produkter: KatalogProdukt[], kallfiler: string[]): string {
@@ -258,7 +259,9 @@ export function seedSql(produkter: KatalogProdukt[], kallfiler: string[]): strin
     ]
     return `  (${varden.join(', ')})`
   })
-  const uppdatera = KOLUMNER.filter((k) => !['marke', 'modell', 'version'].includes(k)).map((k) => `  ${k} = excluded.${k}`)
+  // Märke, modell och version skrivs också över. En konflikt uppstår bara när de är lika bortsett från
+  // stora och små bokstäver, så det enda som kan ändras är stavningen, till exempel EXPED till Exped.
+  const uppdatera = KOLUMNER.map((k) => `  ${k} = excluded.${k}`)
   return [
     ...huvud,
     `insert into public.produkter (${KOLUMNER.join(', ')}) values`,
