@@ -16,7 +16,6 @@ import {
   kortNedrakning,
   lage,
   lokaltDatum,
-  nastaEtikett,
   nedrakning,
   sistaDag,
   TURBILDER,
@@ -125,7 +124,7 @@ describe('bildForTur', () => {
 
 describe('datumrad', () => {
   it('visar datum och dagar när turen har datum', () => {
-    expect(datumrad({ avresa: '2027-08-12', hemkomst: '2027-08-16', dagar: 5 })).toBe('12–16 augusti 2027 · 5 dagar')
+    expect(datumrad({ avresa: '2027-08-12', hemkomst: '2027-08-16', dagar: 5 })).toBe('12–16 augusti 2027, 5 dagar')
   })
 
   it('visar bara "Datum ej bestämt" på en ny tur, där dagarna inte är angivna', () => {
@@ -133,9 +132,9 @@ describe('datumrad', () => {
   })
 
   it('visar dagarna när någon har angett dem, även utan datum', () => {
-    expect(datumrad({ avresa: null, hemkomst: null, dagar: 4 })).toBe('Datum ej bestämt · 4 dagar')
-    expect(datumrad({ avresa: null, hemkomst: null, dagar: 3 })).toBe('Datum ej bestämt · 3 dagar')
-    expect(datumrad({ avresa: null, hemkomst: null, dagar: 1 })).toBe('Datum ej bestämt · 1 dag')
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: 4 })).toBe('Datum ej bestämt, 4 dagar')
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: 3 })).toBe('Datum ej bestämt, 3 dagar')
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: 1 })).toBe('Datum ej bestämt, 1 dag')
   })
 
   it('visar bara avresan när varken hemkomst eller dagar är angivna', () => {
@@ -285,24 +284,6 @@ describe('kortNedrakning', () => {
 
   it('ger null för en tur som är över', () => {
     expect(kortNedrakning({ avresa: '2027-08-01', hemkomst: '2027-08-03', dagar: 3 }, idag)).toBeNull()
-  })
-})
-
-describe('nastaEtikett', () => {
-  const idag = '2027-08-10'
-
-  it('sätter nedräkningen efter Nästa vandring, med liten bokstav', () => {
-    expect(nastaEtikett({ avresa: '2027-08-25', hemkomst: null, dagar: 3 }, idag)).toBe('Nästa vandring · om 15 dagar')
-    expect(nastaEtikett({ avresa: '2027-08-11', hemkomst: null, dagar: 3 }, idag)).toBe('Nästa vandring · i morgon')
-    expect(nastaEtikett({ avresa: '2027-08-10', hemkomst: null, dagar: 3 }, idag)).toBe('Nästa vandring · i dag')
-  })
-
-  it('säger Pågår nu med dagen när turen pågår', () => {
-    expect(nastaEtikett({ avresa: '2027-08-09', hemkomst: '2027-08-11', dagar: 3 }, idag)).toBe('Pågår nu · dag 2 av 3')
-  })
-
-  it('säger bara Nästa vandring för en odaterad tur', () => {
-    expect(nastaEtikett({ avresa: null, hemkomst: null, dagar: 3 }, idag)).toBe('Nästa vandring')
   })
 })
 

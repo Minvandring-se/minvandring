@@ -115,12 +115,12 @@ export function bildForTur(id: string): (typeof TURBILDER)[number] {
 }
 
 /**
- * Raden med datum under turens namn: "12–16 augusti 2027 · 5 dagar".
- * Utan avresa står "Datum ej bestämt", med längden efter om någon har angett den: "Datum ej bestämt · 3 dagar".
+ * Raden med datum under turens namn: "12–16 augusti 2027, 5 dagar".
+ * Utan avresa står "Datum ej bestämt", med längden efter om någon har angett den: "Datum ej bestämt, 3 dagar".
  */
 export function datumrad(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'>): string {
   const datum = datumIntervall(tur.avresa, tur.hemkomst)
-  return tur.dagar === null ? datum : `${datum} · ${dagarText(tur.dagar)}`
+  return tur.dagar === null ? datum : `${datum}, ${dagarText(tur.dagar)}`
 }
 
 /** Texten som visas när en uppgift om turen inte är ifylld. */
@@ -201,17 +201,6 @@ export function deltagarNamn(deltagare: readonly { namn: string }[], max = 4): s
   if (namn.length > max) return `${namn.slice(0, max).join(', ')} och ${namn.length - max} till`
   if (namn.length === 1) return namn[0]
   return `${namn.slice(0, -1).join(', ')} och ${namn[namn.length - 1]}`
-}
-
-/**
- * Etiketten på kortet för nästa vandring: "Nästa vandring · om 15 dagar" eller "Pågår nu · dag 2 av 3".
- * Utan datum står bara "Nästa vandring".
- */
-export function nastaEtikett(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'>, idag: string): string {
-  const text = nedrakning(tur, idag)
-  if (!text) return 'Nästa vandring'
-  if (text.startsWith('Pågår nu')) return text.replace(', ', ' · ')
-  return `Nästa vandring · ${text[0].toLowerCase()}${text.slice(1)}`
 }
 
 /**
