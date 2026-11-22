@@ -6,6 +6,7 @@ import { Namnbricka } from '@/components/app/Namnbricka'
 import { Felgrans } from '@/components/Felgrans'
 import { Logotyp } from '@/components/Logotyp'
 import { Sidfot } from '@/components/Sidfot'
+import { knappStil } from '@/components/ui/knappStil'
 import { useProfilbilder } from '@/hooks/useProfilbilder'
 import { useSession } from '@/hooks/useSession'
 import { aktivDel, type Del } from '@/lib/navigering'
@@ -57,7 +58,7 @@ export function AppSkal() {
           </Link>
           <Link
             to="/turer?ny=1"
-            className="flex h-12 items-center justify-center gap-2 rounded-md bg-primary px-5 font-medium text-primary-foreground transition-colors hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className={cn(knappStil(), 'h-12 text-base')}
           >
             <Plus className="size-5" aria-hidden />
             Ny tur

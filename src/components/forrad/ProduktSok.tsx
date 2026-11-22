@@ -3,6 +3,7 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Granskad } from '@/components/forrad/Granskad'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { KATEGORIER, arKategori, formateraVikt, kategoriFor, type KategoriNyckel } from '@/lib/forrad'
 import {
   antalText,
@@ -41,8 +42,6 @@ const FORDROJNING_MS = 250
 /** Resultatet av en sökning. nyckel säger vilken kategori, vilket märke och vilken söktext det hör till. */
 type Lage = { nyckel: string; modeller: Modell[]; avkortad: boolean } | { nyckel: string; fel: true } | null
 
-const valKlass =
-  'h-11 w-full rounded-md border border-border bg-card px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20'
 const radKlass =
   'flex min-h-14 w-full items-center gap-3 px-3 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring disabled:opacity-60'
 
@@ -159,14 +158,14 @@ export function ProduktSok({ finnsRedan, startKategori, onTillagd, onEgen, onSta
           <label htmlFor={`${id}-kategori`} className="block text-sm font-medium">
             Kategori
           </label>
-          <select id={`${id}-kategori`} className={valKlass} value={kategori} onChange={(e) => bytKategori(e.target.value)}>
+          <Select id={`${id}-kategori`} value={kategori} onChange={(e) => bytKategori(e.target.value)}>
             <option value="">Alla kategorier</option>
             {KATEGORIER.map((k) => (
               <option key={k.nyckel} value={k.nyckel}>
                 {k.etikett}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
 
         {/* Visas bara när kategorin har produkter i katalogen. */}
@@ -175,9 +174,8 @@ export function ProduktSok({ finnsRedan, startKategori, onTillagd, onEgen, onSta
             <label htmlFor={`${id}-marke`} className="block text-sm font-medium">
               Märke
             </label>
-            <select
+            <Select
               id={`${id}-marke`}
-              className={valKlass}
               value={marke}
               onChange={(e) => {
                 setMarke(e.target.value)
@@ -190,7 +188,7 @@ export function ProduktSok({ finnsRedan, startKategori, onTillagd, onEgen, onSta
                   {m.marke} ({m.antal})
                 </option>
               ))}
-            </select>
+            </Select>
           </div>
         )}
       </div>

@@ -3,8 +3,10 @@ import { Link } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { Namnbrickor } from '@/components/app/Namnbricka'
 import { TurBild } from '@/components/app/TurBild'
+import { knappStil } from '@/components/ui/knappStil'
 import { useProfilbilder } from '@/hooks/useProfilbilder'
 import { datumrad, deltagareText, nastaEtikett } from '@/lib/turlista'
+import { cn } from '@/lib/utils'
 
 /** En tur i listan Mina turer, med deltagarna från databasen. */
 export interface TurMedDeltagare {
@@ -61,7 +63,7 @@ export function NastaTurKort({ tur, idag }: { tur: TurMedDeltagare; idag: string
           <Link
             to={`/tur/${tur.id}`}
             state={FRAN_LISTA}
-            className="inline-flex h-11 items-center gap-2 rounded-md bg-primary px-5 text-sm font-medium text-primary-foreground transition-colors after:absolute after:inset-0 hover:bg-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className={cn(knappStil(), 'after:absolute after:inset-0')}
           >
             Öppna turen
             <ArrowRight className="size-4" aria-hidden />
