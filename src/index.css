@@ -39,6 +39,9 @@
   /* Slöjan bakom ett blad eller en dialog. */
   --color-sloja: rgb(20 30 25 / 0.35);
 
+  /* Skärmar från 1920 px, utöver Tailwinds egna brytpunkter (2xl är 1536 px). */
+  --breakpoint-3xl: 120rem;
+
   --radius-md: 0.875rem;
   --radius-lg: 1.25rem;
 

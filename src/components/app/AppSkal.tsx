@@ -89,8 +89,12 @@ export function AppSkal() {
         )}
 
         {/* Luft under innehållet i mobil, så att inget hamnar bakom bottennavigationen. */}
-        {/* På dator fyller innehållet bredden bredvid sidomenyn, upp till 80rem på mycket breda skärmar. */}
-        <main id="innehall" tabIndex={-1} className="mx-auto outline-none w-full max-w-7xl flex-1 px-4 pt-5 pb-8 sm:px-6 lg:px-10 lg:pt-8 lg:pb-12">
+        {/* På dator ligger innehållet direkt intill sidomenyn, upp till 100rem (1600 px). Luften runt växer på stora skärmar. */}
+        <main
+          id="innehall"
+          tabIndex={-1}
+          className="w-full max-w-[100rem] flex-1 px-4 pt-5 pb-8 outline-none sm:px-6 lg:px-10 lg:pt-8 lg:pb-12 2xl:px-14 2xl:pt-10 3xl:px-16 3xl:pt-12"
+        >
           <Felgrans aterstall={pathname}>
           <Suspense
             fallback={
