@@ -1,5 +1,6 @@
 import { useEffect, useLayoutEffect, useRef } from 'react'
 import { useLocation, useNavigationType } from 'react-router'
+import { bladIState } from '@/lib/meny'
 import { rullmal } from '@/lib/rullning'
 
 /** Rullningsläget för varje sida i historiken, så att bakåt hamnar där man var. Lever så länge fliken är öppen. */
@@ -13,10 +14,11 @@ const turId = (sokvag: string) => /^\/tur\/([^/]+)/.exec(sokvag)?.[1]
  * hamnar man där man var. Webbläsarens egen återställning räcker inte, eftersom innehållet hämtas efter sidbytet.
  */
 export function RullaUpp() {
-  const { key, pathname, hash } = useLocation()
+  const { key, pathname, hash, state } = useLocation()
   const typ = useNavigationType()
   const aktuell = useRef(key)
   const forraSokvag = useRef(pathname)
+  const forraBlad = useRef(false)
 
   useEffect(() => {
     history.scrollRestoration = 'manual'
@@ -27,9 +29,14 @@ export function RullaUpp() {
 
   // I layoutfasen, innan webbläsaren hinner rulla om den nya sidan och skriva över det sparade läget.
   useLayoutEffect(() => {
+    // Samma sida: ett flikbyte inom samma tur, eller ett blad i mobilmenyn som öppnas eller stängs på samma adress.
+    const blad = bladIState(state) !== null
+    const bladByte = pathname === forraSokvag.current && (blad || forraBlad.current)
     const sammaTur = turId(pathname) !== undefined && turId(pathname) === turId(forraSokvag.current)
     aktuell.current = key
     forraSokvag.current = pathname
+    forraBlad.current = blad
+    if (bladByte) return
 
     const mal = rullmal(typ, hash !== '', lagen.get(key), sammaTur)
     if (mal === null) return
@@ -50,7 +57,7 @@ export function RullaUpp() {
       window.removeEventListener('wheel', avbryt)
       window.removeEventListener('touchstart', avbryt)
     }
-  }, [key, pathname, hash, typ])
+  }, [key, pathname, hash, state, typ])
 
   return null
 }

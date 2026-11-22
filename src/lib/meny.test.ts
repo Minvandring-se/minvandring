@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aktivSida, BLAD, FLIKAR, flikAktiv, MENYGRUPPER, SIDOR } from '@/lib/meny'
+import { aktivSida, BLAD, bladIState, FLIKAR, flikAktiv, MENYGRUPPER, SIDOR } from '@/lib/meny'
 
 describe('menyns sidor', () => {
   it('har sökvägar utan å, ä och ö, och alla är olika', () => {
@@ -38,6 +38,16 @@ describe('menyns sidor', () => {
     expect(FLIKAR.map((f) => f.namn)).toEqual(['Turer', 'Mat', 'Förråd', 'Minnen', 'Mer'])
     expect(BLAD.minnen).toEqual(['dagbok', 'kom-ihag', 'statistik'])
     expect(BLAD.mer).toEqual(['packlistor', 'utrustning', 'kompisar', 'installningar'])
+  })
+})
+
+describe('bladIState', () => {
+  it('läser det öppna bladet och om det öppnades i appen', () => {
+    expect(bladIState({ blad: 'mer', steg: true })).toEqual({ blad: 'mer', steg: true })
+    expect(bladIState({ blad: 'minnen' })).toEqual({ blad: 'minnen', steg: false })
+    expect(bladIState({ blad: 'annat' })).toBeNull()
+    expect(bladIState(null)).toBeNull()
+    expect(bladIState('mer')).toBeNull()
   })
 })
 

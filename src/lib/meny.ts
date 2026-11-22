@@ -45,7 +45,7 @@ export const SIDOR: Record<Sida, Menysida> = {
     beskrivning: 'Färdiga listor att starta från',
     blir: 'Färdiga packlistor att starta en tur från, och era egna mallar från tidigare turer.',
   },
-  forrad: { sida: 'forrad', namn: 'Mitt förråd', till: '/forrad', byggd: true, beskrivning: 'Din egen utrustning', blir: '' },
+  forrad: { sida: 'forrad', namn: 'Mitt förråd', till: '/forrad', byggd: true, beskrivning: 'Dina egna saker', blir: '' },
   utrustning: {
     sida: 'utrustning',
     namn: 'Utrustningskatalog',
@@ -105,8 +105,11 @@ export const MENYGRUPPER: readonly { rubrik: string; sidor: readonly Sida[] }[] 
   { rubrik: 'Folk', sidor: ['kompisar'] },
 ]
 
+/** Bladen som öppnas nerifrån i mobil. */
+export type Blad = 'minnen' | 'mer'
+
 /** Flikarna i bottenmenyn i mobil. Minnen och Mer öppnar ett blad i stället för en sida. */
-export type Flik = { typ: 'sida'; sida: Sida; namn: string } | { typ: 'blad'; blad: 'minnen' | 'mer'; namn: string }
+export type Flik = { typ: 'sida'; sida: Sida; namn: string } | { typ: 'blad'; blad: Blad; namn: string }
 
 export const FLIKAR: readonly Flik[] = [
   { typ: 'sida', sida: 'turer', namn: 'Turer' },
@@ -117,9 +120,19 @@ export const FLIKAR: readonly Flik[] = [
 ]
 
 /** Innehållet i bladen i mobil. */
-export const BLAD: Record<'minnen' | 'mer', readonly Sida[]> = {
+export const BLAD: Record<Blad, readonly Sida[]> = {
   minnen: ['dagbok', 'kom-ihag', 'statistik'],
   mer: ['packlistor', 'utrustning', 'kompisar', 'installningar'],
+}
+
+/**
+ * Det öppna bladet i mobil står i historikens state, så att tillbaka-knappen stänger det.
+ * steg är true när bladet öppnades i appen: då är posten före samma sida utan blad, och stängning är ett steg bakåt.
+ */
+export function bladIState(state: unknown): { blad: Blad; steg: boolean } | null {
+  const s = state as { blad?: unknown; steg?: unknown } | null
+  if (s?.blad !== 'minnen' && s?.blad !== 'mer') return null
+  return { blad: s.blad, steg: s.steg === true }
 }
 
 /** Vilken sida en adress hör till, för att markera rätt rad i menyn. Turens sidor hör till Mina turer. */
