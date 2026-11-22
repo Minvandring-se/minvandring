@@ -40,7 +40,7 @@ Kontrollera också:
 - **Modellnamnet** ska följa tillverkarens namn, utan butiksord (till exempel "Ultralight", "DWN", "SYN", "RC") och utan produkttyp. Skriv vad sidan kallar produkten, och säg hur märket skriver volym och storlek.
 - **Märkesnamnet** ska stavas som i resten av katalogen.
 - **Adressen** ska sakna spårningsparametrar (`referralCode`, `nosto`, `refSrc`, `_pos`, `___store`, `setLanguage`) och peka på samma regionssida som märkets övriga rader. Säg om värdena skiljer sig mellan regioner.
-- **Vikten:** anger tillverkaren bara en minimivikt, eller för sovsäckar, quilts och liggunderlag bara en vikt utan packpåse eller pumpsäck, och ingen totalvikt: produkten ska utelämnas. Anges samma vikt för flera storlekar utan att det framgår vilken den gäller: de storlekarna ska utelämnas.
+- **Vikten:** anger tillverkaren bara en minimivikt och ingen totalvikt: produkten ska utelämnas. För sovsäckar, quilts och liggunderlag som bara har en vikt utan packpåse, pumpsäck eller kompressionsöverdrag gäller att vikten ska ligga i `packvikt_g` med kommentaren "Vikt utan packpåse enligt tillverkaren." Skriv vad sidan säger att vikten utelämnar. Anges samma vikt för flera storlekar utan att det framgår vilken den gäller: de storlekarna ska utelämnas.
 - **Utgångna produkter** ska inte utelämnas. Säg om tillverkarens sida anger att produkten har utgått, så att kommentaren kan säga det.
 - **Temperaturer:** anger tillverkaren EN 13537 räknas det som `iso`, med en kommentar om att det är EN 13537.
 

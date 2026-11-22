@@ -27,7 +27,7 @@ CSV-filerna i `supabase/katalog/` är huvudlistan. Tabellen `produkter` fylls ba
 
 - Saknas vikten helt, också hos butiken, utelämnas produkten och räknas som utelämnad i loggen.
 - **Bara minvikt.** Anger tillverkaren bara en minimivikt och ingen totalvikt utelämnas produkten. Importen kräver `packvikt_g`, och minvikten är lägre än det man bär eftersom pinnar, linor och packpåse inte ingår. Så blev det för åtta Marmot-tält. Frågan om appen ska tillåta det ligger i `docs/att-ta-senare.md`.
-- **Sovsäckar, quilts och liggunderlag.** Anger tillverkaren bara en vikt utan packpåse (eller utan pumpsäck), eller bara en minimivikt, och ingen totalvikt: utelämna produkten.
+- **Sovsäckar, quilts och liggunderlag.** Anger tillverkaren bara en minimivikt och ingen totalvikt: utelämna produkten. Anger tillverkaren bara en vikt utan packpåse (eller utan pumpsäck, eller utan kompressionsöverdrag) läggs vikten i `packvikt_g` och kommentaren blir "Vikt utan packpåse enligt tillverkaren." (för en butiks reservvikt: skriv vad den utelämnar). Så blev det för Mammut, vars sovsäckar och liggunderlag bara har den vikten. Mammut skriver gradtalet som -15C, med versalt C och utan gradtecken, och alla Mammut-rader skrivs så.
 - **Samma vikt för flera storlekar** utan att det framgår vilken storlek den gäller: utelämna de storlekar som inte kan knytas till vikten.
 - Anger tillverkaren en vikt men inte vad den omfattar: skriv den i `packvikt_g` och skriv i `kommentar` att det inte framgår vad vikten omfattar. Lägg aldrig vikten bara i kommentaren.
 - **Utgångna produkter.** Att tillverkaren markerar en produkt som utgången är inget skäl att utelämna den, så länge tillverkarens uppgifter finns. Skriv i `kommentar`: "Tillverkarens sida anger att produkten har utgått."

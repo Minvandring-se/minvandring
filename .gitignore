@@ -10,3 +10,4 @@ dev-dist
 .vercel
 hero-original/
 .claude/settings.local.json
+Claude outputs/
