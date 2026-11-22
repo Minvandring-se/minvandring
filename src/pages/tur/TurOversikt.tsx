@@ -2,28 +2,48 @@ import { Trash2 } from 'lucide-react'
 import { useState } from 'react'
 import { useNavigate } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
-import { Namnbrickor } from '@/components/app/Namnbricka'
-import { TurBild } from '@/components/app/TurBild'
 import { glomTurlistan } from '@/components/app/turlistaMinne'
 import { Deltagarlista } from '@/components/tur/Deltagarlista'
+import {
+  AttGora,
+  Dagsetapper,
+  DelaOchSpara,
+  DeladeKostnader,
+  DinVikt,
+  EfterTuren,
+  Fardplan,
+  GemensamUtrustning,
+  KartaOchHojdprofil,
+  KomIhag,
+  MatPerDag,
+  Omrostning,
+  Packlage,
+  RedoForAvfard,
+  ResanDitOchHem,
+  SenasteIGruppen,
+  ViktPerPerson,
+} from '@/components/tur/Exempelsektioner'
 import { useTur } from '@/components/tur/turKontext'
 import { TurUppgifter } from '@/components/tur/TurUppgifter'
 import { Button } from '@/components/ui/button'
-import { ROLLNAMN, arAgare, kanAndra } from '@/lib/roller'
+import { useProfilbilder } from '@/hooks/useProfilbilder'
+import { arAgare, kanAndra } from '@/lib/roller'
 import { supabase } from '@/lib/supabase'
-import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
-import { deltagareText } from '@/lib/turlista'
 
-/** Turens översikt: bilden, gruppen, turens uppgifter och deltagarna med inbjudan. */
+const BRED = 'lg:col-span-2'
+const HEL = 'lg:col-span-3'
+
+/**
+ * Turens översikt, enligt skissen Dator-v3 och Mobil-v2. Riktiga delar: turens uppgifter och deltagarna med inbjudan.
+ * Resten visar hur delarna kommer att se ut, med etiketten "Kommer snart" (se Exempelsektioner.tsx).
+ * På dator ligger sektionerna i tre kolumner med de breda delarna över två, i mobil i en kolumn.
+ */
 export function TurOversikt() {
   const navigate = useNavigate()
   const { tur, deltagare, minRoll, mittUserId, setTur, uppdateraDeltagare } = useTur()
   const [raderfel, setRaderfel] = useState(false)
   const { bildUppdaterad } = useApp()
   const bilder = useProfilbilder(deltagare.map((d) => d.user_id), bildUppdaterad)
-  const personer = deltagare
-    .filter((d) => d.typ === 'person')
-    .map((d) => ({ namn: d.namn, bild: d.user_id ? bilder[d.user_id] : null, laddar: !!d.user_id && !arProfilbildHamtad(d.user_id) }))
 
   async function radera() {
     if (!supabase) return
@@ -36,34 +56,10 @@ export function TurOversikt() {
   }
 
   return (
-    <div className="space-y-6 lg:space-y-8">
-      <TurBild
-        turId={tur.id}
-        sizes="(min-width: 1024px) 960px, 100vw"
-        prioritet
-        // Lägre i mobil, så att datum, gruppen och uppgifterna syns tidigare.
-        className="aspect-[5/2] max-h-40 w-full rounded-lg shadow-soft sm:aspect-[21/8] sm:max-h-none lg:aspect-[3/1]"
-      />
-
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
-        {personer.length > 0 && (
-          <a
-            href="#deltagare"
-            className="inline-flex min-h-11 items-center gap-3 rounded-md font-medium text-primary underline underline-offset-4 hover:text-primary-hover focus-visible:outline-2 focus-visible:outline-ring"
-          >
-            <Namnbrickor personer={personer} />
-            Gruppen · {deltagareText(deltagare)}
-          </a>
-        )}
-        {minRoll && <span className="rounded-full bg-primary-soft px-3 py-1 text-sm font-medium text-primary">Du är {ROLLNAMN[minRoll].toLowerCase()}</span>}
-      </div>
-
-      {/* I mobil kommer uppgifterna först och gruppen sedan. På dator står gruppen i en egen kolumn till höger. */}
-      {/* grid-cols-1 (minmax(0, 1fr)) i mobil, så att inbjudningslänken inte gör kolumnen bredare än skärmen. */}
-      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
-        <TurUppgifter key={tur.id} tur={tur} kanAndra={kanAndra(minRoll)} onSparad={setTur} />
-
-        <div id="deltagare" className="scroll-mt-4">
+    <div className="space-y-8">
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
+        {/* Deltagarna får två kolumner, så att namn och roller ryms. Uppgifterna är korta och får en. */}
+        <div id="deltagare" className={`scroll-mt-4 ${BRED}`}>
           <Deltagarlista
             tur={tur}
             deltagare={deltagare}
@@ -77,6 +73,25 @@ export function TurOversikt() {
             }}
           />
         </div>
+        <TurUppgifter key={tur.id} tur={tur} kanAndra={kanAndra(minRoll)} onSparad={setTur} />
+        <RedoForAvfard className={BRED} />
+
+        <KomIhag />
+        <AttGora className={BRED} />
+        <ResanDitOchHem />
+        <Dagsetapper className={BRED} />
+        <DinVikt />
+        <MatPerDag className={BRED} />
+        <ViktPerPerson />
+        <GemensamUtrustning className={BRED} />
+        <DeladeKostnader />
+        <KartaOchHojdprofil className={BRED} />
+        <SenasteIGruppen />
+        <Omrostning />
+        <Packlage />
+        <DelaOchSpara />
+        <Fardplan className={HEL} />
+        <EfterTuren className={HEL} />
       </div>
 
       {arAgare(minRoll) && (

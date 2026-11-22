@@ -1,11 +1,12 @@
 import { ChevronDown, Dog, Plus, UserPlus, X } from 'lucide-react'
-import { useId, useState, type FormEvent } from 'react'
+import { useEffect, useId, useState, type FormEvent } from 'react'
+import { useLocation } from 'react-router'
 import { Namnbricka } from '@/components/app/Namnbricka'
 import { arProfilbildHamtad } from '@/hooks/useProfilbilder'
 import { Inbjudan } from '@/components/tur/Inbjudan'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Sektion } from '@/components/ui/sektion'
 import { Select } from '@/components/ui/select'
 import { ROLLBESKRIVNING, ROLLNAMN, arAgare, kanAndra, kanTaBort, type Roll } from '@/lib/roller'
 import { supabase } from '@/lib/supabase'
@@ -28,10 +29,24 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
   const [nyttNamn, setNyttNamn] = useState('')
   const [nyTyp, setNyTyp] = useState<'person' | 'hund'>('hund')
   const [fel, setFel] = useState('')
-  const [bjuderIn, setBjuderIn] = useState(false)
-  const faltId = useId()
   // Samma roller som får bjuda in i dag: ägare och redigerare.
   const farBjudaIn = minRoll !== null && kanAndra(minRoll)
+  // Knappen Bjud in i turens huvud leder hit med #bjud-in, och då öppnas inbjudan, varje gång man trycker.
+  // key byts vid varje tryck, även när adressen är densamma.
+  const { hash, key } = useLocation()
+  const [bjuderIn, setBjuderIn] = useState(hash === '#bjud-in')
+  const [forraKey, setForraKey] = useState(key)
+  if (key !== forraKey) {
+    setForraKey(key)
+    if (hash === '#bjud-in') setBjuderIn(true)
+  }
+  const faltId = useId()
+  // Sidan rullar ner till deltagarna (#deltagare och #bjud-in), och vid Bjud in flyttas fokus till inbjudan.
+  useEffect(() => {
+    if (hash !== '#bjud-in' && hash !== '#deltagare') return
+    document.getElementById('deltagare')?.scrollIntoView({ block: 'start' })
+    if (hash === '#bjud-in') document.getElementById(`${faltId}-inbjudan`)?.focus({ preventScroll: true })
+  }, [hash, key, faltId])
 
   const alla = deltagare.map((d) => ({ id: d.id, roll: d.roll, userId: d.user_id }))
 
@@ -77,19 +92,20 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
   }
 
   return (
-    <Card className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-2">
-        <h2 className="text-xl">Deltagare</h2>
-        {farBjudaIn && (
+    <Sektion
+      rubrik="Deltagare"
+      atgard={
+        farBjudaIn && (
           <Button variant="outline" aria-expanded={bjuderIn} aria-controls={`${faltId}-inbjudan`} onClick={() => setBjuderIn((b) => !b)}>
             <UserPlus className="size-4" aria-hidden />
             Bjud in
           </Button>
-        )}
-      </div>
-
+        )
+      }
+    >
       {farBjudaIn && minRoll && (
-        <div id={`${faltId}-inbjudan`} hidden={!bjuderIn}>
+        <div id={`${faltId}-inbjudan`} hidden={!bjuderIn} tabIndex={-1} aria-label="Inbjudan" className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+
           {/* Länken hämtas först när rutan öppnas. */}
           {bjuderIn && <Inbjudan turId={tur.id} minRoll={minRoll} />}
         </div>
@@ -201,6 +217,6 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
         </form>
       )}
 
-    </Card>
+    </Sektion>
   )
 }

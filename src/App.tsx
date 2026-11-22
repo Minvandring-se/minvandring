@@ -60,9 +60,8 @@ export default function App() {
           {/* Turen är en ram med delsidor. Ramen hämtar turen och deltagarna en gång. */}
           <Route path="/tur/:id" element={<TurRam />}>
             <Route index element={<TurOversikt />} />
-            <Route path="packa" element={<TurKommerSnart del="packa" />} />
-            <Route path="mat" element={<TurKommerSnart del="mat" />} />
-            <Route path="rutt" element={<TurKommerSnart del="rutt" />} />
+            {/* Flikarna som inte är byggda än. Okända delar visar översikten. */}
+            <Route path=":del" element={<TurKommerSnart />} />
             <Route path="*" element={<TurOversikt />} />
           </Route>
           <Route path="/forrad" element={<Forrad />} />

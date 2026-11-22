@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   antalFranFalt,
+  avfardEtikett,
   bildForTur,
+  deltagarNamn,
   dagarVarde,
   datumrad,
   flerTurer,
@@ -232,6 +234,38 @@ describe('nedrakning', () => {
 
   it('en dagstur i dag är I dag, inte dag 1 av 1', () => {
     expect(nedrakning(tur('2027-08-10', '2027-08-10', 1), idag)).toBe('I dag')
+  })
+})
+
+describe('avfardEtikett', () => {
+  const idag = '2027-08-10'
+
+  it('säger hur långt det är kvar till avfärd', () => {
+    expect(avfardEtikett({ avresa: '2027-08-22', hemkomst: null, dagar: 3 }, idag)).toBe('Avfärd om 12 dagar')
+    expect(avfardEtikett({ avresa: '2027-08-11', hemkomst: null, dagar: 3 }, idag)).toBe('Avfärd i morgon')
+    expect(avfardEtikett({ avresa: '2027-08-10', hemkomst: null, dagar: 3 }, idag)).toBe('Avfärd i dag')
+  })
+
+  it('säger Pågår nu under turen och inget när datum saknas eller turen är över', () => {
+    expect(avfardEtikett({ avresa: '2027-08-09', hemkomst: '2027-08-11', dagar: 3 }, idag)).toBe('Pågår nu, dag 2 av 3')
+    expect(avfardEtikett({ avresa: null, hemkomst: null, dagar: null }, idag)).toBeNull()
+    expect(avfardEtikett({ avresa: '2027-08-01', hemkomst: '2027-08-03', dagar: 3 }, idag)).toBeNull()
+  })
+})
+
+describe('deltagarNamn', () => {
+  const d = (...namn: string[]) => namn.map((n) => ({ namn: n }))
+
+  it('skriver namnen som en mening', () => {
+    expect(deltagarNamn(d('Oscar'))).toBe('Oscar')
+    expect(deltagarNamn(d('Oscar', 'Anna'))).toBe('Oscar och Anna')
+    expect(deltagarNamn(d('Oscar', 'Anna', 'Rex'))).toBe('Oscar, Anna och Rex')
+  })
+
+  it('kortar av långa listor och hoppar över tomma namn', () => {
+    expect(deltagarNamn(d('A', 'B', 'C', 'D', 'E', 'F'))).toBe('A, B, C, D och 2 till')
+    expect(deltagarNamn(d(' ', 'Anna'))).toBe('Anna')
+    expect(deltagarNamn([])).toBe('')
   })
 })
 

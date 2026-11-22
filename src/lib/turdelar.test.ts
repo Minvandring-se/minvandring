@@ -1,40 +1,37 @@
 import { describe, expect, it } from 'vitest'
-import { aktivTurdel, synligaFlikar, turdelAdress, TURDELAR, type TurdelInfo } from './turdelar'
+import { aktivTurdel, delFranSokvag, turdel, turdelAdress, TURDELAR } from './turdelar'
 
 describe('turens delar', () => {
-  it('har egna adresser', () => {
+  it('har flikarna i skissens ordning', () => {
+    expect(TURDELAR.map((d) => d.namn)).toEqual(['Översikt', 'Etapper', 'Karta', 'Packning', 'Mat', 'Gruppen', 'Kostnader', 'Säkerhet', 'Anteckningar'])
+  })
+
+  it('har egna adresser utan å, ä och ö', () => {
     expect(turdelAdress('abc', 'oversikt')).toBe('/tur/abc')
-    expect(turdelAdress('abc', 'packa')).toBe('/tur/abc/packa')
-    expect(turdelAdress('abc', 'mat')).toBe('/tur/abc/mat')
-    expect(turdelAdress('abc', 'rutt')).toBe('/tur/abc/rutt')
+    expect(turdelAdress('abc', 'packning')).toBe('/tur/abc/packning')
+    expect(turdelAdress('abc', 'sakerhet')).toBe('/tur/abc/sakerhet')
+    for (const { sokvag } of TURDELAR) expect(sokvag).toMatch(/^[a-z-]*$/)
   })
 
   it('känner igen delen från adressen', () => {
     for (const { del } of TURDELAR) expect(aktivTurdel(turdelAdress('abc', del))).toBe(del)
-    expect(aktivTurdel('/tur/abc/packa/')).toBe('packa')
+    expect(aktivTurdel('/tur/abc/mat/')).toBe('mat')
     expect(aktivTurdel('/tur/abc/okand')).toBe('oversikt')
     // Ett tur-id som råkar heta som en del är fortfarande en översikt.
-    expect(aktivTurdel('/tur/packa')).toBe('oversikt')
+    expect(aktivTurdel('/tur/mat')).toBe('oversikt')
   })
 
-  it('visar bara översikten som byggd, resten kommer snart', () => {
+  it('visar bara översikten som byggd, och varje planerad del säger vad den blir', () => {
     expect(TURDELAR.filter((d) => d.byggd).map((d) => d.del)).toEqual(['oversikt'])
-  })
-})
-
-describe('synligaFlikar', () => {
-  const del = (namn: string, byggd: boolean): TurdelInfo => ({ del: 'oversikt', namn, sokvag: '', byggd })
-
-  it('visar ingen flikrad i dag, när bara Översikt är byggd', () => {
-    expect(synligaFlikar()).toEqual([])
+    for (const d of TURDELAR.filter((d) => !d.byggd)) expect(d.blir.length).toBeGreaterThan(20)
   })
 
-  it('visar ingen flikrad när bara en del är byggd', () => {
-    expect(synligaFlikar([del('Översikt', true), del('Packa', false)])).toEqual([])
-    expect(synligaFlikar([])).toEqual([])
-  })
-
-  it('visar bara de byggda delarna när det finns minst två, i samma ordning', () => {
-    expect(synligaFlikar([del('Översikt', true), del('Packa', true), del('Mat', false), del('Rutt', true)]).map((d) => d.namn)).toEqual(['Översikt', 'Packa', 'Rutt'])
+  it('hittar delen från sökvägen, och leder gamla adresser till de nya flikarna', () => {
+    expect(delFranSokvag('karta')).toBe('karta')
+    expect(delFranSokvag('packa')).toBe('packning')
+    expect(delFranSokvag('rutt')).toBe('etapper')
+    expect(delFranSokvag('okand')).toBe('oversikt')
+    expect(delFranSokvag(undefined)).toBe('oversikt')
+    expect(turdel('mat').namn).toBe('Mat')
   })
 })
