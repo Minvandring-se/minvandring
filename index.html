@@ -6,7 +6,26 @@
     <link rel="icon" href="/favicon.ico" sizes="16x16 32x32 48x48" />
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-    <meta name="theme-color" content="#1F3D2E" />
+    <!-- Webbläsarens färg runt sidan, samma som bakgrunden i ljust och mörkt läge (TEMAFARG i src/lib/tema.ts). -->
+    <meta name="theme-color" content="#eef0eb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#0e1512" media="(prefers-color-scheme: dark)" />
+    <script>
+      {
+        // Ljust eller mörkt läge innan React startar, så att sidan inte blinkar. Samma nyckel och logik som i src/lib/tema.ts.
+        // Utan giltigt val följer sidan enheten via CSS, och data-tema sätts inte.
+        let val = null
+        try {
+          val = localStorage.getItem('minvandring-tema')
+        } catch {
+          val = null
+        }
+        if (val === 'ljus' || val === 'mork') {
+          document.documentElement.setAttribute('data-tema', val)
+          const farg = val === 'mork' ? '#0e1512' : '#eef0eb'
+          for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.setAttribute('content', farg)
+        }
+      }
+    </script>
     <meta name="description" content="Planera vandringen tillsammans. Packning, mat och rutt på ett ställe." />
     <title>MinVandring · Planera. Packa. Upplev.</title>
     <!-- Förhandsvisning när sidan delas. Samma titel och beskrivning som ovan. Bilden görs om med design/og/og-bild.cjs. -->
