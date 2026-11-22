@@ -170,6 +170,17 @@ export function nedrakning(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'
 }
 
 /**
+ * Kort text för sidomenyns lista Dina turer: "I dag", "I morgon", "Om 9 dagar", "Pågår" eller "Inget datum".
+ * null för turer som är över.
+ */
+export function kortNedrakning(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'>, idag: string): string | null {
+  if (!tur.avresa) return 'Inget datum'
+  const text = nedrakning(tur, idag)
+  if (!text) return null
+  return text.startsWith('Pågår') ? 'Pågår' : text
+}
+
+/**
  * Etiketten på kortet för nästa vandring: "Nästa vandring · om 15 dagar" eller "Pågår nu · dag 2 av 3".
  * Utan datum står bara "Nästa vandring".
  */
