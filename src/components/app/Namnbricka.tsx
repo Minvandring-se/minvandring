@@ -53,7 +53,7 @@ export function Namnbrickor({ personer, max = 4 }: { personer: readonly { namn: 
       {synliga.map((p, i) => (
         <Namnbricka key={i} namn={p.namn} bild={p.bild} laddar={p.laddar} />
       ))}
-      {fler > 0 && <Namnbricka namn={`+ ${fler}`} className="bg-card text-muted-foreground" />}
+      {fler > 0 && <Namnbricka namn={`+ ${fler}`} className="bg-muted text-muted-foreground" />}
     </span>
   )
 }
