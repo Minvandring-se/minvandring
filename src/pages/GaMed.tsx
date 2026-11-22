@@ -1,6 +1,7 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
 import { Button } from '@/components/ui/button'
+import { knappStil } from '@/components/ui/knappStil'
 import { Card } from '@/components/ui/card'
 import { useSession } from '@/hooks/useSession'
 import { useSidtitel } from '@/hooks/useSidtitel'
@@ -98,7 +99,7 @@ export function GaMed() {
           )}
           <Link
             to="/turer"
-            className="inline-flex h-11 items-center rounded-md border border-border bg-card px-5 text-sm font-medium hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className={knappStil({ variant: 'outline' })}
           >
             Till Mina turer
           </Link>

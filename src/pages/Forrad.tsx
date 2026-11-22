@@ -9,6 +9,7 @@ import { SakFormular } from '@/components/forrad/SakFormular'
 import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { formateraVikt, forradsrad, fyraTunga, sakdetaljer, summeraForrad, underkategoriFor, viktjamforelse, type Detaljrad, type Forval, type KategoriNyckel, type Kategorigrupp } from '@/lib/forrad'
 import {
@@ -253,8 +254,6 @@ function Verktyg({
   av: number
 }) {
   const id = useId()
-  const valKlass =
-    'h-11 w-full rounded-md border border-border bg-card px-3 text-base outline-none focus-visible:border-ring focus-visible:ring-2 focus-visible:ring-ring/20'
   return (
     <section aria-label="Sök och sortera" className="space-y-2">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto]">
@@ -280,26 +279,26 @@ function Verktyg({
           <label htmlFor={`${id}-sortera`} className="block text-sm font-medium">
             Sortera
           </label>
-          <select id={`${id}-sortera`} className={valKlass} value={val.sortering} onChange={(e) => onVal({ ...val, sortering: e.target.value as Listval['sortering'] })}>
+          <Select id={`${id}-sortera`} value={val.sortering} onChange={(e) => onVal({ ...val, sortering: e.target.value as Listval['sortering'] })}>
             {SORTERINGAR.map((s) => (
               <option key={s.varde} value={s.varde}>
                 {s.etikett}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
         <div className="space-y-1">
           <label htmlFor={`${id}-kategori`} className="block text-sm font-medium">
             Visa
           </label>
-          <select id={`${id}-kategori`} className={valKlass} value={val.kategori} onChange={(e) => onVal({ ...val, kategori: e.target.value as Listval['kategori'] })}>
+          <Select id={`${id}-kategori`} value={val.kategori} onChange={(e) => onVal({ ...val, kategori: e.target.value as Listval['kategori'] })}>
             <option value="">Alla kategorier</option>
             {kategorier.map((k) => (
               <option key={k.nyckel} value={k.nyckel}>
                 {k.etikett}
               </option>
             ))}
-          </select>
+          </Select>
         </div>
       </div>
       {/* Säger hur mycket av förrådet som visas, så att det märks att ett filter är på. */}

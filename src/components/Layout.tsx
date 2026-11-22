@@ -28,7 +28,7 @@ export function Layout({ children }: { children: ReactNode }) {
             <Link to="/profil" className="flex h-11 items-center px-2 text-sm font-medium hover:underline">
               Profil
             </Link>
-            <Button variant="ghost" size="sm" className="h-11" onClick={() => supabase?.auth.signOut()}>
+            <Button variant="ghost" className="px-3" onClick={() => supabase?.auth.signOut()}>
               Logga ut
             </Button>
           </div>
