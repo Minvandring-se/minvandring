@@ -1,5 +1,53 @@
 {
   "enabledPlugins": {
     "typescript-lsp@claude-plugins-official": true
+  },
+  "permissions": {
+    "allow": [
+      "Bash(npm run build)",
+      "Bash(npm test)",
+      "Bash(npm run lint)",
+      "Bash(npm run katalog)",
+      "Bash(git status *)",
+      "Bash(git diff *)",
+      "Bash(git log *)",
+      "PowerShell(npm run build)",
+      "PowerShell(npm test)",
+      "PowerShell(npm run lint)",
+      "PowerShell(npm run katalog)",
+      "PowerShell(git status *)",
+      "PowerShell(git diff *)",
+      "PowerShell(git log *)"
+    ],
+    "ask": [
+      "Bash(npx supabase db push *)",
+      "Bash(supabase db push *)",
+      "Bash(git push *)",
+      "Bash(rm *)",
+      "Bash(rmdir *)",
+      "Bash(unlink *)",
+      "Bash(git rm *)",
+      "Bash(git clean *)",
+      "PowerShell(npx supabase db push *)",
+      "PowerShell(supabase db push *)",
+      "PowerShell(git push *)",
+      "PowerShell(Remove-Item *)",
+      "PowerShell(git rm *)",
+      "PowerShell(git clean *)"
+    ]
+  },
+  "hooks": {
+    "PreToolUse": [
+      {
+        "matcher": "Bash|PowerShell|Edit|Write|MultiEdit|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "node",
+            "args": ["${CLAUDE_PROJECT_DIR}/.claude/hooks/skydd.mjs"]
+          }
+        ]
+      }
+    ]
   }
 }
