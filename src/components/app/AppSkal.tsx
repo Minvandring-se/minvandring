@@ -1,35 +1,41 @@
-import { Backpack, Map as Karta, Plus, UserRound, type LucideIcon } from 'lucide-react'
+import { Backpack, Map as Karta, UserRound, type LucideIcon } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import type { AppKontext } from '@/components/app/appKontext'
+import { DinaTurer } from '@/components/app/DinaTurer'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Namnbricka } from '@/components/app/Namnbricka'
 import { Felgrans } from '@/components/Felgrans'
 import { Logotyp } from '@/components/Logotyp'
 import { Sidfot } from '@/components/Sidfot'
-import { knappStil } from '@/components/ui/knappStil'
+import { useDinaTurer } from '@/hooks/useDinaTurer'
 import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
 import { useSession } from '@/hooks/useSession'
 import { aktivDel, type Del } from '@/lib/navigering'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
 
-/** Delarna i menyn, i samma ordning i sidomenyn och bottennavigationen. */
-const DELAR: { del: Del; till: string; namn: string; kortNamn: string; ikon: LucideIcon }[] = [
-  { del: 'turer', till: '/turer', namn: 'Mina turer', kortNamn: 'Mina turer', ikon: Karta },
-  { del: 'forrad', till: '/forrad', namn: 'Mitt förråd', kortNamn: 'Förråd', ikon: Backpack },
-  { del: 'profil', till: '/profil', namn: 'Profil', kortNamn: 'Profil', ikon: UserRound },
+/** Delarna i menyn. Bottennavigationen i mobil har alla tre. Sidomenyn på dator har Profil som användaren längst ner. */
+const DELAR: { del: Del; till: string; namn: string; ikon: LucideIcon }[] = [
+  { del: 'turer', till: '/turer', namn: 'Mina turer', ikon: Karta },
+  { del: 'forrad', till: '/forrad', namn: 'Mitt förråd', ikon: Backpack },
+  { del: 'profil', till: '/profil', namn: 'Profil', ikon: UserRound },
 ]
 
+const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
+
 /**
- * Ramen för de inloggade sidorna. På dator en sidomeny med Ny tur, de tre delarna, länken till profilen och sidfoten.
- * I mobil ett kompakt sidhuvud, sidfoten längst ner på sidan och en bottennavigation för samma tre delar.
+ * Ramen för de inloggade sidorna. På dator en sidomeny som ligger kvar när man scrollar: logotypen, Mina turer,
+ * Mitt förråd, listan Dina turer med dagar kvar och användaren längst ner med länk till Profil.
+ * I mobil ett kompakt sidhuvud, sidfoten längst ner på sidan och en bottennavigation för de tre delarna.
  */
 export function AppSkal() {
   const session = useSession()
   const { pathname } = useLocation()
   const aktiv = aktivDel(pathname)
   const anvandarId = session?.user.id ?? ''
+  const dinaTurer = useDinaTurer(anvandarId, pathname)
+  const oppenTurId = /^\/tur\/([^/]+)/.exec(pathname)?.[1] ?? null
   const [namn, setNamn] = useState('')
   const [bildUppdaterad, setBildUppdaterad] = useState<string | null>(null)
   const [profilHamtad, setProfilHamtad] = useState(false)
@@ -54,33 +60,27 @@ export function AppSkal() {
   const kontext: AppKontext = { anvandarId, epost: session?.user.email ?? '', namn, profilHamtad, setNamn, bildUppdaterad, setBildUppdaterad }
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[16.5rem_1fr]">
-      {/* Sidomenyn på dator */}
+    <div className="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr]">
+      {/* Sidomenyn på dator. Ligger kvar när man scrollar. */}
       <aside className="hidden border-r border-border bg-card lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:overflow-y-auto">
-        <div className="flex flex-1 flex-col gap-6 p-5">
-          <Link to="/turer" className="flex min-h-11 items-center rounded-md px-1">
+        <div className="flex flex-1 flex-col gap-7 px-4 pt-6 pb-4">
+          <Link to="/turer" className={cn('flex min-h-11 items-center rounded-md px-2', fokus)}>
             <Logotyp className="text-xl" />
-          </Link>
-          <Link
-            to="/turer?ny=1"
-            className={cn(knappStil(), 'h-12 text-base')}
-          >
-            <Plus className="size-5" aria-hidden />
-            Ny tur
           </Link>
           <nav aria-label="Huvudmeny">
             <ul className="space-y-1">
-              {DELAR.map(({ del, till, namn: text, ikon: Ikon }) => (
+              {DELAR.filter((d) => d.del !== 'profil').map(({ del, till, namn: text, ikon: Ikon }) => (
                 <li key={del}>
                   <Link
                     to={till}
                     aria-current={aktiv === del ? 'page' : undefined}
                     className={cn(
-                      'relative flex min-h-12 items-center gap-3 rounded-md px-3 font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                      'relative flex min-h-11 items-center gap-3 rounded-md px-3 font-medium transition-colors',
+                      fokus,
                       aktiv === del ? 'bg-primary-soft text-primary' : 'text-foreground hover:bg-muted',
                     )}
                   >
-                    {/* Aktiv sida: grön text, fetare ikon och en kort gul markering, som en målad ledmarkering. */}
+                    {/* Aktiv sida: grön text, fetare ikon och en kort rostfärgad markering, som en målad ledmarkering. */}
                     {aktiv === del && <span aria-hidden className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent" />}
                     <Ikon className="size-5" aria-hidden strokeWidth={aktiv === del ? 2.25 : 1.75} />
                     {text}
@@ -89,17 +89,23 @@ export function AppSkal() {
               ))}
             </ul>
           </nav>
+          <DinaTurer turer={dinaTurer} oppenTurId={oppenTurId} />
         </div>
 
-        <div className="space-y-3 border-t border-border p-5">
-          {/* Namnet leder till Profil, där Logga ut finns. */}
+        <div className="space-y-2 border-t border-border px-4 pt-3 pb-4">
+          {/* Användaren leder till Profil, där Utseende och Logga ut finns. */}
           <Link
             to="/profil"
-            className="flex min-h-11 items-center gap-3 rounded-md px-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            aria-current={aktiv === 'profil' ? 'page' : undefined}
+            className={cn(
+              'flex min-h-12 items-center gap-3 rounded-md px-2 transition-colors',
+              fokus,
+              aktiv === 'profil' ? 'bg-primary-soft text-primary' : 'hover:bg-muted',
+            )}
           >
             <Namnbricka namn={namn || session?.user.email || '?'} bild={minBild} laddar={bildLaddar} />
             {profilHamtad ? (
-              <span className="min-w-0 truncate font-medium">{namn || 'Din profil'}</span>
+              <span className="min-w-0 flex-1 truncate font-medium">{namn || 'Din profil'}</span>
             ) : (
               <>
                 <Skelett className="h-4 w-24" />
@@ -107,17 +113,17 @@ export function AppSkal() {
               </>
             )}
           </Link>
-          <Sidfot variant="meny" className="border-t border-border pt-2 text-xs" />
+          <Sidfot variant="meny" className="px-2 text-xs" />
         </div>
       </aside>
 
       <div className="flex min-h-dvh min-w-0 flex-col">
         {/* Kompakt sidhuvud i mobil */}
         <header className="flex items-center justify-between border-b border-border bg-card/80 px-4 py-2 backdrop-blur lg:hidden">
-          <Link to="/turer" className="flex min-h-11 items-center">
+          <Link to="/turer" className={cn('flex min-h-11 items-center rounded-md', fokus)}>
             <Logotyp />
           </Link>
-          <Link to="/profil" aria-label="Din profil" className="flex size-11 items-center justify-center rounded-full">
+          <Link to="/profil" aria-label="Din profil" className={cn('flex size-11 items-center justify-center rounded-full', fokus)}>
             <Namnbricka namn={namn || session?.user.email || '?'} bild={minBild} laddar={bildLaddar} />
           </Link>
         </header>
@@ -129,7 +135,8 @@ export function AppSkal() {
         )}
 
         {/* Luft under innehållet i mobil, så att inget hamnar bakom bottennavigationen. */}
-        <main className="mx-auto w-full max-w-5xl flex-1 px-4 pt-5 pb-8 sm:px-6 lg:px-10 lg:pt-10 lg:pb-12">
+        {/* På dator fyller innehållet bredden bredvid sidomenyn, upp till 80rem på mycket breda skärmar. */}
+        <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-5 pb-8 sm:px-6 lg:px-10 lg:pt-8 lg:pb-12">
           <Felgrans aterstall={pathname}>
           <Suspense
             fallback={
@@ -153,19 +160,20 @@ export function AppSkal() {
         className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
       >
         <ul className="mx-auto grid max-w-md grid-cols-3">
-          {DELAR.map(({ del, till, kortNamn, ikon: Ikon }) => (
+          {DELAR.map(({ del, till, namn: text, ikon: Ikon }) => (
             <li key={del}>
               <Link
                 to={till}
                 aria-current={aktiv === del ? 'page' : undefined}
                 className={cn(
-                  'relative flex min-h-16 flex-col items-center justify-center gap-1 text-xs font-medium focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
-                  aktiv === del ? 'text-primary' : 'text-muted-foreground',
+                  'flex min-h-16 flex-col items-center justify-center gap-0.5 text-xs focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+                  aktiv === del ? 'font-semibold text-primary' : 'font-medium text-muted-foreground',
                 )}
               >
                 <Ikon className="size-6" aria-hidden strokeWidth={aktiv === del ? 2.25 : 1.75} />
-                <span>{kortNamn}</span>
-                {aktiv === del && <span aria-hidden className="absolute top-0 left-1/2 h-1 w-7 -translate-x-1/2 rounded-b-full bg-accent" />}
+                <span>{text}</span>
+                {/* Aktiv sida: fet text, fetare ikon och ett kort rostfärgat streck under, som en målad ledmarkering. */}
+                <span aria-hidden className={cn('h-[3px] w-[18px] rounded-full', aktiv === del ? 'bg-accent' : 'bg-transparent')} />
               </Link>
             </li>
           ))}

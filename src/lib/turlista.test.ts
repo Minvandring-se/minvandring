@@ -11,6 +11,7 @@ import {
   delaUppTurer,
   deltagareText,
   initialer,
+  kortNedrakning,
   lage,
   lokaltDatum,
   nastaEtikett,
@@ -231,6 +232,25 @@ describe('nedrakning', () => {
 
   it('en dagstur i dag är I dag, inte dag 1 av 1', () => {
     expect(nedrakning(tur('2027-08-10', '2027-08-10', 1), idag)).toBe('I dag')
+  })
+})
+
+describe('kortNedrakning', () => {
+  const idag = '2027-08-10'
+
+  it('säger hur många dagar det är kvar', () => {
+    expect(kortNedrakning({ avresa: '2027-08-19', hemkomst: null, dagar: 3 }, idag)).toBe('Om 9 dagar')
+    expect(kortNedrakning({ avresa: '2027-08-11', hemkomst: null, dagar: 3 }, idag)).toBe('I morgon')
+    expect(kortNedrakning({ avresa: '2027-08-10', hemkomst: null, dagar: 3 }, idag)).toBe('I dag')
+  })
+
+  it('säger Pågår under turen och Inget datum när datum saknas', () => {
+    expect(kortNedrakning({ avresa: '2027-08-09', hemkomst: '2027-08-11', dagar: 3 }, idag)).toBe('Pågår')
+    expect(kortNedrakning({ avresa: null, hemkomst: null, dagar: null }, idag)).toBe('Inget datum')
+  })
+
+  it('ger null för en tur som är över', () => {
+    expect(kortNedrakning({ avresa: '2027-08-01', hemkomst: '2027-08-03', dagar: 3 }, idag)).toBeNull()
   })
 })
 

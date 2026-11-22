@@ -56,9 +56,9 @@ export function MinaTurer() {
       halsning(mittNamn, laddfel ? 'laddar' : turer.length === 0 ? 'inga-turer' : nasta ? 'nasta-visas' : 'bara-tidigare')
     )
 
-  // På dator finns Ny tur i sidomenyn, så knappen i sidhuvudet visas bara i mobil.
+  // Sidans huvudknapp. Sidomenyn på dator har också en länk till Ny tur sist i listan Dina turer.
   const nyTurKnapp = !formularOppet && (
-    <Button className="lg:hidden" onClick={() => visaFormular(true)}>
+    <Button onClick={() => visaFormular(true)}>
       <Plus className="size-4" aria-hidden />
       Ny tur
     </Button>
