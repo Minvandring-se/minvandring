@@ -2,11 +2,12 @@ import { Backpack, Map as Karta, Plus, UserRound, type LucideIcon } from 'lucide
 import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import type { AppKontext } from '@/components/app/appKontext'
+import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Namnbricka } from '@/components/app/Namnbricka'
 import { Felgrans } from '@/components/Felgrans'
 import { Logotyp } from '@/components/Logotyp'
 import { Sidfot } from '@/components/Sidfot'
-import { useProfilbilder } from '@/hooks/useProfilbilder'
+import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
 import { useSession } from '@/hooks/useSession'
 import { aktivDel, type Del } from '@/lib/navigering'
 import { supabase } from '@/lib/supabase'
@@ -30,7 +31,10 @@ export function AppSkal() {
   const anvandarId = session?.user.id ?? ''
   const [namn, setNamn] = useState('')
   const [bildUppdaterad, setBildUppdaterad] = useState<string | null>(null)
+  const [profilHamtad, setProfilHamtad] = useState(false)
   const minBild = useProfilbilder(bildUppdaterad ? [anvandarId] : [], bildUppdaterad)[anvandarId]
+  // Platshållare tills vi vet om det finns en bild, och tills bilden i så fall har hämtats.
+  const bildLaddar = !profilHamtad || (!!bildUppdaterad && !minBild && !arProfilbildHamtad(anvandarId))
 
   useEffect(() => {
     if (!supabase || !anvandarId) return
@@ -42,10 +46,11 @@ export function AppSkal() {
       .then(({ data }) => {
         setNamn(data?.namn?.trim() ?? '')
         setBildUppdaterad((data?.bild_uppdaterad as string | null | undefined) ?? null)
+        setProfilHamtad(true)
       })
   }, [anvandarId])
 
-  const kontext: AppKontext = { anvandarId, epost: session?.user.email ?? '', namn, setNamn, bildUppdaterad, setBildUppdaterad }
+  const kontext: AppKontext = { anvandarId, epost: session?.user.email ?? '', namn, profilHamtad, setNamn, bildUppdaterad, setBildUppdaterad }
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[16.5rem_1fr]">
@@ -91,8 +96,8 @@ export function AppSkal() {
             to="/profil"
             className="flex min-h-11 items-center gap-3 rounded-md px-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
-            <Namnbricka namn={namn || session?.user.email || '?'} bild={minBild} />
-            <span className="min-w-0 truncate font-medium">{namn || 'Din profil'}</span>
+            <Namnbricka namn={namn || session?.user.email || '?'} bild={minBild} laddar={bildLaddar} />
+            {profilHamtad ? <span className="min-w-0 truncate font-medium">{namn || 'Din profil'}</span> : <Skelett className="h-4 w-24" />}
           </Link>
           <Sidfot variant="meny" className="border-t border-border pt-2 text-xs" />
         </div>
@@ -105,7 +110,7 @@ export function AppSkal() {
             <Logotyp />
           </Link>
           <Link to="/profil" aria-label="Din profil" className="flex size-11 items-center justify-center rounded-full">
-            <Namnbricka namn={namn || session?.user.email || '?'} bild={minBild} />
+            <Namnbricka namn={namn || session?.user.email || '?'} bild={minBild} laddar={bildLaddar} />
           </Link>
         </header>
 
@@ -120,9 +125,10 @@ export function AppSkal() {
           <Felgrans aterstall={pathname}>
           <Suspense
             fallback={
-              <p role="status" className="text-muted-foreground">
-                Hämtar sidan …
-              </p>
+              <Laddar text="Hämtar sidan">
+                <Skelett className="h-9 w-48" />
+                <Skelett className="h-5 w-64 max-w-full" />
+              </Laddar>
             }
           >
             <Outlet context={kontext} />

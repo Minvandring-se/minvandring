@@ -12,6 +12,11 @@ export function glomProfilbild(userId: string) {
   minne.delete(userId)
 }
 
+/** true när frågan om användarens bild har besvarats, med eller utan bild. Används för att visa en platshållare medan den hämtas. */
+export function arProfilbildHamtad(userId: string): boolean {
+  return minne.has(userId)
+}
+
 function fraMinnet(ids: readonly string[]): Record<string, string> {
   const ut: Record<string, string> = {}
   for (const id of ids) {

@@ -2,6 +2,7 @@ import { Plus, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
+import { Laddar, Skelett } from '@/components/app/Laddar'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { TurBild } from '@/components/app/TurBild'
@@ -15,7 +16,7 @@ import { delaUppTurer, flerTurer, halsning, lokaltDatum } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
 
 export function MinaTurer() {
-  const { namn: mittNamn, anvandarId } = useApp()
+  const { namn: mittNamn, anvandarId, profilHamtad } = useApp()
   const [turer, setTurer] = useState<TurMedDeltagare[] | null>(() => mindTurlista(anvandarId))
   const [laddfel, setLaddfel] = useState(false)
   const [sok, setSok] = useSearchParams()
@@ -47,7 +48,13 @@ export function MinaTurer() {
 
   const idag = lokaltDatum()
   const { nasta, kommande, tidigare } = delaUppTurer(turer ?? [], idag)
-  const halsningstext = halsning(mittNamn, turer === null || laddfel ? 'laddar' : turer.length === 0 ? 'inga-turer' : nasta ? 'nasta-visas' : 'bara-tidigare')
+  // Hälsningen visas först när både namnet och turerna är hämtade, så att den inte byter text medan sidan laddas.
+  const halsningstext =
+    !profilHamtad || turer === null ? (
+      <Skelett className="h-5 w-40 lg:h-7" />
+    ) : (
+      halsning(mittNamn, laddfel ? 'laddar' : turer.length === 0 ? 'inga-turer' : nasta ? 'nasta-visas' : 'bara-tidigare')
+    )
 
   // På dator finns Ny tur i sidomenyn, så knappen i sidhuvudet visas bara i mobil.
   const nyTurKnapp = !formularOppet && (
@@ -74,9 +81,16 @@ export function MinaTurer() {
       {formularOppet && <NyTurFormular onStang={() => visaFormular(false)} />}
 
       {turer === null ? (
-        <p role="status" className="text-muted-foreground">
-          Hämtar dina turer …
-        </p>
+        <Laddar text="Hämtar dina turer">
+          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft md:grid md:grid-cols-[1.15fr_1fr]">
+            <Skelett className="aspect-[16/9] rounded-none md:aspect-auto md:min-h-72" />
+            <div className="space-y-3 p-5 sm:p-6">
+              <Skelett className="h-8 w-3/4" />
+              <Skelett className="h-5 w-1/2" />
+              <Skelett className="h-5 w-1/3" />
+            </div>
+          </div>
+        </Laddar>
       ) : laddfel ? (
         <p className="text-destructive">Det gick inte att hämta dina turer. Ladda om sidan och försök igen.</p>
       ) : turer.length === 0 ? (
@@ -98,9 +112,7 @@ export function MinaTurer() {
           {nasta && <NastaTurKort tur={nasta} idag={idag} />}
 
           {!nasta && (
-            <p className="rounded-lg border border-dashed border-border px-5 py-6 text-muted-foreground">
-              Du har ingen kommande vandring. Skapa en ny tur när det är dags att planera nästa.
-            </p>
+            <TomtLage kompakt text="Du har ingen kommande vandring. Skapa en ny tur när det är dags att planera nästa." />
           )}
 
           {fler.visa && (
@@ -134,9 +146,7 @@ export function MinaTurer() {
             </div>
             <div id="fler-turer-lista" role="tabpanel" aria-labelledby={`flik-${flik}`}>
               {lista.length === 0 ? (
-                <p className="rounded-lg border border-dashed border-border px-5 py-6 text-muted-foreground">
-                  {flik === 'kommande' ? 'Inga fler kommande turer.' : 'Inga tidigare turer än.'}
-                </p>
+                <TomtLage kompakt text={flik === 'kommande' ? 'Inga fler kommande turer.' : 'Inga tidigare turer än.'} />
               ) : (
                 <ul className="space-y-3">
                   {lista.map((t) => (

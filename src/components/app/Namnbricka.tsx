@@ -9,7 +9,18 @@ const FARGER = ['bg-primary-soft', 'bg-sand', 'bg-accent-soft', 'bg-muted']
  * Färgen väljs av namnet, så att samma person får samma färg. Brickan har samma storlek och form i båda lägena,
  * och bilden fyller den utan att tryckas ihop.
  */
-export function Namnbricka({ namn, bild, className }: { namn: string; bild?: string | null; className?: string }) {
+export function Namnbricka({
+  namn,
+  bild,
+  laddar = false,
+  className,
+}: {
+  namn: string
+  bild?: string | null
+  /** Namnet eller bilden hämtas fortfarande: en tom grå bricka, så att initialen inte blinkar förbi innan bilden kommer. */
+  laddar?: boolean
+  className?: string
+}) {
   const farg = FARGER[[...namn].reduce((s, t) => s + t.charCodeAt(0), 0) % FARGER.length]
   // Adressen som inte gick att ladda. En ny adress får ett nytt försök.
   const [trasig, setTrasig] = useState<string | null>(null)
@@ -19,11 +30,11 @@ export function Namnbricka({ namn, bild, className }: { namn: string; bild?: str
       aria-hidden
       className={cn(
         'inline-flex size-9 shrink-0 items-center justify-center overflow-hidden rounded-full text-xs font-semibold text-foreground ring-2 ring-card',
-        farg,
+        laddar && !visaBild ? 'bg-muted motion-safe:animate-pulse' : farg,
         className,
       )}
     >
-      {visaBild ? (
+      {laddar && !visaBild ? null : visaBild ? (
         <img src={bild} alt="" width={256} height={256} decoding="async" className="size-full object-cover" onError={() => setTrasig(bild)} />
       ) : (
         initialer(namn)
@@ -33,14 +44,14 @@ export function Namnbricka({ namn, bild, className }: { namn: string; bild?: str
 }
 
 /** Några namnbrickor omlott och "+n" om det är fler. Namnen står i text bredvid, brickorna är bara dekor. */
-export function Namnbrickor({ personer, max = 4 }: { personer: readonly { namn: string; bild?: string | null }[]; max?: number }) {
+export function Namnbrickor({ personer, max = 4 }: { personer: readonly { namn: string; bild?: string | null; laddar?: boolean }[]; max?: number }) {
   const synliga = personer.slice(0, max)
   const fler = personer.length - synliga.length
   if (personer.length === 0) return null
   return (
     <span className="flex -space-x-2" aria-hidden>
       {synliga.map((p, i) => (
-        <Namnbricka key={i} namn={p.namn} bild={p.bild} />
+        <Namnbricka key={i} namn={p.namn} bild={p.bild} laddar={p.laddar} />
       ))}
       {fler > 0 && <Namnbricka namn={`+ ${fler}`} className="bg-card text-muted-foreground" />}
     </span>

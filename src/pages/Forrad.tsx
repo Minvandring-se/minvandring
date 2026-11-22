@@ -1,6 +1,7 @@
 import { ChevronDown, ExternalLink, Pencil, Plus, RotateCcw, Search } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { useSearchParams } from 'react-router'
+import { Laddar, Skelett } from '@/components/app/Laddar'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Granskad } from '@/components/forrad/Granskad'
@@ -162,9 +163,13 @@ export function Forrad() {
           Det gick inte att hämta ditt förråd. Ladda om sidan och försök igen.
         </p>
       ) : saker === null ? (
-        <p role="status" className="text-muted-foreground">
-          Hämtar ditt förråd …
-        </p>
+        <Laddar text="Hämtar ditt förråd">
+          <Skelett className="h-6 w-56 max-w-full" />
+          <Skelett className="h-6 w-40" />
+          <Skelett className="h-20 rounded-lg" />
+          <Skelett className="h-20 rounded-lg" />
+          <Skelett className="h-20 rounded-lg" />
+        </Laddar>
       ) : saker.length === 0 ? (
         !laggerTill && (
           <TomtLage
@@ -207,12 +212,15 @@ export function Forrad() {
           {harVerktyg && <Verktyg val={val} onVal={setVal} kategorier={kategorierIForradet(saker)} visas={visade.length} av={saker.length} />}
 
           {visade.length === 0 ? (
-            <div className="space-y-2 rounded-lg border border-dashed border-border px-5 py-6">
-              <p className="text-muted-foreground">Inga saker i förrådet matchar.</p>
-              <Button variant="outline" onClick={() => setVal(FORVALDA_VAL)}>
-                Visa hela förrådet
-              </Button>
-            </div>
+            <TomtLage
+              kompakt
+              text="Inga saker i förrådet matchar."
+              knapp={
+                <Button variant="outline" onClick={() => setVal(FORVALDA_VAL)}>
+                  Visa hela förrådet
+                </Button>
+              }
+            />
           ) : val.sortering === 'kategori' ? (
             <div className="space-y-6">
               {summeraForrad(visade).grupper.map((grupp) => (

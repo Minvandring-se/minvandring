@@ -1,6 +1,7 @@
 import { Dog, Plus, UserPlus, X } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
 import { Namnbricka } from '@/components/app/Namnbricka'
+import { arProfilbildHamtad } from '@/hooks/useProfilbilder'
 import { Inbjudan } from '@/components/tur/Inbjudan'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
@@ -105,7 +106,7 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
                 </span>
               ) : (
                 // Profilbilden när den finns, annars bokstaven. Personer utan konto har alltid bokstaven.
-                <Namnbricka namn={d.namn} bild={d.user_id ? bilder[d.user_id] : null} />
+                <Namnbricka namn={d.namn} bild={d.user_id ? bilder[d.user_id] : null} laddar={!!d.user_id && !arProfilbildHamtad(d.user_id)} />
               )}
               <div className="min-w-0 flex-1">
                 <p className="truncate font-medium">

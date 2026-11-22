@@ -3,7 +3,7 @@ import { Link } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { Namnbrickor } from '@/components/app/Namnbricka'
 import { TurBild } from '@/components/app/TurBild'
-import { useProfilbilder } from '@/hooks/useProfilbilder'
+import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
 import { datumrad, deltagareText, nastaEtikett } from '@/lib/turlista'
 
 /** En tur i listan Mina turer, med deltagarna från databasen. */
@@ -29,7 +29,11 @@ export function NastaTurKort({ tur, idag }: { tur: TurMedDeltagare; idag: string
   const { bildUppdaterad } = useApp()
   const deltagare = tur.deltagare.filter((d) => d.typ === 'person')
   const bilder = useProfilbilder(deltagare.map((d) => d.user_id), bildUppdaterad)
-  const personer = deltagare.map((d) => ({ namn: d.namn, bild: d.user_id ? bilder[d.user_id] : null }))
+  const personer = deltagare.map((d) => ({
+    namn: d.namn,
+    bild: d.user_id ? bilder[d.user_id] : null,
+    laddar: !!d.user_id && !arProfilbildHamtad(d.user_id),
+  }))
   return (
     <article className="relative grid overflow-hidden rounded-lg border border-border bg-card shadow-soft md:grid-cols-[1.15fr_1fr]">
       <div className="relative">
