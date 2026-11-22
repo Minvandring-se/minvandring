@@ -301,7 +301,7 @@ function Verktyg({
       </div>
       {/* Säger hur mycket av förrådet som visas, så att det märks att ett filter är på. */}
       <p role="status" className="min-h-5 text-sm text-muted-foreground">
-        {harVal({ ...val, sortering: 'kategori' }) && `Visar ${visas} av ${av} rader.`}
+        {harVal({ ...val, sortering: 'kategori' }) && `Visar ${visas} av ${av} saker.`}
       </p>
     </section>
   )
@@ -364,7 +364,7 @@ function Kategoridel({
   )
 }
 
-/** En liten gul prick som säger att något saknas och går att fylla i. Bara en markering, texten bredvid bär betydelsen. */
+/** En liten rostfärgad prick som säger att något saknas och går att fylla i. Bara en markering, texten bredvid bär betydelsen. */
 function Prick() {
   return <span aria-hidden className="mr-1.5 inline-block size-2 rounded-full bg-accent align-middle" />
 }

@@ -108,7 +108,8 @@ export function TurUppgifter({ tur, kanAndra, onSparad }: Props) {
           <Input maxLength={80} placeholder="T.ex. Aktse" value={form.startpunkt ?? ''} onChange={(e) => andra('startpunkt', e.target.value)} />
         </Falt>
 
-        <div className="grid grid-cols-2 gap-3">
+        {/* Datumen står under varandra på smala skärmar, så att datumet inte klipps i fältet. */}
+        <div className="grid grid-cols-1 gap-3 min-[28rem]:grid-cols-2">
           <Falt etikett="Avresa">
             <Input type="date" value={form.avresa ?? ''} onChange={(e) => andra('avresa', e.target.value || null)} />
           </Falt>

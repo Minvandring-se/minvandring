@@ -9,10 +9,11 @@ export const ROLLNAMN: Record<Roll, string> = {
   viewer: 'Läsare',
 }
 
+// Bara det som går att göra i appen i dag. Packning och mat läggs till här när de delarna är byggda.
 export const ROLLBESKRIVNING: Record<Roll, string> = {
   owner: 'Kan ändra allt, ändra roller och radera turen',
-  editor: 'Kan ändra turen, packningen och maten',
-  viewer: 'Ser allt och bockar av sin egen packning',
+  editor: 'Kan ändra turen och bjuda in andra',
+  viewer: 'Ser allt i turen',
 }
 
 export function kanAndra(roll: Roll | null | undefined): boolean {

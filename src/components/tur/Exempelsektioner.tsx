@@ -199,7 +199,7 @@ export function DinVikt({ className }: Props) {
   const v = DIN_VIKT
   const total = v.kategorier.reduce((s, k) => s + k.kg, 0)
   return (
-    <Sektion rubrik="Din vikt" kommerSnart etikett={<span className="text-sm font-medium text-illustration">{v.mal}</span>} className={className}>
+    <Sektion rubrik="Din vikt" kommerSnart etikett={<span className="text-sm font-medium text-muted-foreground">{v.mal}</span>} className={className}>
       <KommerSnart text="Här kommer din vikt: total startvikt, basvikt, det som förbrukas och vikten per kategori.">
         <div className="space-y-4">
           <div>
@@ -358,8 +358,8 @@ export function KartaOchHojdprofil({ className }: Props) {
               strokeLinecap="round"
               className="stroke-accent"
             />
-            <circle cx="40" cy="190" r="7" className="fill-yta-stark" />
-            <circle cx="670" cy="30" r="7" className="fill-yta-stark" />
+            <circle cx="40" cy="190" r="7" className="fill-yta-stark mork:fill-background" />
+            <circle cx="670" cy="30" r="7" className="fill-yta-stark mork:fill-background" />
           </svg>
           <svg viewBox="0 0 700 70" preserveAspectRatio="none" className="block h-16 w-full">
             <path d="M0 60 L60 50 L120 30 L180 40 L260 15 L330 25 L400 10 L470 30 L540 20 L620 45 L700 55 V70 H0Z" className="fill-primary-soft" />

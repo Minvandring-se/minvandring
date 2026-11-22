@@ -49,7 +49,7 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
     const { data, error } = await supabase.rpc('ny_inbjudningskod', { t: turId })
     setSkapar(false)
     if (error || typeof data !== 'string') {
-      setFel('Det gick inte att skapa en ny länk.')
+      setFel('Det gick inte att skapa en ny länk. Kontrollera uppkopplingen och försök igen.')
       return
     }
     setKod(data)
@@ -66,7 +66,7 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
           <Skelett className="h-10 bg-card" />
         </Laddar>
       )}
-      {kod === null && <p className="text-sm text-destructive">Det gick inte att hämta länken.</p>}
+      {kod === null && <p className="text-sm text-destructive">Det gick inte att hämta länken. Kontrollera uppkopplingen och ladda om sidan.</p>}
       {kod && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <code className="flex-1 truncate rounded-md bg-card px-3 py-2 text-sm select-all">{lank}</code>
