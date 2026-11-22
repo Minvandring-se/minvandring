@@ -45,9 +45,9 @@ Jämförelser senare ("likvärdigt tält som väger mindre") ska bara använda g
 
 Egenskaper per underkategori står i `src/lib/produktegenskaper.ts`. Tält har flest, och elva av dem behövs för jämförelser. Tarp och vindsäck har fem enkla, alla frivilliga. Sovsäck och quilt har tolv, varav fem behövs för jämförelser (komfort- och limittemperatur, fyllning, form och max längd). Där finns också regler mellan fälten: limit får inte vara högre än komfort, extrem inte högre än limit, och fillpower anges bara för dun och blandning. Liggunderlag har elva, varav fem behövs för jämförelser (typ, R-värde, längd, bredd och tjocklek), och ett underlag av skum får inte ha en ventil. Ryggsäck och dagsryggsäck har elva, varav fem behövs för jämförelser (volym, passform, minsta och största rygglängd och ram), och den minsta rygglängden får inte vara större än den största. Övriga underkategorier har inga än.
 
-Att göra: skillen `katalog` och agenten `katalog-granskare` ska beskriva att Chrome används när en tillverkarsida spärrar automatiska hämtningar (HTTP 429 eller 403). Så var det för Big Agnes, Helsport, Jack Wolfskin och marmot.com i genomgången av Outnorths tält 2026-11-22. Granskaren har inte tillgång till Chrome, så den ska sluta efter två spärrade försök och lista raderna, och den som startade granskaren läser dem i Chrome, en sida i taget.
-
 Att ta ställning till: ska appen tillåta produkter som bara har minvikt? I dag kräver importen `packvikt_g`, och produkter där tillverkaren bara anger minimivikt utelämnas. Så blev det för åtta Marmot-tält i genomgången av Outnorth 2026-11-22. Minvikten är lägre än det man faktiskt bär, eftersom pinnar, linor och packpåse inte ingår, så den kan inte stå som packvikt utan att det syns.
+
+Att göra: gå igenom Outnorths utelämnade produkter med regeln om butikens sida som reserv för vikt, temperaturer och mått (se skillen `katalog`), främst Urberg och Sydvang. De utelämnades i genomgången 2026-11-22 för att tillverkarens produktsida saknar verifierbar vikt.
 
 ### Kopplingen till packlistan (inte byggd)
 
