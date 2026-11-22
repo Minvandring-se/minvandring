@@ -17,6 +17,8 @@ export type Sida =
 export interface Menysida {
   sida: Sida
   namn: string
+  /** Sidans rubrik, när den är längre än namnet i menyn. */
+  rubrik?: string
   /** Sökvägen, utan å, ä och ö. */
   till: string
   /** false tills sidan är byggd. Då får den etiketten "Snart" i menyn och "Kommer snart" på sidan. */
@@ -50,9 +52,9 @@ export const SIDOR: Record<Sida, Menysida> = {
     sida: 'utrustning',
     namn: 'Utrustningskatalog',
     till: '/utrustning',
-    byggd: false,
-    beskrivning: 'Sök och jämför produkter',
-    blir: 'Hela katalogen med sökning och filter, så att ni kan jämföra vikt och mått innan ni köper.',
+    byggd: true,
+    beskrivning: 'Sök bland produkterna och se vikten',
+    blir: '',
   },
   dagbok: {
     sida: 'dagbok',
@@ -65,6 +67,7 @@ export const SIDOR: Record<Sida, Menysida> = {
   'kom-ihag': {
     sida: 'kom-ihag',
     namn: 'Kom ihåg till nästa',
+    rubrik: 'Kom ihåg till nästa vandring',
     till: '/kom-ihag',
     byggd: false,
     beskrivning: 'Alla lärdomar samlade',

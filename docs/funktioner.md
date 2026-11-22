@@ -9,7 +9,7 @@ Status:
 - **Senare**: en egen modul längre fram.
 - **Idé**: inte bestämt.
 
-Det som inte finns visas i turens översikt som det kommer att se ut, med etiketten ”Kommer snart”. Exempelinnehållet ligger i `src/lib/exempeldata.ts` och tas bort när modulen byggs på riktigt.
+Det som inte finns visas i turens översikt och på sidorna i menyn (Matplanering, Packlistor och mallar, Dagbok, Kom ihåg till nästa, Statistik och Vandringskompisar) som det kommer att se ut, med etiketten ”Kommer snart”. Exempelinnehållet ligger i `src/lib/exempeldata.ts` och tas bort när modulen byggs på riktigt.
 
 ## Turen
 
@@ -30,6 +30,8 @@ Det som inte finns visas i turens översikt som det kommer att se ut, med etiket
 | Funktion | Status |
 |---|---|
 | Mitt förråd med produktkatalog | Finns |
+| Utrustningskatalog: sök och kategorifilter (`/utrustning`) | Finns |
+| Jämför produkter sida vid sida | Senare |
 | Packlista per person | Nästa (P1) |
 | Basvikt, förbrukning och startvikt | Nästa (P1) |
 | Vikt per kategori och person | Nästa (P1) |
@@ -95,6 +97,7 @@ Det som inte finns visas i turens översikt som det kommer att se ut, med etiket
 | Funktion | Status |
 |---|---|
 | Mobil först och datorvy | Finns |
+| Sidomeny med grupper på dator, bottenmeny med bladen Minnen och Mer i mobil | Finns |
 | Fungerar som app på telefonen (PWA) | Finns |
-| Ljust och mörkt läge, val under Utseende på Profil | Finns |
+| Ljust och mörkt läge, val under Inställningar | Finns |
 | Fiske och jakt i förrådet | Idé |

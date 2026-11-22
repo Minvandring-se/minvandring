@@ -126,5 +126,85 @@ export const EFTER_TUREN = [
   { rubrik: 'Statistik', text: 'Kilometer, nätter och turer genom åren.', accent: false },
 ]
 
+// Exempel för sidorna i menyn som inte är byggda än (src/lib/meny.ts). Samma regler som ovan.
+
+/** Statistik, enligt skissen Sidomeny-dator. Kilometer per månad, januari till december. Summan är 312. */
+export const STATISTIK = {
+  ar: ['2025', '2026', 'Alla år'],
+  valtAr: '2026',
+  nyckeltal: [
+    { etikett: 'Turer', varde: '5' },
+    { etikett: 'Kilometer', varde: '312' },
+    { etikett: 'Nätter ute', varde: '19' },
+    { etikett: 'Snitt startvikt', varde: '11,8 kg' },
+  ],
+  manader: ['Jan', 'Feb', 'Mar', 'Apr', 'Maj', 'Jun', 'Jul', 'Aug', 'Sep', 'Okt', 'Nov', 'Dec'],
+  kmPerManad: [0, 0, 12, 0, 29, 47, 89, 106, 29, 0, 0, 0],
+  mestAnvand: [
+    { namn: 'Tält för två', varde: '19 nätter' },
+    { namn: 'Sovsäck, dun −5 °C', varde: '19 nätter' },
+    { namn: 'Ryggsäck 58 liter', varde: '5 turer' },
+  ],
+  aldrigAnvand: [
+    { namn: 'Extra fleecetröja', varde: '420 g' },
+    { namn: 'Ett andra vattenfilter', varde: '90 g' },
+  ],
+}
+
+/** Matplanering: era egna rätter med energi och vikt per portion. */
+export const RATTER: { namn: string; maltid: string; kcal: number; gram: number; kcalPer100g: number }[] = [
+  { namn: 'Havregrynsgröt med nötter och russin', maltid: 'Frukost', kcal: 620, gram: 140, kcalPer100g: 443 },
+  { namn: 'Wraps med ost och salami', maltid: 'Lunch', kcal: 650, gram: 160, kcalPer100g: 406 },
+  { namn: 'Pasta med soltorkade tomater', maltid: 'Middag', kcal: 780, gram: 180, kcalPer100g: 433 },
+  { namn: 'Linsgryta med kokosmjölk', maltid: 'Middag', kcal: 710, gram: 170, kcalPer100g: 418 },
+  { namn: 'Chokladmousse', maltid: 'Efterrätt', kcal: 420, gram: 90, kcalPer100g: 467 },
+]
+
+/** Packlistor och mallar: färdiga mallar och era egna från tidigare turer. */
+export const MALLAR: { namn: string; fran: string; saker: number; basvikt: string }[] = [
+  { namn: 'Fjälltur sommar', fran: 'Färdig mall', saker: 46, basvikt: '7,8 kg' },
+  { namn: 'Fjälltur vinter', fran: 'Färdig mall', saker: 58, basvikt: '11,2 kg' },
+  { namn: 'Helg i skogen med hund', fran: 'Er mall, från Sörmlandsleden 2025', saker: 34, basvikt: '6,1 kg' },
+  { namn: 'Stugtur i fjällen', fran: 'Färdig mall', saker: 31, basvikt: '4,9 kg' },
+]
+
+/** Dagbok: en tidslinje för en tur. */
+export const DAGBOK = {
+  tur: 'Jämtlandstriangeln 2026',
+  dagar: [
+    { dag: 'Dag 1, fredag 3 juli', rubrik: 'Storulvån till Sylarna', text: 'Regn hela förmiddagen och sol vid stugan. Erik hittade de första hjortronen.', bilder: 4 },
+    { dag: 'Dag 2, lördag 4 juli', rubrik: 'Sylarna till Blåhammaren', text: 'Blåsigt över fjället. Anna lagade linsgryta, den bästa middagen på hela turen.', bilder: 7 },
+    { dag: 'Dag 3, söndag 5 juli', rubrik: 'Blåhammaren till Storulvån', text: 'Kort sista dag. Bad i bäcken innan bussen hem.', bilder: 2 },
+  ],
+}
+
+/** Kom ihåg till nästa: lärdomarna från alla turer, grupperade efter ämne. */
+export const LARDOMAR: { amne: string; rader: { text: string; tur: string }[] }[] = [
+  {
+    amne: 'Kök och mat',
+    rader: [
+      { text: 'En extra gaspatron räckte inte till fyra dagar', tur: 'Jämtlandstriangeln 2026' },
+      { text: 'Packa frukosten i en egen påse per dag', tur: 'Sörmlandsleden 2025' },
+    ],
+  },
+  {
+    amne: 'Sova',
+    rader: [{ text: 'Torrsäck till sovsäcken, även när det inte ska regna', tur: 'Jämtlandstriangeln 2026' }],
+  },
+  {
+    amne: 'Hund',
+    rader: [
+      { text: 'Myggnät till alla, även hunden', tur: 'Jämtlandstriangeln 2026' },
+      { text: 'Tassvax för steniga stigar', tur: 'Sörmlandsleden 2025' },
+    ],
+  },
+]
+
+/** Vandringskompisar: personer ni har vandrat med. */
+export const KOMPISAR: { namn: string; turer: number; senast: string }[] = [
+  { namn: 'Anna', turer: 4, senast: 'Jämtlandstriangeln 2026' },
+  { namn: 'Erik', turer: 3, senast: 'Jämtlandstriangeln 2026' },
+]
+
 /** Exempel på turens längd och svårighet, som i skissen. Visas inte förrän etapperna finns. */
 export const HOJDPROFIL = 'Importera en GPX-fil så visas leden, etapperna, stugor och vatten längs vägen.'
