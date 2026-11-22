@@ -19,6 +19,7 @@ npm run lint
 
 - Migrering eller policy i ändringen: agenten `rls-granskare`.
 - Synlig text i ändringen: agenten `textgranskare`.
+- Ändring i sidor, komponenter eller formulär (`src/pages`, `src/components`): agenten `mobilgranskare`. Den läser koden. Rör ändringen hur en sida ser ut, titta också på den med skillen `kor-appen`.
 - Nya miljövariabler finns i både `.env.example` och `src/vite-env.d.ts`.
 
 ## 3. Committa

@@ -9,3 +9,4 @@ dev-dist
 *.log
 .vercel
 hero-original/
+.claude/settings.local.json
