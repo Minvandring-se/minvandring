@@ -135,3 +135,7 @@ Appen har inget sätt att radera sitt konto i dag. Den som vill sluta får mejla
 När kontoradering byggs ska profilbilden tas bort samtidigt. Den ligger i Supabase Storage (bucketen `profilbilder`, filen `<user_id>/bild`) och försvinner inte av sig själv när raden i `auth.users` tas bort, till skillnad från profilen, deltagarraderna och förrådet som följer med genom främmande nycklar. Tills dess: ta bort filen för hand i Storage när ett konto raderas.
 
 Profilbilden visas med signerade adresser som gäller i en timme. En turkamrat som tas bort ur en tur kan alltså ha en adress som fungerar upp till en timme till.
+
+## Färgring runt profilbilden
+
+Oscars idé: en tunn färgring runt profilbilden i namnbrickan, så att bilden lyfter och känns som en del av MinVandring. Förslag att pröva: skogsgrön ring som standard, eller en ring i deltagarens egen färg i Gruppen och deltagarlistan så att det syns vem som är vem. Gult bara om ringen betyder något, till exempel att någon inte svarat på inbjudan än. Ringen ska fungera både med bild och med bokstaven, och ha god kontrast mot ljus bakgrund.
