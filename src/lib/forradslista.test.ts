@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { FORVALDA_VAL, adressFranVal, filtrera, harVal, kategorierIForradet, matcharSok, sortera, valFranAdress } from './forradslista'
+import { FORVALDA_VAL, adressFranVal, antalPerKategori, filtrera, harFilter, kategorierIForradet, matcharSok, sortera, valFranAdress } from './forradslista'
 import type { Forradssak } from './typer'
 
 function sak(delar: Partial<Forradssak>): Forradssak {
@@ -107,10 +107,6 @@ describe('sortera', () => {
     expect(namn(sortera(lista, 'namn'))).toEqual(['Ask', 'Tält 2', 'Tält 10', 'Ärm', 'Öl'])
   })
 
-  it('senast tillagd har den nyaste först, och saker utan datum sist', () => {
-    expect(namn(sortera(alla, 'senast'))).toEqual(['Kniv', 'Neutrino', 'Flaska', 'Hilleberg Akto', 'Karta'])
-  })
-
   it('ändrar inte listan den får in', () => {
     const lista = [...alla]
     sortera(lista, 'tyngst')
@@ -124,32 +120,45 @@ describe('valen i adressen', () => {
   it('ger förvalen för en adress utan val', () => {
     expect(las('')).toEqual(FORVALDA_VAL)
     expect(adressFranVal(FORVALDA_VAL)).toEqual({})
-    expect(harVal(FORVALDA_VAL)).toBe(false)
+    expect(harFilter(FORVALDA_VAL)).toBe(false)
   })
 
-  it('läser söktext, sortering och kategori', () => {
-    expect(las('q=akto&sortera=tyngst&kategori=talt')).toEqual({ sok: 'akto', sortering: 'tyngst', kategori: 'talt' })
+  it('läser söktext, sortering, kategori och vy', () => {
+    expect(las('q=akto&sortera=lattast&kategori=talt&vy=rutnat')).toEqual({ sok: 'akto', sortering: 'lattast', kategori: 'talt', vy: 'rutnat' })
   })
 
   it('skriver bara det som skiljer sig från förvalen', () => {
-    expect(adressFranVal({ sok: 'akto', sortering: 'kategori', kategori: '' })).toEqual({ q: 'akto' })
-    expect(adressFranVal({ sok: '', sortering: 'namn', kategori: 'sova' })).toEqual({ sortera: 'namn', kategori: 'sova' })
-    expect(adressFranVal({ sok: '   ', sortering: 'kategori', kategori: '' })).toEqual({})
-    expect(harVal({ sok: '', sortering: 'lattast', kategori: '' })).toBe(true)
+    expect(adressFranVal({ sok: 'akto', sortering: 'tyngst', kategori: '', vy: 'lista' })).toEqual({ q: 'akto' })
+    expect(adressFranVal({ sok: '', sortering: 'namn', kategori: 'sova', vy: 'rutnat' })).toEqual({ sortera: 'namn', kategori: 'sova', vy: 'rutnat' })
+    expect(adressFranVal({ sok: '   ', sortering: 'tyngst', kategori: '', vy: 'lista' })).toEqual({})
+  })
+
+  it('räknar bara sök och kategori som filter', () => {
+    expect(harFilter({ sok: 'akto', kategori: '' })).toBe(true)
+    expect(harFilter({ sok: '', kategori: 'sova' })).toBe(true)
+    expect(harFilter({ sok: '  ', kategori: '' })).toBe(false)
   })
 
   it('går runt: det som skrivs till adressen läses tillbaka likadant', () => {
-    const val = { sok: 'röd säck', sortering: 'senast', kategori: 'packning' } as const
+    const val = { sok: 'röd säck', sortering: 'namn', kategori: 'packning', vy: 'rutnat' } as const
     expect(valFranAdress(new URLSearchParams(adressFranVal(val)))).toEqual(val)
   })
 
   it('byter okända värden mot förvalen', () => {
     expect(las('sortera=dyrast&kategori=Tält')).toEqual(FORVALDA_VAL)
     expect(las('sortera=toString')).toEqual(FORVALDA_VAL)
+    expect(las('vy=tabell')).toEqual(FORVALDA_VAL)
   })
 
   it('kortar en orimligt lång söktext', () => {
     expect(las(`q=${'a'.repeat(500)}`).sok).toHaveLength(80)
+  })
+})
+
+describe('antalPerKategori', () => {
+  it('räknar rader per huvudkategori', () => {
+    expect(antalPerKategori(alla)).toEqual({ talt: 1, sova: 1, vatten: 1, sakerhet: 1, verktyg: 1 })
+    expect(antalPerKategori([])).toEqual({})
   })
 })
 

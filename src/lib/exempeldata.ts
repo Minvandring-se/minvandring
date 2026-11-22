@@ -206,5 +206,30 @@ export const KOMPISAR: { namn: string; turer: number; senast: string }[] = [
   { namn: 'Erik', turer: 3, senast: 'Jämtlandstriangeln 2026' },
 ]
 
+/**
+ * Mitt förråd, enligt skissen Forrad-dator. Det som kräver databasen eller packlistorna visas som exempel med Kommer snart.
+ * Ingen av sakerna här är en riktig sak i någons förråd.
+ */
+export const FORRAD_EXEMPEL = {
+  flikar: [
+    { namn: 'Önskelista', antal: 2 },
+    { namn: 'Utlånat', antal: 1 },
+    { namn: 'Pensionerat', antal: 0 },
+  ],
+  etiketter: ['Delas med Anna', 'Utlånat till Erik', 'Pensioneras?'],
+  detaljer: [
+    { etikett: 'Köpt', varde: 'maj 2024' },
+    { etikett: 'Skick', varde: 'Bra' },
+    { etikett: 'Följt med på', varde: '6 turer, 23 nätter' },
+    { etikett: 'Pris per natt', varde: '38 kr' },
+  ],
+  lattare: { text: '7 liknande produkter i katalogen väger mindre.', spara: 'Jämför och spara upp till 1,2 kg' },
+  knappar: ['Lägg i en packlista', 'Låna ut', 'Pensionera'],
+  onskelista: [
+    { namn: 'Uppblåsbart liggunderlag', not: 'Fyller Grunden' },
+    { namn: 'Lättare ryggsäck, 60 liter', not: '−1,2 kg' },
+  ],
+}
+
 /** Exempel på turens längd och svårighet, som i skissen. Visas inte förrän etapperna finns. */
 export const HOJDPROFIL = 'Importera en GPX-fil så visas leden, etapperna, stugor och vatten längs vägen.'

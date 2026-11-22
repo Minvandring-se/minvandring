@@ -197,13 +197,14 @@ export function ProduktSok({ finnsRedan, startKategori, onTillagd, onEgen, onSta
       <div className="min-w-0 space-y-4">
       <div className="space-y-1">
         <label htmlFor={`${id}-sok`} className="block text-sm font-medium">
-          Sök din produkt, till exempel tält eller sovsäck
+          Sök i katalogen på märke, modell eller version
         </label>
         <div className="relative">
           <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
           <Input
             id={`${id}-sok`}
             ref={falt}
+            data-autofokus
             type="search"
             autoComplete="off"
             enterKeyHint="search"
@@ -211,8 +212,12 @@ export function ProduktSok({ finnsRedan, startKategori, onTillagd, onEgen, onSta
             className="pl-10"
             value={text}
             onChange={(e) => setText(e.target.value)}
+            aria-describedby={`${id}-sokhjalp`}
           />
         </div>
+        <p id={`${id}-sokhjalp`} className="text-sm text-muted-foreground">
+          Välj en träff, så fylls vikt och uppgifter i åt dig.
+        </p>
       </div>
 
       <div className="space-y-2">
@@ -280,12 +285,16 @@ export function ProduktSok({ finnsRedan, startKategori, onTillagd, onEgen, onSta
       )}
 
       {/* Ligger utanför listan, så att den syns utan att man scrollar i träffarna. */}
-      <div className="space-y-2 border-t border-border pt-4">
-        <p className="text-sm font-medium">Hittar du inte din produkt?</p>
-        <Button type="button" variant="outline" onClick={() => onEgen(text, kategori || undefined)}>
+      <div className="flex flex-wrap items-center gap-x-2 border-t border-border pt-3 text-sm">
+        <span className="text-muted-foreground">Hittar du den inte?</span>
+        <button
+          type="button"
+          onClick={() => onEgen(text, kategori || undefined)}
+          className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        >
           <Plus className="size-4" aria-hidden />
-          Lägg till den själv
-        </Button>
+          Lägg till egen sak
+        </button>
       </div>
     </section>
   )

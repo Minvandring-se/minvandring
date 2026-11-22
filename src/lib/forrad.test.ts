@@ -1,7 +1,9 @@
 import { describe, expect, it } from 'vitest'
 import {
   KATEGORIER,
+  antalGranskade,
   arKategori,
+  storstaVinsten,
   faltFran,
   formateraVikt,
   forradsrad,
@@ -580,5 +582,37 @@ describe('fyraTunga', () => {
 
   it('räknar vikten 0 g som en ifylld vikt', () => {
     expect(fyraTunga([ryggsack, talt, sovsack, { ...underlag, vikt_g: 0 }])).toMatchObject({ komplett: true, viktG: 5870 })
+  })
+})
+
+describe('storstaVinsten', () => {
+  it('pekar ut saken som väger mest, med antal gånger vikt', () => {
+    const talt = sak({ id: 't', namn: 'Tält', kategori: 'talt', vikt_g: 1700 })
+    const flaskor = sak({ id: 'f', namn: 'Flaska', kategori: 'vatten', vikt_g: 600, antal: 3 })
+    expect(storstaVinsten([talt, flaskor])).toEqual({ id: 'f', namn: 'Flaska', viktG: 1800, kategori: 'Vatten' })
+  })
+
+  it('hoppar över saker utan vikt och ger null när ingen sak har vikt', () => {
+    expect(storstaVinsten([sak({ vikt_g: null }), sak({ vikt_g: 0 })])).toBeNull()
+    expect(storstaVinsten([])).toBeNull()
+  })
+})
+
+describe('antalGranskade', () => {
+  const fran = (produkt: ForradsProdukt, vikt_g = produkt.packvikt_g) => sak({ produkt_id: produkt.id, kategori: 'talt', vikt_g, produkter: produkt })
+
+  it('räknar saker med katalogens vikt som är granskad eller stickprovskontrollerad', () => {
+    const saker = [
+      fran(katalogprodukt({ granskad: '2026-11-01' })),
+      fran(katalogprodukt({ kontrollerad: '2026-11-02' })),
+      fran(katalogprodukt()),
+      fran(katalogprodukt({ granskad: '2026-11-01', kalla_typ: 'butik' })),
+      sak({ vikt_g: 100 }),
+    ]
+    expect(antalGranskade(saker)).toBe(2)
+  })
+
+  it('räknar inte en sak med egen vikt', () => {
+    expect(antalGranskade([fran(katalogprodukt({ granskad: '2026-11-01' }), 1750)])).toBe(0)
   })
 })

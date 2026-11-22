@@ -4,41 +4,40 @@ import type { Forradssak } from './typer'
 
 const ORDNING: readonly string[] = KATEGORIER.map((k) => k.nyckel)
 
-/** Så många saker ska förrådet ha innan sök och sortering visas. Med färre syns allt ändå. */
-export const MIN_FOR_VERKTYG = 8
-
+/** Sakerna visas alltid grupperade per kategori. Sorteringen gäller inom varje kategori. */
 export const SORTERINGAR = [
-  { varde: 'kategori', etikett: 'Kategori' },
   { varde: 'tyngst', etikett: 'Tyngst först' },
   { varde: 'lattast', etikett: 'Lättast först' },
   { varde: 'namn', etikett: 'Namn' },
-  { varde: 'senast', etikett: 'Senast tillagd' },
 ] as const
 
 export type Sortering = (typeof SORTERINGAR)[number]['varde']
 
+export type Vy = 'lista' | 'rutnat'
+
 export interface Listval {
   sok: string
-  /** 'kategori' är förvalet: sakerna visas grupperade per kategori, som utan verktygen. */
   sortering: Sortering
   /** Tom text betyder alla kategorier. */
   kategori: KategoriNyckel | ''
+  vy: Vy
 }
 
-export const FORVALDA_VAL: Listval = { sok: '', sortering: 'kategori', kategori: '' }
+export const FORVALDA_VAL: Listval = { sok: '', sortering: 'tyngst', kategori: '', vy: 'lista' }
 
 function arSortering(varde: unknown): varde is Sortering {
   return SORTERINGAR.some((s) => s.varde === varde)
 }
 
-/** Läser valen ur adressens frågedel (?q=…&sortera=…&kategori=…). Okända värden blir förvalen. */
+/** Läser valen ur adressens frågedel (?q=…&sortera=…&kategori=…&vy=…). Okända värden blir förvalen. */
 export function valFranAdress(parametrar: URLSearchParams): Listval {
   const sortering = parametrar.get('sortera')
   const kategori = parametrar.get('kategori')
   return {
     sok: (parametrar.get('q') ?? '').slice(0, 80),
-    sortering: arSortering(sortering) ? sortering : 'kategori',
+    sortering: arSortering(sortering) ? sortering : FORVALDA_VAL.sortering,
     kategori: arKategori(kategori) ? kategori : '',
+    vy: parametrar.get('vy') === 'rutnat' ? 'rutnat' : 'lista',
   }
 }
 
@@ -46,14 +45,15 @@ export function valFranAdress(parametrar: URLSearchParams): Listval {
 export function adressFranVal(val: Listval): Record<string, string> {
   const ut: Record<string, string> = {}
   if (val.sok.trim()) ut.q = val.sok
-  if (val.sortering !== 'kategori') ut.sortera = val.sortering
+  if (val.sortering !== FORVALDA_VAL.sortering) ut.sortera = val.sortering
   if (val.kategori) ut.kategori = val.kategori
+  if (val.vy !== FORVALDA_VAL.vy) ut.vy = val.vy
   return ut
 }
 
-/** Är något val gjort som gör att inte hela förrådet visas i grundordningen? */
-export function harVal(val: Listval): boolean {
-  return Object.keys(adressFranVal(val)).length > 0
+/** Visas inte hela förrådet? Sök och kategori döljer saker. Sortering och vy gör det inte. */
+export function harFilter(val: Pick<Listval, 'sok' | 'kategori'>): boolean {
+  return val.sok.trim() !== '' || val.kategori !== ''
 }
 
 /** Texten som söks igenom för en sak: namn, märke, version och anteckning. */
@@ -81,9 +81,7 @@ function radvikt(sak: Forradssak): number | null {
 const efterNamn = (a: Forradssak, b: Forradssak) => a.namn.localeCompare(b.namn, 'sv', { numeric: true })
 
 /**
- * Sakerna i en enda lista, i vald ordning. Saker utan vikt hamnar sist både för tyngst och lättast,
- * och saker utan datum sist för senast tillagd. Lika värden sorteras på namn.
- * Sorteringen 'kategori' hanteras av summeraForrad, och ger här samma ordning som namn.
+ * Sakerna i vald ordning. Saker utan vikt hamnar sist både för tyngst och lättast. Lika värden sorteras på namn.
  */
 export function sortera(saker: readonly Forradssak[], sortering: Sortering): Forradssak[] {
   const lista = [...saker]
@@ -96,10 +94,17 @@ export function sortera(saker: readonly Forradssak[], sortering: Sortering): For
       return riktning * (va - vb) || efterNamn(a, b)
     })
   }
-  if (sortering === 'senast') {
-    return lista.sort((a, b) => (b.skapad ?? '').localeCompare(a.skapad ?? '') || efterNamn(a, b))
-  }
   return lista.sort(efterNamn)
+}
+
+/** Antal saker per kategori i förrådet, för kategorivalet ("Sova 2"). Tre flaskor räknas som en rad. */
+export function antalPerKategori(saker: readonly Forradssak[]): Record<string, number> {
+  const ut: Record<string, number> = {}
+  for (const s of saker) {
+    const nyckel = kategoriFor(s.kategori).nyckel
+    ut[nyckel] = (ut[nyckel] ?? 0) + 1
+  }
+  return ut
 }
 
 /** Kategorierna som finns i förrådet, i den ordning de visas. För valet "bara en kategori". */

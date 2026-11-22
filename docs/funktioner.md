@@ -30,6 +30,9 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Matplanerin
 | Funktion | Status |
 |---|---|
 | Mitt förråd med produktkatalog | Finns |
+| Förrådet: Grunden, översikt, sök, kategori, sortering, lista och rutnät | Finns |
+| Önskelista, utlånat och pensionerat i förrådet | Senare |
+| Köpt, skick, turer och pris per natt för en sak | Senare |
 | Utrustningskatalog: sök och kategorifilter (`/utrustning`) | Finns |
 | Jämför produkter sida vid sida | Senare |
 | Packlista per person | Nästa (P1) |
