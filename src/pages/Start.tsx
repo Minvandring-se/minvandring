@@ -112,7 +112,7 @@ const fragor = [
   },
 ]
 
-const fokusPaBild = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-card'
+const fokusPaBild = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-pa-bild'
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 const textlank = `rounded-sm underline underline-offset-2 hover:text-foreground ${fokus}`
 /** Korten med illustrationer. De är inte klickbara men lyfts lite vid hover. */
@@ -175,12 +175,12 @@ export function Start() {
     <StigProvider>
       <header className="absolute inset-x-0 top-0 z-20">
         <nav aria-label="Huvudmeny" className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
-          <Link to="/" className={`flex min-h-11 items-center rounded-md text-card ${fokusPaBild}`}>
+          <Link to="/" className={`flex min-h-11 items-center rounded-md text-pa-bild ${fokusPaBild}`}>
             <Logotyp yta="mork" className="text-xl" />
           </Link>
           <Link
             to="/logga-in"
-            className={`inline-flex h-11 items-center rounded-md border border-card/70 bg-black/20 px-4 text-sm font-semibold text-card transition-colors hover:bg-card/15 ${fokusPaBild}`}
+            className={`inline-flex h-11 items-center rounded-md border border-pa-bild/70 bg-black/20 px-4 text-sm font-semibold text-pa-bild transition-colors hover:bg-pa-bild/15 ${fokusPaBild}`}
           >
             Logga in
           </Link>
@@ -189,14 +189,14 @@ export function Start() {
 
       <main>
         {/* Mobil och dator: 80 % av skärmhöjden. Riktigt breda skärmar (bredare än 2:1) får lite högre bildspel så att bilderna beskärs mindre, men nästa rubrik får alltid plats. */}
-        <section aria-labelledby="start-rubrik" className="relative isolate flex h-[80svh] min-h-[36rem] flex-col text-card md:h-[80svh] md:max-h-[64rem] md:[@media(min-aspect-ratio:2/1)]:h-[calc(100svh-8rem)]">
+        <section aria-labelledby="start-rubrik" className="relative isolate flex h-[80svh] min-h-[36rem] flex-col text-pa-bild md:h-[80svh] md:max-h-[64rem] md:[@media(min-aspect-ratio:2/1)]:h-[calc(100svh-8rem)]">
           <Bildspel />
 
           <div className="relative flex flex-1 flex-col items-center justify-center px-4 pt-20 pb-10 text-center [text-shadow:0_1px_14px_rgb(0_0_0/0.35)] sm:pt-24">
             <h1 id="start-rubrik" className="text-[2.6rem] leading-[1.05] font-bold sm:text-6xl lg:text-7xl">
               Planera. Packa. Upplev.
             </h1>
-            <p className="mt-5 max-w-xl text-lg font-medium text-card [text-shadow:0_1px_2px_rgb(0_0_0/0.7),0_0_14px_rgb(0_0_0/0.45)] sm:text-xl">
+            <p className="mt-5 max-w-xl text-lg font-medium text-pa-bild [text-shadow:0_1px_2px_rgb(0_0_0/0.7),0_0_14px_rgb(0_0_0/0.45)] sm:text-xl">
               Din nästa vandring börjar här. <span className="sm:block">Samla planen, packningen och maten på ett ställe.</span>
             </p>
             <PlaneraKnapp className="mt-8" />
@@ -361,12 +361,12 @@ export function Start() {
 
         </div>
 
-        <section aria-labelledby="cta-rubrik" className="bg-primary text-primary-foreground">
+        <section aria-labelledby="cta-rubrik" className="bg-yta-stark text-yta-stark-foreground">
           <div className="mx-auto flex max-w-6xl flex-col items-center px-4 py-20 text-center sm:px-6 lg:py-28">
             <h2 id="cta-rubrik" className="text-3xl font-bold sm:text-4xl">
               Redo för nästa tur?
             </h2>
-            <p className="mt-3 max-w-xl text-lg text-primary-foreground/90">Skapa vandringen och bjud in resten av gänget med en länk.</p>
+            <p className="mt-3 max-w-xl text-lg text-yta-stark-muted">Skapa vandringen och bjud in resten av gänget med en länk.</p>
             <PlaneraKnapp className="mt-8" />
           </div>
         </section>

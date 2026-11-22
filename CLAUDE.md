@@ -73,7 +73,7 @@ Vid prioritering: 1) planera en vandring 2) planera tillsammans 3) packning och 
 - Sökvägar skrivs utan å/ä/ö (t.ex. `ga-med`, `logga-in`).
 - Skandinavisk, lugn, naturnära och professionell. Undvik plottriga dashboards, för många färger, onödiga animationer och generisk AI/SaaS-stil.
 - Namnet skrivs MinVandring, i ett ord, överallt där det syns.
-- Färger: skogsgrönt primär (`#1F3D2E`, samma som logotypen, `primary-hover` för hover och fokus), sand/beige komplement, ljus off-white bakgrund, mörkgrå text, diskret accent.
+- Färger: ljust läge Fjällskog och mörkt läge Polarnatt. Skogsgrönt primär (`#1F3D2E`, samma som logotypen, `primary-hover` för hover och fokus), vita ytor på svagt grön bakgrund, mörkgrå text och rost som enda accent. Text på foton använder `pa-bild` och den mörkgröna ytan `yta-stark`. Varianten `mork:` används bara där en färgvariabel inte räcker, till exempel för att byta bild.
 - Logotypen är komponenten `Logotyp` med symbolerna i `public/brand/`. Källan ligger i `design/logo/`.
 - Tillgänglighet: labels på formulär, god kontrast, semantisk HTML, synligt fokus.
 - Använd inte tankstreck som paus i synliga texter.
