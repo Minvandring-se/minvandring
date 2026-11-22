@@ -1,4 +1,4 @@
-import { Dog, Plus, UserPlus, X } from 'lucide-react'
+import { ChevronDown, Dog, Plus, UserPlus, X } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
 import { Namnbricka } from '@/components/app/Namnbricka'
 import { arProfilbildHamtad } from '@/hooks/useProfilbilder'
@@ -159,11 +159,13 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
       )}
 
       {/* Rollerna i klartext. Syns även i mobilen, där en hjälptext vid muspekaren inte går att få fram. */}
-      <details className="rounded-md border border-border">
-        <summary className="flex min-h-11 cursor-pointer items-center px-3 text-sm font-medium focus-visible:outline-2 focus-visible:outline-ring">
+      {/* Ser ut som en länk med en pil, inte som ett fält. Pilen vänds när förklaringen är öppen. */}
+      <details className="group">
+        <summary className="-mx-1 inline-flex min-h-11 cursor-pointer list-none items-center gap-1 rounded-md px-1 text-sm font-medium text-primary underline underline-offset-4 hover:text-primary-hover focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
           Vad betyder rollerna?
+          <ChevronDown className="size-4 transition-transform group-open:rotate-180" aria-hidden />
         </summary>
-        <dl className="space-y-2 px-3 pb-3 text-sm">
+        <dl className="space-y-2 rounded-md bg-muted px-3 py-3 text-sm">
           {ROLLER.map((r) => (
             <div key={r}>
               <dt className="font-medium">{ROLLNAMN[r]}</dt>

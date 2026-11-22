@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,9 +32,10 @@ interface Props {
 }
 
 /** Ett val som ser ut som en knapp men är en radioknapp eller kryssruta, så att det går att nå med tangentbord och skärmläsare. */
+// Valt alternativ syns med mer än färg: en tjockare kant (ring inåt, så att inget flyttar sig).
+// På vald kategori byts ikonen också mot en bock i samma storlek, så att inget ändrar storlek när man väljer.
 const valbarKlass =
-  'flex cursor-pointer items-center gap-2 rounded-md border border-border bg-card font-medium transition-colors hover:bg-muted has-checked:border-primary has-checked:bg-primary-soft has-checked:text-primary has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring'
-
+  'group flex cursor-pointer items-center gap-2 rounded-md border border-border bg-card font-medium transition-colors hover:bg-muted has-checked:border-primary has-checked:bg-primary-soft has-checked:text-primary has-checked:ring-1 has-checked:ring-primary has-checked:ring-inset has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring'
 /** Formuläret för en sak i förrådet: lägga till en egen sak, eller ändra och ta bort en som finns. */
 export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
   const id = useId()
@@ -117,7 +119,8 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
                 checked={falt.kategori === nyckel}
                 onChange={() => setFalt((f) => medKategori(f, nyckel))}
               />
-              <Ikon className="size-5 shrink-0" aria-hidden />
+              <Ikon className="size-5 shrink-0 group-has-checked:hidden" aria-hidden />
+              <Check className="hidden size-5 shrink-0 group-has-checked:block" aria-hidden />
               {etikett}
             </label>
           ))}

@@ -462,7 +462,7 @@ function Sakrad({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => vo
         Den ligger utanför knappen, eftersom etiketten själv går att trycka på.
         Att en produkt inte är granskad står bara i den utfällda detaljen.
       */}
-      {produkt && !egen && <Granskad kontrollerad={produkt.kontrollerad} className="px-4 pb-2" />}
+      {produkt && !egen && <Granskad kontrollerad={produkt.kontrollerad} className="px-4" />}
 
       <div id={id} hidden={!utfalld} className="space-y-4 border-t border-border bg-muted/40 px-4 py-3">
         <Detaljlista rader={grund} />

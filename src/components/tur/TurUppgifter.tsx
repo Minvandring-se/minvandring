@@ -69,11 +69,13 @@ export function TurUppgifter({ tur, kanAndra, onSparad }: Props) {
   if (!redigerar) {
     return (
       <Card className="space-y-2">
-        <div className="flex min-h-11 items-center justify-between">
-          <h2 className="text-xl">Turens uppgifter</h2>
+        {/* Rubriken bryts hellre än knappen, så att "Ändra uppgifter" alltid står på en rad. */}
+        <div className="flex min-h-11 items-center justify-between gap-3">
+          <h2 className="min-w-0 text-xl">Turens uppgifter</h2>
           {kanAndra && (
             <Button
               variant="outline"
+              className="shrink-0 px-4 whitespace-nowrap"
               onClick={() => {
                 setForm(tur)
                 setRedigerar(true)
