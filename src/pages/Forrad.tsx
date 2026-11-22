@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
+import { FyraTunga } from '@/components/forrad/FyraTunga'
 import { Granskad } from '@/components/forrad/Granskad'
 import { granskning } from '@/lib/granskning'
 import { ProduktSok } from '@/components/forrad/ProduktSok'
@@ -107,7 +108,7 @@ export function Forrad() {
       {rad.saker}
       {rad.saknarVikt && (
         <>
-          {' · '}
+          {', '}
           <span className="whitespace-nowrap">
             <Prick />
             {rad.saknarVikt}
@@ -186,31 +187,18 @@ export function Forrad() {
           />
         )
       ) : (
-        <>
+        // På dator: listan till vänster och sammanfattningen till höger, där den ligger kvar när man scrollar.
+        // I mobil kommer sammanfattningen först.
+        <div className="grid grid-cols-1 gap-8 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
           {tunga && (
-            <section aria-labelledby="fyra-tunga" className="space-y-2">
-              <h2 id="fyra-tunga" className="text-lg font-semibold">
-                {tunga.text}
-              </h2>
-              {/* Det som saknas står i en gul ruta: här finns något att göra. Texten är mörk för kontrastens skull. */}
-              {tunga.uppmaningar.length > 0 && (
-                <ul className="flex flex-wrap gap-x-5 rounded-md bg-accent-soft px-4 py-1 text-sm text-foreground">
-                  {tunga.uppmaningar.map((u) => (
-                    <li key={u.grupp}>
-                      <button
-                        type="button"
-                        className="min-h-11 font-medium underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-                        onClick={() => (u.gor === 'laggTill' ? oppnaSok(u.kategori) : setOppet({ sakId: u.sakId }))}
-                      >
-                        {u.text}
-                      </button>
-                    </li>
-                  ))}
-                </ul>
-              )}
-            </section>
+            <FyraTunga
+              tunga={tunga}
+              onUppmaning={(u) => (u.gor === 'laggTill' ? oppnaSok(u.kategori) : setOppet({ sakId: u.sakId }))}
+              className="lg:sticky lg:top-8 lg:col-start-2 lg:row-start-1"
+            />
           )}
 
+          <div className="min-w-0 space-y-6 lg:col-start-1 lg:row-start-1">
           {harVerktyg && <Verktyg val={val} onVal={setVal} kategorier={kategorierIForradet(saker)} visas={visade.length} av={saker.length} />}
 
           {visade.length === 0 ? (
@@ -233,7 +221,8 @@ export function Forrad() {
             // Med en annan sortering än Kategori visas en enda lista utan kategorirubriker.
             <Saklista saker={sortera(visade, val.sortering)} {...radhjalp} />
           )}
-        </>
+          </div>
+        </div>
       )}
     </div>
   )
@@ -366,7 +355,7 @@ function Kategoridel({
             {kategori.etikett}
           </h2>
           <p className="text-sm text-muted-foreground">
-            {antalText(antal)} · {formateraVikt(viktG)}
+            {antalText(antal)}, {formateraVikt(viktG)}
           </p>
         </div>
       </div>
@@ -404,8 +393,8 @@ function Sakrad({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => vo
   const [visaAlla, setVisaAlla] = useState(false)
   const [aterstaller, setAterstaller] = useState(false)
   const [fel, setFel] = useState('')
-  // Underkategorin och anteckningen står diskret under namnet.
-  const detaljer = [underkategoriFor(sak.kategori, sak.underkategori)?.etikett, sak.notering].filter(Boolean).join(' · ')
+  // Underkategorin står diskret under namnet, och anteckningen på en egen rad under den.
+  const underkategori = underkategoriFor(sak.kategori, sak.underkategori)?.etikett
   const { grund, viktiga, ovriga } = sakdetaljer(sak)
   const { egen, katalogG } = viktjamforelse(sak)
   const produkt = sak.produkter
@@ -441,7 +430,8 @@ function Sakrad({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => vo
           </span>
           {/* Versionen, till exempel Regular eller Red Label, står under namnet som i träfflistan. */}
           {produkt?.version && <span className="block text-sm break-words text-muted-foreground">{produkt.version}</span>}
-          {detaljer && <span className="block text-sm break-words text-muted-foreground">{detaljer}</span>}
+          {underkategori && <span className="block text-sm break-words text-muted-foreground">{underkategori}</span>}
+          {sak.notering && <span className="mt-0.5 block text-sm break-words text-foreground/80">{sak.notering}</span>}
         </span>
         {sak.vikt_g === null ? (
           <span className="shrink-0 text-sm text-muted-foreground italic">
