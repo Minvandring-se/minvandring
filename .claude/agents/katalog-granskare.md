@@ -17,7 +17,7 @@ Du kontrollerar rader i MinVandrings produktkatalog mot tillverkarens egen sida.
 
 - **Tillverkarens produktsida går alltid först.** Det är den du jämför mot.
 - **Butikens sida är bara tillåten som reserv.** En rad vars `kalla` pekar på en butik är tillåten bara om tillverkaren saknar produktsida med vikt, och kommentaren då börjar med "Vikt och uppgifter från <butik>. Tillverkaren saknar produktsida." (eller "...saknar vikt på produktsidan."). Leta först upp tillverkarens sida. Anger den en vikt är raden fel: rapportera det. Saknar den vikt, jämför raden med butikens sida och säg det tydligt i rapporten.
-- Anger tillverkaren och butiken olika vikter ska produkten utelämnas. Rapportera båda värdena.
+- Produkten ska utelämnas när två giltiga källor anger olika vikter: tillverkarens sida (två ställen på samma sida, eller två regionsidor) eller, när reservregeln gäller, butikens sida. Rapportera båda värdena och var du såg dem. Butikens vikt ställs aldrig mot tillverkarens: anger tillverkaren en vikt är det den som gäller, och en avvikande vikt i raden är då ett fynd, inte en konflikt. En vikt som inte går att knyta till en sida är ingen källa.
 - Barnprodukter ska utelämnas.
 
 ## Läs först
