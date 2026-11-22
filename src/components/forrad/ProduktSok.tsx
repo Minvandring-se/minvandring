@@ -1,6 +1,7 @@
 import { ChevronDown, Plus, Search, X } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Granskad } from '@/components/forrad/Granskad'
+import { granskning } from '@/lib/granskning'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -70,7 +71,7 @@ export function ProduktSok({ finnsRedan, startKategori, onTillagd, onEgen, onSta
     let avbruten = false
     supabase
       .from('produkter')
-      .select('id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad')
+      .select('id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad, granskad, kalla_typ')
       .eq('kategori', kategori)
       .limit(MAX_PRODUKTER)
       .then(({ data }) => {
@@ -91,7 +92,7 @@ export function ProduktSok({ finnsRedan, startKategori, onTillagd, onEgen, onSta
     const klient = supabase
     let avbruten = false
     const timer = window.setTimeout(async () => {
-      let fraga = klient.from('produkter').select('id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad').limit(MAX_PRODUKTER)
+      let fraga = klient.from('produkter').select('id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad, granskad, kalla_typ').limit(MAX_PRODUKTER)
       if (kategori) fraga = fraga.eq('kategori', kategori)
       if (marke) fraga = fraga.eq('marke', marke)
       if (harText) for (const ord of sokord(text)) fraga = fraga.or(sokfilter(ord))
@@ -311,7 +312,7 @@ function Produktrad({
   const Ikon = kategoriFor(produkt.kategori).ikon
   return (
     <>
-      <button type="button" disabled={upptagen} onClick={() => onValj(produkt)} className={cn(radKlass, produkt.kontrollerad ? 'pt-2 pb-1' : 'py-2', indragen && 'pl-11')}>
+      <button type="button" disabled={upptagen} onClick={() => onValj(produkt)} className={cn(radKlass, granskning(produkt).marke ? 'pt-2 pb-1' : 'py-2', indragen && 'pl-11')}>
         {!indragen && <Ikon className="size-5 shrink-0 text-primary" aria-hidden />}
         <span className="min-w-0 flex-1">
           <span className="block font-medium break-words">
@@ -325,7 +326,7 @@ function Produktrad({
         <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       </button>
       {/* Bara granskade produkter har en etikett. Den ligger utanför knappen, eftersom den själv går att trycka på. */}
-      <Granskad kontrollerad={produkt.kontrollerad} className="px-3 pl-11" />
+      <Granskad produkt={produkt} className="px-3 pl-11" />
     </>
   )
 }
