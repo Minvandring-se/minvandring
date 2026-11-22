@@ -1,6 +1,9 @@
 import type { Roll } from './roller'
 import type { Typ } from './vikt'
 
+/** Var uppgifterna om en produkt kommer från: tillverkarens sida, eller butikens när tillverkaren saknar vikt. */
+export type KallaTyp = 'tillverkare' | 'butik'
+
 /** En sak i Mitt förråd, som raden ser ut i forradssaker. */
 export interface Forradssak {
   id: string
@@ -27,7 +30,11 @@ export interface ForradsProdukt {
   modell: string
   /** Katalogens vikt. Jämförs med sakens egen vikt. */
   packvikt_g: number | null
+  /** Dagen en grundare stickprovskontrollerade genomgången produkten ingick i. */
   kontrollerad: string | null
+  /** Dagen vikten jämfördes med tillverkarens sida. */
+  granskad: string | null
+  kalla_typ: KallaTyp
   version: string | null
   underkategori: string
   minvikt_g: number | null
@@ -45,8 +52,11 @@ export interface Produkt {
   kategori: string
   underkategori: string
   packvikt_g: number
-  /** Dagen produkten kontrollerades mot tillverkarens uppgifter. null = inte granskad än. */
+  /** Dagen en grundare stickprovskontrollerade genomgången produkten ingick i. */
   kontrollerad: string | null
+  /** Dagen vikten jämfördes med tillverkarens sida. */
+  granskad: string | null
+  kalla_typ: KallaTyp
 }
 
 export interface Tur {

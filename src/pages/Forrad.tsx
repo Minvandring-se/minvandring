@@ -5,6 +5,7 @@ import { Laddar, Skelett } from '@/components/app/Laddar'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Granskad } from '@/components/forrad/Granskad'
+import { granskning } from '@/lib/granskning'
 import { ProduktSok } from '@/components/forrad/ProduktSok'
 import { SakFormular } from '@/components/forrad/SakFormular'
 import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
@@ -55,7 +56,7 @@ export function Forrad() {
   useEffect(() => {
     supabase
       ?.from('forradssaker')
-      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, skapad, produkter(id, marke, modell, packvikt_g, kontrollerad, version, underkategori, minvikt_g, kalla, egenskaper)')
+      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, skapad, produkter(id, marke, modell, packvikt_g, kontrollerad, granskad, kalla_typ, version, underkategori, minvikt_g, kalla, egenskaper)')
       .then(({ data, error }) => {
         setLaddfel(!!error)
         if (!error) setSaker((data as unknown as Forradssak[] | null) ?? [])
@@ -457,12 +458,12 @@ function Sakrad({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => vo
       </button>
 
       {/*
-        Etiketten Granskad gäller katalogens uppgifter. Den står vid raden så länge vikten är katalogens.
-        Har man en egen vikt flyttas den ner till specifikationerna, så att den inte ser ut att gälla den egna vikten.
-        Den ligger utanför knappen, eftersom etiketten själv går att trycka på.
-        Att en produkt inte är granskad står bara i den utfällda detaljen.
+        Märket (Stickprovskontrollerad eller Granskad mot tillverkaren) gäller katalogens uppgifter. Det står vid raden så länge vikten är katalogens.
+        Har man en egen vikt flyttas det ner till specifikationerna, så att det inte ser ut att gälla den egna vikten.
+        Det ligger utanför knappen, eftersom märket själv går att trycka på.
+        Att en produkt saknar nivå står bara i den utfällda detaljen.
       */}
-      {produkt && !egen && <Granskad kontrollerad={produkt.kontrollerad} className="px-4" />}
+      {produkt && !egen && <Granskad produkt={produkt} className="px-4" />}
 
       <div id={id} hidden={!utfalld} className="space-y-4 border-t border-border bg-muted/40 px-4 py-3">
         <Detaljlista rader={grund} />
@@ -485,9 +486,9 @@ function Sakrad({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => vo
               <h3 id={`${id}-spec`} className="text-sm font-semibold">
                 Specifikationer från katalogen
               </h3>
-              {egen && <Granskad kontrollerad={produkt.kontrollerad} />}
+              {egen && <Granskad produkt={produkt} />}
             </div>
-            {!produkt.kontrollerad && <p className="text-sm text-muted-foreground">Produktuppgifterna har inte granskats.</p>}
+            {!granskning(produkt).marke && <p className="text-sm text-muted-foreground">{granskning(produkt).forklaring}</p>}
             {viktiga.length > 0 && <Detaljlista rader={viktiga} />}
             {ovriga.length > 0 && (
               <>

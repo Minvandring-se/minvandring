@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { godkanda, importera, lasCsv, rapport, seedSql, tolkaRad } from './katalogimport'
 
 const RUBRIK =
-  'marke;modell;version;underkategori;personer;sasong;konstruktion;fristaende;kraver_stavar;packvikt_g;minvikt_g;golvyta_m2;absidyta_m2;ingangar;absider;innerhojd_cm;langd_cm;yttertalt_forst;material_typ;material_beskrivning;vattenpelare_duk_mm;vattenpelare_golv_mm;packmatt_cm;pris_sek_ca;ean;kalla;kontrollerad_datum;kommentar'
+  'marke;modell;version;underkategori;personer;sasong;konstruktion;fristaende;kraver_stavar;packvikt_g;minvikt_g;golvyta_m2;absidyta_m2;ingangar;absider;innerhojd_cm;langd_cm;yttertalt_forst;material_typ;material_beskrivning;vattenpelare_duk_mm;vattenpelare_golv_mm;packmatt_cm;pris_sek_ca;ean;kalla;kontrollerad_datum;granskad_datum;kalla_typ;genomgang;kommentar'
 
 /** Ett komplett tält. Enskilda fält byts ut i testerna. */
 const TALT: Record<string, string> = {
@@ -33,6 +33,9 @@ const TALT: Record<string, string> = {
   ean: '7331234567890',
   kalla: 'https://exempel.se/fjalltalt-2',
   kontrollerad_datum: '2026-11-19',
+  granskad_datum: '2026-11-10',
+  kalla_typ: 'tillverkare',
+  genomgang: '2026-11-10-test-talt',
   kommentar: 'Bara för oss.',
 }
 
@@ -80,6 +83,9 @@ describe('tolkaRad', () => {
         ean: '7331234567890',
         kalla: 'https://exempel.se/fjalltalt-2',
         kontrollerad: '2026-11-19',
+        granskad: '2026-11-10',
+        kalla_typ: 'tillverkare',
+        genomgang: '2026-11-10-test-talt',
         egenskaper: {
           personer: 2,
           sasong: 4,
@@ -113,10 +119,37 @@ describe('tolkaRad', () => {
     expect(r.produkt?.egenskaper).toMatchObject({ golvyta_m2: 2.6, material_typ: 'dcf' })
   })
 
-  it('importerar en rad utan kontrollerad_datum som inte granskad', () => {
+  it('importerar en rad utan kontrollerad_datum som bara granskad', () => {
     const r = tolkaRad(2, { ...TALT, kontrollerad_datum: '' })
     expect(r.fel).toEqual([])
-    expect(r.produkt?.kontrollerad).toBeNull()
+    expect(r.produkt).toMatchObject({ kontrollerad: null, granskad: '2026-11-10' })
+  })
+
+  it('importerar en rad utan nivå, och tomt kalla_typ och genomgang betyder tillverkare och ingen genomgång', () => {
+    const r = tolkaRad(2, { ...TALT, kontrollerad_datum: '', granskad_datum: '', kalla_typ: '', genomgang: '' })
+    expect(r.fel).toEqual([])
+    expect(r.produkt).toMatchObject({ kontrollerad: null, granskad: null, kalla_typ: 'tillverkare', genomgang: null })
+  })
+
+  it('importerar en butiksrad utan nivå', () => {
+    const r = tolkaRad(2, { ...TALT, kontrollerad_datum: '', granskad_datum: '', kalla_typ: 'butik', kommentar: 'Vikt och uppgifter från XXL. Tillverkaren saknar produktsida.' })
+    expect(r.fel).toEqual([])
+    expect(r.produkt).toMatchObject({ kalla_typ: 'butik', granskad: null, kontrollerad: null })
+  })
+
+  it.each([
+    ['granskad_datum på en butiksrad', { kalla_typ: 'butik', kontrollerad_datum: '', kommentar: 'Vikt och uppgifter från XXL. Tillverkaren saknar produktsida.' }, 'granskad_datum'],
+    ['kontrollerad_datum på en butiksrad', { kalla_typ: 'butik', granskad_datum: '', kommentar: 'Vikt och uppgifter från XXL. Tillverkaren saknar produktsida.' }, 'kontrollerad_datum'],
+    ['kontrollerad_datum utan granskad_datum', { granskad_datum: '' }, 'kontrollerad_datum'],
+    ['butik utan butikskommentar', { kalla_typ: 'butik', kontrollerad_datum: '', granskad_datum: '' }, 'kalla_typ'],
+    ['butikskommentar utan kalla_typ butik', { kontrollerad_datum: '', granskad_datum: '', kommentar: 'Vikt och uppgifter från XXL. Tillverkaren saknar vikt på produktsidan.' }, 'kalla_typ'],
+    ['okänd kalla_typ', { kalla_typ: 'internet' }, 'kalla_typ'],
+    ['ogiltigt granskad_datum', { granskad_datum: '2026-13-01' }, 'granskad_datum'],
+    ['genomgang i fel format', { genomgang: 'xxl talt' }, 'genomgang'],
+  ])('stoppar raden: %s', (_namn, delar, kolumn) => {
+    const r = tolkaRad(2, { ...TALT, ...delar })
+    expect(r.produkt).toBeNull()
+    expect(r.fel.some((f) => f.startsWith(`${kolumn}:`))).toBe(true)
   })
 
   it('varnar men importerar när fält för jämförelser saknas', () => {
@@ -215,7 +248,7 @@ describe('importera', () => {
 
   it('varnar men importerar när kommentaren sist på raden innehåller ett semikolon', () => {
     const r = importera(csv({ ...TALT, kommentar: 'Först; sedan mer; och mer' }))
-    expect(r.rader[0].produkt).toMatchObject({ modell: 'Fjälltält 2', kalla: 'https://exempel.se/fjalltalt-2', kontrollerad: '2026-11-19' })
+    expect(r.rader[0].produkt).toMatchObject({ modell: 'Fjälltält 2', kalla: 'https://exempel.se/fjalltalt-2', kontrollerad: '2026-11-19', granskad: '2026-11-10' })
     expect(r.rader[0].fel).toEqual([])
     expect(r.rader[0].varningar).toEqual(['kommentar: innehåller semikolon, sätt den inom citattecken'])
   })
@@ -238,7 +271,7 @@ describe('seedSql', () => {
 
   it('skriver null för tomma värden och dubblar apostrofer', () => {
     const sql = seedSql(produkter, ['supabase/katalog/test.csv'])
-    expect(sql).toContain("('Testmärke', 'Tält med '' i namnet', null, 'talt', 'talt', 2400, 2000, 9500, '7331234567890', 'https://exempel.se/fjalltalt-2', null, '{")
+    expect(sql).toContain("('Testmärke', 'Tält med '' i namnet', null, 'talt', 'talt', 2400, 2000, 9500, '7331234567890', 'https://exempel.se/fjalltalt-2', null, '2026-11-10', 'tillverkare', '{")
     expect(sql).toContain('"material_typ":"kerlon"')
     expect(sql).toContain('::jsonb)')
     expect(sql).not.toContain('Bara för oss')
@@ -249,6 +282,9 @@ describe('seedSql', () => {
     expect(sql).toContain("on conflict (lower(marke), lower(modell), lower(coalesce(version, ''))) do update set")
     expect(sql).toContain('packvikt_g = excluded.packvikt_g')
     // Stavningen av namnet ska också slå igenom, till exempel EXPED som rättas till Exped i CSV:n.
+    expect(sql).toContain('granskad = excluded.granskad')
+    expect(sql).toContain('kalla_typ = excluded.kalla_typ')
+    expect(sql).not.toContain('genomgang')
     expect(sql).toContain('marke = excluded.marke')
     expect(sql).toContain('modell = excluded.modell')
     expect(sql).toContain('version = excluded.version')
@@ -262,11 +298,11 @@ describe('seedSql', () => {
 describe('rapport', () => {
   it('visar varje rad med fel och varningar, och en summering', () => {
     const text = rapport('test.csv', importera(csv(TALT, { ...TALT, modell: 'Utan vikt', packvikt_g: '', ean: '' }, { ...TALT, modell: 'Ogranskat', sasong: '', ean: '', kontrollerad_datum: '' })))
-    expect(text).toContain('OK  rad 2: Testmärke Fjälltält 2 2026 · talt · 2400 g · granskad 2026-11-19')
+    expect(text).toContain('OK  rad 2: Testmärke Fjälltält 2 2026 · talt · 2400 g · stickprovskontrollerad')
     expect(text).toContain('FEL rad 3: Testmärke Utan vikt 2026')
     expect(text).toContain('fel: packvikt_g: saknas')
     expect(text).toContain('varning: sasong: saknas, behövs för jämförelser')
-    expect(text).toContain('Summa: 2 av 3 rader importeras (1 granskade, 1 inte granskade). 1 stoppas av fel, 1 har varningar.')
+    expect(text).toContain('Summa: 2 av 3 rader importeras (1 stickprovskontrollerade, 1 granskade, 0 butik, 0 inte granskade). 1 stoppas av fel, 1 har varningar.')
   })
 })
 

@@ -1,7 +1,9 @@
 // Importen av produktkatalogen. CSV-filerna i supabase/katalog är huvudlistan, och härifrån skapas seed-SQL:en.
 // Rena funktioner: text in, resultat ut. Skriptet scripts/katalog.mjs läser filerna och skriver migreringen.
 import { kategoriForUnder } from './forrad'
+import { granskning } from './granskning'
 import { ALLA_EGENSKAPSNYCKLAR, egenskaperFor, tolkaEgenskap, valideraEgenskaper, type Egenskapsvarde } from './produktegenskaper'
+import type { KallaTyp } from './typer'
 
 /** En produkt som den sparas i tabellen produkter. */
 export interface KatalogProdukt {
@@ -15,8 +17,14 @@ export interface KatalogProdukt {
   pris_sek_ca: number | null
   ean: string | null
   kalla: string
-  /** Dagen någon av oss kontrollerade raden mot källan. null = inte granskad än. */
+  /** Dagen en grundare stickprovskontrollerade genomgången raden ingick i. */
   kontrollerad: string | null
+  /** Dagen vikten jämfördes med tillverkarens sida. */
+  granskad: string | null
+  /** 'butik' när vikten kommer från butikens sida eftersom tillverkaren saknar vikt. */
+  kalla_typ: KallaTyp
+  /** Genomgången raden kom med, till exempel 2026-11-22-xxl-talt. Finns bara i CSV:n, inte i databasen. */
+  genomgang: string | null
   egenskaper: Record<string, Egenskapsvarde>
 }
 
@@ -37,7 +45,7 @@ export interface Importresultat {
 }
 
 /** Kolumner som är gemensamma för alla produkter. Övriga kolumner är egenskaper för en underkategori. */
-const GEMENSAMMA = ['marke', 'modell', 'version', 'underkategori', 'packvikt_g', 'minvikt_g', 'pris_sek_ca', 'ean', 'kalla', 'kontrollerad_datum', 'kommentar']
+const GEMENSAMMA = ['marke', 'modell', 'version', 'underkategori', 'packvikt_g', 'minvikt_g', 'pris_sek_ca', 'ean', 'kalla', 'kontrollerad_datum', 'granskad_datum', 'kalla_typ', 'genomgang', 'kommentar']
 const MASTE_FINNAS = ['marke', 'modell', 'underkategori', 'packvikt_g', 'kalla']
 
 /** Delar upp en rad på semikolon. Ett fält inom citattecken får innehålla semikolon, och "" är ett citattecken. */
@@ -82,7 +90,13 @@ function heltal(text: string): number | null {
   return /^\d+$/.test(text) ? Number(text) : null
 }
 
-function arDatum(text: string): boolean {
+/** Kommentarer som börjar så anger att vikten kommer från butikens sida. */
+export const BUTIKSKOMMENTAR = 'Vikt och uppgifter från'
+
+/** Genomgångens id: datum, butik och kategori, till exempel 2026-11-22-xxl-talt. */
+const GENOMGANG = /^\d{4}-\d{2}-\d{2}-[a-z0-9]+(-[a-z0-9]+)*$/
+
+export function arDatum(text: string): boolean {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(text)) return false
   const d = new Date(`${text}T12:00:00Z`)
   return !Number.isNaN(d.getTime()) && d.toISOString().slice(0, 10) === text
@@ -132,6 +146,22 @@ export function tolkaRad(rad: number, falt: Record<string, string>): Radresultat
   const kontrollerad = v('kontrollerad_datum') || null
   if (kontrollerad && !arDatum(kontrollerad)) fel.push('kontrollerad_datum: ska vara ett datum, till exempel 2026-11-19')
 
+  const granskad = v('granskad_datum') || null
+  if (granskad && !arDatum(granskad)) fel.push('granskad_datum: ska vara ett datum, till exempel 2026-11-22')
+
+  const kallaTypText = v('kalla_typ').toLowerCase()
+  if (kallaTypText && kallaTypText !== 'tillverkare' && kallaTypText !== 'butik') fel.push('kalla_typ: ska vara tillverkare eller butik, eller vara tom')
+  const kallaTyp: KallaTyp = kallaTypText === 'butik' ? 'butik' : 'tillverkare'
+  const butikskommentar = v('kommentar').startsWith(BUTIKSKOMMENTAR)
+  if (kallaTyp === 'butik' && !butikskommentar) fel.push(`kalla_typ: butik kräver att kommentaren börjar med "${BUTIKSKOMMENTAR}"`)
+  if (kallaTyp === 'tillverkare' && butikskommentar) fel.push('kalla_typ: kommentaren säger att vikten kommer från butiken, sätt kalla_typ till butik')
+  if (kallaTyp === 'butik' && granskad) fel.push('granskad_datum: en butiksrad kan inte vara granskad mot tillverkaren')
+  if (kallaTyp === 'butik' && kontrollerad) fel.push('kontrollerad_datum: en butiksrad kan inte vara stickprovskontrollerad')
+  if (kontrollerad && !granskad) fel.push('kontrollerad_datum: kräver granskad_datum')
+
+  const genomgang = v('genomgang') || null
+  if (genomgang && !GENOMGANG.test(genomgang)) fel.push('genomgang: ska se ut som 2026-11-22-xxl-talt (datum, butik, kategori)')
+
   // Egenskaperna för radens underkategori. Det som står i andra egenskapskolumner sparas inte.
   const egenskaper: Record<string, Egenskapsvarde> = {}
   const definitioner = kategori ? egenskaperFor(underkategori) : []
@@ -166,6 +196,9 @@ export function tolkaRad(rad: number, falt: Record<string, string>): Radresultat
       ean,
       kalla,
       kontrollerad,
+      granskad,
+      kalla_typ: kallaTyp,
+      genomgang,
       egenskaper,
     },
     fel,
@@ -228,7 +261,7 @@ function sqlTal(varde: number | null): string {
   return varde === null ? 'null' : String(varde)
 }
 
-const KOLUMNER = ['marke', 'modell', 'version', 'kategori', 'underkategori', 'packvikt_g', 'minvikt_g', 'pris_sek_ca', 'ean', 'kalla', 'kontrollerad', 'egenskaper']
+const KOLUMNER = ['marke', 'modell', 'version', 'kategori', 'underkategori', 'packvikt_g', 'minvikt_g', 'pris_sek_ca', 'ean', 'kalla', 'kontrollerad', 'granskad', 'kalla_typ', 'egenskaper']
 
 /**
  * Seed-SQL för produkterna. En produkt som redan finns (samma märke, modell och version, utan hänsyn till
@@ -255,6 +288,8 @@ export function seedSql(produkter: KatalogProdukt[], kallfiler: string[]): strin
       sqlText(p.ean),
       sqlText(p.kalla),
       sqlText(p.kontrollerad),
+      sqlText(p.granskad),
+      sqlText(p.kalla_typ),
       `${sqlText(JSON.stringify(p.egenskaper))}::jsonb`,
     ]
     return `  (${varden.join(', ')})`
@@ -272,13 +307,20 @@ export function seedSql(produkter: KatalogProdukt[], kallfiler: string[]): strin
   ].join('\n')
 }
 
+/** Nivån som skriptet visar för en rad. Butiksrader får ingen nivå och visas som butik. */
+export function nivaText(p: KatalogProdukt): 'stickprovskontrollerad' | 'granskad' | 'butik' | 'inte granskad' {
+  if (p.kalla_typ === 'butik') return 'butik'
+  const niva = granskning(p).niva
+  return niva === 'stickprov' ? 'stickprovskontrollerad' : niva === 'granskad' ? 'granskad' : 'inte granskad'
+}
+
 /** Rapporten som visas innan seed-SQL:en skapas: varje rad med fel och varningar, och en summering. */
 export function rapport(filnamn: string, resultat: Importresultat): string {
   const ut: string[] = [filnamn]
   for (const f of resultat.filfel) ut.push(`  FEL I FILEN: ${f}`)
   for (const r of resultat.rader) {
     const p = r.produkt
-    const detaljer = p ? ` · ${p.underkategori} · ${p.packvikt_g} g · ${p.kontrollerad ? `granskad ${p.kontrollerad}` : 'inte granskad'}` : ''
+    const detaljer = p ? ` · ${p.underkategori} · ${p.packvikt_g} g · ${nivaText(p)}` : ''
     ut.push(`  ${p ? 'OK ' : 'FEL'} rad ${r.rad}: ${r.namn}${detaljer}`)
     for (const f of r.fel) ut.push(`        fel: ${f}`)
     for (const w of r.varningar) ut.push(`        varning: ${w}`)
@@ -286,9 +328,9 @@ export function rapport(filnamn: string, resultat: Importresultat): string {
   const in_ = godkanda(resultat)
   const stoppade = resultat.rader.length - in_.length
   const medVarning = resultat.rader.filter((r) => r.produkt && r.varningar.length).length
-  const granskade = in_.filter((p) => p.kontrollerad).length
+  const antalNiva = (n: ReturnType<typeof nivaText>) => in_.filter((p) => nivaText(p) === n).length
   ut.push(
-    `  Summa: ${in_.length} av ${resultat.rader.length} rader importeras (${granskade} granskade, ${in_.length - granskade} inte granskade). ` +
+    `  Summa: ${in_.length} av ${resultat.rader.length} rader importeras (${antalNiva('stickprovskontrollerad')} stickprovskontrollerade, ${antalNiva('granskad')} granskade, ${antalNiva('butik')} butik, ${antalNiva('inte granskad')} inte granskade). ` +
       `${stoppade} stoppas av fel, ${medVarning} har varningar.`,
   )
   return ut.join('\n')

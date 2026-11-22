@@ -3,7 +3,7 @@ import { antalText, gArAttSoka, grupperaModeller, markenMedAntal, produktnamn, s
 import type { Produkt } from './typer'
 
 function produkt(marke: string, modell: string, delar: Partial<Produkt> = {}): Produkt {
-  return { id: `${marke}-${modell}`, marke, modell, version: null, kategori: 'talt', underkategori: 'talt', packvikt_g: 1000, kontrollerad: null, ...delar }
+  return { id: `${marke}-${modell}`, marke, modell, version: null, kategori: 'talt', underkategori: 'talt', packvikt_g: 1000, kontrollerad: null, granskad: null, kalla_typ: 'tillverkare', ...delar }
 }
 
 describe('sokord', () => {

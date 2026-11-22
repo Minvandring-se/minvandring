@@ -10,7 +10,7 @@ CSV-filerna i `supabase/katalog/` är huvudlistan. Tabellen `produkter` fylls ba
 ## Regler som alltid gäller
 
 - Ändra aldrig `produkter` för hand i databasen. Ändra CSV:n och skapa en ny seed-migrering.
-- Sätt aldrig `kontrollerad_datum`. Det gör bara en av grundarna, efter egen kontroll mot tillverkarens sida.
+- **Granskningsnivåer.** `kontrollerad_datum` sätts bara av en av grundarna, med `--godkann`, efter ett stickprov av hela genomgången. Sätt det aldrig själv. `granskad_datum` sätts bara av dig, med `--granskad`, för de rader katalog-granskaren har läst mot tillverkarens sida och bekräftat vikten på. Sätt det aldrig för butiksrader (`kalla_typ` butik), och aldrig för rader granskaren inte har läst.
 - När användaren säger att katalogfilen är uppdaterad: läs om filen från disk, kontrollera radantalet mot det användaren säger och committa den först av allt.
 - Kör aldrig `checkout`, `restore` eller `stash` på `supabase/katalog/` utan att fråga. Ett branchbyte byter också ut filerna, så använd `git worktree` om en annan branch behövs.
 - Merga aldrig en pull request utan att användaren har sagt ja. Seeden körs efter merge: `npx supabase db push --remote --yes`.
@@ -49,12 +49,17 @@ CSV-filerna i `supabase/katalog/` är huvudlistan. Tabellen `produkter` fylls ba
 2. **Sortera bort det som redan finns.** Samma märke, modell och version räknas som "redan fanns" och läggs inte till igen.
 3. **Hämta uppgifterna från tillverkaren.** En rad per storlek eller version. Egenskaperna per underkategori och reglerna mellan fälten står i `src/lib/produktegenskaper.ts`. Skriv i `kommentar` hur ett värde har härletts när det inte står rakt av på sidan.
 4. **Låt katalog-granskaren läsa de nya raderna** mot tillverkarens sida innan de läggs in. Rätta avvikelserna, eller utelämna raden.
-5. **Lägg raderna i rätt fil** i `supabase/katalog/`. Semikolon som avgränsare, kolumnerna läses efter namn, decimaltecken får vara punkt eller komma.
+5. **Lägg raderna i rätt fil** i `supabase/katalog/`. Semikolon som avgränsare, kolumnerna läses efter namn, decimaltecken får vara punkt eller komma. Sätt `genomgang` på varje ny rad (samma id som i loggraden, se nedan). Sätt `kalla_typ` till `butik` för reservrader (kommentaren börjar då med "Vikt och uppgifter från"), annars till `tillverkare`. Lämna `granskad_datum` och `kontrollerad_datum` tomma.
 6. **Kör `npm run katalog`.** Fel stoppar raden och ska rättas. Varningar betyder att fält för jämförelser saknas, och får stå kvar om tillverkaren inte anger dem.
-7. **Skapa seeden:** `npm run katalog -- --skriv katalog_<namn>`. Den uppdaterar också produkter som redan finns.
-8. **Logga genomgången** (se nedan).
-9. **Kör `npm test`.** `supabase/katalog.test.ts` faller om en CSV har ändrats utan ny migrering.
-10. **Visa migreringen och vänta på ok** innan `npx supabase db push --remote`.
+7. **Sätt `granskad_datum`** på raderna granskaren bekräftade: spara avsnittet "Granskad mot tillverkaren" ur granskarens rapport som en fil med en nyckel (`marke;modell;version`) per rad och kör `npm run katalog -- --granskad <genomgang> --nycklar <fil>`. Kommandot vägrar butiksrader och nycklar som inte finns i genomgången.
+8. **Skapa seeden:** `npm run katalog -- --skriv katalog_<namn>`. Den uppdaterar också produkter som redan finns.
+9. **Logga genomgången** (se nedan).
+10. **Kör `npm test`.** `supabase/katalog.test.ts` faller om en CSV har ändrats utan ny migrering.
+11. **Visa migreringen och vänta på ok** innan `npx supabase db push --remote`.
+
+### Stickprov och godkännande (en av grundarna)
+
+Efter genomgången drar man ett stickprov: `npm run katalog -- --stickprov <genomgang>` skriver en checklista i `docs/katalog/stickprov/<genomgang>.md` (frö skrivs ut och kan återanvändas med `--frö N`). Grundaren jämför raderna med tillverkarnas sidor. Stämmer vikterna kör grundaren `npm run katalog -- --godkann <genomgang>`, som sätter `kontrollerad_datum` på genomgångens granskade rader och `godkand` i loggen. Skapa därefter en ny seed. Hittas ett fel: rätta raden, dra ett nytt stickprov av samma storlek ur resten, och hittas fel igen görs genomgången om eller så godkänns den inte.
 
 ### Spärrade tillverkarsidor
 
@@ -77,11 +82,12 @@ Varje genomgång loggas, också en som inte gav några nya produkter.
 **En ny rad sist i `docs/katalog/genomgangar.csv`:**
 
 ```
-datum;kategori;katalogfil;kalla;rader_i_kallan;nya;redan_fanns;utelamnade;kommentar
+datum;kategori;katalogfil;kalla;rader_i_kallan;nya;redan_fanns;utelamnade;kommentar;genomgang;godkand
 ```
 
 - `rader_i_kallan` ska vara summan av `nya`, `redan_fanns` och `utelamnade`. Räkna efter.
 - `kommentar` anger vilka som utelämnades och varför.
+- `genomgang` är id:t `ÅÅÅÅ-MM-DD-butik-kategori` med små bokstäver utan å, ä, ö, till exempel `2026-11-22-xxl-talt` (kategorier: `talt`, `sov`, `ligg`, `ryggsack`). Samma id sätts på varje ny rad i CSV:n. `godkand` lämnas tomt: det fylls av `--godkann`.
 - En rad per kategori och butik. Kontrollera att raden inte redan finns.
 
 **Täckningstabellen i `docs/katalog/README.md`:** byt `–` mot `✓` och datumet i rätt cell. Ny butik blir en ny kolumn, ny kategori en ny rad.
