@@ -134,12 +134,17 @@ export function Profilbildsval({ anvandarId, namn, bildUppdaterad, onAndrad, lad
           )}
         </div>
       </div>
-      <p className="text-sm text-muted-foreground">
-        {vald ? 'Så här kommer bilden att se ut.' : 'JPG, PNG eller WebP, högst 10 MB. Bilden syns för dig och dem du delar en tur med.'}
-      </p>
-      <p role="status" aria-live="polite" className="min-h-5 text-sm">
-        {besked && <span className={besked.sort === 'ok' ? 'font-medium text-primary' : 'text-destructive'}>{besked.text}</span>}
-      </p>
+      {/* Beskedet tar hjälptextens plats, så att det inte står en tom rad under bilden och inget hoppar när det kommer. */}
+      <div className="text-sm">
+        {!besked && (
+          <p className="text-muted-foreground">
+            {vald ? 'Så här kommer bilden att se ut.' : 'JPG, PNG eller WebP, högst 10 MB. Bilden syns för dig och dem du delar en tur med.'}
+          </p>
+        )}
+        <p role="status" aria-live="polite">
+          {besked && <span className={besked.sort === 'ok' ? 'font-medium text-primary' : 'text-destructive'}>{besked.text}</span>}
+        </p>
+      </div>
     </div>
   )
 }
