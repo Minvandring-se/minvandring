@@ -473,7 +473,27 @@ describe('fyraTunga', () => {
   })
 
   it('summerar ryggsäck, tält, sovsäck och liggunderlag när alla finns med vikt', () => {
-    expect(fyraTunga(alla)).toEqual({ viktG: 6455, komplett: true, text: 'De fyra tunga: 6,46 kg', uppmaningar: [] })
+    expect(fyraTunga(alla)).toMatchObject({ viktG: 6455, komplett: true, medVikt: 4, varde: '6,46 kg', uppmaningar: [] })
+  })
+
+  it('har en rad per grupp med saken som räknas, i fast ordning', () => {
+    expect(fyraTunga(alla)?.grupper.map((g) => [g.namn, g.sak?.namn, g.sak?.viktG])).toEqual([
+      ['Ryggsäck', 'Kajka 65', 3300],
+      ['Tält', 'Akto', 1700],
+      ['Sovsäck', 'Neutrino', 870],
+      ['Liggunderlag', 'Ultra 5R', 585],
+    ])
+  })
+
+  it('har uppmaningen på raden för det som saknas', () => {
+    const rad = fyraTunga([ryggsack, talt, sovsack])?.grupper[3]
+    expect(rad).toEqual({
+      grupp: 'liggunderlag',
+      namn: 'Liggunderlag',
+      sak: null,
+      utanVikt: null,
+      uppmaning: { grupp: 'liggunderlag', text: 'Lägg till ett liggunderlag', gor: 'laggTill', kategori: 'sova' },
+    })
   })
 
   it('räknar inte in andra saker, och inte antal', () => {
@@ -496,13 +516,13 @@ describe('fyraTunga', () => {
 
   it('uppmanar att lägga till det som saknas, och skriver summan som minst', () => {
     const r = fyraTunga([ryggsack, talt, sovsack])
-    expect(r).toMatchObject({ viktG: 5870, komplett: false, text: 'De fyra tunga: minst 5,87 kg' })
+    expect(r).toMatchObject({ viktG: 5870, komplett: false, medVikt: 3, varde: 'Minst 5,87 kg' })
     expect(r?.uppmaningar).toEqual([{ grupp: 'liggunderlag', text: 'Lägg till ett liggunderlag', gor: 'laggTill', kategori: 'sova' }])
   })
 
   it('har en uppmaning per saknad grupp, med rätt kategori att öppna', () => {
     const r = fyraTunga([sak({ kategori: 'kok', underkategori: 'brannare', vikt_g: 400 })])
-    expect(r).toMatchObject({ viktG: 0, komplett: false, text: 'De fyra tunga' })
+    expect(r).toMatchObject({ viktG: 0, komplett: false, medVikt: 0, varde: null })
     expect(r?.uppmaningar.map((u) => [u.text, u.gor === 'laggTill' ? u.kategori : null])).toEqual([
       ['Lägg till en ryggsäck', 'packning'],
       ['Lägg till ett tält', 'talt'],
@@ -523,19 +543,22 @@ describe('fyraTunga', () => {
   it('en sak utan vikt räknas inte i summan, och uppmaningen pekar på saken', () => {
     const utan = { ...sovsack, vikt_g: null }
     const r = fyraTunga([ryggsack, talt, utan, underlag])
-    expect(r).toMatchObject({ viktG: 3300 + 1700 + 585, komplett: false, text: 'De fyra tunga: minst 5,58 kg' })
+    expect(r).toMatchObject({ viktG: 3300 + 1700 + 585, komplett: false, varde: 'Minst 5,58 kg' })
     expect(r?.uppmaningar).toEqual([{ grupp: 'sovsack', text: 'Fyll i vikten på din sovsäck', gor: 'fyllIVikt', sakId: 's' }])
+    expect(r?.grupper[2]).toMatchObject({ sak: null, utanVikt: 'Neutrino' })
   })
 
   it('använder den lättaste som har vikt när någon i gruppen saknar vikt', () => {
     const utan = sak({ id: 't0', kategori: 'talt', underkategori: 'talt', vikt_g: null })
     const tungt = sak({ id: 't3', kategori: 'talt', underkategori: 'talt', vikt_g: 2400 })
-    expect(fyraTunga([ryggsack, utan, tungt, talt, sovsack, underlag])).toEqual({ viktG: 6455, komplett: true, text: 'De fyra tunga: 6,46 kg', uppmaningar: [] })
+    const r = fyraTunga([ryggsack, utan, tungt, talt, sovsack, underlag])
+    expect(r).toMatchObject({ viktG: 6455, komplett: true, varde: '6,46 kg', uppmaningar: [] })
+    expect(r?.grupper[1].sak?.id).toBe('t')
   })
 
   it('säger rätt sak för varje grupp som bara har saker utan vikt', () => {
     const r = fyraTunga(alla.map((s) => ({ ...s, vikt_g: null })))
-    expect(r).toMatchObject({ viktG: 0, komplett: false, text: 'De fyra tunga' })
+    expect(r).toMatchObject({ viktG: 0, komplett: false, varde: null })
     expect(r?.uppmaningar.map((u) => u.text)).toEqual([
       'Fyll i vikten på din ryggsäck',
       'Fyll i vikten på ditt tält',
@@ -551,7 +574,7 @@ describe('fyraTunga', () => {
 
   it('blandar saknade saker och saknade vikter', () => {
     const r = fyraTunga([{ ...ryggsack, vikt_g: null }, talt])
-    expect(r).toMatchObject({ viktG: 1700, text: 'De fyra tunga: minst 1,7 kg' })
+    expect(r).toMatchObject({ viktG: 1700, varde: 'Minst 1,7 kg' })
     expect(r?.uppmaningar.map((u) => u.gor)).toEqual(['fyllIVikt', 'laggTill', 'laggTill'])
   })
 

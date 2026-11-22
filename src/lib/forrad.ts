@@ -483,24 +483,48 @@ export function forradsrad(summa: Pick<Forradssumma, 'antal' | 'utanVikt'>): { s
 
 /** De fyra tyngsta sakerna i en packning. Underkategorierna i varje grupp räknas som samma sorts sak. */
 const TUNGA = [
-  { grupp: 'ryggsack', under: ['ryggsack'], kategori: 'packning', laggTill: 'Lägg till en ryggsäck', fyllI: 'Fyll i vikten på din ryggsäck' },
-  { grupp: 'talt', under: ['talt'], kategori: 'talt', laggTill: 'Lägg till ett tält', fyllI: 'Fyll i vikten på ditt tält' },
-  { grupp: 'sovsack', under: ['sovsack', 'quilt'], kategori: 'sova', laggTill: 'Lägg till en sovsäck', fyllI: 'Fyll i vikten på din sovsäck' },
-  { grupp: 'liggunderlag', under: ['liggunderlag'], kategori: 'sova', laggTill: 'Lägg till ett liggunderlag', fyllI: 'Fyll i vikten på ditt liggunderlag' },
-] as const satisfies readonly { grupp: string; under: readonly UnderkategoriNyckel[]; kategori: KategoriNyckel; laggTill: string; fyllI: string }[]
+  { grupp: 'ryggsack', namn: 'Ryggsäck', under: ['ryggsack'], kategori: 'packning', laggTill: 'Lägg till en ryggsäck', fyllI: 'Fyll i vikten på din ryggsäck' },
+  { grupp: 'talt', namn: 'Tält', under: ['talt'], kategori: 'talt', laggTill: 'Lägg till ett tält', fyllI: 'Fyll i vikten på ditt tält' },
+  { grupp: 'sovsack', namn: 'Sovsäck', under: ['sovsack', 'quilt'], kategori: 'sova', laggTill: 'Lägg till en sovsäck', fyllI: 'Fyll i vikten på din sovsäck' },
+  {
+    grupp: 'liggunderlag',
+    namn: 'Liggunderlag',
+    under: ['liggunderlag'],
+    kategori: 'sova',
+    laggTill: 'Lägg till ett liggunderlag',
+    fyllI: 'Fyll i vikten på ditt liggunderlag',
+  },
+] as const satisfies readonly { grupp: string; namn: string; under: readonly UnderkategoriNyckel[]; kategori: KategoriNyckel; laggTill: string; fyllI: string }[]
 
 export type TungGrupp = (typeof TUNGA)[number]['grupp']
 
 /** Något som saknas bland de fyra tunga: en sak att lägga till, eller en vikt att fylla i på en sak som finns. */
 export type Uppmaning = { grupp: TungGrupp; text: string } & ({ gor: 'laggTill'; kategori: KategoriNyckel } | { gor: 'fyllIVikt'; sakId: string })
 
+/** En av de fyra tunga: den sak som räknas (den lättaste med vikt) eller det som saknas. */
+export interface TungRad {
+  grupp: TungGrupp
+  /** "Ryggsäck", "Tält", "Sovsäck" eller "Liggunderlag". */
+  namn: string
+  /** Saken som räknas, eller null när gruppen saknar en sak med vikt. */
+  sak: { id: string; namn: string; viktG: number } | null
+  /** Namnet på saken som saknar vikt, när gruppen bara har saker utan vikt. Annars null. */
+  utanVikt: string | null
+  /** Vad man kan göra när sak är null. */
+  uppmaning: Uppmaning | null
+}
+
 export interface FyraTunga {
   /** Summan av den lättaste saken med vikt i varje grupp. */
   viktG: number
   /** Alla fyra grupperna har en sak med vikt. */
   komplett: boolean
-  /** "De fyra tunga: 7,4 kg", eller "De fyra tunga: minst 5,2 kg" när något saknas, så att summan inte ser komplett ut. */
-  text: string
+  /** Hur många av de fyra grupperna som har en sak med vikt. */
+  medVikt: number
+  /** Summan som text: "7,4 kg", eller "Minst 5,2 kg" när något saknas, så att den inte ser komplett ut. null utan någon vikt. */
+  varde: string | null
+  /** En rad per grupp, i ordningen ryggsäck, tält, sovsäck och liggunderlag. */
+  grupper: TungRad[]
   uppmaningar: Uppmaning[]
 }
 
@@ -512,24 +536,29 @@ export interface FyraTunga {
 export function fyraTunga(saker: readonly Forradssak[]): FyraTunga | null {
   if (saker.length === 0) return null
   let viktG = 0
-  let antalMedVikt = 0
-  const uppmaningar: Uppmaning[] = []
+  let medVikt = 0
+  const grupper: TungRad[] = []
   for (const t of TUNGA) {
     const under: readonly string[] = t.under
     const iGruppen = saker.filter((s) => s.underkategori !== null && under.includes(s.underkategori))
-    const vikter = iGruppen.flatMap((s) => (s.vikt_g === null ? [] : [s.vikt_g]))
-    if (vikter.length > 0) {
-      viktG += Math.min(...vikter)
-      antalMedVikt++
+    const medVikter = iGruppen.filter((s): s is Forradssak & { vikt_g: number } => s.vikt_g !== null)
+    if (medVikter.length > 0) {
+      const lattast = medVikter.reduce((a, b) => (b.vikt_g < a.vikt_g ? b : a))
+      viktG += lattast.vikt_g
+      medVikt++
+      grupper.push({ grupp: t.grupp, namn: t.namn, sak: { id: lattast.id, namn: lattast.namn, viktG: lattast.vikt_g }, utanVikt: null, uppmaning: null })
     } else if (iGruppen.length > 0) {
       const forsta = [...iGruppen].sort((a, b) => a.namn.localeCompare(b.namn, 'sv'))[0]
-      uppmaningar.push({ grupp: t.grupp, text: forsta.underkategori === 'quilt' ? 'Fyll i vikten på din quilt' : t.fyllI, gor: 'fyllIVikt', sakId: forsta.id })
+      const text = forsta.underkategori === 'quilt' ? 'Fyll i vikten på din quilt' : t.fyllI
+      grupper.push({ grupp: t.grupp, namn: t.namn, sak: null, utanVikt: forsta.namn, uppmaning: { grupp: t.grupp, text, gor: 'fyllIVikt', sakId: forsta.id } })
     } else {
       const baraDagsryggsack = t.grupp === 'ryggsack' && saker.some((s) => s.underkategori === 'dagsryggsack')
-      uppmaningar.push({ grupp: t.grupp, text: baraDagsryggsack ? 'Lägg till en vandringsryggsäck' : t.laggTill, gor: 'laggTill', kategori: t.kategori })
+      const text = baraDagsryggsack ? 'Lägg till en vandringsryggsäck' : t.laggTill
+      grupper.push({ grupp: t.grupp, namn: t.namn, sak: null, utanVikt: null, uppmaning: { grupp: t.grupp, text, gor: 'laggTill', kategori: t.kategori } })
     }
   }
-  const komplett = antalMedVikt === TUNGA.length
-  const text = antalMedVikt === 0 ? 'De fyra tunga' : `De fyra tunga: ${komplett ? '' : 'minst '}${formateraVikt(viktG)}`
-  return { viktG, komplett, text, uppmaningar }
+  const komplett = medVikt === TUNGA.length
+  const varde = medVikt === 0 ? null : komplett ? formateraVikt(viktG) : `Minst ${formateraVikt(viktG)}`
+  const uppmaningar = grupper.flatMap((g) => (g.uppmaning ? [g.uppmaning] : []))
+  return { viktG, komplett, medVikt, varde, grupper, uppmaningar }
 }
