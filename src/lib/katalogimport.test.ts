@@ -248,7 +248,10 @@ describe('seedSql', () => {
     const sql = seedSql(produkter, ['a.csv'])
     expect(sql).toContain("on conflict (lower(marke), lower(modell), lower(coalesce(version, ''))) do update set")
     expect(sql).toContain('packvikt_g = excluded.packvikt_g')
-    expect(sql).not.toContain('marke = excluded.marke')
+    // Stavningen av namnet ska också slå igenom, till exempel EXPED som rättas till Exped i CSV:n.
+    expect(sql).toContain('marke = excluded.marke')
+    expect(sql).toContain('modell = excluded.modell')
+    expect(sql).toContain('version = excluded.version')
   })
 
   it('skriver ingen insert utan produkter', () => {
