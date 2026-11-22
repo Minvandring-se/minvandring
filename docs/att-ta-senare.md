@@ -163,3 +163,33 @@ Idé: ge dem som fiskar eller jagar på vandringen plats för det i appen. Tre d
 ## Katalogen: Mammut Tyin MTI 5-Season
 
 Mammut Tyin MTI 5-Season (180 och 200 cm) och Protect Fiber Bag -18C S utelämnades vid XXL- och Outnorth-genomgången 2026-11-22. Tyins produktsida hos Mammut hängde sig i Chrome, och Protect Fiber S visar att produkten inte längre finns. Försök läsa Tyin igen, och lägg in raderna om sidan visar vikt per storlek. Outnorths vikter för raderna finns i `Claude outputs/outnorth-sovsackar.csv`.
+
+## Mina turer: väder, bild och information
+
+Idé: göra turkortet och turvyn mer levande med väder, en egen bild och fakta om platsen, utan att bygga en ledguide (se docs/vision.md).
+
+- **Väder från SMHI:s öppna prognos-API** för startpunkten när turen börjar inom cirka tio dagar. Kräver att turen har koordinater (i dag är startpunkten bara text). Kontrollera användarvillkoren innan det byggs, och ange SMHI som källa där prognosen visas.
+- **En egen tecknad bildruta per tur** i appens stil: fjäll, skog eller kust efter landskap, med färger efter årstid. Kräver en kolumn för landskap på turen. Inget API och inga bildrättigheter.
+- **Med P2:** karta från Lantmäteriets öppna data eller OpenStreetMap, GPX-import och höjdprofil, och lavinprognoser från Naturvårdsverket för vinterturer.
+- **Bortvalt tills vidare:** bilder från Wikimedia Commons eller Unsplash. Kvaliteten varierar, upphovsangivelser krävs och nyckeln kräver en server.
+
+## Leddatabas
+
+Mål: en stor lista över svenska vandringsleder med mycket information, som kan förifylla en tur.
+
+Per led:
+- sträcka, och etapper med avstånd
+- höjdmeter
+- stugor och övernattning
+- säsong och svårighetsgrad
+- start och mål med kommunikationer
+- vatten och mobiltäckning
+- risker, till exempel vadställen och lavinterräng
+- officiella källor och kontrolldatum
+
+Etapper: de 20 till 50 mest kända lederna först, sedan de leder användarna planerar. Samma arbetssätt som produktkatalogen: en lista i filer i repot som är huvudlistan, med källa och kontrolldatum per rad.
+
+Villkor och källor:
+- Bygg inte på OpenStreetMaps ruttdata. Licensen (ODbL) kräver att den databas man bygger delas vidare.
+- Kontrollera villkoren för Lantmäteriets och länsstyrelsernas data innan något hämtas.
+- Skriv egna formuleringar och ange källa per led.
