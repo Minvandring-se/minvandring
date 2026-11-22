@@ -1,5 +1,6 @@
 import { Check, Copy, RefreshCw } from 'lucide-react'
 import { useEffect, useState } from 'react'
+import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Button } from '@/components/ui/button'
 import { arAgare, type Roll } from '@/lib/roller'
 import { supabase } from '@/lib/supabase'
@@ -60,7 +61,11 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
     <div className="space-y-2 rounded-md bg-muted p-3">
       <p className="text-sm font-medium">Dela länken med de som ska med</p>
       <p className="text-sm text-muted-foreground">Den som går med via länken blir redigerare. Ägaren kan ändra rollen efteråt.</p>
-      {kod === undefined && <p className="text-sm text-muted-foreground">Hämtar länken …</p>}
+      {kod === undefined && (
+        <Laddar text="Hämtar länken">
+          <Skelett className="h-10 bg-card" />
+        </Laddar>
+      )}
       {kod === null && <p className="text-sm text-destructive">Det gick inte att hämta länken.</p>}
       {kod && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">

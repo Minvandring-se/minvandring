@@ -2,6 +2,7 @@ import { LogOut } from 'lucide-react'
 import { useEffect, useId, useState, type FormEvent } from 'react'
 import { useNavigate } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
+import { Skelett } from '@/components/app/Laddar'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { Profilbildsval } from '@/components/profil/Profilbildsval'
 import { Button } from '@/components/ui/button'
@@ -12,7 +13,7 @@ import { supabase } from '@/lib/supabase'
 
 /** Ändra sitt visningsnamn och sin profilbild, och logga ut. Namnet följer med till alla turer man är med i. */
 export function Profil() {
-  const { anvandarId, epost, setNamn: setNamnIRamen, bildUppdaterad, setBildUppdaterad } = useApp()
+  const { anvandarId, epost, profilHamtad, setNamn: setNamnIRamen, bildUppdaterad, setBildUppdaterad } = useApp()
   const navigate = useNavigate()
   const id = useId()
   const [namn, setNamn] = useState('')
@@ -51,12 +52,22 @@ export function Profil() {
       <SidRubrik rubrik="Profil" text="Ditt namn och ditt konto." />
 
       <Card className="space-y-5 sm:p-6">
-        <Profilbildsval anvandarId={anvandarId} namn={namn || epost || '?'} bildUppdaterad={bildUppdaterad} onAndrad={setBildUppdaterad} />
+        <Profilbildsval
+          anvandarId={anvandarId}
+          namn={namn || epost || '?'}
+          bildUppdaterad={bildUppdaterad}
+          onAndrad={setBildUppdaterad}
+          laddar={!profilHamtad}
+        />
         <div className="border-t border-border pt-4">
           <div className="min-w-0">
-            <p className="truncate font-heading text-lg font-semibold">
-              {namn || (status === 'laddar' ? 'Hämtar …' : status === 'laddfel' ? 'Namnet gick inte att hämta' : 'Inget namn än')}
-            </p>
+            {status === 'laddar' ? (
+              <Skelett className="my-1 h-5 w-32" />
+            ) : (
+              <p className="truncate font-heading text-lg font-semibold">
+                {namn || (status === 'laddfel' ? 'Namnet gick inte att hämta' : 'Inget namn än')}
+              </p>
+            )}
             <p className="truncate text-sm text-muted-foreground">{epost}</p>
           </div>
         </div>

@@ -1,8 +1,9 @@
 import { ImagePlus, Trash2 } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type ChangeEvent } from 'react'
+import { Skelett } from '@/components/app/Laddar'
 import { Namnbricka } from '@/components/app/Namnbricka'
 import { Button } from '@/components/ui/button'
-import { glomProfilbild, useProfilbilder } from '@/hooks/useProfilbilder'
+import { arProfilbildHamtad, glomProfilbild, useProfilbilder } from '@/hooks/useProfilbilder'
 import { FILVALJARE_ACCEPT, PROFILBILD_BUCKET, bildsokvag, forminskaBild, kontrolleraFil } from '@/lib/profilbild'
 import { supabase } from '@/lib/supabase'
 
@@ -14,6 +15,8 @@ interface Props {
   bildUppdaterad: string | null
   /** Bilden har sparats (ny tid) eller tagits bort (null). */
   onAndrad: (bildUppdaterad: string | null) => void
+  /** Profilen hämtas fortfarande, så vi vet inte om det finns en bild. */
+  laddar?: boolean
 }
 
 type Besked = { sort: 'ok' | 'fel'; text: string } | null
@@ -22,13 +25,15 @@ type Besked = { sort: 'ok' | 'fel'; text: string } | null
  * Profilbilden i Profil: välj en bild, se den beskuren och förminskad, och spara eller avbryt.
  * Bilden görs om i webbläsaren innan den laddas upp, så originalet lämnar aldrig enheten.
  */
-export function Profilbildsval({ anvandarId, namn, bildUppdaterad, onAndrad }: Props) {
+export function Profilbildsval({ anvandarId, namn, bildUppdaterad, onAndrad, laddar = false }: Props) {
   const id = useId()
   const filfalt = useRef<HTMLInputElement>(null)
   const [vald, setVald] = useState<{ blob: Blob; adress: string } | null>(null)
   const [arbetar, setArbetar] = useState<'laser' | 'sparar' | 'tarbort' | null>(null)
   const [besked, setBesked] = useState<Besked>(null)
   const sparad = useProfilbilder(bildUppdaterad ? [anvandarId] : [], bildUppdaterad)[anvandarId]
+  // Platshållare tills vi vet om det finns en bild, och tills bilden i så fall har hämtats.
+  const bildLaddar = laddar || (!!bildUppdaterad && !sparad && !arProfilbildHamtad(anvandarId))
 
   // Förhandsvisningens adress pekar på bilden i minnet och ska lämnas tillbaka när den inte används.
   useEffect(() => {
@@ -98,9 +103,11 @@ export function Profilbildsval({ anvandarId, namn, bildUppdaterad, onAndrad }: P
   return (
     <div className="space-y-3">
       <div className="flex flex-wrap items-center gap-4">
-        <Namnbricka namn={namn} bild={vald?.adress ?? sparad} className="size-20 text-xl" />
+        <Namnbricka namn={namn} bild={vald?.adress ?? sparad} laddar={bildLaddar && !vald} className="size-20 text-xl" />
         <div className="flex flex-wrap gap-2">
-          {vald ? (
+          {laddar ? (
+            <Skelett className="h-11 w-32" />
+          ) : vald ? (
             <>
               <Button type="button" disabled={arbetar !== null} onClick={spara}>
                 {arbetar === 'sparar' ? 'Sparar …' : 'Spara bild'}

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import { Link, Navigate, useNavigate, useParams } from 'react-router'
+import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
 import { Card } from '@/components/ui/card'
@@ -143,8 +144,12 @@ export function GaMed() {
   }
 
   return (
-    <p role="status" className="text-muted-foreground">
-      Går med i turen …
-    </p>
+    <Card className="mx-auto mt-10 max-w-md">
+      <Laddar text="Går med i turen">
+        <Skelett className="h-4 w-24" />
+        <Skelett className="h-8 w-3/4" />
+        <Skelett className="h-12" />
+      </Laddar>
+    </Card>
   )
 }

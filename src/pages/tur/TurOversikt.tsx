@@ -11,7 +11,7 @@ import { TurUppgifter } from '@/components/tur/TurUppgifter'
 import { Button } from '@/components/ui/button'
 import { ROLLNAMN, arAgare, kanAndra } from '@/lib/roller'
 import { supabase } from '@/lib/supabase'
-import { useProfilbilder } from '@/hooks/useProfilbilder'
+import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
 import { deltagareText } from '@/lib/turlista'
 
 /** Turens översikt: bilden, gruppen, turens uppgifter och deltagarna med inbjudan. */
@@ -21,7 +21,9 @@ export function TurOversikt() {
   const [raderfel, setRaderfel] = useState(false)
   const { bildUppdaterad } = useApp()
   const bilder = useProfilbilder(deltagare.map((d) => d.user_id), bildUppdaterad)
-  const personer = deltagare.filter((d) => d.typ === 'person').map((d) => ({ namn: d.namn, bild: d.user_id ? bilder[d.user_id] : null }))
+  const personer = deltagare
+    .filter((d) => d.typ === 'person')
+    .map((d) => ({ namn: d.namn, bild: d.user_id ? bilder[d.user_id] : null, laddar: !!d.user_id && !arProfilbildHamtad(d.user_id) }))
 
   async function radera() {
     if (!supabase) return

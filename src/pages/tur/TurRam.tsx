@@ -2,6 +2,7 @@ import { CalendarDays, ChevronLeft, MapPin, RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation, useNavigate, useParams } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
+import { Laddar, Skelett } from '@/components/app/Laddar'
 import type { TurKontext } from '@/components/tur/turKontext'
 import { Button } from '@/components/ui/button'
 import { useSidtitel } from '@/hooks/useSidtitel'
@@ -104,9 +105,18 @@ function Ram({ id }: { id: string | undefined }) {
 
   if (tur === undefined)
     return (
-      <p role="status" className="text-muted-foreground">
-        Hämtar turen …
-      </p>
+      <Laddar text="Hämtar turen" className="space-y-5 lg:space-y-6">
+        <div className="space-y-3">
+          <Skelett className="h-5 w-44" />
+          <Skelett className="h-8 w-3/4 sm:h-9 lg:h-10" />
+          <Skelett className="h-5 w-56 max-w-full" />
+        </div>
+        <Skelett className="aspect-[5/2] max-h-40 w-full rounded-lg sm:aspect-[21/8] sm:max-h-none lg:aspect-[3/1]" />
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)]">
+          <Skelett className="h-64 rounded-lg" />
+          <Skelett className="h-64 rounded-lg" />
+        </div>
+      </Laddar>
     )
   if (tur === 'saknas')
     return (
