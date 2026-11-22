@@ -308,6 +308,8 @@ function katalogprodukt(delar: Partial<ForradsProdukt> = {}): ForradsProdukt {
     modell: 'Akto',
     packvikt_g: 1700,
     kontrollerad: null,
+    granskad: null,
+    kalla_typ: 'tillverkare',
     version: 'Red Label',
     underkategori: 'talt',
     minvikt_g: 1300,

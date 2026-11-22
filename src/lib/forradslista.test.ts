@@ -12,6 +12,8 @@ const produkt = (marke: string, version: string | null) => ({
   modell: 'M',
   packvikt_g: 1,
   kontrollerad: null,
+  granskad: null,
+  kalla_typ: 'tillverkare' as const,
   version,
   underkategori: 'talt',
   minvikt_g: null,

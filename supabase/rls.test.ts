@@ -613,7 +613,7 @@ describe('produktkatalogen', () => {
   beforeAll(async () => {
     // Katalogen fylls via migreringar, som körs som databasens ägare.
     const r = await db.query<{ id: string }>(
-      `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, kontrollerad, egenskaper)
+      `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, granskad, egenskaper)
        values ('Testmärke', 'Testtält 2', 'talt', 'talt', 2400, 'https://exempel.se/testtalt-2', '2026-11-19', '{"personer": 2}')
        returning id`,
     )
@@ -629,7 +629,7 @@ describe('produktkatalogen', () => {
     await forvantaFel(
       som(A, (tx) =>
         tx.query(
-          `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, kontrollerad)
+          `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, granskad)
            values ('Eget', 'Påhitt', 'talt', 'talt', 1, 'https://exempel.se', '2026-11-19')`,
         ),
       ),
@@ -648,7 +648,7 @@ describe('produktkatalogen', () => {
   it('samma märke, modell och version går inte att lägga in två gånger', async () => {
     await forvantaFel(
       db.query(
-        `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, kontrollerad)
+        `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, granskad)
          values ('TESTMÄRKE', 'testtält 2', 'talt', 'talt', 2500, 'https://exempel.se/igen', '2026-11-19')`,
       ),
     )
@@ -657,7 +657,7 @@ describe('produktkatalogen', () => {
   it('kräver en vikt, en källa och egenskaper som ett objekt', async () => {
     const lagg = (kolumner: string, varden: string) =>
       db.query(
-        `insert into public.produkter (marke, modell, kontrollerad, kategori, underkategori, ${kolumner})
+        `insert into public.produkter (marke, modell, granskad, kategori, underkategori, ${kolumner})
          values ('M', '${crypto.randomUUID()}', '2026-11-19', 'talt', 'talt', ${varden})`,
       )
     await lagg('packvikt_g, kalla', `100, 'https://exempel.se'`)
@@ -670,7 +670,7 @@ describe('produktkatalogen', () => {
   it('kräver både kategori och underkategori, och att de hör ihop', async () => {
     const lagg = (kategori: string | null, underkategori: string | null) =>
       db.query(
-        `insert into public.produkter (marke, modell, kontrollerad, packvikt_g, kalla, kategori, underkategori)
+        `insert into public.produkter (marke, modell, granskad, packvikt_g, kalla, kategori, underkategori)
          values ('M', $1, '2026-11-19', 100, 'https://exempel.se', $2, $3)`,
         [crypto.randomUUID(), kategori, underkategori],
       )
@@ -720,11 +720,62 @@ describe('startutbudet i katalogen', () => {
     expect(kvar.rows[0].n).toBe(0)
   })
 
-  it('en produkt får sakna kontrollerad, och den går att sätta senare', async () => {
+  it('en produkt får sakna kontrollerad, och den går att sätta senare när den är granskad', async () => {
     const r = await db.query<{ n: number }>('select count(*)::int as n from public.produkter where kontrollerad is null')
     expect(r.rows[0].n).toBeGreaterThan(0)
-    await db.query(`update public.produkter set kontrollerad = '2026-11-20' where modell = 'Soulo'`)
-    await db.query(`update public.produkter set kontrollerad = null where modell = 'Soulo'`)
+    await db.query(`update public.produkter set granskad = '2026-11-19', kontrollerad = '2026-11-20' where modell = 'Soulo'`)
+    await db.query(`update public.produkter set granskad = null, kontrollerad = null where modell = 'Soulo'`)
+  })
+
+  it('ingen användare kan ändra granskad, kontrollerad eller kalla_typ, men alla inloggade kan läsa dem', async () => {
+    const id = (await db.query<{ id: string }>(`select id from public.produkter where modell = 'Soulo'`)).rows[0].id
+    for (const sats of [`granskad = '2026-11-20'`, `kontrollerad = '2026-11-20'`, `kalla_typ = 'butik'`, `granskad = '2026-11-20', kontrollerad = '2026-11-21'`]) {
+      await forvantaFel(som(A, (tx) => tx.query(`update public.produkter set ${sats} where id = $1`, [id])))
+    }
+    await forvantaFel(somAnon((tx) => tx.query(`update public.produkter set granskad = '2026-11-20' where id = $1`, [id])))
+    const r = await som(A, (tx) => tx.query<{ granskad: string | null; kontrollerad: string | null; kalla_typ: string }>('select granskad, kontrollerad, kalla_typ from public.produkter where id = $1', [id]))
+    expect(r.rows).toEqual([{ granskad: null, kontrollerad: null, kalla_typ: 'tillverkare' }])
+  })
+
+  it('kalla_typ är tillverkare som standard, och bara tillverkare och butik går an', async () => {
+    const lagg = (kalla_typ: string | null) =>
+      db.query(
+        `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla${kalla_typ === null ? '' : ', kalla_typ'})
+         values ('M', $1, 'talt', 'talt', 100, 'https://exempel.se'${kalla_typ === null ? '' : ', $2'}) returning kalla_typ`,
+        kalla_typ === null ? [crypto.randomUUID()] : [crypto.randomUUID(), kalla_typ],
+      )
+    expect((await lagg(null)).rows).toEqual([{ kalla_typ: 'tillverkare' }])
+    expect((await lagg('butik')).rows).toEqual([{ kalla_typ: 'butik' }])
+    await forvantaFel(lagg('internet'))
+    await forvantaFel(lagg(''))
+  })
+
+  it('kontrollerad kräver granskad, och en butiksrad kan varken vara granskad eller kontrollerad', async () => {
+    const satt = (sats: string) => db.query(`update public.produkter set ${sats} where modell = 'Soulo'`)
+    await forvantaFel(satt(`kontrollerad = '2026-11-20'`))
+    await satt(`granskad = '2026-11-19'`)
+    await satt(`kontrollerad = '2026-11-20'`)
+    // En granskad rad kan inte bli butiksrad, och granskningen kan inte tas bort så länge raden är kontrollerad.
+    await forvantaFel(satt(`kalla_typ = 'butik'`))
+    await forvantaFel(satt('granskad = null'))
+    await satt('granskad = null, kontrollerad = null')
+    await satt(`kalla_typ = 'butik'`)
+    await forvantaFel(satt(`granskad = '2026-11-19'`))
+    await forvantaFel(satt(`granskad = '2026-11-19', kontrollerad = '2026-11-20'`))
+    await forvantaFel(satt(`kontrollerad = '2026-11-20'`))
+    await satt(`kalla_typ = 'tillverkare'`)
+  })
+
+  it('butiksraderna i CSV:erna är butik i databasen och har ingen nivå', async () => {
+    const mapp = path.join(import.meta.dirname, 'katalog')
+    const csvButik = fs
+      .readdirSync(mapp)
+      .filter((f) => f.endsWith('.csv'))
+      .flatMap((f) => godkanda(importera(fs.readFileSync(path.join(mapp, f), 'utf8'))))
+      .filter((p) => p.kalla_typ === 'butik').length
+    expect(csvButik).toBeGreaterThan(0)
+    const r = await db.query<{ n: number }>(`select count(*)::int as n from public.produkter where kalla_typ = 'butik' and granskad is null and kontrollerad is null and marke <> 'Testmärke' and marke <> 'M'`)
+    expect(r.rows[0].n).toBe(csvButik)
   })
 
   it('går att köra igen utan dubbletter, och uppdaterar då produkterna som finns', async () => {
@@ -876,7 +927,7 @@ describe('Mitt förråd', () => {
 
   it('en sak från katalogen finns kvar när produkten tas bort', async () => {
     const p = await db.query<{ id: string }>(
-      `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, kontrollerad)
+      `insert into public.produkter (marke, modell, kategori, underkategori, packvikt_g, kalla, granskad)
        values ('Testmärke', 'Utgående sovsäck', 'sova', 'sovsack', 900, 'https://exempel.se/sovsack', '2026-11-19') returning id`,
     )
     const s = await som(A, (tx) =>
