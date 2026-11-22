@@ -25,11 +25,11 @@ export function Granskad({ produkt, className }: { produkt: Granskningsuppgifter
         onClick={() => setOppen((o) => !o)}
         className="group inline-flex min-h-11 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
-        {/* Nivåerna skiljs med text och ikon. Den högre nivån har dessutom fylld bakgrund, den lägre en ram. */}
+        {/* Nivåerna skiljs med text och ikon. Den högre nivån har dessutom fylld bakgrund, den lägre en ram i primärfärgen (minst 3 till 1 mot bakgrunden). */}
         <span
           className={cn(
             'inline-flex items-center gap-1 rounded-full px-2.5 py-0.5 text-sm font-medium text-primary',
-            niva === 'stickprov' ? 'bg-primary-soft group-hover:bg-primary-soft/70' : 'border border-border group-hover:bg-primary-soft/40',
+            niva === 'stickprov' ? 'bg-primary-soft group-hover:bg-primary-soft/70' : 'border border-primary group-hover:bg-primary-soft/40',
           )}
         >
           <Ikon className="size-3.5" aria-hidden />
