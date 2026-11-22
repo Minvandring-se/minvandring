@@ -56,9 +56,9 @@ export function MinaTurer() {
       halsning(mittNamn, laddfel ? 'laddar' : turer.length === 0 ? 'inga-turer' : nasta ? 'nasta-visas' : 'bara-tidigare')
     )
 
-  // Sidans huvudknapp. Sidomenyn på dator har också en länk till Ny tur sist i listan Dina turer.
+  // En knapp med kant, eftersom Öppna turen är sidans huvudknapp. Sidomenyn på dator har också en länk till Ny tur.
   const nyTurKnapp = !formularOppet && (
-    <Button onClick={() => visaFormular(true)}>
+    <Button variant="outline" onClick={() => visaFormular(true)}>
       <Plus className="size-4" aria-hidden />
       Ny tur
     </Button>
@@ -82,9 +82,9 @@ export function MinaTurer() {
 
       {turer === null ? (
         <Laddar text="Hämtar dina turer">
-          <div className="overflow-hidden rounded-lg border border-border bg-card shadow-soft md:grid md:grid-cols-[1.15fr_1fr]">
-            <Skelett className="aspect-[16/9] rounded-none md:aspect-auto md:min-h-72" />
-            <div className="space-y-3 p-5 sm:p-6">
+          <div className="overflow-hidden rounded-[1.375rem] border border-border bg-card md:grid md:grid-cols-2">
+            <Skelett className="h-44 rounded-none sm:h-56 md:order-2 md:h-full md:min-h-80" />
+            <div className="space-y-3 p-5 sm:p-7">
               <Skelett className="h-8 w-3/4" />
               <Skelett className="h-5 w-1/2" />
               <Skelett className="h-5 w-1/3" />
@@ -148,7 +148,8 @@ export function MinaTurer() {
               {lista.length === 0 ? (
                 <TomtLage kompakt text={flik === 'kommande' ? 'Inga fler kommande turer.' : 'Inga tidigare turer än.'} />
               ) : (
-                <ul className="space-y-3">
+                // Två kolumner på dator, en i mobil.
+                <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
                   {lista.map((t) => (
                     <li key={t.id}>
                       <TurRadKort tur={t} />

@@ -31,10 +31,11 @@ export function Turbild({ turId, className }: { turId: string; className?: strin
           strokeLinecap="round"
           className="stroke-accent"
         />
-        <rect x="516" y="266" width="4" height="36" className="fill-yta-stark" />
+        {/* Stolpen och granarna är mörka. I mörkt läge är himlen lika mörk som yta-stark, så där används bakgrunden. */}
+        <rect x="516" y="266" width="4" height="36" className="fill-yta-stark mork:fill-background" />
         <path d="M507 274 l22 15 M529 274 l-22 15" strokeWidth="4" strokeLinecap="round" className="stroke-accent" />
         {/* Två granar. */}
-        <path d="M60 388 l10-26 10 26z M82 394 l9-22 9 22z" className="fill-yta-stark" />
+        <path d="M60 388 l10-26 10 26z M82 394 l9-22 9 22z" className="fill-yta-stark mork:fill-background" />
       </g>
     </svg>
   )
