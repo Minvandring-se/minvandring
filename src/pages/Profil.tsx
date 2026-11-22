@@ -5,6 +5,7 @@ import { useApp } from '@/components/app/appKontext'
 import { Skelett } from '@/components/app/Laddar'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { Profilbildsval } from '@/components/profil/Profilbildsval'
+import { Utseende } from '@/components/profil/Utseende'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
@@ -103,6 +104,11 @@ export function Profil() {
             )}
           </p>
         </form>
+      </Card>
+
+      <Card className="space-y-4 sm:p-6">
+        <h2 className="text-lg">Utseende</h2>
+        <Utseende />
       </Card>
 
       <Card className="flex flex-wrap items-center justify-between gap-4 sm:p-6">

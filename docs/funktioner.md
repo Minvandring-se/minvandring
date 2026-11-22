@@ -96,5 +96,5 @@ Det som inte finns visas i turens översikt som det kommer att se ut, med etiket
 |---|---|
 | Mobil först och datorvy | Finns |
 | Fungerar som app på telefonen (PWA) | Finns |
-| Ljust och mörkt läge, val under Utseende på Profil | Senare |
+| Ljust och mörkt läge, val under Utseende på Profil | Finns |
 | Fiske och jakt i förrådet | Idé |
