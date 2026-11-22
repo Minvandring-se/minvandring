@@ -46,6 +46,8 @@ npm run lint
 
 Merge till `main` publiceras automatiskt på www.minvandring.se. Merga inte utan att användaren har sagt ja.
 
+Undantag, stående regel från användaren: en PR som bara ändrar filer under `docs/` får du merga själv när `npm test` har gått igenom. Kontrollera med `git diff --stat origin/main...HEAD` att varje fil ligger i `docs/`. Allt annat, även `.claude/`, `CLAUDE.md` och en enda fil utanför `docs/`, frågar du om som förut. Säg i sammanfattningen att du mergade själv.
+
 ## 6. Avsluta
 
 En kort sammanfattning till användaren: vad som gjordes, utfallet av build, test och lint, länken till PR:en och hur ändringen testas.
