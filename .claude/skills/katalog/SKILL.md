@@ -31,6 +31,7 @@ CSV-filerna i `supabase/katalog/` är huvudlistan. Tabellen `produkter` fylls ba
 - **Samma vikt för flera storlekar** utan att det framgår vilken storlek den gäller: utelämna de storlekar som inte kan knytas till vikten.
 - Anger tillverkaren en vikt men inte vad den omfattar: skriv den i `packvikt_g` och skriv i `kommentar` att det inte framgår vad vikten omfattar. Lägg aldrig vikten bara i kommentaren.
 - **Utgångna produkter.** Att tillverkaren markerar en produkt som utgången är inget skäl att utelämna den, så länge tillverkarens uppgifter finns. Skriv i `kommentar`: "Tillverkarens sida anger att produkten har utgått."
+- **Utgångna produkter utan tillverkarsida.** Finns tillverkarens produktsida inte längre (404, omdirigering eller bortflyttad) behålls raden, men källan är aldrig en arkiverad sida (web.archive.org). `kalla` blir butikens egen produktsida om den finns kvar (utan `?color=`-delen), och kommentaren blir "Utgången. Tillverkarens produktsida finns inte längre." Raden får ingen `granskad_datum`. `kalla` får inte vara tom, eftersom importen och databasen kräver en adress. Finns varken tillverkarens eller butikens sida går raden inte att lägga in.
 - **Ur kategorin utelämnas** också: campingprodukter, tillbehör (reparationssatser, pumpar, lakan, liners) och specialprodukter. För ryggsäckar gäller dessutom cykel-, löpar-, vardags-, dator- och barnryggsäckar och specialryggsäckar för klättring. För liggunderlag luftmadrasser och bäddar för bil eller camping.
 
 ## Namn
