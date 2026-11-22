@@ -15,7 +15,7 @@ Filerna här ligger medvetet utanför `supabase/katalog/`, så att `npm run kata
 
 | Kategori | Naturkompaniet | Outnorth | XXL | Outdoorexperten | Addnature |
 |---|---|---|---|---|---|
-| Tält och vindskydd | ✓ 2026-11-19 | – | – | – | – |
+| Tält och vindskydd | ✓ 2026-11-19 | ✓ 2026-11-22 | – | – | – |
 | Sovsäckar och quilts | ✓ 2026-11-19 | – | – | – | – |
 | Liggunderlag | ✓ 2026-11-19 | – | – | – | – |
 | Ryggsäckar | ✓ 2026-11-19 | – | – | – | – |
