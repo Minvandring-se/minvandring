@@ -16,6 +16,7 @@ import {
   Wrench,
   type LucideIcon,
 } from 'lucide-react'
+import { granskning } from './granskning'
 import { visaEgenskaper } from './produktegenskaper'
 import type { Forradssak } from './typer'
 import { tolkaVikt } from './viktfalt'
@@ -479,6 +480,28 @@ export function forradsrad(summa: Pick<Forradssumma, 'antal' | 'utanVikt'>): { s
     saker: summa.antal === 1 ? '1 sak i förrådet' : `${summa.antal} saker i förrådet`,
     saknarVikt: summa.utanVikt > 0 ? `${summa.utanVikt} saknar vikt` : null,
   }
+}
+
+/**
+ * Största vinsten: den sak som väger mest (antal gånger vikt). Där finns mest att vinna för den som vill gå lättare.
+ * null när ingen sak har vikt.
+ */
+export function storstaVinsten(saker: readonly Forradssak[]): { id: string; namn: string; viktG: number; kategori: string } | null {
+  let basta: { id: string; namn: string; viktG: number; kategori: string } | null = null
+  for (const s of saker) {
+    if (s.vikt_g === null || s.vikt_g <= 0) continue
+    const viktG = s.antal * s.vikt_g
+    if (!basta || viktG > basta.viktG) basta = { id: s.id, namn: s.namn, viktG, kategori: kategoriFor(s.kategori).etikett }
+  }
+  return basta
+}
+
+/**
+ * Hur många saker som har katalogens vikt och där vikten är granskad mot tillverkaren (granskad eller stickprovskontrollerad).
+ * Saker med egen vikt räknas inte, eftersom det då är användarens vikt som gäller.
+ */
+export function antalGranskade(saker: readonly Forradssak[]): number {
+  return saker.filter((s) => s.produkter && !viktjamforelse(s).egen && granskning(s.produkter).niva !== 'ingen').length
 }
 
 /** De fyra tyngsta sakerna i en packning. Underkategorierna i varje grupp räknas som samma sorts sak. */
