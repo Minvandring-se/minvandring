@@ -737,6 +737,18 @@ describe('startutbudet i katalogen', () => {
     expect(r.rows).toEqual([{ granskad: null, kontrollerad: null, kalla_typ: 'tillverkare' }])
   })
 
+  it('varken inloggade eller anon har skrivrättigheter på produkter, och anon kan inte läsa dem', async () => {
+    // Prövar rättigheterna direkt, så att testet inte bara lutar sig mot att en check eller ett villkor råkar neka.
+    const rattighet = async (roll: string, vad: string) =>
+      (await db.query<{ r: boolean }>(`select has_table_privilege($1, 'public.produkter', $2) as r`, [roll, vad])).rows[0].r
+    for (const vad of ['insert', 'update', 'delete', 'truncate']) {
+      expect(await rattighet('authenticated', vad)).toBe(false)
+      expect(await rattighet('anon', vad)).toBe(false)
+    }
+    expect(await rattighet('authenticated', 'select')).toBe(true)
+    expect(await rattighet('anon', 'select')).toBe(false)
+  })
+
   it('kalla_typ är tillverkare som standard, och bara tillverkare och butik går an', async () => {
     const lagg = (kalla_typ: string | null) =>
       db.query(
