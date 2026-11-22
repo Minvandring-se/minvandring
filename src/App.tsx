@@ -21,6 +21,11 @@ const Profil = lazy(() => import('@/pages/Profil').then((m) => ({ default: m.Pro
 const TurRam = lazy(() => import('@/pages/tur/TurRam').then((m) => ({ default: m.TurRam })))
 const TurOversikt = lazy(() => import('@/pages/tur/TurOversikt').then((m) => ({ default: m.TurOversikt })))
 const TurKommerSnart = lazy(() => import('@/pages/tur/TurKommerSnart').then((m) => ({ default: m.TurKommerSnart })))
+const Installningar = lazy(() => import('@/pages/Installningar').then((m) => ({ default: m.Installningar })))
+const PlaneradSida = lazy(() => import('@/pages/PlaneradSida').then((m) => ({ default: m.PlaneradSida })))
+
+/** Sidorna i menyn som inte är byggda än. De visar vad sidan blir, med "Kommer snart". */
+const PLANERADE = ['matplanering', 'packlistor', 'utrustning', 'dagbok', 'kom-ihag', 'statistik', 'kompisar'] as const
 
 function Laddar({ text = 'Laddar …' }: { text?: string }) {
   return (
@@ -66,6 +71,10 @@ export default function App() {
           </Route>
           <Route path="/forrad" element={<Forrad />} />
           <Route path="/profil" element={<Profil />} />
+          <Route path="/installningar" element={<Installningar />} />
+          {PLANERADE.map((sida) => (
+            <Route key={sida} path={`/${sida}`} element={<PlaneradSida key={sida} sida={sida} />} />
+          ))}
         </Route>
         <Route
           path="*"
