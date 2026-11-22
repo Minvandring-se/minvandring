@@ -58,7 +58,9 @@ CSV-filerna i `supabase/katalog/` är huvudlistan. Tabellen `produkter` fylls ba
 
 ### Spärrade tillverkarsidor
 
-Flera tillverkare svarar HTTP 403 eller 429 på automatiska hämtningar (bland andra Big Agnes, Helsport, Jack Wolfskin, Osprey, The North Face, Pajak, Sea to Summit och marmot.com). Granskaren stannar efter två spärrade sidor och listar raderna. Den som startade granskaren läser dem då i Chrome, en sida i taget. Specifikationen ligger ibland i en flik eller dialog som måste öppnas först (till exempel Lundhags "Tekniska specifikationer"). Skriv aldrig att en rad stämmer när sidan inte har lästs.
+Flera tillverkare svarar HTTP 403 eller 429 på automatiska hämtningar (bland andra Big Agnes, Helsport, Jack Wolfskin, Osprey, The North Face, Pajak, Sea to Summit och marmot.com). Katalog-granskaren har Chrome-verktygen och läser själv sidor som spärrar automatisk hämtning, en sida i taget i en egen Chrome-flik som den stänger efteråt. Den som startade granskaren läser bara de sidor granskaren inte kommer åt, till exempel när en robotkontroll kräver att man klickar, och gör det då i en egen flik, en sida i taget. Specifikationen ligger ibland i en flik eller dialog som måste öppnas först (till exempel Lundhags "Tekniska specifikationer").
+
+Chrome används bara för att läsa offentliga produktsidor: ingen inloggning, inga formulär och inga köp. Försök aldrig ta dig förbi en robotkontroll. Skriv aldrig att en rad stämmer när sidan inte har lästs.
 
 ### När raderna kommer färdiga från en annan AI
 
