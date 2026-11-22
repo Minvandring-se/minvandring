@@ -338,6 +338,8 @@ export function Stigavsnitt({ id, bit }: Props) {
                     width={karta.bredd}
                     height={karta.hojd}
                     preserveAspectRatio="xMidYMid slice"
+                    // Kartbilden är ljus. I mörkt läge dämpas den, så att den inte lyser upp sidan.
+                    className="mork:opacity-35"
                   />
                 </g>
               </g>

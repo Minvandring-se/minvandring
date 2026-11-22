@@ -1,30 +1,41 @@
 @import 'tailwindcss';
 
-/* Färger och former. Använd variablerna (bg-primary, text-muted-foreground …) i stället för Tailwinds egna färger. */
+/*
+ * Färger och former. Använd variablerna (bg-primary, text-muted-foreground …) i stället för Tailwinds egna färger.
+ * Ljust läge är Fjällskog och står här. Mörkt läge är Polarnatt och skriver över samma variabler längre ner.
+ * Alla par av text och yta klarar WCAG AA (4,5:1) i båda lägena, och accent och ring klarar 3:1 mot ytorna.
+ */
 @theme {
-  --color-background: #f6f3ec;
-  --color-foreground: #1f2a24;
-  --color-card: #fffdf8;
-  --color-card-foreground: #1f2a24;
-  /* Samma gröna som logotypen. primary-hover är ljusare, för hover och fokus. */
+  --color-background: #eef0eb;
+  --color-foreground: #1c2420;
+  --color-card: #ffffff;
+  --color-card-foreground: #1c2420;
+  /* Samma gröna som logotypen. primary-hover är färgen för hover och fokus. */
   --color-primary: #1f3d2e;
   --color-primary-hover: #2e5945;
   --color-primary-foreground: #ffffff;
-  --color-primary-soft: #dcebe3;
-  --color-muted: #ece8de;
-  --color-muted-foreground: #5d6660;
-  --color-accent: #e8a33d;
-  --color-accent-soft: #fff2cc;
-  /* Text i accentfärg. Mörkare än accent så att stor text klarar WCAG AA (3:1) mot bakgrunden. */
-  --color-accent-strong: #bf7e1e;
+  --color-primary-soft: #dfe9e2;
+  --color-muted: #e3e8e2;
+  --color-muted-foreground: #59625c;
+  /* Den enda accentfärgen: rost, som ledkrysset på en fjälled. */
+  --color-accent: #a8553a;
+  --color-accent-soft: #f5e4dc;
+  /* Text i accentfärg, på accent-soft eller på ytorna. */
+  --color-accent-strong: #7a3a24;
   --color-sand: #e8dcc4;
   /* Fyllda ytor i illustrationerna. Ljusare än primary så att detaljerna syns mot de mörka konturerna. */
   --color-illustration: #356854;
   /* Ledkrysset vid början av leden på startsidan. Dov roströd. */
   --color-trail-marker: #9e5a43;
-  --color-destructive: #c0392b;
-  --color-border: #ddd7ca;
+  --color-destructive: #b3261e;
+  --color-border: #dde2db;
   --color-ring: #2e5945;
+  /* Den mörkgröna ytan för en eller två saker per sida, till exempel färdplanen. Mörk i båda lägena. */
+  --color-yta-stark: #1f3d2e;
+  --color-yta-stark-foreground: #ffffff;
+  --color-yta-stark-muted: #c9dacf;
+  /* Text och symboler ovanpå foton. Ljus i båda lägena, eftersom fotot inte byter färg. */
+  --color-pa-bild: #ffffff;
 
   --radius-md: 0.875rem;
   --radius-lg: 1.25rem;
@@ -43,6 +54,81 @@
     }
     to {
       transform: scale(1.06);
+    }
+  }
+}
+
+/*
+ * Mörkt läge, Polarnatt. Gäller när data-tema="mork" står på html (läget är valt i appen),
+ * eller när inget val är gjort och enheten är inställd på mörkt. De två blocken har samma värden:
+ * ändra båda samtidigt. Ett test i tester/farger.test.ts kontrollerar att de stämmer överens.
+ */
+:root {
+  color-scheme: light;
+}
+html[data-tema='mork'] {
+  color-scheme: dark;
+  --color-background: #0e1512;
+  --color-foreground: #e8efe9;
+  --color-card: #1b2620;
+  --color-card-foreground: #e8efe9;
+  --color-primary: #cfe3d6;
+  --color-primary-hover: #b7d3c1;
+  --color-primary-foreground: #122019;
+  --color-primary-soft: #24372f;
+  --color-muted: #2a3830;
+  --color-muted-foreground: #a3b3a9;
+  --color-accent: #e0a37f;
+  --color-accent-soft: #3a2a22;
+  --color-accent-strong: #f0c2a6;
+  --color-sand: #4a4234;
+  --color-illustration: #5f8a72;
+  --color-trail-marker: #d08a6c;
+  --color-destructive: #f2a097;
+  --color-border: #2a3830;
+  --color-ring: #b7d3c1;
+  --color-yta-stark: #24372f;
+  --color-yta-stark-foreground: #e8efe9;
+  --color-yta-stark-muted: #a3b3a9;
+  --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.25);
+}
+@media (prefers-color-scheme: dark) {
+  html:not([data-tema]) {
+    color-scheme: dark;
+    --color-background: #0e1512;
+    --color-foreground: #e8efe9;
+    --color-card: #1b2620;
+    --color-card-foreground: #e8efe9;
+    --color-primary: #cfe3d6;
+    --color-primary-hover: #b7d3c1;
+    --color-primary-foreground: #122019;
+    --color-primary-soft: #24372f;
+    --color-muted: #2a3830;
+    --color-muted-foreground: #a3b3a9;
+    --color-accent: #e0a37f;
+    --color-accent-soft: #3a2a22;
+    --color-accent-strong: #f0c2a6;
+    --color-sand: #4a4234;
+    --color-illustration: #5f8a72;
+    --color-trail-marker: #d08a6c;
+    --color-destructive: #f2a097;
+    --color-border: #2a3830;
+    --color-ring: #b7d3c1;
+    --color-yta-stark: #24372f;
+    --color-yta-stark-foreground: #e8efe9;
+    --color-yta-stark-muted: #a3b3a9;
+    --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.25);
+  }
+}
+
+/* mork: gäller i mörkt läge, valt eller från enheten. Används bara där en färgvariabel inte räcker, till exempel för att byta bild. */
+@custom-variant mork {
+  &:where([data-tema='mork'], [data-tema='mork'] *) {
+    @slot;
+  }
+  @media (prefers-color-scheme: dark) {
+    &:where(html:not([data-tema]), html:not([data-tema]) *) {
+      @slot;
     }
   }
 }
