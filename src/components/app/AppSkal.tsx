@@ -97,7 +97,14 @@ export function AppSkal() {
             className="flex min-h-11 items-center gap-3 rounded-md px-1 hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <Namnbricka namn={namn || session?.user.email || '?'} bild={minBild} laddar={bildLaddar} />
-            {profilHamtad ? <span className="min-w-0 truncate font-medium">{namn || 'Din profil'}</span> : <Skelett className="h-4 w-24" />}
+            {profilHamtad ? (
+              <span className="min-w-0 truncate font-medium">{namn || 'Din profil'}</span>
+            ) : (
+              <>
+                <Skelett className="h-4 w-24" />
+                <span className="sr-only">Din profil</span>
+              </>
+            )}
           </Link>
           <Sidfot variant="meny" className="border-t border-border pt-2 text-xs" />
         </div>

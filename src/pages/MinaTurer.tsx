@@ -51,7 +51,7 @@ export function MinaTurer() {
   // Hälsningen visas först när både namnet och turerna är hämtade, så att den inte byter text medan sidan laddas.
   const halsningstext =
     !profilHamtad || turer === null ? (
-      <Skelett className="h-5 w-40 lg:h-7" />
+      <Skelett className="h-6 w-40 lg:h-7" />
     ) : (
       halsning(mittNamn, laddfel ? 'laddar' : turer.length === 0 ? 'inga-turer' : nasta ? 'nasta-visas' : 'bara-tidigare')
     )
