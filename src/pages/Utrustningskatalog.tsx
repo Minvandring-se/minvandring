@@ -128,7 +128,7 @@ export function Utrustningskatalog() {
       </div>
 
       {modeller && modeller.length > 0 && (
-        <ul aria-busy={gammal} className={cn('grid gap-3 transition-opacity md:grid-cols-2 xl:grid-cols-3', gammal && 'opacity-60')}>
+        <ul aria-busy={gammal} className={cn('grid gap-3 transition-opacity md:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4', gammal && 'opacity-60')}>
           {modeller.map((m) => (
             <Produktkort key={m.nyckel} modell={m} />
           ))}

@@ -148,8 +148,8 @@ export function MinaTurer() {
               {lista.length === 0 ? (
                 <TomtLage kompakt text={flik === 'kommande' ? 'Inga fler kommande turer.' : 'Inga tidigare turer än.'} />
               ) : (
-                // Två kolumner på dator, en i mobil.
-                <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2">
+                // En kolumn i mobil, två på dator och tre på stora skärmar.
+                <ul className="grid grid-cols-1 gap-3 lg:grid-cols-2 2xl:grid-cols-3">
                   {lista.map((t) => (
                     <li key={t.id}>
                       <TurRadKort tur={t} />

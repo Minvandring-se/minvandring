@@ -6,7 +6,8 @@ export function SidRubrik({ rubrik, etikett, text, knappar }: { rubrik: string; 
     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0 space-y-1">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          <h1 className="text-3xl break-words lg:text-4xl">{rubrik}</h1>
+          {/* Växer lite med skärmen från dator och uppåt, upp till 2,75rem. */}
+          <h1 className="text-3xl break-words lg:text-[clamp(2.25rem,1.6rem+0.9vw,2.75rem)]">{rubrik}</h1>
           {etikett}
         </div>
         {text && <p className="max-w-prose text-muted-foreground lg:text-lg">{text}</p>}
