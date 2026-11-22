@@ -139,3 +139,15 @@ Profilbilden visas med signerade adresser som gäller i en timme. En turkamrat s
 ## Färgring runt profilbilden
 
 Oscars idé: en tunn färgring runt profilbilden i namnbrickan, så att bilden lyfter och känns som en del av MinVandring. Förslag att pröva: skogsgrön ring som standard, eller en ring i deltagarens egen färg i Gruppen och deltagarlistan så att det syns vem som är vem. Gult bara om ringen betyder något, till exempel att någon inte svarat på inbjudan än. Ringen ska fungera både med bild och med bokstaven, och ha god kontrast mot ljus bakgrund.
+
+## Mitt förråd: förslag efter genomgång av designförslaget
+
+Genomgången gjordes 2026-11-22 mot `docs/designforslag.md`, `docs/skisser/design-forrad.png` och sidan i 390 och 1272 px. Det mesta i designförslaget är redan byggt. Tryckytorna är minst 44 px, det finns ingen sidscroll och appen ger inga konsolfel. Fem saker återstår, i den ordning vi föreslår:
+
+1. **Ta bort underkategorin ur radens undertext.** Raden visar "Tält · Lilla tältet. Köpt juli 2025." under rubriken "Tält och vindskydd". Skissen har bara anteckningen, och ordet Tält upprepar kategorin. Där anteckningen saknas kan underkategorin vara kvar.
+2. **Tydligare radnamn och vikt.** I skissen är namnet halvfet och vikten lika stor som namnet. I dag är namnet `font-medium` och vikten `text-sm`. Det blir lättare att läsa utomhus.
+3. **Lugnare "De fyra tunga".** Den gula rutan med uppmaningar ligger över alla kategorier och drar mer blick än förrådet självt. Den finns inte i skissen. Behåll men gör den mindre, eller flytta den under listan. Produktbeslut, eftersom den lades till medvetet.
+4. **Mobil, sök i katalogen.** Träfflistan scrollar i en egen ruta som visar ungefär fyra rader med bottenmenyn nära. Låt listan ta sidans scroll på mobil.
+5. **Rubrikstorlek.** Skissens "Mitt förråd" är större än dagens. Liten ändring, gör den om vi vill följa skissen exakt.
+
+Inte kontrollerat än: tomt förråd, tangentbordsfokus och den utfällda detaljen med "Produktuppgifterna har inte granskats". Titta på dem med skillen `kor-appen` när vi bygger.

@@ -79,6 +79,7 @@ Vid prioritering: 1) planera en vandring 2) planera tillsammans 3) packning och 
 - Använd inte tankstreck som paus i synliga texter.
 - Lova inte funktioner i appens texter som inte finns ännu. Undantag: korten på startsidan får visa planerade funktioner, till exempel Kom ihåg till nästa vandring och Mitt förråd.
 - Varje funktion ska svara ja på: gör detta det enklare att planera en riktig vandring?
+- Reglerna i det här avsnittet går alltid före råden i skillen `frontend-design` om djärva, ovanliga eller tydligt egna val av palett, typsnitt, layout och rörelse. Skillen används för kvalitet och eftertanke, inte för att byta stil.
 
 ## Arbetssätt
 1. Hämta senaste ändringarna från GitHub innan arbete börjar.
