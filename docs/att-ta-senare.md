@@ -193,3 +193,7 @@ Villkor och källor:
 - Bygg inte på OpenStreetMaps ruttdata. Licensen (ODbL) kräver att den databas man bygger delas vidare.
 - Kontrollera villkoren för Lantmäteriets och länsstyrelsernas data innan något hämtas.
 - Skriv egna formuleringar och ange källa per led.
+
+## Katalogen: Nordisk och OMM
+
+Nordisks produktsidor säger inte vad "Official weight" är och anger ingen temperaturstandard för sovsäckarna, så raderna har totalvikten i `packvikt_g` och `ej_angiven`. Fråga Nordisk (eller läs deras FAQ) vad den officiella vikten och temperaturerna bygger på. Nordisk-tälten som redan ligger i katalogen har trimvikten som minvikt. OMM Mountain Raid utelämnades eftersom OMM bara anger Leanweight, "all extras removed", utan att säga vilka delar som avses för sovsäckarna.
