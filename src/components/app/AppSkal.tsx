@@ -1,7 +1,7 @@
-import { Backpack, Map as Karta, UserRound, type LucideIcon } from 'lucide-react'
 import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import type { AppKontext } from '@/components/app/appKontext'
+import { Bottenmeny } from '@/components/app/Bottenmeny'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Namnbricka } from '@/components/app/Namnbricka'
 import { Sidomeny } from '@/components/app/Sidomeny'
@@ -12,28 +12,19 @@ import { useDinaTurer } from '@/hooks/useDinaTurer'
 import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
 import { useSession } from '@/hooks/useSession'
 import { aktivSida } from '@/lib/meny'
-import { aktivDel, type Del } from '@/lib/navigering'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
-
-/** Delarna i menyn. Bottennavigationen i mobil har alla tre. Sidomenyn på dator har Profil som användaren längst ner. */
-const DELAR: { del: Del; till: string; namn: string; ikon: LucideIcon }[] = [
-  { del: 'turer', till: '/turer', namn: 'Mina turer', ikon: Karta },
-  { del: 'forrad', till: '/forrad', namn: 'Mitt förråd', ikon: Backpack },
-  { del: 'profil', till: '/profil', namn: 'Profil', ikon: UserRound },
-]
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
 /**
- * Ramen för de inloggade sidorna. På dator en sidomeny som ligger kvar när man scrollar: logotypen, Mina turer,
- * Mitt förråd, listan Dina turer med dagar kvar och användaren längst ner med länk till Profil.
- * I mobil ett kompakt sidhuvud, sidfoten längst ner på sidan och en bottennavigation för de tre delarna.
+ * Ramen för de inloggade sidorna. På dator sidomenyn (Sidomeny), som ligger kvar när man scrollar.
+ * I mobil ett kompakt sidhuvud, sidfoten längst ner på sidan och bottenmenyn (Bottenmeny) med fem flikar.
  */
 export function AppSkal() {
   const session = useSession()
   const { pathname } = useLocation()
-  const aktiv = aktivDel(pathname)
+  const aktiv = aktivSida(pathname)
   const anvandarId = session?.user.id ?? ''
   const dinaTurer = useDinaTurer(anvandarId, pathname)
   const oppenTurId = /^\/tur\/([^/]+)/.exec(pathname)?.[1] ?? null
@@ -70,7 +61,7 @@ export function AppSkal() {
         Hoppa till innehållet
       </a>
       <Sidomeny
-        aktiv={aktivSida(pathname)}
+        aktiv={aktiv}
         turer={dinaTurer}
         oppenTurId={oppenTurId}
         namn={namn}
@@ -117,31 +108,7 @@ export function AppSkal() {
         <Sidfot className="mx-4 mb-[calc(5rem+env(safe-area-inset-bottom))] lg:hidden" />
       </div>
 
-      {/* Bottennavigation i mobil */}
-      <nav
-        aria-label="Huvudmeny"
-        className="fixed inset-x-0 bottom-0 z-20 border-t border-border bg-card pb-[env(safe-area-inset-bottom)] lg:hidden"
-      >
-        <ul className="mx-auto grid max-w-md grid-cols-3">
-          {DELAR.map(({ del, till, namn: text, ikon: Ikon }) => (
-            <li key={del}>
-              <Link
-                to={till}
-                aria-current={aktiv === del ? 'page' : undefined}
-                className={cn(
-                  'flex min-h-16 flex-col items-center justify-center gap-0.5 text-xs focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
-                  aktiv === del ? 'font-semibold text-primary' : 'font-medium text-muted-foreground',
-                )}
-              >
-                <Ikon className="size-6" aria-hidden strokeWidth={aktiv === del ? 2.25 : 1.75} />
-                <span>{text}</span>
-                {/* Aktiv sida: fet text, fetare ikon och ett kort rostfärgat streck under, som en målad ledmarkering. */}
-                <span aria-hidden className={cn('h-[3px] w-[18px] rounded-full', aktiv === del ? 'bg-accent' : 'bg-transparent')} />
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <Bottenmeny aktiv={aktiv} />
     </div>
   )
 }
