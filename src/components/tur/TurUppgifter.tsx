@@ -1,11 +1,11 @@
 import { Pencil } from 'lucide-react'
 import { useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
-import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
-import { dagarMellan, datumText } from '@/lib/datum'
+import { Sektion } from '@/components/ui/sektion'
+import { dagarMellan } from '@/lib/datum'
 import { supabase } from '@/lib/supabase'
-import { antalFranFalt, dagarVarde, INTE_ANGETT } from '@/lib/turlista'
+import { antalFranFalt, INTE_ANGETT } from '@/lib/turlista'
 import type { Tur } from '@/lib/typer'
 
 interface Props {
@@ -68,14 +68,14 @@ export function TurUppgifter({ tur, kanAndra, onSparad }: Props) {
 
   if (!redigerar) {
     return (
-      <Card className="space-y-2">
-        {/* Rubriken bryts hellre än knappen, så att "Ändra uppgifter" alltid står på en rad. */}
-        <div className="flex min-h-11 items-center justify-between gap-3">
-          <h2 className="min-w-0 text-xl">Turens uppgifter</h2>
-          {kanAndra && (
+      // Namn, destination, datum och vandringsdagar står i turens huvud. Här står resten, och här ändrar man allt.
+      <Sektion
+        rubrik="Turens uppgifter"
+        atgard={
+          kanAndra && (
             <Button
               variant="outline"
-              className="shrink-0 px-4 whitespace-nowrap"
+              className="px-4 whitespace-nowrap"
               onClick={() => {
                 setForm(tur)
                 setRedigerar(true)
@@ -84,25 +84,20 @@ export function TurUppgifter({ tur, kanAndra, onSparad }: Props) {
               <Pencil className="size-4" aria-hidden />
               Ändra uppgifter
             </Button>
-          )}
-        </div>
+          )
+        }
+      >
         <dl className="text-sm">
-          <Rad etikett="Destination" varde={tur.destination ?? ''} />
           <Rad etikett="Startpunkt" varde={tur.startpunkt ?? ''} />
-          <Rad etikett="Avresa" varde={datumText(tur.avresa)} />
-          <Rad etikett="Hemkomst" varde={datumText(tur.hemkomst)} />
-          <Rad etikett="Vandringsdagar" varde={dagarVarde(tur.dagar)} />
           <Rad etikett="Reservdagar" varde={String(tur.reservdagar)} />
         </dl>
-      </Card>
+      </Sektion>
     )
   }
 
   return (
-    <Card>
+    <Sektion rubrik="Ändra turen">
       <form onSubmit={spara} className="space-y-4">
-        <h2 className="text-lg">Ändra turen</h2>
-
         <Falt etikett="Namn">
           <Input required maxLength={80} value={form.namn} onChange={(e) => andra('namn', e.target.value)} />
         </Falt>
@@ -147,7 +142,11 @@ export function TurUppgifter({ tur, kanAndra, onSparad }: Props) {
         </div>
         {dagarFranDatum !== null && <p className="text-sm text-muted-foreground">Dagarna räknas från datumen.</p>}
 
-        {fel && <p className="text-sm text-destructive">{fel}</p>}
+        {fel && (
+          <p role="alert" className="text-sm text-destructive">
+            {fel}
+          </p>
+        )}
 
         <div className="flex gap-2">
           <Button type="submit" className="flex-1" disabled={sparar || !form.namn.trim()}>
@@ -158,7 +157,7 @@ export function TurUppgifter({ tur, kanAndra, onSparad }: Props) {
           </Button>
         </div>
       </form>
-    </Card>
+    </Sektion>
   )
 }
 

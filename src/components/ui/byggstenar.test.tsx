@@ -10,12 +10,23 @@ import { Turbild } from '@/components/ui/turbild'
 // Byggstenarna ritas som HTML utan webbläsare, så att struktur och tillgänglighet går att kontrollera.
 
 describe('Sektion', () => {
-  it('kopplar rubriken till sektionen och visar etiketten för det som inte är byggt', () => {
-    const html = renderToStaticMarkup(<Sektion rubrik="Dagsetapper" kommerSnart>innehåll</Sektion>)
+  it('kopplar rubriken till en riktig sektion, så att den blir ett landmärke', () => {
+    const html = renderToStaticMarkup(<Sektion rubrik="Deltagare">innehåll</Sektion>)
     const id = /aria-labelledby="([^"]+)"/.exec(html)?.[1]
     expect(id).toBeTruthy()
     expect(html).toContain(`<h2 id="${id}"`)
+  })
+
+  it('visar etiketten för det som inte är byggt och döljer exemplen i rubrikraden', () => {
+    const html = renderToStaticMarkup(
+      <Sektion rubrik="Dagsetapper" kommerSnart overrubrik="Från förra turen" atgard={<span>Alla etapper</span>}>
+        innehåll
+      </Sektion>,
+    )
     expect(html).toContain('Kommer snart')
+    expect(html).not.toContain('aria-labelledby')
+    expect(html).toMatch(/<p inert="" aria-hidden="true"[^>]*>Från förra turen<\/p>/)
+    expect(html).toMatch(/<div inert="" aria-hidden="true"[^>]*><span>Alla etapper<\/span>/)
   })
 
   it('visar ingen etikett för en riktig sektion och kan ha rubrik på nivå 3', () => {

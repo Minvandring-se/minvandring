@@ -23,7 +23,7 @@ Det som inte finns visas i turens översikt som det kommer att se ut, med etiket
 | Väder från SMHI före avfärd | Senare |
 | Svårighetsgrad och typ av boende | Senare |
 | Kopiera en tur | Senare |
-| Tecknad bildruta per tur | Idé |
+| Tecknad bildruta per tur | Finns |
 
 ## Packning och vikt
 

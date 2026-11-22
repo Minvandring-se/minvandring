@@ -181,6 +181,29 @@ export function kortNedrakning(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'da
 }
 
 /**
+ * Etiketten i turens huvud: "Avfärd om 12 dagar", "Avfärd i morgon", "Avfärd i dag" eller "Pågår nu, dag 2 av 3".
+ * null när turen saknar datum eller redan är över.
+ */
+export function avfardEtikett(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'>, idag: string): string | null {
+  const text = nedrakning(tur, idag)
+  if (!text) return null
+  if (text.startsWith('Pågår')) return text
+  return `Avfärd ${text[0].toLowerCase()}${text.slice(1)}`
+}
+
+/**
+ * Deltagarnas namn i en mening: "Oscar", "Oscar och Anna" eller "Oscar, Anna och Rex".
+ * Högst fyra namn, sedan "och 3 till".
+ */
+export function deltagarNamn(deltagare: readonly { namn: string }[], max = 4): string {
+  const namn = deltagare.map((d) => d.namn.trim()).filter(Boolean)
+  if (namn.length === 0) return ''
+  if (namn.length > max) return `${namn.slice(0, max).join(', ')} och ${namn.length - max} till`
+  if (namn.length === 1) return namn[0]
+  return `${namn.slice(0, -1).join(', ')} och ${namn[namn.length - 1]}`
+}
+
+/**
  * Etiketten på kortet för nästa vandring: "Nästa vandring · om 15 dagar" eller "Pågår nu · dag 2 av 3".
  * Utan datum står bara "Nästa vandring".
  */
