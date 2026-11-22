@@ -1,18 +1,18 @@
-import { LogOut } from 'lucide-react'
+import { LogOut, Settings } from 'lucide-react'
 import { useEffect, useId, useState, type FormEvent } from 'react'
-import { useNavigate } from 'react-router'
+import { Link, useNavigate } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { Skelett } from '@/components/app/Laddar'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { Profilbildsval } from '@/components/profil/Profilbildsval'
-import { Utseende } from '@/components/profil/Utseende'
 import { Button } from '@/components/ui/button'
+import { knappStil } from '@/components/ui/knappStil'
 import { Input } from '@/components/ui/input'
 import { Sektion } from '@/components/ui/sektion'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { supabase } from '@/lib/supabase'
 
-/** Ändra sitt visningsnamn och sin profilbild, och logga ut. Namnet följer med till alla turer man är med i. */
+/** Ändra sitt visningsnamn och sin profilbild, och logga ut. Namnet följer med till alla turer man är med i. Utseendet finns under Inställningar. */
 export function Profil() {
   const { anvandarId, epost, profilHamtad, setNamn: setNamnIRamen, bildUppdaterad, setBildUppdaterad } = useApp()
   const navigate = useNavigate()
@@ -50,9 +50,9 @@ export function Profil() {
 
   return (
     <div className="space-y-6">
-      <SidRubrik rubrik="Profil" text="Ditt namn, din bild och hur appen ser ut." />
+      <SidRubrik rubrik="Profil" text="Ditt namn och din bild, som andra deltagare ser." />
 
-      {/* På dator: namn och bild till vänster, Utseende och Konto till höger. I mobil i en kolumn. */}
+      {/* På dator: namn och bild till vänster, Konto till höger. I mobil i en kolumn. */}
       <div className="grid max-w-5xl grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
       <Sektion rubrik="Namn och bild">
         <Profilbildsval
@@ -111,19 +111,19 @@ export function Profil() {
         </form>
       </Sektion>
 
-      <div className="space-y-5">
-        <Sektion rubrik="Utseende">
-          <Utseende />
-        </Sektion>
-
-        <Sektion rubrik="Konto">
-          <p className="text-sm text-muted-foreground">Logga ut från MinVandring på den här enheten.</p>
-          <Button variant="outline" className="self-start" onClick={loggaUt}>
+      <Sektion rubrik="Konto">
+        <p className="text-sm text-muted-foreground">Välj ljust eller mörkt läge under Inställningar. Logga ut från MinVandring på den här enheten.</p>
+        <div className="flex flex-wrap gap-2">
+          <Link to="/installningar" className={knappStil({ variant: 'outline' })}>
+            <Settings className="size-4" aria-hidden />
+            Inställningar
+          </Link>
+          <Button variant="outline" onClick={loggaUt}>
             <LogOut className="size-4" aria-hidden />
             Logga ut
           </Button>
-        </Sektion>
-      </div>
+        </div>
+      </Sektion>
       </div>
     </div>
   )

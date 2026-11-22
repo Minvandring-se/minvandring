@@ -1,10 +1,11 @@
 // De inloggade sidorna: vilka sidor som har sidomenyn och vilken del av menyn som är aktiv.
+import { aktivSida } from '@/lib/meny'
 
 export type Del = 'turer' | 'forrad' | 'profil'
 
-/** Sidorna som visas i den inloggade ramen med sidomeny och bottennavigation. */
+/** Sidorna som visas i den inloggade ramen med sidomeny och bottennavigation: alla sidor i menyn (src/lib/meny.ts). */
 export function arAppsida(pathname: string): boolean {
-  return aktivDel(pathname) !== null
+  return aktivSida(pathname) !== null
 }
 
 /** Vilken del av menyn sidan hör till. En enskild tur hör till Mina turer. */

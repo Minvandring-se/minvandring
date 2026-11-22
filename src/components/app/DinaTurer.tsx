@@ -20,7 +20,7 @@ export function DinaTurer({ turer, oppenTurId }: { turer: TurIListan[] | null; o
 
   return (
     <nav aria-labelledby="dina-turer-rubrik" className="space-y-1">
-      <h2 id="dina-turer-rubrik" className="px-3 pb-1 font-sans text-xs font-semibold text-muted-foreground">
+      <h2 id="dina-turer-rubrik" className="px-3 pt-4 pb-1 font-sans text-xs font-semibold text-muted-foreground">
         Dina turer
       </h2>
       {turer === null ? (
@@ -34,15 +34,22 @@ export function DinaTurer({ turer, oppenTurId }: { turer: TurIListan[] | null; o
             const oppen = tur.id === oppenTurId
             return (
               <li key={tur.id}>
+                {/* Namnet på en rad (högst två) och nedräkningen under, så att namnet inte klipps. */}
                 <Link
                   to={`/tur/${tur.id}`}
+                  title={tur.namn}
                   aria-current={oppen ? 'page' : undefined}
-                  className={cn(radKlass, 'border', oppen ? 'border-border bg-background font-semibold' : 'border-transparent text-foreground hover:bg-muted')}
+                  className={cn(
+                    'flex min-h-12 gap-2.5 rounded-md border px-3 py-1.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                    oppen ? 'border-border bg-background' : 'border-transparent text-foreground hover:bg-muted',
+                  )}
                 >
-                  <span aria-hidden className={cn('size-2 shrink-0 rounded-full', tur === nasta ? 'bg-accent' : 'bg-illustration/60')} />
-                  {tur === nasta && <span className="sr-only">Nästa tur:</span>}
-                  <span className="min-w-0 flex-1 truncate">{tur.namn}</span>
-                  <span className="shrink-0 text-xs font-normal text-muted-foreground">{kortNedrakning(tur, idag)}</span>
+                  <span aria-hidden className={cn('mt-1.5 size-2 shrink-0 rounded-full', tur === nasta ? 'bg-accent' : 'bg-illustration/60')} />
+                  <span className="min-w-0 flex-1">
+                    {tur === nasta && <span className="sr-only">Nästa tur: </span>}
+                    <span className={cn('line-clamp-2 break-words', (oppen || tur === nasta) && 'font-semibold')}>{tur.namn}</span>
+                    <span className="block text-xs text-muted-foreground">{kortNedrakning(tur, idag)}</span>
+                  </span>
                 </Link>
               </li>
             )

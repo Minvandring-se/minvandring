@@ -2,15 +2,16 @@ import { Backpack, Map as Karta, UserRound, type LucideIcon } from 'lucide-react
 import { Suspense, useEffect, useState } from 'react'
 import { Link, Outlet, useLocation } from 'react-router'
 import type { AppKontext } from '@/components/app/appKontext'
-import { DinaTurer } from '@/components/app/DinaTurer'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Namnbricka } from '@/components/app/Namnbricka'
+import { Sidomeny } from '@/components/app/Sidomeny'
 import { Felgrans } from '@/components/Felgrans'
 import { Logotyp } from '@/components/Logotyp'
 import { Sidfot } from '@/components/Sidfot'
 import { useDinaTurer } from '@/hooks/useDinaTurer'
 import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
 import { useSession } from '@/hooks/useSession'
+import { aktivSida } from '@/lib/meny'
 import { aktivDel, type Del } from '@/lib/navigering'
 import { supabase } from '@/lib/supabase'
 import { cn } from '@/lib/utils'
@@ -60,62 +61,24 @@ export function AppSkal() {
   const kontext: AppKontext = { anvandarId, epost: session?.user.email ?? '', namn, profilHamtad, setNamn, bildUppdaterad, setBildUppdaterad }
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[16rem_1fr]">
-      {/* Sidomenyn på dator. Ligger kvar när man scrollar. */}
-      <aside className="hidden border-r border-border bg-card lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:overflow-y-auto">
-        <div className="flex flex-1 flex-col gap-7 px-4 pt-6 pb-4">
-          <Link to="/turer" className={cn('flex min-h-11 items-center rounded-md px-2', fokus)}>
-            <Logotyp className="text-xl" />
-          </Link>
-          <nav aria-label="Huvudmeny">
-            <ul className="space-y-1">
-              {DELAR.filter((d) => d.del !== 'profil').map(({ del, till, namn: text, ikon: Ikon }) => (
-                <li key={del}>
-                  <Link
-                    to={till}
-                    aria-current={aktiv === del ? 'page' : undefined}
-                    className={cn(
-                      'relative flex min-h-11 items-center gap-3 rounded-md px-3 font-medium transition-colors',
-                      fokus,
-                      aktiv === del ? 'bg-primary-soft text-primary' : 'text-foreground hover:bg-muted',
-                    )}
-                  >
-                    {/* Aktiv sida: grön text, fetare ikon och en kort rostfärgad markering, som en målad ledmarkering. */}
-                    {aktiv === del && <span aria-hidden className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent" />}
-                    <Ikon className="size-5" aria-hidden strokeWidth={aktiv === del ? 2.25 : 1.75} />
-                    {text}
-                  </Link>
-                </li>
-              ))}
-            </ul>
-          </nav>
-          <DinaTurer turer={dinaTurer} oppenTurId={oppenTurId} />
-        </div>
-
-        <div className="space-y-2 border-t border-border px-4 pt-3 pb-4">
-          {/* Användaren leder till Profil, där Utseende och Logga ut finns. */}
-          <Link
-            to="/profil"
-            aria-current={aktiv === 'profil' ? 'page' : undefined}
-            className={cn(
-              'flex min-h-12 items-center gap-3 rounded-md px-2 transition-colors',
-              fokus,
-              aktiv === 'profil' ? 'bg-primary-soft text-primary' : 'hover:bg-muted',
-            )}
-          >
-            <Namnbricka namn={namn || session?.user.email || '?'} bild={minBild} laddar={bildLaddar} />
-            {profilHamtad ? (
-              <span className="min-w-0 flex-1 truncate font-medium">{namn || 'Din profil'}</span>
-            ) : (
-              <>
-                <Skelett className="h-4 w-24" />
-                <span className="sr-only">Din profil</span>
-              </>
-            )}
-          </Link>
-          <Sidfot variant="meny" className="px-2 text-xs" />
-        </div>
-      </aside>
+    <div className="min-h-dvh lg:grid lg:grid-cols-[17.5rem_1fr]">
+      {/* Hoppar förbi menyn med tangentbordet. Syns bara när den har fokus. */}
+      <a
+        href="#innehall"
+        className="sr-only z-50 rounded-md bg-card px-4 py-3 font-medium focus:not-sr-only focus:fixed focus:top-3 focus:left-3 focus-visible:outline-2 focus-visible:outline-ring"
+      >
+        Hoppa till innehållet
+      </a>
+      <Sidomeny
+        aktiv={aktivSida(pathname)}
+        turer={dinaTurer}
+        oppenTurId={oppenTurId}
+        namn={namn}
+        epost={session?.user.email ?? ''}
+        bild={minBild}
+        bildLaddar={bildLaddar}
+        profilHamtad={profilHamtad}
+      />
 
       <div className="flex min-h-dvh min-w-0 flex-col">
         {/* Kompakt sidhuvud i mobil */}
@@ -136,7 +99,7 @@ export function AppSkal() {
 
         {/* Luft under innehållet i mobil, så att inget hamnar bakom bottennavigationen. */}
         {/* På dator fyller innehållet bredden bredvid sidomenyn, upp till 80rem på mycket breda skärmar. */}
-        <main className="mx-auto w-full max-w-7xl flex-1 px-4 pt-5 pb-8 sm:px-6 lg:px-10 lg:pt-8 lg:pb-12">
+        <main id="innehall" tabIndex={-1} className="mx-auto outline-none w-full max-w-7xl flex-1 px-4 pt-5 pb-8 sm:px-6 lg:px-10 lg:pt-8 lg:pb-12">
           <Felgrans aterstall={pathname}>
           <Suspense
             fallback={
