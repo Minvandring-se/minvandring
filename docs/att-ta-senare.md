@@ -151,3 +151,11 @@ Genomgången gjordes 2026-11-22 mot `docs/designforslag.md`, `docs/skisser/desig
 5. **Rubrikstorlek.** Skissens "Mitt förråd" är större än dagens. Liten ändring, gör den om vi vill följa skissen exakt.
 
 Inte kontrollerat än: tomt förråd, tangentbordsfokus och den utfällda detaljen med "Produktuppgifterna har inte granskats". Titta på dem med skillen `kor-appen` när vi bygger.
+
+## Fiske och jakt
+
+Idé: ge dem som fiskar eller jagar på vandringen plats för det i appen. Tre delar, i den ordning de bör byggas:
+
+1. **Kategorierna Fiske och Jakt i Mitt förråd**, så att man kan lägga in egna saker. Kategorinycklarna läggs till både i databasen och i `src/lib/forrad.ts`, och testet i `supabase/rls.test.ts` ska fortsätta stämma.
+2. **Påminnelser i Kom ihåg till nästa vandring** om fiskekort, jaktkort och jakttider, så att man minns att ordna dem före turen.
+3. **Eventuellt en liten katalog för resespön och fjällspön.** Inga vapen i katalogen.
