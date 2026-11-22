@@ -159,3 +159,7 @@ Idé: ge dem som fiskar eller jagar på vandringen plats för det i appen. Tre d
 1. **Kategorierna Fiske och Jakt i Mitt förråd**, så att man kan lägga in egna saker. Kategorinycklarna läggs till både i databasen och i `src/lib/forrad.ts`, och testet i `supabase/rls.test.ts` ska fortsätta stämma.
 2. **Påminnelser i Kom ihåg till nästa vandring** om fiskekort, jaktkort och jakttider, så att man minns att ordna dem före turen.
 3. **Eventuellt en liten katalog för resespön och fjällspön.** Inga vapen i katalogen.
+
+## Katalogen: Mammut Tyin MTI 5-Season
+
+Mammut Tyin MTI 5-Season (180 och 200 cm) och Protect Fiber Bag -18C S utelämnades vid XXL- och Outnorth-genomgången 2026-11-22. Tyins produktsida hos Mammut hängde sig i Chrome, och Protect Fiber S visar att produkten inte längre finns. Försök läsa Tyin igen, och lägg in raderna om sidan visar vikt per storlek. Outnorths vikter för raderna finns i `Claude outputs/outnorth-sovsackar.csv`.
