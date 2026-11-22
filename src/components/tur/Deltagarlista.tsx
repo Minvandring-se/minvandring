@@ -6,6 +6,7 @@ import { Inbjudan } from '@/components/tur/Inbjudan'
 import { Button } from '@/components/ui/button'
 import { Card } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { ROLLBESKRIVNING, ROLLNAMN, arAgare, kanAndra, kanTaBort, type Roll } from '@/lib/roller'
 import { supabase } from '@/lib/supabase'
 import type { DeltagareRad, Tur } from '@/lib/typer'
@@ -118,9 +119,9 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
 
               {harKonto &&
                 (arAgare(minRoll) ? (
-                  <select
+                  <Select
                     aria-label={`Roll för ${d.namn}`}
-                    className="h-11 rounded-md border border-border bg-card px-2 text-sm"
+                    className="w-auto shrink-0 px-2"
                     value={d.roll}
                     onChange={(e) => bytRoll(d.id, e.target.value as Roll)}
                   >
@@ -129,7 +130,7 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
                         {ROLLNAMN[r]}
                       </option>
                     ))}
-                  </select>
+                  </Select>
                 ) : (
                   <span className="rounded-full bg-primary-soft px-3 py-1 text-sm font-medium">
                     {ROLLNAMN[d.roll]}
@@ -139,8 +140,7 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
               {minRoll && kanTaBort(minRoll, { id: d.id, roll: d.roll, userId: d.user_id }, mittUserId, alla) && (
                 <Button
                   variant="ghost"
-                  size="sm"
-                  className="size-11 px-0"
+                  size="ikon"
                   aria-label={jag ? 'Lämna turen' : `Ta bort ${d.namn}`}
                   onClick={() => taBort(d)}
                 >
@@ -179,15 +179,15 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
           <label htmlFor={`${faltId}-typ`} className="col-span-2 text-sm text-muted-foreground">
             Typ
           </label>
-          <select
+          <Select
             id={`${faltId}-typ`}
-            className="col-span-2 mb-1 h-11 rounded-md border border-border bg-card px-3"
+            className="col-span-2 mb-1"
             value={nyTyp}
             onChange={(e) => setNyTyp(e.target.value as 'person' | 'hund')}
           >
             <option value="hund">Hund</option>
             <option value="person">Person utan konto</option>
-          </select>
+          </Select>
           <label htmlFor={`${faltId}-namn`} className="col-span-2 text-sm text-muted-foreground">
             Namn
           </label>

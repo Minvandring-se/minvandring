@@ -59,7 +59,8 @@ export function TurOversikt() {
       </div>
 
       {/* I mobil kommer uppgifterna först och gruppen sedan. På dator står gruppen i en egen kolumn till höger. */}
-      <div className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
+      {/* grid-cols-1 (minmax(0, 1fr)) i mobil, så att inbjudningslänken inte gör kolumnen bredare än skärmen. */}
+      <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_minmax(0,24rem)] lg:items-start">
         <TurUppgifter key={tur.id} tur={tur} kanAndra={kanAndra(minRoll)} onSparad={setTur} />
 
         <div id="deltagare" className="scroll-mt-4">
