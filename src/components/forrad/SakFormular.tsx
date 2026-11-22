@@ -1,3 +1,4 @@
+import { Check } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -31,8 +32,10 @@ interface Props {
 }
 
 /** Ett val som ser ut som en knapp men är en radioknapp eller kryssruta, så att det går att nå med tangentbord och skärmläsare. */
+// Valt alternativ syns med mer än färg: en tjockare kant (ring inåt, så att inget flyttar sig) och en bock.
 const valbarKlass =
-  'flex cursor-pointer items-center gap-2 rounded-md border border-border bg-card font-medium transition-colors hover:bg-muted has-checked:border-primary has-checked:bg-primary-soft has-checked:text-primary has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring'
+  'group flex cursor-pointer items-center gap-2 rounded-md border border-border bg-card font-medium transition-colors hover:bg-muted has-checked:border-primary has-checked:bg-primary-soft has-checked:text-primary has-checked:ring-1 has-checked:ring-primary has-checked:ring-inset has-focus-visible:outline-2 has-focus-visible:outline-offset-2 has-focus-visible:outline-ring'
+const bockKlass = 'hidden size-4 shrink-0 group-has-checked:block'
 
 /** Formuläret för en sak i förrådet: lägga till en egen sak, eller ändra och ta bort en som finns. */
 export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
@@ -118,7 +121,8 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
                 onChange={() => setFalt((f) => medKategori(f, nyckel))}
               />
               <Ikon className="size-5 shrink-0" aria-hidden />
-              {etikett}
+              <span className="min-w-0 flex-1">{etikett}</span>
+              <Check className={bockKlass} aria-hidden />
             </label>
           ))}
         </div>
@@ -139,6 +143,7 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
                   checked={falt.underkategori === u.nyckel}
                   onChange={(e) => setFalt((f) => medUnderkategori(f, e.target.checked ? u.nyckel : ''))}
                 />
+                <Check className={bockKlass} aria-hidden />
                 {u.etikett}
               </label>
             ))}

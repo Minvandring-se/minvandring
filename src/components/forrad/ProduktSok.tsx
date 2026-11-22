@@ -327,7 +327,7 @@ function Produktrad({
         <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
       </button>
       {/* Bara granskade produkter har en etikett. Den ligger utanför knappen, eftersom den själv går att trycka på. */}
-      <Granskad kontrollerad={produkt.kontrollerad} className="px-3 pb-2 pl-11" />
+      <Granskad kontrollerad={produkt.kontrollerad} className="px-3 pl-11" />
     </>
   )
 }

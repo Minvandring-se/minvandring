@@ -14,13 +14,13 @@ export function Granskad({ kontrollerad, className }: { kontrollerad: string | n
 
   return (
     <div className={className}>
-      {/* Knappen är 44 px hög för fingret, etiketten inuti är mindre. */}
+      {/* Knappen är 44 px hög för fingret, etiketten inuti är mindre. Ingen negativ marginal, så att ytan inte överlappar raden ovanför. */}
       <button
         type="button"
         aria-expanded={oppen}
         aria-controls={id}
         onClick={() => setOppen((o) => !o)}
-        className="group -my-2 inline-flex min-h-11 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+        className="group inline-flex min-h-11 items-center rounded-full focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
       >
         <span className="inline-flex items-center gap-1 rounded-full bg-primary-soft px-2.5 py-0.5 text-sm font-medium text-primary group-hover:bg-primary-soft/70">
           <Check className="size-3.5" aria-hidden />
