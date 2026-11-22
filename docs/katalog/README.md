@@ -1,5 +1,7 @@
 # Produktkatalogen: källor och täckning
 
+**Så fyller vi på katalogen: se [manual.md](manual.md).** Promptmallen till Astra ligger i [astra-mall.md](astra-mall.md).
+
 Katalogfilerna ligger i `supabase/katalog/`. Den här mappen beskriver varifrån produkterna kommer.
 Filerna här ligger medvetet utanför `supabase/katalog/`, så att `npm run katalog` inte försöker importera dem.
 
