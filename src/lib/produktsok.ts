@@ -121,6 +121,15 @@ export function grupperaModeller<P extends Produkt>(produkter: P[]): Modell<P>[]
   return [...modeller.values()]
 }
 
+/** Modellen som produkten hör till, och produkten själv, eller null när den inte finns bland modellerna. */
+export function modellMedProdukt<P extends Produkt>(modeller: readonly Modell<P>[], id: string): { modell: Modell<P>; produkt: P } | null {
+  for (const modell of modeller) {
+    const produkt = modell.varianter.find((v) => v.id === id)
+    if (produkt) return { modell, produkt }
+  }
+  return null
+}
+
 export interface Marke {
   marke: string
   /** Antal modeller, alltså lika många rader som listan visar för märket. */
