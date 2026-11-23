@@ -27,7 +27,7 @@ Filerna här ligger medvetet utanför `supabase/katalog/`, så att `npm run kata
 | Kök | ✓ 2026-11-23 | ✓ 2026-11-23 | – | – | – |
 | Vattenrening | ✓ 2026-11-23 | ✓ 2026-11-23 | ✓ 2026-11-23 | ✓ 2026-11-23 | ✓ 2026-11-23 |
 | Vandringsstavar | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 |
-| Pannlampor | – | – | – | – | – |
+| Pannlampor | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 |
 
 ## Kolumnerna i genomgangar.csv
 
