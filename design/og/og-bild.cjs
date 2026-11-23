@@ -1,4 +1,4 @@
-// Gör delningsbilden public/og-bild.jpg (1200 x 630): hero-motivet med logotypen och "Planera. Packa. Upplev.".
+// Gör delningsbilden public/og-bild.jpg (1200 x 630): logotypen och "Planera. Packa. Upplev." på mörkgrön bakgrund.
 // Kräver sharp och puppeteer-core, som inte är beroenden i projektet, och att utvecklingsservern körs:
 //   npm install --no-save sharp puppeteer-core
 //   npm run dev
@@ -15,23 +15,18 @@ const html = `<!doctype html>
 <html lang="sv">
   <style>
     @font-face {
-      font-family: 'Montserrat Variable';
+      font-family: 'Fraunces Variable';
       font-weight: 100 900;
-      src: url('/node_modules/@fontsource-variable/montserrat/files/montserrat-latin-wght-normal.woff2') format('woff2-variations');
+      src: url('/node_modules/@fontsource-variable/fraunces/files/fraunces-latin-wght-normal.woff2') format('woff2-variations');
     }
     * { margin: 0; box-sizing: border-box; }
-    body { width: 1200px; height: 630px; overflow: hidden; background: #000; font-family: 'Montserrat Variable', sans-serif; color: #fffdf8; }
-    img.bild { position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover; object-position: 50% 80%; }
-    .skugga { position: absolute; inset: 0; background: linear-gradient(to bottom, rgb(0 0 0 / 0.45), rgb(0 0 0 / 0.2) 45%, rgb(0 0 0 / 0.6)); }
-    main { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; text-shadow: 0 2px 24px rgb(0 0 0 / 0.45); }
-    .logotyp { display: flex; align-items: center; gap: 18px; font-size: 52px; font-weight: 600; letter-spacing: -0.02em; }
-    .logotyp img { width: 104px; height: 104px; margin: 0 -18px; }
-    h1 { margin-top: 26px; font-size: 92px; line-height: 1.05; font-weight: 700; letter-spacing: -0.025em; }
+    body { width: 1200px; height: 630px; overflow: hidden; background: #1f3d2e; color: #f7f4ec; }
+    main { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; text-align: center; }
+    img { width: 620px; height: auto; }
+    h1 { margin-top: 44px; font-family: 'Fraunces Variable', serif; font-size: 76px; line-height: 1.05; font-weight: 600; letter-spacing: -0.01em; }
   </style>
-  <img class="bild" src="/hero/5-norrsken-1920.webp" alt="" />
-  <div class="skugga"></div>
   <main>
-    <div class="logotyp"><img src="/brand/minvandring-symbol-cream.svg" alt="" />MinVandring</div>
+    <img src="/brand/minvandring-logotyp-mork.svg" alt="" />
     <h1>Planera. Packa. Upplev.</h1>
   </main>
 </html>`

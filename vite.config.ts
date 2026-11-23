@@ -24,11 +24,11 @@ export default defineConfig({
         orientation: 'portrait',
         background_color: '#FAF8F3',
         theme_color: '#1F3D2E',
-        // Ikonerna från logotypspaketet har heltäckande bakgrund och säker marginal, så de fungerar både som vanliga och maskerade.
+        // Ikonerna görs med design/logo/ikoner.cjs. Den maskerade har extra luft så att symbolen klarar runda och andra former.
         icons: [
           { src: 'icon-192.png', sizes: '192x192', type: 'image/png', purpose: 'any' },
           { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'any' },
-          { src: 'icon-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
+          { src: 'icon-maskable-512.png', sizes: '512x512', type: 'image/png', purpose: 'maskable' },
         ],
       },
       workbox: {
