@@ -60,8 +60,10 @@ describe('vilka kokkärl som passar vilka brännare', () => {
     expect(passarIhop({ typ: 'stormkok' }, vanlig)).toBe(false)
   })
 
-  it('ställer inte ett systemkokkärl på en öppen brännare', () => {
-    expect(passarIhop(crux, { system: 'jetboil_fluxring' })).toBe(false)
+  it('ställer kokkärl i ett system på en öppen brännare, utom när tillverkaren säger att de bara passar sitt kök', () => {
+    expect(passarIhop(crux, { system: 'trangia_27' })).toBe(true)
+    expect(passarIhop(crux, { system: 'msr_reactor', bara_system: true })).toBe(false)
+    expect(passarIhop({ typ: 'stormkok', system: 'trangia_27' }, { system: 'trangia_27' })).toBe(true)
   })
 
   it('säger nej när uppgifter saknas', () => {

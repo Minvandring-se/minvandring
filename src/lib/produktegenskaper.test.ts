@@ -690,9 +690,10 @@ describe('egenskaper för kokkärl', () => {
     lock: true,
     antal_delar: 2,
     packmatt_cm: '18 x 10',
+    bara_system: false,
   }
 
-  it('har åtta egenskaper, varav tre behövs för jämförelser', () => {
+  it('har nio egenskaper, varav tre behövs för jämförelser', () => {
     expect(egenskaperFor('kastrull').map((e) => e.nyckel)).toEqual(Object.keys(kastrull))
     expect(egenskaperFor('kastrull').filter((e) => e.forJamforelse).map((e) => e.nyckel)).toEqual(['typ', 'volym_l', 'material'])
   })
@@ -701,6 +702,11 @@ describe('egenskaper för kokkärl', () => {
     expect(valideraEgenskaper('kastrull', kastrull)).toEqual({ fel: [], varningar: [] })
     const { system: _, ...utanSystem } = kastrull
     expect(valideraEgenskaper('kastrull', utanSystem)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('kräver system när kokkärlet bara passar sitt eget kök', () => {
+    const { system: _, ...utanSystem } = kastrull
+    expect(valideraEgenskaper('kastrull', { ...utanSystem, bara_system: true }).fel.map((f) => f.split(':')[0])).toEqual(['bara_system'])
   })
 
   it('ger fel för system som inte finns', () => {

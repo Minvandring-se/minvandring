@@ -54,14 +54,13 @@ export function filtreraKokgrupp<P extends { underkategori: string; egenskaper?:
 const OPPNA_TYPER = new Set(['toppmonterat', 'slangkok', 'annat'])
 
 /**
- * Passar kokkärlet på brännaren? Har brännaren ett kokkärlssystem passar bara kokkärl i samma system. Har den inget
- * passar vanliga kokkärl (utan system) på öppna brännare, men inte på systemkök och stormkök, som är byggda för sina
- * egna kastruller. Ett kokkärl i ett system passar bara brännare i samma system.
+ * Passar kokkärlet på brännaren? Har brännaren ett kokkärlssystem passar bara kokkärl i samma system. En öppen
+ * brännare tar alla kokkärl utom de som tillverkaren säger bara fungerar med sitt eget kök (bara_system). Systemkök
+ * och stormkök utan angivet system är byggda för sina egna kastruller, så där passar inget annat.
  */
 export function passarIhop(brannare: Egenskaper, kokkarl: Egenskaper): boolean {
   const brannarsystem = brannare?.system
-  const kokkarlsystem = kokkarl?.system
-  if (typeof brannarsystem === 'string' && brannarsystem) return kokkarlsystem === brannarsystem
-  if (typeof kokkarlsystem === 'string' && kokkarlsystem) return false
+  if (typeof brannarsystem === 'string' && brannarsystem) return kokkarl?.system === brannarsystem
+  if (kokkarl?.bara_system === true) return false
   return typeof brannare?.typ === 'string' && OPPNA_TYPER.has(brannare.typ)
 }
