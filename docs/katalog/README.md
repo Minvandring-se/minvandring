@@ -26,7 +26,7 @@ Filerna här ligger medvetet utanför `supabase/katalog/`, så att `npm run kata
 | Ryggsäckar | ✓ 2026-11-19 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 |
 | Kök | ✓ 2026-11-23 | ✓ 2026-11-23 | – | – | – |
 | Vattenrening | ✓ 2026-11-23 | ✓ 2026-11-23 | ✓ 2026-11-23 | ✓ 2026-11-23 | ✓ 2026-11-23 |
-| Vandringsstavar | – | – | – | – | – |
+| Vandringsstavar | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 |
 | Pannlampor | – | – | – | – | – |
 
 ## Kolumnerna i genomgangar.csv
