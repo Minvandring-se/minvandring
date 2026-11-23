@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { matandelar, matvikter, packvikter, type Deltagare, type Packrad } from './vikt'
+import { barRaden, matandelar, matvikter, packvikter, radvikt, type Deltagare, type Packrad } from './vikt'
 
 const oscar: Deltagare = { id: 'o', typ: 'person', matandel: null }
 const andreas: Deltagare = { id: 'a', typ: 'person', matandel: null }
@@ -8,6 +8,41 @@ const bamse: Deltagare = { id: 'b', typ: 'hund', matandel: null, hundmatPerDagG:
 
 const rad = (r: Partial<Packrad>): Packrad => ({
   antal: 1, viktG: null, typ: 'ryggsack', med: true, barsAv: null, alla: false, ...r,
+})
+
+describe('radvikt', () => {
+  it('är antal gånger vikt', () => {
+    expect(radvikt(rad({ viktG: 53, antal: 3 }))).toBe(159)
+  })
+
+  it('är 0 när vikten saknas eller saken inte ska med', () => {
+    expect(radvikt(rad({ viktG: null, antal: 2 }))).toBe(0)
+    expect(radvikt(rad({ viktG: 500, med: false }))).toBe(0)
+  })
+
+  it('räknar ett antal som inte är ett tal som 1', () => {
+    expect(radvikt(rad({ viktG: 200, antal: Number.NaN }))).toBe(200)
+  })
+})
+
+describe('barRaden', () => {
+  it('alla-saker bärs av varje person men inte av hunden', () => {
+    const sovsack = rad({ alla: true })
+    expect(barRaden(sovsack, oscar)).toBe(true)
+    expect(barRaden(sovsack, bamse)).toBe(false)
+  })
+
+  it('en sak med bärare bärs bara av den, även av en hund', () => {
+    expect(barRaden(rad({ barsAv: 'o' }), oscar)).toBe(true)
+    expect(barRaden(rad({ barsAv: 'o' }), andreas)).toBe(false)
+    expect(barRaden(rad({ barsAv: 'b' }), bamse)).toBe(true)
+  })
+
+  it('alla går före bärare, och ingen bär det som saknar bärare eller inte ska med', () => {
+    expect(barRaden(rad({ alla: true, barsAv: 'o' }), andreas)).toBe(true)
+    expect(barRaden(rad({}), oscar)).toBe(false)
+    expect(barRaden(rad({ barsAv: 'o', med: false }), oscar)).toBe(false)
+  })
 })
 
 describe('packvikter', () => {
