@@ -167,7 +167,7 @@ const BRANNARE: Egenskap[] = [
   { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text' },
 ]
 
-/** Tändare och regulator finns bara på kök som går på gas, och ett stormkök har alltid kastruller. */
+/** Tändare och regulator finns bara på kök som går på gas, och ett stormkök eller systemkök har alltid kastruller. */
 function brannarregler(e: Record<string, unknown>): string[] {
   const fel: string[] = []
   // Ett okänt bränsle ger redan ett fel för bransle, så reglerna gäller bara kända bränslen.
@@ -176,7 +176,7 @@ function brannarregler(e: Record<string, unknown>): string[] {
     if (e.regulator === true) fel.push('regulator: anges bara när bransle är gas eller multibransle')
     if (e.tandare === true) fel.push('tandare: anges bara när bransle är gas eller multibransle')
   }
-  if (e.typ === 'stormkok' && saknas(e.kokkarl_l)) fel.push('kokkarl_l: ska anges när typ är stormkok')
+  if ((e.typ === 'stormkok' || e.typ === 'systemkok') && saknas(e.kokkarl_l)) fel.push(`kokkarl_l: ska anges när typ är ${e.typ}`)
   return fel
 }
 

@@ -662,9 +662,10 @@ describe('egenskaper för kök och brännare', () => {
     expect(felnycklar({ ...kok, bransle: 'sprit', tandare: false })).toEqual([])
   })
 
-  it('kräver kokkärl för ett stormkök', () => {
+  it('kräver kokkärl för ett stormkök och ett systemkök', () => {
     const { kokkarl_l: _, ...utanKokkarl } = kok
     expect(felnycklar({ ...utanKokkarl, typ: 'stormkok' })).toEqual(['kokkarl_l'])
+    expect(felnycklar({ ...utanKokkarl, typ: 'systemkok' })).toEqual(['kokkarl_l'])
     expect(felnycklar({ ...utanKokkarl, typ: 'toppmonterat' })).toEqual([])
   })
 
