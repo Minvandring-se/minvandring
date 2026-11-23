@@ -14,7 +14,7 @@ import { Sektion } from '@/components/ui/sektion'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, underkategoriFor, underkategorierFor, type KategoriNyckel } from '@/lib/forrad'
 import { forradsadress } from '@/lib/forradslista'
-import { antalText, forvalFranProdukt, gArAttSoka, grupperaModeller, ingaTraffarText, produktnamn, sokfilter, sokord, sorteraTraffar, type Modell } from '@/lib/produktsok'
+import { antalText, forvalFranProdukt, gArAttSoka, grupperaModeller, iForradetText, ingaTraffarText, produktnamn, sokfilter, sokord, sorteraTraffar, type Modell } from '@/lib/produktsok'
 import { supabase } from '@/lib/supabase'
 import type { Katalogprodukt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -40,8 +40,8 @@ export function Utrustningskatalog() {
   const [underkategori, setUnderkategori] = useState('')
   const [antal, setAntal] = useState<number | null>(null)
   const [lage, setLage] = useState<Lage>(null)
-  // Produkterna i träfflistan som finns i ens förråd. Hämtas med en fråga per träfflista.
-  const [iForradet, setIForradet] = useState<ReadonlySet<string>>(new Set())
+  // Produkterna i träfflistan som finns i ens förråd, med produktens version (storlek). Hämtas med en fråga per träfflista.
+  const [iForradet, setIForradet] = useState<ReadonlyMap<string, string | null>>(new Map())
   // Produkten som läggs i förrådet just nu, i formuläret.
   const [laggTill, setLaggTill] = useState<Katalogprodukt | null>(null)
 
@@ -70,9 +70,10 @@ export function Utrustningskatalog() {
       const produkter = (data as Katalogprodukt[] | null) ?? []
       // RLS gör att bara ens egna saker kommer tillbaka.
       const ids = produkter.map((p) => p.id)
-      const egna = ids.length ? await klient.from('forradssaker').select('produkt_id').in('produkt_id', ids) : null
+      const egna = ids.length ? await klient.from('forradssaker').select('produkt_id, produkter(version)').in('produkt_id', ids) : null
       if (avbruten) return
-      setIForradet(new Set(((egna?.data as { produkt_id: string }[] | null) ?? []).map((s) => s.produkt_id)))
+      const rader = (egna?.data as unknown as { produkt_id: string; produkter: { version: string | null } | null }[] | null) ?? []
+      setIForradet(new Map(rader.map((s) => [s.produkt_id, s.produkter?.version ?? null])))
       setLage(
         error
           ? { nyckel, fel: true }
@@ -159,7 +160,7 @@ export function Utrustningskatalog() {
           <SakFormular
             forval={forvalFranProdukt(laggTill)}
             onKlar={() => {
-              setIForradet((s) => new Set([...s, laggTill.id]))
+              setIForradet((s) => new Map([...s, [laggTill.id, laggTill.version]]))
               setLaggTill(null)
             }}
             onAvbryt={() => setLaggTill(null)}
@@ -178,7 +179,15 @@ export function Utrustningskatalog() {
  * En modell i katalogen: namn, kategori, vikten och storlekarna om det finns flera. Ett tryck fäller ut kortet med
  * specifikationerna för vald storlek, och knappen för att lägga den i förrådet.
  */
-function Produktkort({ modell, iForradet, onLaggTill }: { modell: Modell<Katalogprodukt>; iForradet: ReadonlySet<string>; onLaggTill: (p: Katalogprodukt) => void }) {
+function Produktkort({
+  modell,
+  iForradet,
+  onLaggTill,
+}: {
+  modell: Modell<Katalogprodukt>
+  iForradet: ReadonlyMap<string, string | null>
+  onLaggTill: (p: Katalogprodukt) => void
+}) {
   const id = useId()
   const [utfalld, setUtfalld] = useState(false)
   const [valdId, setValdId] = useState(modell.varianter[0].id)
@@ -186,7 +195,9 @@ function Produktkort({ modell, iForradet, onLaggTill }: { modell: Modell<Katalog
   const vald = modell.varianter.find((v) => v.id === valdId) ?? forsta
   const { ikon: Ikon, etikett } = kategoriFor(forsta.kategori)
   const flera = modell.varianter.length > 1
-  const finns = modell.varianter.find((v) => iForradet.has(v.id)) ?? null
+  // Storlekarna man har, i samma ordning som i kortet. finns pekar på den första, för länken till Mitt förråd.
+  const egna = modell.varianter.filter((v) => iForradet.has(v.id))
+  const finns = egna.length ? { produkt: egna[0], text: iForradetText(egna.map((v) => iForradet.get(v.id) ?? null)) } : null
   return (
     <li className={cn('flex flex-col rounded-lg border border-border bg-card', utfalld && 'md:col-span-full')}>
       <button
@@ -223,7 +234,7 @@ function Produktkort({ modell, iForradet, onLaggTill }: { modell: Modell<Katalog
             </ul>
           )}
           <Granskad produkt={forsta} />
-          {finns && <IForradet produkt={finns} />}
+          {finns && <IForradet finns={finns} />}
         </div>
       )}
 
@@ -253,7 +264,7 @@ function Utfallt({
   modell: Modell<Katalogprodukt>
   vald: Katalogprodukt
   onValj: (id: string) => void
-  finns: Katalogprodukt | null
+  finns: IForradetInfo | null
   onLaggTill: () => void
 }) {
   const id = useId()
@@ -306,7 +317,7 @@ function Utfallt({
         </a>
       </div>
 
-      {finns && <IForradet produkt={finns} />}
+      {finns && <IForradet finns={finns} />}
 
       <div className="flex flex-wrap items-center gap-2">
         <Button onClick={onLaggTill}>Lägg i förrådet</Button>
@@ -319,16 +330,18 @@ function Utfallt({
   )
 }
 
-/** Att produkten redan finns i förrådet, med en länk dit, filtrerat på produktens kategori och underkategori. */
-function IForradet({ produkt }: { produkt: Katalogprodukt }) {
+/** Vilka storlekar av modellen man har i förrådet, med en länk dit, filtrerat på produktens kategori och underkategori. */
+type IForradetInfo = { produkt: Katalogprodukt; text: string }
+
+function IForradet({ finns }: { finns: IForradetInfo }) {
   return (
     <p className="flex flex-wrap items-center gap-x-3 text-sm">
       <span className="inline-flex items-center gap-1.5 font-medium text-primary">
-        <Check className="size-4" aria-hidden />
-        Finns i ditt förråd
+        <Check className="size-4 shrink-0" aria-hidden />
+        {finns.text}
       </span>
       <Link
-        to={forradsadress(produkt.kategori, produkt.underkategori)}
+        to={forradsadress(finns.produkt.kategori, finns.produkt.underkategori)}
         className={cn('inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4', fokus)}
       >
         Visa i Mitt förråd

@@ -4,6 +4,7 @@ import {
   antalText,
   forvalFranProdukt,
   gArAttSoka,
+  iForradetText,
   ingaTraffarText,
   grupperaModeller,
   markenMedAntal,
@@ -244,6 +245,28 @@ describe('ingaTraffarText', () => {
 
   it('säger att kategorin är tom när bara en kategori är vald utan söktext', () => {
     expect(ingaTraffarText({ harText: false, kategori: 'vatten', underkategori: '' })).toBe('Inga produkter i katalogen i den här kategorin än.')
+  })
+})
+
+describe('iForradetText', () => {
+  it('säger vilken storlek man har', () => {
+    expect(iForradetText(['Regular'])).toBe('Du har Regular i ditt förråd')
+  })
+
+  it('räknar upp flera storlekar', () => {
+    expect(iForradetText(['Regular', 'Long'])).toBe('Du har Regular och Long i ditt förråd')
+    expect(iForradetText(['S', 'M', 'L'])).toBe('Du har S, M och L i ditt förråd')
+  })
+
+  it('säger bara Finns i ditt förråd för en sak utan storlek', () => {
+    expect(iForradetText([null])).toBe('Finns i ditt förråd')
+    expect(iForradetText(['  '])).toBe('Finns i ditt förråd')
+    expect(iForradetText(['One Size'])).toBe('Finns i ditt förråd')
+    expect(iForradetText(['one size'])).toBe('Finns i ditt förråd')
+  })
+
+  it('hoppar över dubbletter och storlekslösa bland flera', () => {
+    expect(iForradetText(['Regular', 'Regular', null])).toBe('Du har Regular i ditt förråd')
   })
 })
 

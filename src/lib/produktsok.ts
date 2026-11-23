@@ -145,6 +145,23 @@ export function ingaTraffarText(val: { harText: boolean; kategori: string; under
   return 'Inga produkter matchar din sökning.'
 }
 
+/** En version som inte är en storlek att välja mellan, till exempel "One Size". */
+function utanStorlek(version: string | null): boolean {
+  return !version?.trim() || /^one ?size$/i.test(version.trim())
+}
+
+/**
+ * Texten i katalogkortet för en modell man har i förrådet. Med storlek: "Du har Regular i ditt förråd", eller
+ * "Du har Regular och Long i ditt förråd" för flera. Utan storlek (eller One Size): "Finns i ditt förråd".
+ * Storlekarna står i den ordning de kommer in, utan dubbletter.
+ */
+export function iForradetText(versioner: readonly (string | null)[]): string {
+  const storlekar = [...new Set(versioner.filter((v): v is string => !utanStorlek(v)).map((v) => v.trim()))]
+  if (storlekar.length === 0) return 'Finns i ditt förråd'
+  const lista = storlekar.length === 1 ? storlekar[0] : `${storlekar.slice(0, -1).join(', ')} och ${storlekar.at(-1)}`
+  return `Du har ${lista} i ditt förråd`
+}
+
 /** "1 produkt" eller "42 produkter", för raden ovanför träfflistan. */
 export function antalText(antal: number): string {
   return antal === 1 ? '1 produkt' : `${antal} produkter`
