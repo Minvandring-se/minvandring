@@ -135,16 +135,13 @@ export function Forrad() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
-        <div className="min-w-0 space-y-2">
-          <p className="flex items-center gap-2 text-sm font-semibold text-hjortron-strong">
-            <span aria-hidden className="size-2.5 shrink-0 rounded-full bg-hjortron" />
-            Utrustning
-          </p>
-          <h1 className="text-[44px] leading-[1.05] break-words text-primary lg:text-[64px]">Mitt förråd</h1>
-          <p className="max-w-prose text-[17px] text-muted-foreground">Allt du äger för vandring, samlat på ett ställe.</p>
+      <div className="space-y-2">
+        {/* På dator står knappen i höjd med rubriken. I mobil kommer den efter rutan Hela förrådet. */}
+        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
+          <h1 className="min-w-0 text-[44px] leading-[1.05] break-words text-primary lg:text-[64px]">Mitt förråd</h1>
+          <div className="hidden shrink-0 lg:flex">{laggTillKnapp}</div>
         </div>
-        <div className="hidden shrink-0 lg:flex">{laggTillKnapp}</div>
+        <p className="max-w-prose text-[17px] text-muted-foreground">Allt du äger för vandring, samlat på ett ställe.</p>
       </div>
 
       {/* I mobil ligger den mörka rutan direkt under rubriken, före knappen och filtren. På dator står den i översikten. */}
@@ -250,7 +247,7 @@ export function Forrad() {
 /** Kategorierna i listan, med sakerna och de tomma rutorna för det som saknas. */
 function Lista({ delar, sortering, onSaknad, ...radhjalp }: { delar: Listdel[]; sortering: Listval['sortering']; onSaknad: (s: SaknadGrundsak) => void } & Radhjalp) {
   return (
-    <div className={cn('grid gap-8', radhjalp.vy === 'lista' && '3xl:grid-cols-2 3xl:items-start')}>
+    <div className="grid gap-8">
       {delar.map((del) => (
         <Kategoridel key={del.kategori.nyckel} del={del} sortering={sortering} onSaknad={onSaknad} {...radhjalp} />
       ))}
@@ -400,8 +397,8 @@ function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: List
         onAndra={(kategori, underkategori) => onVal(valjKategori(val, kategori, underkategori))}
       />
 
-      {/* Säger hur mycket av förrådet som visas, så att det märks att ett filter är på. */}
-      <div className="flex min-h-11 flex-wrap items-center gap-x-4">
+      {/* Säger hur mycket av förrådet som visas, så att det märks att ett filter är på. Tar ingen plats utan filter. */}
+      <div className={cn('flex flex-wrap items-center gap-x-4', harFilter(val) && 'min-h-11')}>
         <p role="status" className="text-sm text-muted-foreground">
           {harFilter(val) && `Visar ${visas} av ${saker.length} saker.`}
         </p>
@@ -533,7 +530,7 @@ function Sakrad({ sak, vy, onAndra, onAndrad }: { sak: Forradssak; vy: Vy; onAnd
     sak.vikt_g === null ? (
       <span className="text-sm text-muted-foreground italic">
         <Prick />
-        vikt saknas
+        Ingen vikt
       </span>
     ) : (
       <span className="block text-right">

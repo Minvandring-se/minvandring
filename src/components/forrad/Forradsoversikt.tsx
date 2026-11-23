@@ -8,7 +8,7 @@ import { cn } from '@/lib/utils'
 /** Rubrikerna i korten bredvid listan. */
 const kortrubrik = 'text-[22px] sm:text-[22px]'
 
-/** Hela förrådet i den mörkgröna rutan: vikten stort, antal saker, hur många som är granskade och hur många som saknar vikt. */
+/** Hela förrådet i den mörkgröna rutan: vikten stort, antal saker, hur många som är granskade och hur många som är utan vikt. */
 export function HelaForradet({ summa, granskade, className }: { summa: Forradssumma; granskade: number; className?: string }) {
   return (
     <section aria-labelledby="hela-forradet" className={cn('rounded-lg bg-yta-stark p-5 text-yta-stark-foreground sm:p-6', className)}>
@@ -24,7 +24,7 @@ export function HelaForradet({ summa, granskade, className }: { summa: Forradssu
             {granskade} med vikt granskad mot tillverkaren
           </li>
         )}
-        {summa.utanVikt > 0 && <li>{summa.utanVikt} saknar vikt</li>}
+        {summa.utanVikt > 0 && <li>{summa.utanVikt} utan vikt</li>}
       </ul>
     </section>
   )
