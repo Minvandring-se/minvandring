@@ -154,7 +154,7 @@ describe('tolkaEgenskap', () => {
 
 describe('underkategorier utan egna egenskaper', () => {
   it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar, kök och kokkärl har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'kastrull'])
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'kastrull', 'filter', 'rening', 'stavar', 'pannlampa'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
@@ -716,5 +716,128 @@ describe('egenskaper för kokkärl', () => {
   it('visar system och material med svenska namn', () => {
     const rader = visaEgenskaper('kastrull', { material: 'hardanodiserad_aluminium', system: 'trangia_28' })
     expect(rader.map((r) => r.varde)).toEqual(['Hårdanodiserad aluminium', 'Trangia 28 (Mini)'])
+  })
+})
+
+describe('egenskaper för pannlampor', () => {
+  const lampa = {
+    typ: 'pannlampa',
+    lumen_max: 450,
+    rackvidd_max_m: 90,
+    brinntid_hogsta_h: 4,
+    brinntid_max_h: 120,
+    batteri: 'hybrid',
+    laddbar: true,
+    laddport: 'usb-c',
+    rott_ljus: true,
+    laslage: true,
+    vattentalighet: 'ipx8',
+  }
+
+  it('godkänner en komplett lampa utan fel eller varningar', () => {
+    expect(valideraEgenskaper('pannlampa', lampa)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('markerar lumen, brinntid på högsta läget och batteri som de viktigaste', () => {
+    expect(egenskaperFor('pannlampa').filter((e) => e.viktig).map((e) => e.nyckel)).toEqual(['lumen_max', 'brinntid_hogsta_h', 'batteri'])
+  })
+
+  it('varnar men stoppar inte när något som behövs för jämförelser saknas', () => {
+    const { lumen_max: _l, batteri: _b, ...rest } = lampa
+    const r = valideraEgenskaper('pannlampa', rest)
+    expect(r.fel).toEqual([])
+    expect(r.varningar.map((v) => v.split(':')[0])).toEqual(['lumen_max', 'batteri'])
+  })
+
+  it('godkänner bara de sex batterivärdena och ger fel för andra', () => {
+    for (const batteri of ['inbyggt', 'aaa', 'aa', 'cr2032', 'hybrid', 'batteripack']) expect(valideraEgenskaper('pannlampa', { ...lampa, batteri }).fel).toEqual([])
+    for (const batteri of ['externt li-ion', '18650', 'r2']) expect(valideraEgenskaper('pannlampa', { ...lampa, batteri }).fel.map((f) => f.split(':')[0])).toEqual(['batteri'])
+  })
+
+  it('tolkar batteri och vattentålighet med stora bokstäver', () => {
+    const batteri = egenskaperFor('pannlampa').find((e) => e.nyckel === 'batteri')!
+    expect(tolkaEgenskap(batteri, 'AAA')).toEqual({ varde: 'aaa' })
+    expect(tolkaEgenskap(batteri, 'Hybrid')).toEqual({ varde: 'hybrid' })
+    const tal = egenskaperFor('pannlampa').find((e) => e.nyckel === 'vattentalighet')!
+    expect(tolkaEgenskap(tal, 'IPX8')).toEqual({ varde: 'ipx8' })
+  })
+
+  it('godkänner decimaler i brinntiden men inte en kortare tid på det svagaste läget än på högsta', () => {
+    expect(valideraEgenskaper('pannlampa', { ...lampa, brinntid_hogsta_h: 2.5 }).fel).toEqual([])
+    expect(valideraEgenskaper('pannlampa', { ...lampa, brinntid_hogsta_h: 90, brinntid_max_h: 50 }).fel.map((f) => f.split(':')[0])).toEqual(['brinntid_hogsta_h'])
+  })
+
+  it('visar värdena med svenska namn och enheter', () => {
+    const rader = visaEgenskaper('pannlampa', lampa)
+    expect(rader.find((r) => r.nyckel === 'lumen_max')).toMatchObject({ varde: '450 lumen', viktig: true })
+    expect(rader.find((r) => r.nyckel === 'brinntid_hogsta_h')?.varde).toBe('4 h')
+    expect(rader.find((r) => r.nyckel === 'batteri')?.varde).toBe('Hybrid')
+    expect(rader.find((r) => r.nyckel === 'laddport')?.varde).toBe('USB-C')
+    expect(rader.find((r) => r.nyckel === 'vattentalighet')?.varde).toBe('IPX8')
+  })
+})
+
+describe('egenskaper för vattenrening', () => {
+  const flaska = { typ: 'flaskfilter', kapacitet_l: 1000, flode_l_min: 2, porstorlek_mikron: 0.1, renar_bakterier: true, renar_virus: false, tal_frost: 'nej', passar_flaskgang: '42 mm' }
+  const tabletter = { typ: 'tabletter', kapacitet_l: 70, renar_bakterier: true, renar_virus: true, verkningstid_min: 30, tal_frost: 'ej_angivet' }
+
+  it('filter och reningstabletter har samma egenskaper', () => {
+    expect(egenskaperFor('filter')).toBe(egenskaperFor('rening'))
+  })
+
+  it('godkänner ett komplett filter och tabletter utan fel eller varningar', () => {
+    expect(valideraEgenskaper('filter', flaska)).toEqual({ fel: [], varningar: [] })
+    expect(valideraEgenskaper('rening', tabletter)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('markerar typ, kapacitet, flöde och om viruset renas som de viktigaste', () => {
+    expect(egenskaperFor('filter').filter((e) => e.viktig).map((e) => e.nyckel)).toEqual(['typ', 'kapacitet_l', 'flode_l_min', 'renar_virus'])
+  })
+
+  it('ger fel för en typ som inte finns och för värden utanför gränserna', () => {
+    expect(valideraEgenskaper('filter', { ...flaska, typ: 'sil' }).fel.map((f) => f.split(':')[0])).toEqual(['typ'])
+    expect(valideraEgenskaper('filter', { ...flaska, porstorlek_mikron: 0 }).fel.map((f) => f.split(':')[0])).toEqual(['porstorlek_mikron'])
+  })
+
+  it('tolkar flöde med både punkt och komma', () => {
+    const flode = egenskaperFor('filter').find((e) => e.nyckel === 'flode_l_min')!
+    expect(tolkaEgenskap(flode, '1.75')).toEqual({ varde: 1.75 })
+    expect(tolkaEgenskap(flode, '1,75')).toEqual({ varde: 1.75 })
+  })
+
+  it('visar typ med svenskt namn och flödet med decimalkomma', () => {
+    const rader = visaEgenskaper('filter', { typ: 'gravitationsfilter', flode_l_min: 1.75, tal_frost: 'ej_angivet' })
+    expect(rader.map((r) => r.varde)).toEqual(['Gravitationsfilter', '1,75 l/min', 'Inte angivet'])
+  })
+})
+
+describe('egenskaper för vandringsstavar', () => {
+  const stav = { typ: 'fallbar', langd_min_cm: 110, langd_max_cm: 125, packlangd_cm: 37, material: 'kol', lasning: 'klamlas', grepp: 'kork_och_skum', fjadring: false }
+
+  it('godkänner en komplett stav utan fel eller varningar', () => {
+    expect(valideraEgenskaper('stavar', stav)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('markerar typ, längd, material och låsning som de viktigaste', () => {
+    expect(egenskaperFor('stavar').filter((e) => e.viktig).map((e) => e.nyckel)).toEqual(['typ', 'langd_min_cm', 'langd_max_cm', 'material', 'lasning'])
+  })
+
+  it('ger fel när kortaste längden är större än längsta', () => {
+    expect(valideraEgenskaper('stavar', { ...stav, langd_min_cm: 130 }).fel.map((f) => f.split(':')[0])).toEqual(['langd_min_cm'])
+  })
+
+  it('låsning och grepp är enkla val', () => {
+    expect(valideraEgenskaper('stavar', { ...stav, lasning: 'FlickLock' }).fel.map((f) => f.split(':')[0])).toEqual(['lasning'])
+    expect(valideraEgenskaper('stavar', { ...stav, grepp: 'Trek Pro 245' }).fel.map((f) => f.split(':')[0])).toEqual(['grepp'])
+  })
+
+  it('visar längden som ett spann, och packlängden med decimalkomma', () => {
+    const rader = visaEgenskaper('stavar', { ...stav, packlangd_cm: 39.5 })
+    expect(rader.find((r) => r.nyckel === 'langd_min_cm')).toMatchObject({ etikett: 'Längd', varde: '110–125 cm', viktig: true })
+    expect(rader.find((r) => r.nyckel === 'langd_max_cm')).toBeUndefined()
+    expect(rader.find((r) => r.nyckel === 'packlangd_cm')?.varde).toBe('39,5 cm')
+    expect(rader.find((r) => r.nyckel === 'lasning')?.varde).toBe('Klämlås')
+    expect(rader.find((r) => r.nyckel === 'grepp')?.varde).toBe('Kork och skum')
+    expect(rader.find((r) => r.nyckel === 'fjadring')?.varde).toBe('Nej')
   })
 })
