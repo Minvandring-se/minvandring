@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arAgare, kanAndra, kanTaBort } from './roller'
+import { arAgare, kanAndra, kanAndraKostbehov, kanTaBort } from './roller'
 
 const agare = { id: '1', roll: 'owner' as const, userId: 'a' }
 const redigerare = { id: '2', roll: 'editor' as const, userId: 'b' }
@@ -31,5 +31,20 @@ describe('kanTaBort', () => {
 
   it('låter vem som helst lämna turen', () => {
     expect(kanTaBort('viewer', lasare, 'c', alla)).toBe(true)
+  })
+})
+
+describe('kanAndraKostbehov', () => {
+  it('låter var och en ändra sina egna, oavsett roll', () => {
+    expect(kanAndraKostbehov({ typ: 'person', userId: 'c' }, 'c')).toBe(true)
+  })
+
+  it('låter ingen ändra för någon annan, inte heller för personer utan konto', () => {
+    expect(kanAndraKostbehov({ typ: 'person', userId: 'b' }, 'a')).toBe(false)
+    expect(kanAndraKostbehov({ typ: 'person', userId: null }, 'a')).toBe(false)
+  })
+
+  it('hundar har inga kostbehov', () => {
+    expect(kanAndraKostbehov({ typ: 'hund', userId: null }, 'a')).toBe(false)
   })
 })

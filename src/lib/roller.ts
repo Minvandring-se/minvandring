@@ -10,11 +10,11 @@ export const ROLLNAMN: Record<Roll, string> = {
   viewer: 'Läsare',
 }
 
-// Bara det som går att göra i appen i dag. Packning och mat läggs till här när de delarna är byggda.
+// Bara det som går att göra i appen i dag. Packning läggs till här när den delen är byggd.
 export const ROLLBESKRIVNING: Record<Roll, string> = {
-  owner: 'Kan ändra allt, ändra roller och radera turen',
-  editor: 'Kan ändra turen och bjuda in andra',
-  viewer: 'Ser allt i turen',
+  owner: 'Kan ändra turen och matplanen, ändra roller och radera turen',
+  editor: 'Kan ändra turen och matplanen och bjuda in andra',
+  viewer: 'Kan se allt i turen och ange sina egna kostbehov',
 }
 
 export function kanAndra(roll: Roll | null | undefined): boolean {
@@ -37,4 +37,13 @@ export function kanTaBort(min: Roll | null, deltagare: DeltagareRoll, mittUserId
   if (arAgare(min)) return true
   if (kanAndra(min) && deltagare.userId === null) return true
   return deltagare.userId === mittUserId
+}
+
+/**
+ * Får den inloggade ändra deltagarens kostbehov? Samma regel som policyn på kostbehov: bara personen själv,
+ * eftersom uppgifterna bygger på personens eget samtycke. Ingen anger kostbehov åt någon annan, inte ens ägaren,
+ * och personer utan konto har inga förrän de har gått med.
+ */
+export function kanAndraKostbehov(d: { typ: 'person' | 'hund'; userId: string | null }, mittUserId: string): boolean {
+  return d.typ === 'person' && d.userId !== null && d.userId === mittUserId
 }

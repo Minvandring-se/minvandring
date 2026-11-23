@@ -1,3 +1,4 @@
+import type { Allergen } from './kost'
 import type { Roll } from './roller'
 import type { Typ } from './vikt'
 
@@ -86,4 +87,91 @@ export interface DeltagareRad {
   typ: 'person' | 'hund'
   roll: Roll
   user_id: string | null
+}
+
+/** Måltiderna i matplanen, som de står i maltider.maltid. */
+export type Maltid = 'frukost' | 'lunch' | 'middag' | 'mellanmal'
+
+/** Vilken måltid en påse i matkatalogen är gjord för. */
+export type Katalogmaltid = 'frukost' | 'lunch_middag' | 'dessert' | 'mellanmal'
+
+/** En påse i matkatalogen. Näringen gäller hela påsen. Tomma kostval och allergener betyder okänt. */
+export interface Matprodukt {
+  id: string
+  marke: string
+  namn: string
+  maltid: Katalogmaltid
+  torkning: 'frystorkad' | 'lufttorkad' | null
+  vikt_torr_g: number
+  portioner: number
+  kcal: number
+  protein_g: number | null
+  fett_g: number | null
+  kolhydrater_g: number | null
+  vatten_ml: number | null
+  tillagning_vatten: 'varmt' | 'kallt' | 'varmt_eller_kallt' | 'inget' | null
+  tillagning_min: number | null
+  vegetarisk: boolean | null
+  vegansk: boolean | null
+  glutenfri: boolean | null
+  laktosfri: boolean | null
+  allergener: Allergen[] | null
+  /** Kan innehålla spår av. */
+  spar: Allergen[] | null
+  pris_sek_ca: number | null
+  /** Butikens produktsida när priset kommer från en butik. */
+  pris_kalla: string | null
+  kalla: string
+  kontrollerad: string | null
+}
+
+/** En rätt i turen: en egen rätt med ingredienser, eller en påse ur katalogen (matprodukt_id). */
+export interface Ratt {
+  id: string
+  namn: string
+  matprodukt_id: string | null
+  /** Bara för påsar. Egna rätter har ansvarig och klart på varorna. */
+  ansvarig: string | null
+  klart: boolean
+}
+
+/** En vara i turen. Ingår i egna rätter och står i inköpslistan. */
+export interface Vara {
+  id: string
+  namn: string
+  kcal_per_100g: number | null
+  protein_per_100g: number | null
+  /** Mängd utöver recepten, till exempel kaffe. */
+  extra_g: number
+  varifran: 'kopa' | 'hemifran' | null
+  ansvarig: string | null
+  klart: boolean
+}
+
+export interface Ingrediens {
+  id: string
+  ratt_id: string
+  vara_id: string
+  gram_per_portion: number
+}
+
+/** En rätt i en måltid en viss dag. En måltid kan ha flera rätter. */
+export interface Maltidsrad {
+  id: string
+  dag: number
+  maltid: Maltid
+  ratt_id: string
+  sortering: number
+}
+
+/** En deltagares kostbehov, som raden ser ut i kostbehov. */
+export interface Kostbehov {
+  deltagare_id: string
+  vegetarisk: boolean
+  vegansk: boolean
+  glutenfri: boolean
+  laktosfri: boolean
+  utan: Allergen[]
+  /** När personen samtyckte till att uppgifterna sparas och visas för deltagarna i turen. */
+  samtycke_tid: string
 }

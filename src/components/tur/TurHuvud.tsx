@@ -113,7 +113,7 @@ export function TurHuvud({ tur, deltagare, minRoll }: { tur: Tur; deltagare: Del
       </section>
 
       {/*
-        Flikarna. Bara Översikt är byggd, de andra visar vad de blir med "Kommer snart".
+        Flikarna. Översikt och Mat är byggda, de andra visar vad de blir med "Kommer snart".
         Flikarna byter del utan att lägga till ett steg i historiken, så att bakåt alltid leder ut ur turen.
         I mobil är de runda knappar i en rad som går att svepa, på dator flikar med en rostfärgad linje under den aktiva.
       */}

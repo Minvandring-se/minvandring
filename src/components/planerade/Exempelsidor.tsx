@@ -1,40 +1,10 @@
 import { ClipboardList, ImageIcon, UserPlus } from 'lucide-react'
 import { Namnbricka } from '@/components/app/Namnbricka'
-import { DAGBOK, KOMPISAR, LARDOMAR, MALLAR, RATTER } from '@/lib/exempeldata'
+import { DAGBOK, KOMPISAR, LARDOMAR, MALLAR } from '@/lib/exempeldata'
 
 // Exemplen på sidorna i menyn som inte är byggda än. De visas inerta under "Kommer snart" (PlaneradSida).
 
 const kort = 'rounded-lg border border-border bg-card'
-
-/** Matplanering: era rätter med energi och vikt per portion. */
-export function Matexempel() {
-  return (
-    <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
-      {RATTER.map((r) => (
-        <li key={r.namn} className={`${kort} flex flex-col gap-3 p-4`}>
-          <div>
-            <p className="text-xs font-semibold text-muted-foreground">{r.maltid}</p>
-            <p className="font-heading text-lg font-semibold">{r.namn}</p>
-          </div>
-          <dl className="mt-auto flex flex-wrap gap-x-6 gap-y-2 text-sm">
-            <div>
-              <dt className="text-muted-foreground">Per portion</dt>
-              <dd className="font-semibold tabular-nums">{r.kcal} kcal</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Vikt</dt>
-              <dd className="font-semibold tabular-nums">{r.gram} g</dd>
-            </div>
-            <div>
-              <dt className="text-muted-foreground">Per 100 g</dt>
-              <dd className="font-semibold tabular-nums">{r.kcalPer100g} kcal</dd>
-            </div>
-          </dl>
-        </li>
-      ))}
-    </ul>
-  )
-}
 
 /** Packlistor och mallar: några mallar att starta en tur från. */
 export function Mallexempel() {

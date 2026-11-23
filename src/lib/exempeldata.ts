@@ -151,15 +151,6 @@ export const STATISTIK = {
   ],
 }
 
-/** Matplanering: era egna rätter med energi och vikt per portion. */
-export const RATTER: { namn: string; maltid: string; kcal: number; gram: number; kcalPer100g: number }[] = [
-  { namn: 'Havregrynsgröt med nötter och russin', maltid: 'Frukost', kcal: 620, gram: 140, kcalPer100g: 443 },
-  { namn: 'Wraps med ost och salami', maltid: 'Lunch', kcal: 650, gram: 160, kcalPer100g: 406 },
-  { namn: 'Pasta med soltorkade tomater', maltid: 'Middag', kcal: 780, gram: 180, kcalPer100g: 433 },
-  { namn: 'Linsgryta med kokosmjölk', maltid: 'Middag', kcal: 710, gram: 170, kcalPer100g: 418 },
-  { namn: 'Chokladmousse', maltid: 'Efterrätt', kcal: 420, gram: 90, kcalPer100g: 467 },
-]
-
 /** Packlistor och mallar: färdiga mallar och era egna från tidigare turer. */
 export const MALLAR: { namn: string; fran: string; saker: number; basvikt: string }[] = [
   { namn: 'Fjälltur sommar', fran: 'Färdig mall', saker: 46, basvikt: '7,8 kg' },

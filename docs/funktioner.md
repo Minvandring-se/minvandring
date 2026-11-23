@@ -9,7 +9,7 @@ Status:
 - **Senare**: en egen modul längre fram.
 - **Idé**: inte bestämt.
 
-Det som inte finns visas i turens översikt och på sidorna i menyn (Matplanering, Packlistor och mallar, Dagbok, Kom ihåg till nästa, Statistik och Vandringskompisar) som det kommer att se ut, med etiketten ”Kommer snart”. Exempelinnehållet ligger i `src/lib/exempeldata.ts` och tas bort när modulen byggs på riktigt.
+Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor och mallar, Dagbok, Kom ihåg till nästa, Statistik och Vandringskompisar) som det kommer att se ut, med etiketten ”Kommer snart”. Exempelinnehållet ligger i `src/lib/exempeldata.ts` och tas bort när modulen byggs på riktigt.
 
 ## Turen
 
@@ -50,11 +50,17 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Matplanerin
 
 | Funktion | Status |
 |---|---|
-| Matplan per dag | Nästa (P1) |
-| Inköpslista | Nästa (P1) |
-| Kcal och gram per person och dag | Senare |
+| Matplan per dag, med flera rätter per måltid | Finns |
+| Egna rätter med ingredienser | Finns |
+| Matkatalog med frystorkade och lufttorkade påsar | Finns, fylls på med data från Astra |
+| Inköpslista med ansvarig | Finns |
+| Kcal, protein och matvikt per person och dag | Finns |
+| Kostbehov och allergier per deltagare, med samtycke | Finns |
+| Varning när en påse inte passar någon i gruppen | Finns |
+| Kostinformation för egna rätter | Senare |
+| Eget matförråd (påsar hemma) | Senare |
+| Recept att dela mellan turer | Senare |
 | Proviantering i STF-stugor | Senare |
-| Specialkost och allergier | Senare |
 
 ## Gruppen
 
