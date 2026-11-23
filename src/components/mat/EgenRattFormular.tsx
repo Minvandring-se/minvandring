@@ -4,12 +4,40 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formateraVikt } from '@/lib/forrad'
 import { formateraKcal, MAX_RATTNAMN, naringForRader, tolkaRattformular, type Ingrediensfalt, type TolkadIngrediens } from '@/lib/mat'
+import { raderTillFalt } from '@/lib/recept'
 import type { Vara } from '@/lib/typer'
 
 const TOM_RAD: Ingrediensfalt = { vara: '', gram: '', kcal: '', protein: '' }
 
-/** Fälten för en vara som redan finns i turen, så att kcal och protein fylls i när man väljer den. */
-function faltForVara(vara: Vara, gram = ''): Ingrediensfalt {
+/** En vara som föreslås, med kcal och protein som fylls i när man väljer den. */
+type Forslag = Pick<Vara, 'namn' | 'kcal_per_100g' | 'protein_per_100g'>
+
+/** Texterna som skiljer en rätt i en tur från ett eget recept. */
+const TEXTER = {
+  ratt: {
+    namn: 'Rättens namn',
+    nySpara: 'Spara och lägg till i måltiden',
+    sparaFel: 'Det gick inte att spara rätten. Kontrollera uppkopplingen och att ingen annan rätt i turen heter likadant.',
+    raderaFel: 'Det gick inte att radera rätten. Kontrollera uppkopplingen och försök igen.',
+    raderaFraga: 'Rätten raderas och tas bort ur alla måltider i turen. Varor som bara den använde raderas också. Det går inte att få tillbaka.',
+    radera: 'Radera rätten',
+    raderaJa: 'Ja, radera rätten',
+    raderaNej: 'Nej, behåll rätten',
+  },
+  recept: {
+    namn: 'Receptets namn',
+    nySpara: 'Spara receptet',
+    sparaFel: 'Det gick inte att spara receptet. Kontrollera uppkopplingen och att du inte redan har ett recept som heter likadant.',
+    raderaFel: 'Det gick inte att radera receptet. Kontrollera uppkopplingen och försök igen.',
+    raderaFraga: 'Receptet raderas. Turer där det redan ligger påverkas inte. Det går inte att få tillbaka.',
+    radera: 'Radera receptet',
+    raderaJa: 'Ja, radera receptet',
+    raderaNej: 'Nej, behåll receptet',
+  },
+} as const
+
+/** Fälten för en vara som föreslås, så att kcal och protein fylls i när man väljer den. */
+function faltForVara(vara: Forslag, gram = ''): Ingrediensfalt {
   return {
     vara: vara.namn,
     gram,
@@ -19,10 +47,11 @@ function faltForVara(vara: Vara, gram = ''): Ingrediensfalt {
 }
 
 /**
- * Formuläret för en egen rätt: namn och ingredienser med gram per portion, kcal och protein per 100 g.
- * Visar energin och vikten per portion medan man skriver. Varor som redan finns i turen föreslås.
+ * Formuläret för en egen rätt eller ett eget recept: namn och ingredienser med gram per portion, kcal och protein
+ * per 100 g. Visar energin och vikten per portion medan man skriver. Varor som redan finns föreslås.
  */
 export function EgenRattFormular({
+  typ = 'ratt',
   ny,
   forsta,
   varor,
@@ -30,19 +59,22 @@ export function EgenRattFormular({
   onAvbryt,
   onTaBort,
 }: {
-  /** En ny rätt läggs i måltiden när den sparas. */
+  typ?: 'ratt' | 'recept'
+  /** En ny rätt läggs i måltiden när den sparas. Ett nytt recept sparas bara. */
   ny: boolean
-  forsta?: { namn: string; rader: { vara: Vara; gram: number }[] }
-  varor: readonly Vara[]
+  forsta?: { namn: string; rader: readonly TolkadIngrediens[] }
+  /** Varor som föreslås: turens varor, eller varorna i ens recept. */
+  varor: readonly Forslag[]
   onSpara: (namn: string, rader: TolkadIngrediens[]) => Promise<boolean>
   onAvbryt: () => void
-  /** Finns när en befintlig rätt ändras. Tar bort rätten ur turen. */
+  /** Finns när en befintlig rätt eller ett befintligt recept ändras. */
   onTaBort?: () => Promise<boolean>
 }) {
   const id = useId()
+  const t = TEXTER[typ]
   const [namn, setNamn] = useState(forsta?.namn ?? '')
   const [falt, setFalt] = useState<Ingrediensfalt[]>(() =>
-    forsta?.rader.length ? forsta.rader.map((r) => faltForVara(r.vara, String(r.gram))) : [{ ...TOM_RAD }],
+    forsta?.rader.length ? raderTillFalt(forsta.rader) : [{ ...TOM_RAD }],
   )
   const [fel, setFel] = useState<string | null>(null)
   const [sparar, setSparar] = useState(false)
@@ -56,7 +88,7 @@ export function EgenRattFormular({
     setSparar(true)
     const ok = await onTaBort()
     setSparar(false)
-    if (!ok) setFel('Det gick inte att radera rätten. Kontrollera uppkopplingen och försök igen.')
+    if (!ok) setFel(t.raderaFel)
   }
 
   const tolkat = tolkaRattformular(namn || 'namn', falt)
@@ -86,14 +118,14 @@ export function EgenRattFormular({
     setSparar(true)
     const ok = await onSpara(svar.namn, svar.rader)
     setSparar(false)
-    if (!ok) setFel('Det gick inte att spara rätten. Kontrollera uppkopplingen och att ingen annan rätt i turen heter likadant. Försök sedan igen.')
+    if (!ok) setFel(t.sparaFel)
   }
 
   return (
     <form onSubmit={spara} noValidate className="space-y-5">
       <div className="space-y-1.5">
         <label htmlFor={`${id}-namn`} className="text-sm font-medium">
-          Rättens namn
+          {t.namn}
         </label>
         <Input id={`${id}-namn`} data-autofokus value={namn} maxLength={MAX_RATTNAMN} onChange={(e) => setNamn(e.target.value)} placeholder="Till exempel Gröt med russin" />
       </div>
@@ -102,7 +134,7 @@ export function EgenRattFormular({
         <legend className="text-sm font-medium">Ingredienser per portion</legend>
         <datalist id={`${id}-varor`}>
           {varor.map((v) => (
-            <option key={v.id} value={v.namn} />
+            <option key={v.namn} value={v.namn} />
           ))}
         </datalist>
         {falt.map((rad, i) => (
@@ -161,7 +193,7 @@ export function EgenRattFormular({
 
       <div className="flex flex-wrap gap-2">
         <Button type="submit" disabled={sparar}>
-          {sparar ? 'Sparar …' : ny ? 'Spara och lägg till i måltiden' : 'Spara ändringarna'}
+          {sparar ? 'Sparar …' : ny ? t.nySpara : 'Spara ändringarna'}
         </Button>
         <Button type="button" variant="outline" onClick={onAvbryt}>
           Avbryt
@@ -171,17 +203,15 @@ export function EgenRattFormular({
       {onTaBort && (
         <div className="space-y-2 border-t border-border pt-4">
           {sakerPa && (
-            <p className="text-sm">
-              Rätten raderas och tas bort ur alla måltider i turen. Varor som bara den använde raderas också. Det går inte att få tillbaka.
-            </p>
+            <p className="text-sm">{t.raderaFraga}</p>
           )}
           <div className="flex flex-wrap gap-2">
             <Button type="button" variant="ghost" className="text-destructive" disabled={sparar} onClick={taBort}>
-              {sakerPa ? 'Ja, radera rätten' : 'Radera rätten'}
+              {sakerPa ? t.raderaJa : t.radera}
             </Button>
             {sakerPa && (
               <Button type="button" variant="outline" disabled={sparar} onClick={() => setSakerPa(false)}>
-                Nej, behåll rätten
+                {t.raderaNej}
               </Button>
             )}
           </div>

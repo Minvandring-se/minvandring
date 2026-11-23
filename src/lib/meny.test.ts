@@ -60,14 +60,16 @@ describe('aktivSida och flikAktiv', () => {
     expect(aktivSida('/okand')).toBeNull()
   })
 
-  it('delarna av Matplanering hör till Matplanering, och fliken Mat är aktiv på alla tre', () => {
+  it('delarna av Matplanering hör till Matplanering, och fliken Mat är aktiv på alla', () => {
     expect(UNDERSIDOR.matplanering!.map((u) => [u.namn, u.till])).toEqual([
       ['Mina matplaner', '/matplanering'],
       ['Matkatalog', '/matplanering/katalog'],
+      ['Recept', '/matplanering/recept'],
       ['Skafferi', '/matplanering/skafferi'],
+      ['Tips', '/matplanering/tips'],
     ])
     const mat = FLIKAR.find((f) => f.namn === 'Mat')!
-    for (const adress of ['/matplanering', '/matplanering/katalog', '/matplanering/skafferi/']) {
+    for (const adress of ['/matplanering', '/matplanering/katalog', '/matplanering/recept', '/matplanering/skafferi/', '/matplanering/tips']) {
       expect(aktivSida(adress)).toBe('matplanering')
       expect(flikAktiv(mat, aktivSida(adress))).toBe(true)
     }

@@ -26,6 +26,8 @@ const Installningar = lazy(() => import('@/pages/Installningar').then((m) => ({ 
 const Matplanering = lazy(() => import('@/pages/Matplanering').then((m) => ({ default: m.Matplanering })))
 const Matkatalog = lazy(() => import('@/pages/Matkatalog').then((m) => ({ default: m.Matkatalog })))
 const Skafferi = lazy(() => import('@/pages/Skafferi').then((m) => ({ default: m.Skafferi })))
+const Recept = lazy(() => import('@/pages/Recept').then((m) => ({ default: m.Recept })))
+const Mattips = lazy(() => import('@/pages/Mattips').then((m) => ({ default: m.Mattips })))
 const PlaneradSida = lazy(() => import('@/pages/PlaneradSida').then((m) => ({ default: m.PlaneradSida })))
 
 /** Sidorna i menyn som inte är byggda än. De visar vad sidan blir, med "Kommer snart". */
@@ -83,6 +85,8 @@ export default function App() {
           <Route path="/matplanering" element={<Matplanering />} />
           <Route path="/matplanering/katalog" element={<Matkatalog />} />
           <Route path="/matplanering/skafferi" element={<Skafferi />} />
+          <Route path="/matplanering/recept" element={<Recept />} />
+          <Route path="/matplanering/tips" element={<Mattips />} />
           {PLANERADE.map((sida) => (
             <Route key={sida} path={`/${sida}`} element={<PlaneradSida key={sida} sida={sida} />} />
           ))}

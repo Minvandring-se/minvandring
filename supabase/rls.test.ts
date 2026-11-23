@@ -1995,3 +1995,167 @@ describe('skafferiet', () => {
     expect((await db.query('select 1 from public.matfavoriter where user_id = $1', [ULLA])).rows).toHaveLength(0)
   })
 })
+describe('egna recept', () => {
+  // Egna användare: Vera och Wilma delar en tur, Xenia tas bort på slutet.
+  const VERA = '00000000-0000-0000-0000-000000000041'
+  const WILMA = '00000000-0000-0000-0000-000000000042'
+  const XENIA = '00000000-0000-0000-0000-000000000043'
+  let verasRecept: string
+  let verasRad: string
+
+  const nyttRecept = async (vem: string, namn: string) =>
+    (await som(vem, (tx) => tx.query<{ id: string }>('insert into public.recept (namn) values ($1) returning id', [namn]))).rows[0].id
+
+  const nyRad = async (vem: string, recept: string, vara: string) =>
+    (
+      await som(vem, (tx) =>
+        tx.query<{ id: string }>(
+          'insert into public.receptrader (recept_id, vara, gram_per_portion, kcal_per_100g, protein_per_100g) values ($1, $2, 90, 380, 12.5) returning id',
+          [recept, vara],
+        ),
+      )
+    ).rows[0].id
+
+  beforeAll(async () => {
+    await db.query(`insert into auth.users (id, email) values ('${VERA}', 'vera@exempel.se'), ('${WILMA}', 'wilma@exempel.se'), ('${XENIA}', 'xenia@exempel.se')`)
+    // Vera och Wilma delar en tur. Det ska inte ge Wilma någon åtkomst till Veras recept.
+    const tur = await skapaTur(VERA, 'Tur med recept')
+    const kod = await kodFor(tur)
+    await som(WILMA, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    verasRecept = await nyttRecept(VERA, 'Veras gryta')
+    verasRad = await nyRad(VERA, verasRecept, 'Couscous')
+  })
+
+  it('receptet och raderna blir ens egna utan att user_id anges, och man ser dem själv', async () => {
+    const r = await som(VERA, (tx) => tx.query<{ namn: string; user_id: string }>('select namn, user_id from public.recept'))
+    expect(r.rows).toEqual([{ namn: 'Veras gryta', user_id: VERA }])
+    const rader = await som(VERA, (tx) => tx.query<{ vara: string; user_id: string }>('select vara, user_id from public.receptrader'))
+    expect(rader.rows).toEqual([{ vara: 'Couscous', user_id: VERA }])
+  })
+
+  it('ägaren kan ändra och ta bort recept och rader', async () => {
+    const id = await nyttRecept(VERA, 'Tillfälligt')
+    const rad = await nyRad(VERA, id, 'Havregryn')
+    expect((await som(VERA, (tx) => tx.query('update public.receptrader set gram_per_portion = 100 where id = $1', [rad]))).affectedRows).toBe(1)
+    expect((await som(VERA, (tx) => tx.query(`update public.recept set namn = 'Tillfälligt nytt' where id = $1`, [id]))).affectedRows).toBe(1)
+    expect((await som(VERA, (tx) => tx.query('delete from public.receptrader where id = $1', [rad]))).affectedRows).toBe(1)
+    expect((await som(VERA, (tx) => tx.query('delete from public.recept where id = $1', [id]))).affectedRows).toBe(1)
+  })
+
+  it('raderna försvinner med receptet', async () => {
+    const id = await nyttRecept(VERA, 'Försvinner')
+    await nyRad(VERA, id, 'Ris')
+    await som(VERA, (tx) => tx.query('delete from public.recept where id = $1', [id]))
+    expect((await db.query('select 1 from public.receptrader where recept_id = $1', [id])).rows).toHaveLength(0)
+  })
+
+  it('någon annan ser inte recepten, inte ens i samma tur', async () => {
+    for (const vem of [WILMA, C]) {
+      expect((await som(vem, (tx) => tx.query('select id from public.recept'))).rows).toHaveLength(0)
+      expect((await som(vem, (tx) => tx.query('select id from public.receptrader'))).rows).toHaveLength(0)
+    }
+  })
+
+  it('någon annan kan inte ändra eller ta bort recepten', async () => {
+    expect((await som(WILMA, (tx) => tx.query(`update public.recept set namn = 'Wilmas nu' where id = $1`, [verasRecept]))).affectedRows).toBe(0)
+    expect((await som(WILMA, (tx) => tx.query('update public.receptrader set gram_per_portion = 1 where id = $1', [verasRad]))).affectedRows).toBe(0)
+    expect((await som(WILMA, (tx) => tx.query('delete from public.receptrader where id = $1', [verasRad]))).affectedRows).toBe(0)
+    expect((await som(WILMA, (tx) => tx.query('delete from public.recept where id = $1', [verasRecept]))).affectedRows).toBe(0)
+    const r = await db.query<{ namn: string }>('select namn from public.recept where id = $1', [verasRecept])
+    expect(r.rows).toEqual([{ namn: 'Veras gryta' }])
+  })
+
+  it('man kan inte lägga något hos någon annan eller ge bort sina recept', async () => {
+    const rls = /row-level security/
+    await expect(som(WILMA, (tx) => tx.query(`insert into public.recept (namn, user_id) values ('Smugglat', '${VERA}')`))).rejects.toThrow(rls)
+    // En rad i någon annans recept: med sitt eget user_id stoppas den av nyckeln, med ägarens av RLS.
+    // Felet är detsamma oavsett om varan finns i receptet, så att det inte avslöjar något om innehållet.
+    for (const vara of ['Smuggel', 'Couscous', 'COUSCOUS'])
+      await expect(
+        som(WILMA, (tx) => tx.query('insert into public.receptrader (recept_id, vara, gram_per_portion) values ($1, $2, 10)', [verasRecept, vara])),
+      ).rejects.toMatchObject({ code: '23503' })
+    await expect(
+      som(WILMA, (tx) => tx.query(`insert into public.receptrader (recept_id, user_id, vara, gram_per_portion) values ($1, '${VERA}', 'Smuggel', 10)`, [verasRecept])),
+    ).rejects.toThrow(rls)
+    await expect(som(VERA, (tx) => tx.query(`update public.recept set user_id = '${WILMA}' where id = $1`, [verasRecept]))).rejects.toThrow(rls)
+    await expect(som(VERA, (tx) => tx.query(`update public.receptrader set user_id = '${WILMA}' where id = $1`, [verasRad]))).rejects.toThrow(rls)
+    // En egen rad kan inte flyttas in i någon annans recept.
+    const wilmas = await nyttRecept(WILMA, 'Wilmas soppa')
+    await expect(som(VERA, (tx) => tx.query('update public.receptrader set recept_id = $1 where id = $2', [wilmas, verasRad]))).rejects.toMatchObject({ code: '23503' })
+    const r = await db.query<{ recept_id: string; user_id: string }>('select recept_id, user_id from public.receptrader where id = $1', [verasRad])
+    expect(r.rows).toEqual([{ recept_id: verasRecept, user_id: VERA }])
+  })
+
+  it('går inte att nå utan inloggning', async () => {
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.recept')))
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.receptrader')))
+    await forvantaFel(somAnon((tx) => tx.query(`insert into public.recept (namn, user_id) values ('Anonymt', '${VERA}')`)))
+    await forvantaFel(somAnon((tx) => tx.query('delete from public.receptrader')))
+    await forvantaFel(somAnon((tx) => tx.query(`update public.recept set namn = 'Anonymt'`)))
+    await forvantaFel(somAnon((tx) => tx.query('update public.receptrader set gram_per_portion = 1')))
+    await forvantaFel(somAnon((tx) => tx.query('delete from public.recept')))
+    await forvantaFel(somAnon((tx) => tx.query(`insert into public.receptrader (recept_id, user_id, vara, gram_per_portion) values ($1, '${VERA}', 'Anonym', 10)`, [verasRecept])))
+  })
+
+  it('någon annan kan inte läsa ett recept genom att ange id:t', async () => {
+    expect((await som(WILMA, (tx) => tx.query('select id from public.recept where id = $1', [verasRecept]))).rows).toHaveLength(0)
+    expect((await som(WILMA, (tx) => tx.query('select id from public.receptrader where recept_id = $1', [verasRecept]))).rows).toHaveLength(0)
+  })
+
+  it('har bara de avsedda rättigheterna: inget för anon', async () => {
+    const har = async (roll: string, tabell: string, rattighet: string) =>
+      (await db.query<{ ok: boolean }>('select has_table_privilege($1, $2, $3) as ok', [roll, tabell, rattighet])).rows[0].ok
+    for (const r of ['select', 'insert', 'update', 'delete'])
+      for (const t of ['public.recept', 'public.receptrader']) {
+        expect(await har('anon', t, r)).toBe(false)
+        expect(await har('authenticated', t, r)).toBe(true)
+      }
+  })
+
+  it('kräver namn, ett namn en gång per person, och gränserna från formuläret', async () => {
+    const unik = (p: Promise<unknown>) => expect(p).rejects.toMatchObject({ code: '23505' })
+    await forvantaFel(som(VERA, (tx) => tx.query(`insert into public.recept (namn) values ('  ')`)))
+    await forvantaFel(som(VERA, (tx) => tx.query('insert into public.recept (namn) values ($1)', ['x'.repeat(81)])))
+    await unik(som(VERA, (tx) => tx.query(`insert into public.recept (namn) values ('VERAS GRYTA')`)))
+    // Samma namn går bra för någon annan.
+    await nyttRecept(WILMA, 'Veras gryta')
+    const fel = (kolumner: string, varden: string) =>
+      forvantaFel(som(VERA, (tx) => tx.query(`insert into public.receptrader (recept_id, ${kolumner}) values ($1, ${varden})`, [verasRecept])))
+    await fel('vara, gram_per_portion', `' ', 10`)
+    await fel('vara, gram_per_portion', `'Noll', 0`)
+    await fel('vara, gram_per_portion', `'För mycket', 5001`)
+    await fel('vara, gram_per_portion, kcal_per_100g', `'Kcal', 10, 901`)
+    await fel('vara, gram_per_portion, protein_per_100g', `'Protein', 10, 100.1`)
+    await unik(som(VERA, (tx) => tx.query(`insert into public.receptrader (recept_id, vara, gram_per_portion) values ($1, 'COUSCOUS', 10)`, [verasRecept])))
+    // Mellanslag i början och slutet sparas inte, så samma namn går inte att få in två gånger.
+    await forvantaFel(som(VERA, (tx) => tx.query(`insert into public.recept (namn) values (' Veras gryta')`)))
+    await fel('vara, gram_per_portion', `'Couscous ', 10`)
+    await fel('vara, gram_per_portion', `'${'x'.repeat(81)}', 10`)
+    await fel('vara, gram_per_portion, kcal_per_100g', `'Minus kcal', 10, -1`)
+    await fel('vara, gram_per_portion, protein_per_100g', `'Minus protein', 10, -0.1`)
+    // Ett annat recept kan inte döpas om till ett namn man redan har, och en rad kan inte ändras till fel värde.
+    const annat = await nyttRecept(VERA, 'Veras soppa')
+    await unik(som(VERA, (tx) => tx.query(`update public.recept set namn = 'VERAS GRYTA' where id = $1`, [annat])))
+    await forvantaFel(som(VERA, (tx) => tx.query('update public.receptrader set gram_per_portion = 0 where id = $1', [verasRad])))
+  })
+
+  it('tar emot värdena på gränserna och tomma kcal och protein', async () => {
+    const id = await nyttRecept(VERA, 'x'.repeat(80))
+    const lagg = (vara: string, gram: number, kcal: number | null, protein: number | null) =>
+      som(VERA, (tx) =>
+        tx.query('insert into public.receptrader (recept_id, vara, gram_per_portion, kcal_per_100g, protein_per_100g) values ($1, $2, $3, $4, $5)', [id, vara, gram, kcal, protein]),
+      )
+    await lagg('y'.repeat(80), 1, 0, 0)
+    await lagg('Max', 5000, 900, 100)
+    await lagg('Okänd', 10, null, null)
+    expect((await som(VERA, (tx) => tx.query('select id from public.receptrader where recept_id = $1', [id]))).rows).toHaveLength(3)
+  })
+
+  it('recepten försvinner när kontot tas bort', async () => {
+    const id = await nyttRecept(XENIA, 'Xenias gröt')
+    await nyRad(XENIA, id, 'Havregryn')
+    await db.query('delete from auth.users where id = $1', [XENIA])
+    expect((await db.query('select 1 from public.recept where user_id = $1', [XENIA])).rows).toHaveLength(0)
+    expect((await db.query('select 1 from public.receptrader where user_id = $1', [XENIA])).rows).toHaveLength(0)
+  })
+})
