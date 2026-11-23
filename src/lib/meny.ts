@@ -36,7 +36,7 @@ export const SIDOR: Record<Sida, Menysida> = {
     namn: 'Matplanering',
     till: '/matplanering',
     byggd: true,
-    beskrivning: 'Matplaner, matkatalog och skafferi',
+    beskrivning: 'Matplaner, katalog, recept och tips',
     blir: '',
   },
   packlistor: {
@@ -112,7 +112,9 @@ export const UNDERSIDOR: Partial<Record<Sida, readonly Undersida[]>> = {
   matplanering: [
     { namn: 'Mina matplaner', till: '/matplanering' },
     { namn: 'Matkatalog', till: '/matplanering/katalog' },
+    { namn: 'Recept', till: '/matplanering/recept' },
     { namn: 'Skafferi', till: '/matplanering/skafferi' },
+    { namn: 'Tips', till: '/matplanering/tips' },
   ],
 }
 

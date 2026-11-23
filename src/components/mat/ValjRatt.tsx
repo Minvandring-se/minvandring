@@ -1,4 +1,4 @@
-import { Pencil, Search, Star } from 'lucide-react'
+import { BookmarkPlus, Pencil, Search, Star } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
 import { EgenRattFormular } from '@/components/mat/EgenRattFormular'
 import { Kostfilterval } from '@/components/mat/Kostfilterval'
@@ -6,11 +6,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Panel } from '@/components/ui/panel'
 import { useMatkatalog } from '@/hooks/useMatplan'
+import type { Receptlage } from '@/hooks/useRecept'
 import { formateraVikt } from '@/lib/forrad'
 import { filterForGruppen, passarFilter, varningar, type Behov, type Kostfilter } from '@/lib/kost'
-import { formateraKcal, kcalPer100g, PASAR_TILL, pasdetaljer, pasnamn, type Naring, type TolkadIngrediens } from '@/lib/mat'
+import { formateraKcal, kcalPer100g, naringForRader, PASAR_TILL, pasdetaljer, pasnamn, type Naring, type TolkadIngrediens } from '@/lib/mat'
+import { rattTillRader, receptMedNamn, receptTillRader } from '@/lib/recept'
 import { skafferietForst } from '@/lib/skafferi'
-import type { Ingrediens, Maltid, Matprodukt, Ratt, Vara } from '@/lib/typer'
+import type { Ingrediens, Maltid, Matprodukt, Ratt, Recept, Vara } from '@/lib/typer'
 import { cn } from '@/lib/utils'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
@@ -26,9 +28,17 @@ const TOMT_SKAFFERI: EgetSkafferi = { favoriter: new Set(), hemma: new Map() }
 
 type Vy = { typ: 'lista' } | { typ: 'ny' } | { typ: 'andra'; ratt: Ratt }
 
+type Flik = 'pasar' | 'egna' | 'recept'
+
+const FLIKAR: readonly (readonly [Flik, string])[] = [
+  ['pasar', 'Påsar'],
+  ['egna', 'Egna rätter'],
+  ['recept', 'Recept'],
+]
+
 /**
- * Panelen där man väljer en rätt till en måltid: en påse ur matkatalogen eller en av turens egna rätter.
- * Påsarna är förfiltrerade efter gruppens kostbehov, och filtret går att ändra.
+ * Panelen där man väljer en rätt till en måltid: en påse ur matkatalogen, en av turens egna rätter eller ett av
+ * ens recept, som kopieras till turen. Påsarna är förfiltrerade efter gruppens kostbehov, och filtret går att ändra.
  */
 export function ValjRatt({
   rubrik,
@@ -39,7 +49,10 @@ export function ValjRatt({
   varor,
   behov,
   skafferi = TOMT_SKAFFERI,
+  recept = [],
   onValjPase,
+  onValjRecept,
+  onSparaSomRecept,
   onValjRatt,
   onSparaRatt,
   onTaBortRatt,
@@ -54,7 +67,13 @@ export function ValjRatt({
   varor: readonly Vara[]
   behov: readonly Behov[]
   skafferi?: EgetSkafferi
+  /** Ens egna recept. */
+  recept?: Receptlage
   onValjPase: (p: Matprodukt) => Promise<boolean>
+  /** Kopierar receptet till turen, eller använder en rätt med samma ingredienser, och lägger det i måltiden. */
+  onValjRecept?: (r: Recept) => Promise<boolean>
+  /** Sparar en egen rätt i turen som recept, eller uppdaterar receptet med samma namn. */
+  onSparaSomRecept?: (namn: string, rader: TolkadIngrediens[]) => Promise<boolean>
   onValjRatt: (rattId: string) => Promise<boolean>
   /** Sparar en ny eller ändrad egen rätt. En ny läggs också i måltiden. */
   onSparaRatt: (rattId: string | null, namn: string, rader: TolkadIngrediens[]) => Promise<boolean>
@@ -63,7 +82,7 @@ export function ValjRatt({
   onStang: () => void
 }) {
   const id = useId()
-  const [flik, setFlik] = useState<'pasar' | 'egna'>('pasar')
+  const [flik, setFlik] = useState<Flik>('pasar')
   const [vy, setVy] = useState<Vy>({ typ: 'lista' })
   const [fel, setFel] = useState(false)
   const [valjer, setValjer] = useState(false)
@@ -80,19 +99,17 @@ export function ValjRatt({
 
   if (vy.typ !== 'lista') {
     const ratt = vy.typ === 'andra' ? vy.ratt : null
-    const forsta = ratt
-      ? {
-          namn: ratt.namn,
-          rader: ingredienser
-            .filter((i) => i.ratt_id === ratt.id)
-            .flatMap((i) => {
-              const vara = varor.find((v) => v.id === i.vara_id)
-              return vara ? [{ vara, gram: i.gram_per_portion }] : []
-            }),
-        }
-      : undefined
+    const forsta = ratt ? { namn: ratt.namn, rader: rattTillRader(ratt.id, ingredienser, varor) } : undefined
     return (
       <Panel etikett={ratt ? `Ändra ${ratt.namn}` : 'Ny egen rätt'} onStang={onStang} rubrik={<h2 className="text-2xl">{ratt ? 'Ändra rätten' : 'Ny egen rätt'}</h2>}>
+        {ratt && forsta && forsta.rader.length > 0 && onSparaSomRecept && (
+          <SparaSomRecept
+            key={ratt.id}
+            namn={forsta.namn}
+            finns={Array.isArray(recept) && !!receptMedNamn(recept, forsta.namn)}
+            onSpara={() => onSparaSomRecept(forsta.namn, forsta.rader)}
+          />
+        )}
         <EgenRattFormular
           ny={!ratt}
           forsta={forsta}
@@ -130,12 +147,7 @@ export function ValjRatt({
     >
       <div className="space-y-4">
         <div role="tablist" aria-label="Typ av rätt" className="flex gap-2">
-          {(
-            [
-              ['pasar', 'Påsar'],
-              ['egna', 'Egna rätter'],
-            ] as const
-          ).map(([varde, text]) => (
+          {FLIKAR.map(([varde, text], i) => (
             <button
               key={varde}
               type="button"
@@ -148,7 +160,7 @@ export function ValjRatt({
               onKeyDown={(e) => {
                 if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
                 e.preventDefault()
-                const annan = varde === 'pasar' ? 'egna' : 'pasar'
+                const annan = FLIKAR[(i + (e.key === 'ArrowRight' ? 1 : FLIKAR.length - 1)) % FLIKAR.length][0]
                 setFlik(annan)
                 document.getElementById(`${id}-flik-${annan}`)?.focus()
               }}
@@ -172,6 +184,8 @@ export function ValjRatt({
         <div id={`${id}-innehall`} role="tabpanel" aria-labelledby={`${id}-flik-${flik}`}>
           {flik === 'pasar' ? (
             <Pasar maltid={maltid} behov={behov} skafferi={skafferi} valjer={valjer} onValj={(p) => valj(() => onValjPase(p))} />
+          ) : flik === 'recept' ? (
+            <Receptlista recept={recept} valjer={valjer} onValj={(x) => onValjRecept && valj(() => onValjRecept(x))} />
           ) : (
             <div className="space-y-4">
               <Button variant="outline" onClick={() => setVy({ typ: 'ny' })}>
@@ -318,5 +332,85 @@ function Pasrad({
         ))}
       </button>
     </li>
+  )
+}
+
+/** Knappen som sparar en egen rätt i turen som recept på kontot. Det som är sparat i turen blir receptet. */
+function SparaSomRecept({ namn, finns, onSpara }: { namn: string; finns: boolean; onSpara: () => Promise<boolean> }) {
+  const [lage, setLage] = useState<'vilar' | 'sparar' | 'sparat' | 'fel'>('vilar')
+  async function spara() {
+    setLage('sparar')
+    setLage((await onSpara()) ? 'sparat' : 'fel')
+  }
+  return (
+    <div className="mb-5 space-y-2 rounded-md bg-muted p-3">
+      <p className="text-sm">
+        {finns ? `Du har redan ett recept som heter ${namn}. Det uppdateras med den här rättens ingredienser.` : 'Spara rätten som recept, så kan du lägga in den i andra turer.'}
+      </p>
+      <Button variant="outline" disabled={lage === 'sparar'} onClick={spara}>
+        <BookmarkPlus className="size-4" aria-hidden />
+        {finns ? 'Uppdatera receptet' : 'Spara som recept'}
+      </Button>
+      <p aria-live="polite" className="text-sm">
+        {lage === 'sparat' && <span className="font-medium text-primary">Sparat i dina recept.</span>}
+        {lage === 'fel' && <span className="text-destructive">Det gick inte att spara receptet. Kontrollera uppkopplingen och försök igen.</span>}
+      </p>
+    </div>
+  )
+}
+
+/** Ens recept, med sökning. Ett tryck kopierar receptet till turen och lägger det i måltiden. */
+function Receptlista({ recept, valjer, onValj }: { recept: Receptlage; valjer: boolean; onValj: (r: Recept) => void }) {
+  const id = useId()
+  const [sok, setSok] = useState('')
+  if (recept === null) return <p role="status" className="text-muted-foreground">Hämtar dina recept …</p>
+  if (recept === 'fel')
+    return (
+      <p role="alert" className="text-destructive">
+        Det gick inte att hämta dina recept. Kontrollera uppkopplingen och försök igen.
+      </p>
+    )
+  if (recept.length === 0)
+    return (
+      <p className="text-muted-foreground">
+        Du har inga recept än. Skapa dem under Matplanering, Recept, eller spara en egen rätt som recept när du ändrar den.
+      </p>
+    )
+  const s = sok.trim().toLowerCase()
+  const traffar = recept.filter((r) => !s || r.namn.toLowerCase().includes(s))
+  return (
+    <div className="space-y-4">
+      <div>
+        <label htmlFor={`${id}-sok`} className="mb-1.5 block text-sm font-medium">
+          Sök bland dina recept
+        </label>
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-3 left-3 size-5 text-muted-foreground" aria-hidden />
+          <Input id={`${id}-sok`} type="search" className="pl-10" value={sok} onChange={(e) => setSok(e.target.value)} />
+        </div>
+      </div>
+      <p className="text-sm text-muted-foreground">Receptet kopieras till turen. Ändrar du receptet senare ändras inte turen.</p>
+      <ul className="divide-y divide-border">
+        {traffar.map((r) => {
+          const portion = naringForRader(receptTillRader(r))
+          return (
+            <li key={r.id} className="py-1">
+              <button
+                type="button"
+                disabled={valjer}
+                onClick={() => onValj(r)}
+                className={cn('min-h-11 w-full rounded-md px-2 py-2 text-left hover:bg-muted disabled:opacity-60', fokus)}
+              >
+                <span className="block font-medium break-words">{r.namn}</span>
+                <span className="block text-sm text-muted-foreground tabular-nums">
+                  {formateraKcal(portion.kcal)} per portion, {formateraVikt(portion.gram)}
+                </span>
+              </button>
+            </li>
+          )
+        })}
+      </ul>
+      {traffar.length === 0 && <p className="text-muted-foreground">Inget recept passar sökningen.</p>}
+    </div>
   )
 }

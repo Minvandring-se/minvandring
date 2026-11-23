@@ -11,11 +11,13 @@ import { ValjRatt } from '@/components/mat/ValjRatt'
 import { useTur } from '@/components/tur/turKontext'
 import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
+import { sparaRecept, useRecept } from '@/hooks/useRecept'
 import { useSkafferi } from '@/hooks/useSkafferi'
 import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
 import { dagssummor, inkopslista, MALTIDER, matdagar, matsummering, matviktTotalt, rattPerPortion, type Matdag as Dag } from '@/lib/mat'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
+import { receptbesked, receptMedNamn, receptTillRader, valForRecept } from '@/lib/recept'
 import { hemma } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import { turdelAdress } from '@/lib/turdelar'
@@ -76,6 +78,9 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
   const kanAndra = rollKanAndra(minRoll)
   const [valjer, setValjer] = useState<{ dag: Dag; maltid: Maltid } | null>(null)
   const [fel, setFel] = useState<string | null>(null)
+  // En kort text om vad som hände när ett recept lades i turen och namnet redan fanns.
+  const [besked, setBesked] = useState<string | null>(null)
+  const { recept, laddaOm: laddaOmRecept } = useRecept()
   // Ens eget skafferi. Om det inte går att hämta visas matplanen ändå, utan uppgifterna om vad man har hemma.
   const { skafferi } = useSkafferi()
   const egnaRader = useMemo(() => (skafferi && skafferi !== 'fel' ? skafferi.rader : []), [skafferi])
@@ -144,6 +149,9 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
           {fel}
         </p>
       )}
+      <p role="status" className={besked ? 'rounded-md bg-primary-soft px-4 py-3 text-sm' : 'sr-only'}>
+        {besked}
+      </p>
 
       <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
         {summor.map((summa) => (
@@ -154,7 +162,10 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
             ratter={ratter}
             behov={behov}
             kanAndra={kanAndra}
-            onLaggTill={(maltid) => setValjer({ dag: summa.dag, maltid })}
+            onLaggTill={(maltid) => {
+              setBesked(null)
+              setValjer({ dag: summa.dag, maltid })
+            }}
             onTaBort={taBort}
           />
         ))}
@@ -183,6 +194,30 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
           varor={plan.varor}
           behov={behov}
           skafferi={egetSkafferi}
+          recept={recept}
+          onValjRecept={async (r) => {
+            const rader = receptTillRader(r)
+            const val = valForRecept(r.namn, rader, plan.ratter, plan.ingredienser, plan.varor)
+            const plats = sortering(valjer.dag.dag, valjer.maltid)
+            let ok: boolean
+            if (val.typ === 'befintlig') ok = await laggIMaltid(tur.id, val.rattId, valjer.dag.dag, valjer.maltid, plats)
+            else {
+              const id = await sparaEgenRatt(tur.id, null, val.namn, rader, plan.varor)
+              ok = !!id && (await laggIMaltid(tur.id, id, valjer.dag.dag, valjer.maltid, plats))
+            }
+            if (ok) {
+              setBesked(receptbesked(val, r.namn))
+              setValjer(null)
+              await laddaOm()
+            }
+            return ok
+          }}
+          onSparaSomRecept={async (namn, rader) => {
+            const finns = Array.isArray(recept) ? receptMedNamn(recept, namn) : undefined
+            const id = await sparaRecept(finns?.id ?? null, finns?.namn ?? namn, rader)
+            if (id) await laddaOmRecept()
+            return !!id
+          }}
           onStang={() => setValjer(null)}
           onValjPase={async (pase) => {
             const befintlig = plan.ratter.find((r) => r.matprodukt_id === pase.id)

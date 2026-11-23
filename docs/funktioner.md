@@ -61,7 +61,10 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Kostinformation för egna rätter | Senare |
 | Skafferi: påsar hemma med antal och bäst före, och favoriter | Finns (`/matplanering/skafferi`), personligt |
 | Favoriter och det man har hemma först i Välj rätt, och "Köp 2 (du har 1 hemma)" i inköpslistan | Finns |
-| Recept att dela mellan turer | Senare |
+| Egna recept på kontot, att lägga in i vilken tur som helst (kopieras till turen) | Finns (`/matplanering/recept`), personligt |
+| Spara en egen rätt i en tur som recept | Finns |
+| Tips om mat med källor: energi, vatten och bränsle, packning, kcal per 100 g | Finns (`/matplanering/tips`) |
+| Dela recept med andra användare | Senare |
 | Proviantering i STF-stugor | Senare |
 
 ## Gruppen
