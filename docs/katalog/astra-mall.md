@@ -11,7 +11,7 @@ Formatet (kolumnerna) skiljer sig per kategori. Klistra in rätt block under "Fo
 | Plats | Tält och vindskydd | Sovsäckar och quilts | Liggunderlag | Ryggsäckar | Kök |
 |---|---|---|---|---|---|
 | {KATEGORI_BESKRIVNING} | tält, tarpar och vindsäckar som passar för vandring | sovsäckar och quilts | liggunderlag | vandringsryggsäckar och dagsryggsäckar för vandring | kök och brännare för vandring: toppmonterade gaskök, slangkök, systemkök, stormkök, spritkök, multibränslekök, vedkök och kök för fast bränsle |
-| {UTELAMNA} | biltält, taktält, campingtält, familjetält, glamping- och bomullstält, festtält, strandtält, popup-tält, isfiske- och bastutält, separata innertält och tillbehör. Riktmärke: tält tyngre än cirka 5 kg för två personer är oftast campingtält | campingsovsäckar, rektangulära täcken, sovsäckslakan, liners, resekuddar och tillbehör | luftmadrasser och bäddar för bil eller camping, tillbehör (reparationssatser, pumpar, lakan, kuddar) | vardags-, pendlar-, dator-, skol-, rese-, cykel-, löpar-, skid- och klätterryggsäckar, duffelväskor, midjeväskor, packpåsar, regnskydd och andra tillbehör | kök för gasolflaska (med slang och regulator), campingkök med två eller fler lågor, grillar, bordsspisar, gaspatroner och bränsle, lösa kastruller och kåsor, och tillbehör (vindskydd, patronstativ, tändare, reservdelar, brännare som säljs som reservdel). Stormkök med gasbrännare för skruvpatron (EN 417) ska med |
+| {UTELAMNA} | biltält, taktält, campingtält, familjetält, glamping- och bomullstält, festtält, strandtält, popup-tält, isfiske- och bastutält, separata innertält och tillbehör. Riktmärke: tält tyngre än cirka 5 kg för två personer är oftast campingtält | campingsovsäckar, rektangulära täcken, sovsäckslakan, liners, resekuddar och tillbehör | luftmadrasser och bäddar för bil eller camping, tillbehör (reparationssatser, pumpar, lakan, kuddar) | vardags-, pendlar-, dator-, skol-, rese-, cykel-, löpar-, skid- och klätterryggsäckar, duffelväskor, midjeväskor, packpåsar, regnskydd och andra tillbehör | kök för gasolflaska (med slang och regulator), campingkök med två eller fler lågor, grillar, bordsspisar, gaspatroner och bränsle, kåsor och muggar, och tillbehör (vindskydd, patronstativ, tändare, reservdelar, brännare som säljs som reservdel). Stormkök med gasbrännare för skruvpatron (EN 417) ska med |
 | {MINVIKTSREGEL} | tält och tarpar gäller: anger tillverkaren bara en minimivikt (utan pinnar, linor, lock) och ingen totalvikt, lämna ute produkten, även om butiken anger en vikt. | sovsäckar gäller: bara en minimivikt och ingen totalvikt betyder utelämnad. Bara en vikt utan packpåse går in i `packvikt_g` med kommentar. | liggunderlag gäller: bara en minimivikt och ingen totalvikt betyder utelämnad. Bara en vikt utan packpåse eller pumpsäck går in i `packvikt_g` med kommentar. | ryggsäckar gäller: anger tillverkaren bara en minimivikt (utan höftbälte, lock eller ram) och ingen totalvikt, lämna ute produkten. | kök gäller: `packvikt_g` är hela förpackningen utan bränsle. Anger tillverkaren bara brännarens vikt för ett kök som säljs med kokkärl, och ingen totalvikt, lämna ute produkten. Skriv i kommentaren vad vikten omfattar. |
 
 ---
@@ -141,3 +141,22 @@ marke;modell;version;underkategori;packvikt_g;minvikt_g;typ;bransle;personer;eff
 - `kokkarl_l`: volymen på det största kokkärlet som ingår, med komma. Tomt om inget kokkärl ingår. Ska alltid anges för stormkök
 - `patronfaste`: fri text, till exempel `EN 417` eller `EN 417 och bränsleflaska`
 - `packmatt_cm`: till exempel `12 x 16`, största måttet först
+- `kokkarl_l`: ska alltid anges för systemkök och stormkök, eftersom kokkärlet ingår
+- `system`: kokkärlssystemet köket hör till, se Kokkärl nedan. Tomt för en brännare med vanliga pannstöd
+
+### Kokkärl
+
+Lösa kastruller, kittlar, stekpannor och kokset utan brännare går i samma fil som köken (`kok.csv`) med `underkategori` `kastrull`. Kåsor och muggar lämnas ute.
+
+```
+marke;modell;version;underkategori;packvikt_g;typ;packmatt_cm;system;volym_l;material;varmevaxlare;lock;antal_delar;pris_sek_ca;ean;kalla;kontrollerad_datum;kommentar
+```
+
+- `underkategori`: alltid `kastrull`
+- `packvikt_g`: allt som ingår (kastruller, lock, handtag, påse)
+- `typ`: `kastrull`, `kittel`, `stekpanna`, `kokset` (flera delar) eller `annat`
+- `volym_l`: volymen på det största kärlet, med komma
+- `material`: `aluminium`, `hardanodiserad_aluminium`, `titan`, `rostfritt_stal` eller `annat`
+- `system`: bara när tillverkaren själv säger vilka kök kokkärlet är gjort för: `jetboil_fluxring`, `msr_windburner`, `msr_reactor`, `primus_lite`, `primus_primetech`, `trangia_25`, `trangia_27` eller `trangia_28`. Skriv i kommentaren vad tillverkaren säger. Tomt för en vanlig kastrull som passar alla öppna brännare. Passar kokkärlet ett system som inte finns i listan: lämna tomt och skriv det i kommentaren
+- `varmevaxlare` och `lock`: `ja` eller `nej`, tomt om det inte framgår
+- `antal_delar`: heltal, kastruller, lock och stekpannor räknade för sig

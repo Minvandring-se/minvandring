@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arKokgrupp, filtreraKokgrupp, kokEtikettFor, kokgrupp, kokkarlEtikett } from './kokkarl'
+import { arKokgrupp, filtreraKokgrupp, kokEtikettFor, kokgrupp, kokkarlEtikett, passarIhop } from './kokkarl'
 
 describe('kök med och utan kokkärl', () => {
   it('räknar ett kök med kokkärlets volym som kit', () => {
@@ -33,5 +33,39 @@ describe('kök med och utan kokkärl', () => {
   it('känner igen giltiga grupper', () => {
     expect(arKokgrupp('med_kokkarl')).toBe(true)
     expect(arKokgrupp('gasol')).toBe(false)
+  })
+})
+
+describe('vilka kokkärl som passar vilka brännare', () => {
+  const jetboil = { typ: 'systemkok', system: 'jetboil_fluxring' }
+  const crux = { typ: 'toppmonterat' }
+  const trangia = { typ: 'stormkok', system: 'trangia_25' }
+  const vanlig = { typ: 'kastrull' }
+
+  it('låter brännare och kokkärl i samma system passa ihop', () => {
+    expect(passarIhop(jetboil, { system: 'jetboil_fluxring' })).toBe(true)
+    expect(passarIhop(trangia, { system: 'trangia_25' })).toBe(true)
+  })
+
+  it('låter inte olika system passa ihop', () => {
+    expect(passarIhop(jetboil, { system: 'msr_windburner' })).toBe(false)
+    expect(passarIhop(trangia, { system: 'trangia_27' })).toBe(false)
+  })
+
+  it('ställer vanliga kokkärl på öppna brännare, men inte på system- och stormkök', () => {
+    expect(passarIhop(crux, vanlig)).toBe(true)
+    expect(passarIhop({ typ: 'slangkok' }, vanlig)).toBe(true)
+    expect(passarIhop(jetboil, vanlig)).toBe(false)
+    expect(passarIhop({ typ: 'systemkok' }, vanlig)).toBe(false)
+    expect(passarIhop({ typ: 'stormkok' }, vanlig)).toBe(false)
+  })
+
+  it('ställer inte ett systemkokkärl på en öppen brännare', () => {
+    expect(passarIhop(crux, { system: 'jetboil_fluxring' })).toBe(false)
+  })
+
+  it('säger nej när uppgifter saknas', () => {
+    expect(passarIhop(null, vanlig)).toBe(false)
+    expect(passarIhop(undefined, undefined)).toBe(false)
   })
 })

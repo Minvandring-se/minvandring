@@ -49,3 +49,19 @@ export function filtreraKokgrupp<P extends { underkategori: string; egenskaper?:
   if (!grupp) return produkter
   return produkter.filter((p) => p.underkategori !== KOK_UNDERKATEGORI || kokgrupp(p.egenskaper) === grupp)
 }
+
+/** Brännare som tar vanliga kastruller: de står fritt eller sitter på patronen och har öppna pannstöd. */
+const OPPNA_TYPER = new Set(['toppmonterat', 'slangkok', 'annat'])
+
+/**
+ * Passar kokkärlet på brännaren? Har brännaren ett kokkärlssystem passar bara kokkärl i samma system. Har den inget
+ * passar vanliga kokkärl (utan system) på öppna brännare, men inte på systemkök och stormkök, som är byggda för sina
+ * egna kastruller. Ett kokkärl i ett system passar bara brännare i samma system.
+ */
+export function passarIhop(brannare: Egenskaper, kokkarl: Egenskaper): boolean {
+  const brannarsystem = brannare?.system
+  const kokkarlsystem = kokkarl?.system
+  if (typeof brannarsystem === 'string' && brannarsystem) return kokkarlsystem === brannarsystem
+  if (typeof kokkarlsystem === 'string' && kokkarlsystem) return false
+  return typeof brannare?.typ === 'string' && OPPNA_TYPER.has(brannare.typ)
+}
