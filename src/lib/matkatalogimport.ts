@@ -2,7 +2,7 @@
 // Rena funktioner: text in, resultat ut. Skriptet scripts/matkatalog.mjs läser filerna och skriver migreringen.
 // Formatet beskrivs i docs/katalog/matkatalog.md.
 import { arAllergen, type Allergen } from './kost'
-import { lasCsv, arDatum } from './katalogimport'
+import { lasCsv } from './katalogimport'
 import type { Katalogmaltid, Matprodukt } from './typer'
 
 /** Kolumnerna i den ordning Astra levererar dem. */
@@ -144,8 +144,8 @@ export function tolkaMatrad(rad: number, falt: Record<string, string>): Matradre
   if (prisKalla && pris === null) fel.push('pris_kalla: får bara vara ifylld när pris_sek_ca är ifyllt')
   const kalla = falt.kalla ?? ''
   if (!ADRESS.test(kalla)) fel.push('kalla: tillverkarens sida, ska börja med http:// eller https://')
-  const kontrollerad = falt.kontrollerad || null
-  if (kontrollerad && !arDatum(kontrollerad)) fel.push('kontrollerad: datum som ÅÅÅÅ-MM-DD eller tom cell')
+  // Astras datum är när hon hämtade uppgifterna. Det sparas inte: kontrollerad sätts bara av grundarna efter
+  // ett stickprov, så kolumnen läses inte alls.
 
   const produkt: Matkatalograd = {
     marke,
@@ -170,7 +170,7 @@ export function tolkaMatrad(rad: number, falt: Record<string, string>): Matradre
     pris_sek_ca: pris,
     pris_kalla: prisKalla,
     kalla,
-    kontrollerad,
+    kontrollerad: null,
   }
 
   if (fel.length) return { rad, namn, produkt: null, fel, varningar }
