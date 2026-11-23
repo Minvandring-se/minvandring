@@ -1,4 +1,5 @@
-// Roller i en tur. Samma regler som i databasen (supabase/migrations/20261109000000_roller.sql).
+// Roller i en tur. Samma regler som i databasen (supabase/migrations/20261109000000_roller.sql,
+// och 20261123235900_redigerare_andrar_bara_utan_konto.sql för vem som får ändra en deltagare).
 // Databasen bestämmer. De här funktionerna styr bara vad appen visar.
 
 export type Roll = 'owner' | 'editor' | 'viewer'
