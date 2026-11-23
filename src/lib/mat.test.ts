@@ -305,6 +305,7 @@ describe('pasdetaljer', () => {
     allergener: ['soja', 'selleri'],
     spar: ['sesam'],
     pris_sek_ca: null,
+    pris_kalla: null,
     kalla: 'https://exempel.se',
     kontrollerad: null,
   }

@@ -119,6 +119,8 @@ export interface Matprodukt {
   /** Kan innehålla spår av. */
   spar: Allergen[] | null
   pris_sek_ca: number | null
+  /** Butikens produktsida när priset kommer från en butik. */
+  pris_kalla: string | null
   kalla: string
   kontrollerad: string | null
 }

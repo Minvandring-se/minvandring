@@ -42,10 +42,13 @@ create table public.matprodukter (
   -- Kan innehålla spår av. Räknas inte som att påsen innehåller allergenen när man filtrerar.
   spar public.allergenlista,
   pris_sek_ca int check (pris_sek_ca >= 0),
+  -- Butikens produktsida när priset kommer från en butik i stället för tillverkaren. Tomt annars.
+  pris_kalla text check (pris_kalla ~ '^https?://'),
   kalla text not null check (kalla ~ '^https?://'),
   kontrollerad date,
   skapad timestamptz not null default now(),
-  constraint matprodukter_vegansk_ar_vegetarisk check (vegansk is not true or vegetarisk is true)
+  constraint matprodukter_vegansk_ar_vegetarisk check (vegansk is not true or vegetarisk is true),
+  constraint matprodukter_pris_kalla_kraver_pris check (pris_kalla is null or pris_sek_ca is not null)
 );
 
 -- Samma påse ska inte kunna läggas in två gånger.

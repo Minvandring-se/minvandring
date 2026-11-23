@@ -18,7 +18,7 @@ export interface Matplan {
 
 export type Matlage = { lage: 'laddar' } | { lage: 'fel' } | { lage: 'klar'; plan: Matplan }
 
-const MATPRODUKT = 'id, marke, namn, maltid, torkning, vikt_torr_g, portioner, kcal, protein_g, fett_g, kolhydrater_g, vatten_ml, tillagning_vatten, tillagning_min, vegetarisk, vegansk, glutenfri, laktosfri, allergener, spar, pris_sek_ca, kalla, kontrollerad'
+const MATPRODUKT = 'id, marke, namn, maltid, torkning, vikt_torr_g, portioner, kcal, protein_g, fett_g, kolhydrater_g, vatten_ml, tillagning_vatten, tillagning_min, vegetarisk, vegansk, glutenfri, laktosfri, allergener, spar, pris_sek_ca, pris_kalla, kalla, kontrollerad'
 
 async function hamtaMatplan(turId: string): Promise<Matplan | null> {
   if (!supabase) return null

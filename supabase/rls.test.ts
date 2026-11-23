@@ -9,6 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { KATEGORIER } from '../src/lib/forrad'
 import { ALLERGENER } from '../src/lib/kost'
 import { godkanda, importera } from '../src/lib/katalogimport'
+import { godkandaPasar, importeraMatkatalog, MATKOLUMNER, matSeedSql } from '../src/lib/matkatalogimport'
 
 const A = '00000000-0000-0000-0000-00000000000a'
 const B = '00000000-0000-0000-0000-00000000000b'
@@ -1487,6 +1488,13 @@ describe('matplanen', () => {
       await forvantaFel(nyPase('TESTGRYTA'))
     })
 
+    it('priskällan är en adress och kräver ett pris', async () => {
+      await nyPase('Pris från butik', { pris_sek_ca: '129', pris_kalla: `'https://butik.exempel.se/gryta'` })
+      await nyPase('Pris från tillverkaren', { pris_sek_ca: '119' })
+      await forvantaFel(nyPase('Källa utan pris', { pris_kalla: `'https://butik.exempel.se/gryta'` }))
+      await forvantaFel(nyPase('Källa som inte är en adress', { pris_sek_ca: '99', pris_kalla: `'butik.exempel.se'` }))
+    })
+
     it('vegansk kräver vegetarisk, och okänt får vara tomt', async () => {
       await nyPase('Vegansk gryta', { vegetarisk: 'true', vegansk: 'true' })
       await nyPase('Okänd gryta', { vegansk: 'null' })
@@ -1500,6 +1508,28 @@ describe('matplanen', () => {
       await forvantaFel(nyPase('Med fel spår', { spar: `array['Gluten']` }))
       await nyPase('Frystorkad', { torkning: `'frystorkad'` })
       await forvantaFel(nyPase('Rökt', { torkning: `'rokt'` }))
+    })
+
+    it('seed-SQL:en från importen går att köra, och en ny körning uppdaterar påsen', async () => {
+      // Fejkade rader i Astras format. De finns bara här.
+      const csv = (kcal: string) =>
+        [
+          MATKOLUMNER.join(';'),
+          `Seedmat;Gryta;lunch_middag;frystorkad;150;2;${kcal};24,5;;;450;varmt;8;ja;ja;ja;;inga;sesam;129;https://butik.exempel.se/g;https://seedmat.exempel.se/g;2026-11-24`,
+          'Seedmat;Müsli;frukost;;100;;400;;;;;inget;;;;;;;;;;https://seedmat.exempel.se/m;',
+        ].join('\n')
+      const korSeed = (kcal: string) => db.exec(matSeedSql(godkandaPasar(importeraMatkatalog(csv(kcal))), ['test.csv']))
+      await korSeed('600')
+      await korSeed('640')
+      const r = await som(LASARE, (tx) =>
+        tx.query<{ namn: string; kcal: number; protein_g: string; allergener: string[] | null; spar: string[]; pris_kalla: string | null; portioner: number }>(
+          `select namn, kcal, protein_g, allergener, spar, pris_kalla, portioner from public.matprodukter where marke = 'Seedmat' order by namn`,
+        ),
+      )
+      expect(r.rows).toEqual([
+        { namn: 'Gryta', kcal: 640, protein_g: '24.5', allergener: [], spar: ['sesam'], pris_kalla: 'https://butik.exempel.se/g', portioner: 2 },
+        { namn: 'Müsli', kcal: 400, protein_g: null, allergener: null, spar: null, pris_kalla: null, portioner: 1 },
+      ])
     })
 
     it('allergenerna i databasen är samma som i src/lib/kost.ts', async () => {
