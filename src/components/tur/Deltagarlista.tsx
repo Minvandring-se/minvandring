@@ -104,7 +104,7 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
       }
     >
       {farBjudaIn && minRoll && (
-        <div id={`${faltId}-inbjudan`} hidden={!bjuderIn} tabIndex={-1} aria-label="Inbjudan" className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+        <div id={`${faltId}-inbjudan`} hidden={!bjuderIn} tabIndex={-1} role="group" aria-label="Inbjudan" className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
 
           {/* Länken hämtas först när rutan öppnas. */}
           {bjuderIn && <Inbjudan turId={tur.id} minRoll={minRoll} />}
@@ -119,7 +119,7 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
             <li key={d.id} className="flex min-h-14 items-center gap-3 py-2">
               {d.typ === 'hund' ? (
                 <span className="inline-flex size-9 shrink-0 items-center justify-center">
-                  <Dog className="size-5 text-primary" aria-label="Hund" />
+                  <Dog className="size-5 text-primary" role="img" aria-label="Hund" />
                 </span>
               ) : (
                 // Profilbilden när den finns, annars bokstaven. Personer utan konto har alltid bokstaven.
