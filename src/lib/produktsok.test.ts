@@ -8,6 +8,7 @@ import {
   ingaTraffarText,
   grupperaModeller,
   markenMedAntal,
+  modellMedProdukt,
   produktnamn,
   sakFranProdukt,
   sokfilter,
@@ -245,6 +246,26 @@ describe('ingaTraffarText', () => {
 
   it('säger att kategorin är tom när bara en kategori är vald utan söktext', () => {
     expect(ingaTraffarText({ harText: false, kategori: 'vatten', underkategori: '' })).toBe('Inga produkter i katalogen i den här kategorin än.')
+  })
+})
+
+describe('modellMedProdukt', () => {
+  const modeller = grupperaModeller([
+    produkt('Rab', 'Neutrino', { id: 'r', version: 'Regular', packvikt_g: 870 }),
+    produkt('Rab', 'Neutrino', { id: 'l', version: 'Long', packvikt_g: 910 }),
+    produkt('Hilleberg', 'Akto', { id: 'a' }),
+  ])
+
+  it('hittar modellen och storleken för en produkt', () => {
+    const r = modellMedProdukt(modeller, 'l')
+    expect(r?.modell.modell).toBe('Neutrino')
+    expect(r?.produkt.version).toBe('Long')
+    expect(r?.modell.varianter.map((v) => v.id)).toEqual(['r', 'l'])
+  })
+
+  it('ger null för en produkt som inte finns bland modellerna', () => {
+    expect(modellMedProdukt(modeller, 'finns-inte')).toBeNull()
+    expect(modellMedProdukt([], 'a')).toBeNull()
   })
 })
 

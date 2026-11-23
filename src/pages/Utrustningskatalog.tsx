@@ -1,8 +1,7 @@
 import { Check, ChevronDown, ExternalLink, Search } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
-import { Link } from 'react-router'
+import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { SidRubrik } from '@/components/app/SidRubrik'
-import { Detaljlista } from '@/components/forrad/Detaljlista'
 import { Granskad } from '@/components/forrad/Granskad'
 import { Kategorifilter } from '@/components/forrad/Kategorifilter'
 import { SakFormular } from '@/components/forrad/SakFormular'
@@ -10,27 +9,54 @@ import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
 import { KommerSnartEtikett } from '@/components/ui/kommerSnart'
+import { Panel } from '@/components/ui/panel'
 import { Sektion } from '@/components/ui/sektion'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, underkategoriFor, underkategorierFor, type KategoriNyckel } from '@/lib/forrad'
+import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, underkategoriFor, underkategorierFor, type Detaljrad, type KategoriNyckel } from '@/lib/forrad'
 import { forradsadress } from '@/lib/forradslista'
-import { antalText, forvalFranProdukt, gArAttSoka, grupperaModeller, iForradetText, ingaTraffarText, produktnamn, sokfilter, sokord, sorteraTraffar, type Modell } from '@/lib/produktsok'
+import {
+  antalText,
+  forvalFranProdukt,
+  gArAttSoka,
+  grupperaModeller,
+  iForradetText,
+  ingaTraffarText,
+  modellMedProdukt,
+  produktnamn,
+  sokfilter,
+  sokord,
+  sorteraTraffar,
+  type Modell,
+} from '@/lib/produktsok'
 import { supabase } from '@/lib/supabase'
 import type { Katalogprodukt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
 
 const MAX = 200
 const FORDROJNING_MS = 250
-// Allt som visas när ett kort fälls ut hämtas i samma fråga, så att det inte blir en fråga per kort.
+// Allt som visas i detaljpanelen hämtas i samma fråga, så att det inte blir en fråga per kort.
 const KOLUMNER = 'id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad, granskad, kalla_typ, minvikt_g, pris_sek_ca, kalla, egenskaper'
 
 type Lage = { nyckel: string; modeller: Modell<Katalogprodukt>[]; avkortad: boolean } | { nyckel: string; fel: true } | null
 
+/** Produkt-id mot produktens version (storlek), för de produkter man har i förrådet. */
+type IForradetKarta = ReadonlyMap<string, string | null>
+
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
+/** Hämtar vilka av produkterna man har i förrådet, med storlek. RLS gör att bara ens egna saker kommer tillbaka. */
+async function hamtaIForradet(ids: string[]): Promise<IForradetKarta> {
+  if (!supabase || ids.length === 0) return new Map()
+  const { data } = await supabase.from('forradssaker').select('produkt_id, produkter(version)').in('produkt_id', ids)
+  const rader = (data as unknown as { produkt_id: string; produkter: { version: string | null } | null }[] | null) ?? []
+  return new Map(rader.map((s) => [s.produkt_id, s.produkter?.version ?? null]))
+}
+
 /**
- * Utrustningskatalogen: sök och filtrera bland produkterna i katalogen och se vikten. Ett kort fälls ut med
- * specifikationerna, och produkten går att lägga i förrådet därifrån. Jämförelse sida vid sida kommer senare.
+ * Utrustningskatalogen: sök och filtrera bland produkterna i katalogen och se vikten. Ett tryck på ett kort öppnar
+ * en detaljpanel med specifikationerna, och produkten går att lägga i förrådet därifrån. Den öppna produkten står i
+ * adressen (?produkt=<id>), så att bakåtknappen stänger panelen och en länk kan öppna den direkt.
+ * Jämförelse sida vid sida kommer senare.
  */
 export function Utrustningskatalog() {
   useSidtitel('Utrustningskatalog')
@@ -41,9 +67,16 @@ export function Utrustningskatalog() {
   const [antal, setAntal] = useState<number | null>(null)
   const [lage, setLage] = useState<Lage>(null)
   // Produkterna i träfflistan som finns i ens förråd, med produktens version (storlek). Hämtas med en fråga per träfflista.
-  const [iForradet, setIForradet] = useState<ReadonlyMap<string, string | null>>(new Map())
+  const [iForradet, setIForradet] = useState<IForradetKarta>(new Map())
   // Produkten som läggs i förrådet just nu, i formuläret.
   const [laggTill, setLaggTill] = useState<Katalogprodukt | null>(null)
+  // En produkt som öppnas från en länk och inte finns i träfflistan hämtas för sig, med sin modells alla storlekar.
+  const [direkt, setDirekt] = useState<{ for: string; modeller: Modell<Katalogprodukt>[]; iForradet: IForradetKarta } | null>(null)
+
+  const [parametrar, setParametrar] = useSearchParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+  const produktId = parametrar.get('produkt')
 
   const harText = gArAttSoka(text)
   const sokbar = harText || kategori !== ''
@@ -68,12 +101,9 @@ export function Utrustningskatalog() {
       const { data, error } = await fraga.order('marke').order('modell')
       if (avbruten) return
       const produkter = (data as Katalogprodukt[] | null) ?? []
-      // RLS gör att bara ens egna saker kommer tillbaka.
-      const ids = produkter.map((p) => p.id)
-      const egna = ids.length ? await klient.from('forradssaker').select('produkt_id, produkter(version)').in('produkt_id', ids) : null
+      const egna = await hamtaIForradet(produkter.map((p) => p.id))
       if (avbruten) return
-      const rader = (egna?.data as unknown as { produkt_id: string; produkter: { version: string | null } | null }[] | null) ?? []
-      setIForradet(new Map(rader.map((s) => [s.produkt_id, s.produkter?.version ?? null])))
+      setIForradet(egna)
       setLage(
         error
           ? { nyckel, fel: true }
@@ -90,6 +120,56 @@ export function Utrustningskatalog() {
   // Förra träfflistan ligger kvar, dämpad, tills nästa kommer. Då hoppar inte sidan medan man skriver.
   const modeller = sokbar && lage && 'modeller' in lage ? lage.modeller : null
   const gammal = !aktuellt
+
+  // Den öppna produkten: ur träfflistan, annars den som hämtades för sig.
+  const iListan = produktId && modeller ? modellMedProdukt(modeller, produktId) : null
+  const fraanLank = produktId && !iListan && direkt?.for === produktId ? modellMedProdukt(direkt.modeller, produktId) : null
+  const oppen = iListan ?? fraanLank
+  const oppenIForradet = iListan ? iForradet : (direkt?.iForradet ?? iForradet)
+
+  // En länk till en produkt som inte finns i träfflistan: hämta produkten och sedan modellens alla storlekar.
+  const behoverHamtas = !!produktId && !iListan && direkt?.for !== produktId
+  useEffect(() => {
+    if (!supabase || !produktId || !behoverHamtas) return
+    const klient = supabase
+    let avbruten = false
+    ;(async () => {
+      const { data: en } = await klient.from('produkter').select(KOLUMNER).eq('id', produktId).maybeSingle()
+      const p = en as Katalogprodukt | null
+      const { data: alla } = p ? await klient.from('produkter').select(KOLUMNER).eq('marke', p.marke).eq('modell', p.modell) : { data: null }
+      const produkter = (alla as Katalogprodukt[] | null) ?? []
+      const egna = await hamtaIForradet(produkter.map((x) => x.id))
+      if (!avbruten) setDirekt({ for: produktId, modeller: grupperaModeller(produkter), iForradet: egna })
+    })()
+    return () => {
+      avbruten = true
+    }
+  }, [produktId, behoverHamtas])
+
+  /** Öppnar panelen. Ett nytt steg i historiken, så att bakåtknappen stänger den. */
+  function oppna(produkt: string) {
+    const p = new URLSearchParams(parametrar)
+    p.set('produkt', produkt)
+    setParametrar(p, { state: { panel: true } })
+  }
+
+  /** Byter storlek i panelen utan ett nytt steg i historiken. */
+  function valjStorlek(produkt: string) {
+    const p = new URLSearchParams(parametrar)
+    p.set('produkt', produkt)
+    setParametrar(p, { replace: true, state: location.state })
+  }
+
+  /** Stänger panelen: ett steg bakåt om panelen öppnades här, annars tas produkten bort ur adressen. */
+  function stang() {
+    if ((location.state as { panel?: boolean } | null)?.panel) {
+      navigate(-1)
+      return
+    }
+    const p = new URLSearchParams(parametrar)
+    p.delete('produkt')
+    setParametrar(p, { replace: true })
+  }
 
   return (
     <div className="space-y-6">
@@ -150,9 +230,21 @@ export function Utrustningskatalog() {
       {modeller && modeller.length > 0 && (
         <ul aria-busy={gammal} className={cn('grid gap-3 transition-opacity md:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4', gammal && 'opacity-60')}>
           {modeller.map((m) => (
-            <Produktkort key={m.nyckel} modell={m} iForradet={iForradet} onLaggTill={setLaggTill} />
+            <Produktkort key={m.nyckel} modell={m} iForradet={iForradet} onOppna={() => oppna(m.varianter[0].id)} />
           ))}
         </ul>
+      )}
+
+      {oppen && (
+        <Produktpanel
+          key={oppen.modell.nyckel}
+          modell={oppen.modell}
+          vald={oppen.produkt}
+          iForradet={oppenIForradet}
+          onValj={valjStorlek}
+          onLaggTill={setLaggTill}
+          onStang={stang}
+        />
       )}
 
       {laggTill && (
@@ -160,7 +252,9 @@ export function Utrustningskatalog() {
           <SakFormular
             forval={forvalFranProdukt(laggTill)}
             onKlar={() => {
-              setIForradet((s) => new Map([...s, [laggTill.id, laggTill.version]]))
+              const nytt = (s: IForradetKarta) => new Map([...s, [laggTill.id, laggTill.version]])
+              setIForradet(nytt)
+              setDirekt((d) => (d ? { ...d, iForradet: nytt(d.iForradet) } : d))
               setLaggTill(null)
             }}
             onAvbryt={() => setLaggTill(null)}
@@ -175,167 +269,176 @@ export function Utrustningskatalog() {
   )
 }
 
+/** Vilka storlekar av modellen man har i förrådet, med texten och produkten som länken till Mitt förråd utgår från. */
+function iForradetFor(modell: Modell<Katalogprodukt>, iForradet: IForradetKarta): { produkt: Katalogprodukt; text: string } | null {
+  const egna = modell.varianter.filter((v) => iForradet.has(v.id))
+  return egna.length ? { produkt: egna[0], text: iForradetText(egna.map((v) => iForradet.get(v.id) ?? null)) } : null
+}
+
 /**
- * En modell i katalogen: namn, kategori, vikten och storlekarna om det finns flera. Ett tryck fäller ut kortet med
- * specifikationerna för vald storlek, och knappen för att lägga den i förrådet.
+ * En modell i katalogen: namn, kategori, vikten och storlekarna om det finns flera. Ett tryck öppnar detaljpanelen.
+ * Kortet ändras inte när panelen öppnas, så rutnätet står still.
  */
-function Produktkort({
-  modell,
-  iForradet,
-  onLaggTill,
-}: {
-  modell: Modell<Katalogprodukt>
-  iForradet: ReadonlyMap<string, string | null>
-  onLaggTill: (p: Katalogprodukt) => void
-}) {
-  const id = useId()
-  const [utfalld, setUtfalld] = useState(false)
-  const [valdId, setValdId] = useState(modell.varianter[0].id)
+function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogprodukt>; iForradet: IForradetKarta; onOppna: () => void }) {
   const forsta = modell.varianter[0]
-  const vald = modell.varianter.find((v) => v.id === valdId) ?? forsta
   const { ikon: Ikon, etikett } = kategoriFor(forsta.kategori)
   const flera = modell.varianter.length > 1
-  // Storlekarna man har, i samma ordning som i kortet. finns pekar på den första, för länken till Mitt förråd.
-  const egna = modell.varianter.filter((v) => iForradet.has(v.id))
-  const finns = egna.length ? { produkt: egna[0], text: iForradetText(egna.map((v) => iForradet.get(v.id) ?? null)) } : null
+  const finns = iForradetFor(modell, iForradet)
   return (
-    <li className={cn('flex flex-col rounded-lg border border-border bg-card', utfalld && 'md:col-span-full')}>
+    <li className="flex flex-col rounded-lg border border-border bg-card">
       <button
         type="button"
-        aria-expanded={utfalld}
-        aria-controls={id}
-        onClick={() => setUtfalld((u) => !u)}
-        className="flex w-full items-start gap-3 rounded-lg p-4 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        aria-haspopup="dialog"
+        onClick={onOppna}
+        className="flex w-full flex-col gap-2 rounded-lg p-4 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-          <Ikon className="size-5" aria-hidden />
+        <span className="flex w-full items-start gap-3">
+          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+            <Ikon className="size-5" aria-hidden />
+          </span>
+          <span className="min-w-0 flex-1">
+            <span className="block font-semibold break-words">{produktnamn(modell)}</span>
+            <span className="block text-sm text-muted-foreground">{flera ? `${etikett}, ${modell.varianter.length} storlekar` : [etikett, forsta.version].filter(Boolean).join(', ')}</span>
+          </span>
+          <span className="shrink-0 font-heading text-lg font-semibold tabular-nums">
+            {flera && <span className="font-sans text-sm font-normal text-muted-foreground">från </span>}
+            {formateraVikt(forsta.packvikt_g)}
+          </span>
         </span>
-        <span className="min-w-0 flex-1">
-          <span className="block font-semibold break-words">{produktnamn(modell)}</span>
-          <span className="block text-sm text-muted-foreground">{flera ? `${etikett}, ${modell.varianter.length} storlekar` : [etikett, forsta.version].filter(Boolean).join(', ')}</span>
-        </span>
-        <span className="shrink-0 font-heading text-lg font-semibold tabular-nums">
-          {flera && <span className="font-sans text-sm font-normal text-muted-foreground">från </span>}
-          {formateraVikt(forsta.packvikt_g)}
-        </span>
-        <ChevronDown className={cn('mt-1 size-5 shrink-0 text-muted-foreground transition-transform', utfalld && 'rotate-180')} aria-hidden />
-      </button>
-
-      {!utfalld && (
-        <div className="space-y-2 px-4 pb-4">
-          {flera && (
-            <ul className="space-y-0.5 border-t border-border pt-2 text-sm">
-              {modell.varianter.map((v) => (
-                <li key={v.id} className="flex justify-between gap-3">
-                  <span className="min-w-0 break-words text-muted-foreground">{v.version || 'Utan storlek'}</span>
-                  <span className="shrink-0 tabular-nums">{formateraVikt(v.packvikt_g)}</span>
-                </li>
-              ))}
-            </ul>
-          )}
-          <Granskad produkt={forsta} />
-          {finns && <IForradet finns={finns} />}
-        </div>
-      )}
-
-      <div id={id} hidden={!utfalld} className="border-t border-border px-4 py-4">
-        {utfalld && (
-          <Utfallt
-            modell={modell}
-            vald={vald}
-            onValj={setValdId}
-            finns={finns}
-            onLaggTill={() => onLaggTill(vald)}
-          />
+        {flera && (
+          <span className="block w-full space-y-0.5 border-t border-border pt-2 text-sm">
+            {modell.varianter.map((v) => (
+              <span key={v.id} className="flex justify-between gap-3">
+                <span className="min-w-0 break-words text-muted-foreground">{v.version || 'Utan storlek'}</span>
+                <span className="shrink-0 tabular-nums">{formateraVikt(v.packvikt_g)}</span>
+              </span>
+            ))}
+          </span>
         )}
+      </button>
+      <div className="space-y-1 px-4 pb-4">
+        <Granskad produkt={forsta} />
+        {finns && <IForradet finns={finns} />}
       </div>
     </li>
   )
 }
 
-/** Det utfällda kortet: storlekarna, vikt och pris, specifikationerna, källan och knapparna. */
-function Utfallt({
+/**
+ * Detaljpanelen för en modell: namn och vikt stort, vad man har i förrådet, storlekarna, specifikationerna som rutor,
+ * källan, och knapparna fast i botten. Allt gäller den valda storleken.
+ */
+function Produktpanel({
   modell,
   vald,
+  iForradet,
   onValj,
-  finns,
   onLaggTill,
+  onStang,
 }: {
   modell: Modell<Katalogprodukt>
   vald: Katalogprodukt
+  iForradet: IForradetKarta
   onValj: (id: string) => void
-  finns: IForradetInfo | null
-  onLaggTill: () => void
+  onLaggTill: (p: Katalogprodukt) => void
+  onStang: () => void
 }) {
   const id = useId()
   const [visaAlla, setVisaAlla] = useState(false)
   const { grund, viktiga, ovriga } = produktdetaljer(vald)
+  const finns = iForradetFor(modell, iForradet)
   const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4', fokus)
+  // Vikten står stort under namnet. Den första raden i grund är alltid vikten, så rutorna börjar med raden efter.
+  const rutor = [...grund.slice(1), ...viktiga]
   return (
-    <div className="space-y-4">
-      {modell.varianter.length > 1 && (
-        <div role="group" aria-label="Storlek" className="flex flex-wrap gap-2">
-          {modell.varianter.map((v) => (
-            <button
-              key={v.id}
-              type="button"
-              aria-pressed={v.id === vald.id}
-              onClick={() => onValj(v.id)}
-              className={cn(
-                'inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm transition-colors',
-                fokus,
-                v.id === vald.id ? 'border-primary bg-primary-soft font-semibold text-primary' : 'border-border bg-card hover:bg-muted',
-              )}
-            >
-              {/* En prick i hjortron på den valda storleken, utöver den gröna markeringen. */}
-              {v.id === vald.id && <span aria-hidden className="size-2 shrink-0 rounded-full bg-hjortron" />}
-              {v.version || 'Utan storlek'}
-              <span className="tabular-nums opacity-80">{formateraVikt(v.packvikt_g)}</span>
-            </button>
-          ))}
+    <Panel
+      etikett={produktnamn(modell)}
+      onStang={onStang}
+      rubrik={
+        <div className="space-y-1">
+          <h2 className="text-2xl break-words text-primary">{produktnamn(modell)}</h2>
+          <p className="font-heading text-3xl font-semibold tabular-nums">{formateraVikt(vald.packvikt_g)}</p>
+          {vald.version && <p className="text-sm text-muted-foreground">{vald.version}</p>}
+          {finns && <IForradet finns={finns} />}
         </div>
-      )}
-
-      <Detaljlista rader={[...grund, ...viktiga]} />
-      {viktiga.length === 0 && ovriga.length === 0 && <p className="text-sm text-muted-foreground">Inga fler uppgifter om den här produkten än.</p>}
-      {ovriga.length > 0 && (
-        <>
-          <button type="button" aria-expanded={visaAlla} aria-controls={`${id}-alla`} onClick={() => setVisaAlla((v) => !v)} className={cn(lankKlass, 'no-underline')}>
-            {visaAlla ? 'Dölj specifikationerna' : 'Visa alla specifikationer'}
-            <ChevronDown className={cn('size-4 transition-transform', visaAlla && 'rotate-180')} aria-hidden />
-          </button>
-          <div id={`${id}-alla`} hidden={!visaAlla}>
-            <Detaljlista rader={ovriga} />
+      }
+      fot={
+        <div className="flex flex-wrap items-center gap-2">
+          <Button onClick={() => onLaggTill(vald)}>Lägg i förrådet</Button>
+          <Button variant="outline" disabled>
+            Lägg på önskelistan
+            <KommerSnartEtikett />
+          </Button>
+        </div>
+      }
+    >
+      <div className="space-y-5">
+        {modell.varianter.length > 1 && (
+          <div role="group" aria-label="Storlek" className="flex flex-wrap gap-2">
+            {modell.varianter.map((v) => (
+              <button
+                key={v.id}
+                type="button"
+                aria-pressed={v.id === vald.id}
+                onClick={() => onValj(v.id)}
+                className={cn(
+                  'inline-flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm transition-colors',
+                  fokus,
+                  v.id === vald.id ? 'border-primary bg-primary-soft font-semibold text-primary' : 'border-border bg-card hover:bg-muted',
+                )}
+              >
+                {/* En prick i hjortron på den valda storleken, utöver den gröna markeringen. */}
+                {v.id === vald.id && <span aria-hidden className="size-2 shrink-0 rounded-full bg-hjortron" />}
+                {v.version || 'Utan storlek'}
+                <span className="tabular-nums opacity-80">{formateraVikt(v.packvikt_g)}</span>
+              </button>
+            ))}
           </div>
-        </>
-      )}
+        )}
 
-      <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
-        <Granskad produkt={vald} />
-        <a href={vald.kalla} target="_blank" rel="noopener noreferrer" className={lankKlass}>
-          Tillverkarens sida
-          <ExternalLink className="size-4" aria-hidden />
-          <span className="sr-only">(öppnas i ny flik)</span>
-        </a>
+        {rutor.length > 0 && <Specrutor rader={rutor} />}
+        {viktiga.length === 0 && ovriga.length === 0 && <p className="text-sm text-muted-foreground">Inga fler uppgifter om den här produkten än.</p>}
+        {ovriga.length > 0 && (
+          <div className="space-y-3">
+            <button type="button" aria-expanded={visaAlla} aria-controls={`${id}-alla`} onClick={() => setVisaAlla((v) => !v)} className={cn(lankKlass, 'no-underline')}>
+              {visaAlla ? 'Dölj specifikationerna' : 'Visa alla specifikationer'}
+              <ChevronDown className={cn('size-4 transition-transform', visaAlla && 'rotate-180')} aria-hidden />
+            </button>
+            <div id={`${id}-alla`} hidden={!visaAlla}>
+              <Specrutor rader={ovriga} />
+            </div>
+          </div>
+        )}
+
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+          <Granskad produkt={vald} />
+          <a href={vald.kalla} target="_blank" rel="noopener noreferrer" className={lankKlass}>
+            Tillverkarens sida
+            <ExternalLink className="size-4" aria-hidden />
+            <span className="sr-only">(öppnas i ny flik)</span>
+          </a>
+        </div>
       </div>
+    </Panel>
+  )
+}
 
-      {finns && <IForradet finns={finns} />}
-
-      <div className="flex flex-wrap items-center gap-2">
-        <Button onClick={onLaggTill}>Lägg i förrådet</Button>
-        <Button variant="outline" disabled>
-          Lägg på önskelistan
-          <KommerSnartEtikett />
-        </Button>
-      </div>
-    </div>
+/** Specifikationerna som rutor med etiketten över värdet, två i bredd. */
+function Specrutor({ rader }: { rader: Detaljrad[] }) {
+  return (
+    <dl className="grid grid-cols-2 gap-2">
+      {rader.map((rad) => (
+        <div key={rad.etikett} className="min-w-0 rounded-md bg-muted px-3 py-2">
+          <dt className="text-xs text-muted-foreground">{rad.etikett}</dt>
+          <dd className="font-semibold break-words">{rad.varde}</dd>
+        </div>
+      ))}
+    </dl>
   )
 }
 
 /** Vilka storlekar av modellen man har i förrådet, med en länk dit, filtrerat på produktens kategori och underkategori. */
-type IForradetInfo = { produkt: Katalogprodukt; text: string }
-
-function IForradet({ finns }: { finns: IForradetInfo }) {
+function IForradet({ finns }: { finns: { produkt: Katalogprodukt; text: string } }) {
   return (
     <p className="flex flex-wrap items-center gap-x-3 text-sm">
       <span className="inline-flex items-center gap-1.5 rounded-full bg-hjortron-soft px-2.5 py-0.5 font-medium text-hjortron-strong">
