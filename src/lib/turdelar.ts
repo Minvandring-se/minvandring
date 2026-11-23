@@ -25,7 +25,7 @@ export const TURDELAR: readonly TurdelInfo[] = [
     byggd: false,
     blir: 'Gruppens packlista: vem som bär vad, vikten per ryggsäck och bockar för det som är packat.',
   },
-  { del: 'mat', namn: 'Mat', sokvag: 'mat', byggd: false, blir: 'Matplanen dag för dag och en inköpslista som går att bocka av.' },
+  { del: 'mat', namn: 'Mat', sokvag: 'mat', byggd: true, blir: 'Matplanen dag för dag och en inköpslista som går att bocka av.' },
   { del: 'gruppen', namn: 'Gruppen', sokvag: 'gruppen', byggd: false, blir: 'Att göra i gruppen, omröstningar och det senaste som hänt i turen.' },
   { del: 'kostnader', namn: 'Kostnader', sokvag: 'kostnader', byggd: false, blir: 'Delade kostnader och vem som ska betala vem när turen är slut.' },
   { del: 'sakerhet', namn: 'Säkerhet', sokvag: 'sakerhet', byggd: false, blir: 'En färdplan till någon hemma med kontaktperson, hemkomst och nödinformation.' },

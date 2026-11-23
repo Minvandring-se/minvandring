@@ -2,7 +2,8 @@
 //
 // I första versionen äter alla personer i turen en portion av varje rätt i en måltid. Hundar äter egen mat,
 // som räknas i vikt.ts (hundmat_per_dag_g).
-import type { Ingrediens, Maltid, Maltidsrad, Matprodukt, Ratt, Vara } from './typer'
+import { allergenetikett, uppraknade } from './kost'
+import type { Ingrediens, Katalogmaltid, Maltid, Maltidsrad, Matprodukt, Ratt, Vara } from './typer'
 
 export const MALTIDER: readonly { nyckel: Maltid; etikett: string }[] = [
   { nyckel: 'frukost', etikett: 'Frukost' },
@@ -28,6 +29,11 @@ export function matdagar(dagar: number | null, reservdagar: number): Matdag[] {
   for (let d = 1; d <= dagar; d++) ut.push({ dag: d, reserv: false, namn: `Dag ${d}` })
   for (let r = 1; r <= Math.max(0, reservdagar); r++) ut.push({ dag: dagar + r, reserv: true, namn: `Reservdag ${r}` })
   return ut
+}
+
+/** Energi som den visas: "1 250 kcal". */
+export function formateraKcal(kcal: number): string {
+  return `${Math.round(kcal).toLocaleString('sv-SE')} kcal`
 }
 
 /** Kcal per 100 g, avrundat till heltal. null när vikten saknas. */
@@ -234,4 +240,108 @@ export function matsummering(summor: readonly Dagssumma[]): Matsummering {
     saknadeMaltider: summor.reduce((t, s) => t + s.saknas.length, 0),
     ofullstandig: summor.some((s) => s.naring.ofullstandig),
   }
+}
+
+/** Vilka slags påsar i katalogen som visas först för en måltid i planen. */
+export const PASAR_TILL: Record<Maltid, readonly Katalogmaltid[]> = {
+  frukost: ['frukost'],
+  lunch: ['lunch_middag'],
+  middag: ['lunch_middag', 'dessert'],
+  mellanmal: ['mellanmal', 'dessert'],
+}
+
+/** Namnet på en påse som det visas och som rätten i turen heter: märke och namn. */
+export function pasnamn(p: Pick<Matprodukt, 'marke' | 'namn'>): string {
+  return `${p.marke} ${p.namn}`
+}
+
+const TILLAGNING: Record<NonNullable<Matprodukt['tillagning_vatten']>, string> = {
+  varmt: 'Varmt vatten',
+  kallt: 'Kallt vatten',
+  varmt_eller_kallt: 'Varmt eller kallt vatten',
+  inget: 'Inget vatten',
+}
+
+/** Detaljerna om en påse som visas i listan: torkning, tillagning, allergener och spår. */
+export function pasdetaljer(p: Matprodukt): string[] {
+  const ut: string[] = []
+  if (p.torkning) ut.push(p.torkning === 'frystorkad' ? 'Frystorkad' : 'Lufttorkad')
+  if (p.tillagning_vatten) {
+    const delar = [TILLAGNING[p.tillagning_vatten]]
+    if (p.vatten_ml && p.tillagning_vatten !== 'inget') delar.push(`${p.vatten_ml} ml`)
+    if (p.tillagning_min) delar.push(`${p.tillagning_min} min`)
+    ut.push(delar.join(', '))
+  }
+  if (p.allergener === null) ut.push('Allergenerna är okända')
+  else if (p.allergener.length === 0) ut.push('Ingen av de 14 allergenerna')
+  else ut.push(`Innehåller ${uppraknade(p.allergener.map((a) => allergenetikett(a).toLowerCase()))}`)
+  if (p.spar?.length) ut.push(`Kan innehålla spår av ${uppraknade(p.spar.map((a) => allergenetikett(a).toLowerCase()))}`)
+  return ut
+}
+
+/** Ett tal från ett formulärfält. Komma och punkt går båda. Tomt blir null, och det som inte är ett tal NaN. */
+export function tolkaTal(text: string): number | null {
+  const t = text.trim().replace(/\s/g, '').replace(',', '.')
+  if (t === '') return null
+  return /^\d+(\.\d+)?$/.test(t) ? Number(t) : NaN
+}
+
+/** En rad i formuläret för en egen rätt, som den står i fälten. */
+export interface Ingrediensfalt {
+  vara: string
+  gram: string
+  kcal: string
+  protein: string
+}
+
+export interface TolkadIngrediens {
+  vara: string
+  gram: number
+  kcalPer100g: number | null
+  proteinPer100g: number | null
+}
+
+export type Rattformular = { ok: true; namn: string; rader: TolkadIngrediens[] } | { ok: false; fel: string }
+
+export const MAX_RATTNAMN = 80
+
+/** Kontrollerar formuläret för en egen rätt. Helt tomma rader hoppas över. */
+export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[]): Rattformular {
+  const n = namn.trim()
+  if (!n) return { ok: false, fel: 'Skriv vad rätten heter.' }
+  if (n.length > MAX_RATTNAMN) return { ok: false, fel: `Namnet får vara högst ${MAX_RATTNAMN} tecken.` }
+  const rader: TolkadIngrediens[] = []
+  const varor = new Set<string>()
+  for (const [i, f] of falt.entries()) {
+    if (!f.vara.trim() && !f.gram.trim() && !f.kcal.trim() && !f.protein.trim()) continue
+    const rad = `Ingrediens ${i + 1}`
+    const vara = f.vara.trim()
+    if (!vara) return { ok: false, fel: `${rad}: skriv vad ingrediensen heter.` }
+    if (varor.has(vara.toLowerCase())) return { ok: false, fel: `${vara} står två gånger. Lägg ihop mängden på en rad.` }
+    varor.add(vara.toLowerCase())
+    const gram = tolkaTal(f.gram)
+    if (gram === null || !Number.isInteger(gram) || gram < 1 || gram > 5000)
+      return { ok: false, fel: `${rad}: skriv gram per portion som ett heltal mellan 1 och 5000.` }
+    const kcal = tolkaTal(f.kcal)
+    if (kcal !== null && !(kcal <= 900)) return { ok: false, fel: `${rad}: skriv kcal per 100 g som ett tal mellan 0 och 900.` }
+    const protein = tolkaTal(f.protein)
+    if (protein !== null && !(protein <= 100)) return { ok: false, fel: `${rad}: skriv protein per 100 g som ett tal mellan 0 och 100.` }
+    rader.push({ vara, gram, kcalPer100g: kcal === null ? null : Math.round(kcal), proteinPer100g: protein })
+  }
+  if (rader.length === 0) return { ok: false, fel: 'Lägg till minst en ingrediens.' }
+  return { ok: true, namn: n, rader }
+}
+
+/** En portion av rätten i formuläret, för att visa medan man skriver. */
+export function naringForRader(rader: readonly TolkadIngrediens[]): Naring {
+  return rader.reduce<Naring>(
+    (s, r) =>
+      plus(s, {
+        kcal: ((r.kcalPer100g ?? 0) * r.gram) / 100,
+        proteinG: ((r.proteinPer100g ?? 0) * r.gram) / 100,
+        gram: r.gram,
+        ofullstandig: r.kcalPer100g === null || r.proteinPer100g === null,
+      }),
+    NOLL,
+  )
 }

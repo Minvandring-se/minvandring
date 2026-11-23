@@ -1,18 +1,26 @@
 import { describe, expect, it } from 'vitest'
 import {
   dagssummor,
+  formateraKcal,
   inkopsgrupper,
   inkopslista,
   kcalPer100g,
   matdagar,
   matsummering,
   matviktTotalt,
+  naringForRader,
+  PASAR_TILL,
+  pasdetaljer,
   pasePerPortion,
+  pasnamn,
   rattPerPortion,
+  tolkaRattformular,
+  tolkaTal,
+  type Ingrediensfalt,
   type Matdata,
   type Pase,
 } from './mat'
-import type { Ingrediens, Maltid, Maltidsrad, Ratt, Vara } from './typer'
+import type { Ingrediens, Maltid, Maltidsrad, Matprodukt, Ratt, Vara } from './typer'
 
 const ratt = (id: string, extra: Partial<Ratt> = {}): Ratt => ({ id, namn: id, matprodukt_id: null, ansvarig: null, klart: false, ...extra })
 const vara = (id: string, extra: Partial<Vara> = {}): Vara => ({
@@ -57,6 +65,13 @@ describe('matdagar', () => {
   it('är tom tills antalet dagar är angivet', () => {
     expect(matdagar(null, 1)).toEqual([])
     expect(matdagar(0, 1)).toEqual([])
+  })
+})
+
+describe('formateraKcal', () => {
+  it('avrundar och skriver tusental med mellanslag', () => {
+    expect(formateraKcal(1249.6).replace(/\s/g, ' ')).toBe('1 250 kcal')
+    expect(formateraKcal(423)).toBe('423 kcal')
   })
 })
 
@@ -202,5 +217,116 @@ describe('summeringen', () => {
 
   it('är noll utan dagar', () => {
     expect(matsummering([])).toEqual({ snittKcal: 0, lagstaKcal: 0, snittProteinG: 0, saknadeMaltider: 0, ofullstandig: false })
+  })
+})
+
+describe('tolkaTal', () => {
+  it('tar emot komma, punkt och mellanslag', () => {
+    expect(tolkaTal('12,5')).toBe(12.5)
+    expect(tolkaTal(' 1 200 ')).toBe(1200)
+    expect(tolkaTal('3.0')).toBe(3)
+  })
+
+  it('ger null för tomt och NaN för annat', () => {
+    expect(tolkaTal('  ')).toBeNull()
+    expect(tolkaTal('-5')).toBeNaN()
+    expect(tolkaTal('tio')).toBeNaN()
+  })
+})
+
+describe('tolkaRattformular', () => {
+  const rad = (vara: string, gram: string, kcal = '', protein = ''): Ingrediensfalt => ({ vara, gram, kcal, protein })
+
+  it('tolkar raderna och hoppar över tomma', () => {
+    expect(tolkaRattformular(' Gröt ', [rad('Havregryn', '90', '370', '13,5'), rad('', ''), rad('Russin', '30')])).toEqual({
+      ok: true,
+      namn: 'Gröt',
+      rader: [
+        { vara: 'Havregryn', gram: 90, kcalPer100g: 370, proteinPer100g: 13.5 },
+        { vara: 'Russin', gram: 30, kcalPer100g: null, proteinPer100g: null },
+      ],
+    })
+  })
+
+  it('kräver ett namn och minst en ingrediens', () => {
+    expect(tolkaRattformular('', [rad('Havregryn', '90')])).toEqual({ ok: false, fel: 'Skriv vad rätten heter.' })
+    expect(tolkaRattformular('Gröt', [rad('', '')])).toEqual({ ok: false, fel: 'Lägg till minst en ingrediens.' })
+    expect(tolkaRattformular('x'.repeat(81), [rad('Havregryn', '90')]).ok).toBe(false)
+  })
+
+  it('säger vilken rad som är fel', () => {
+    expect(tolkaRattformular('Gröt', [rad('Havregryn', '90'), rad('', '30')])).toEqual({ ok: false, fel: 'Ingrediens 2: skriv vad ingrediensen heter.' })
+    expect(tolkaRattformular('Gröt', [rad('Havregryn', '0')])).toMatchObject({ ok: false, fel: expect.stringContaining('Ingrediens 1: skriv gram') })
+    expect(tolkaRattformular('Gröt', [rad('Havregryn', '12,5')]).ok).toBe(false)
+    expect(tolkaRattformular('Gröt', [rad('Havregryn', '90', '1000')]).ok).toBe(false)
+    expect(tolkaRattformular('Gröt', [rad('Havregryn', '90', '', 'mycket')]).ok).toBe(false)
+  })
+
+  it('tar inte emot samma vara två gånger', () => {
+    expect(tolkaRattformular('Gröt', [rad('Russin', '10'), rad('russin', '20')])).toEqual({
+      ok: false,
+      fel: 'russin står två gånger. Lägg ihop mängden på en rad.',
+    })
+  })
+})
+
+describe('naringForRader', () => {
+  it('summerar en portion och märker saknade uppgifter', () => {
+    expect(naringForRader([{ vara: 'Havregryn', gram: 100, kcalPer100g: 370, proteinPer100g: 13 }])).toEqual({
+      kcal: 370,
+      proteinG: 13,
+      gram: 100,
+      ofullstandig: false,
+    })
+    expect(naringForRader([{ vara: 'Russin', gram: 50, kcalPer100g: 300, proteinPer100g: null }])).toMatchObject({ kcal: 150, ofullstandig: true })
+  })
+})
+
+describe('pasdetaljer', () => {
+  const pase: Matprodukt = {
+    id: 'p',
+    marke: 'Testmat',
+    namn: 'Gryta',
+    maltid: 'lunch_middag',
+    torkning: 'frystorkad',
+    vikt_torr_g: 150,
+    portioner: 1,
+    kcal: 600,
+    protein_g: 25,
+    fett_g: null,
+    kolhydrater_g: null,
+    vatten_ml: 450,
+    tillagning_vatten: 'varmt',
+    tillagning_min: 8,
+    vegetarisk: true,
+    vegansk: false,
+    glutenfri: null,
+    laktosfri: null,
+    allergener: ['soja', 'selleri'],
+    spar: ['sesam'],
+    pris_sek_ca: null,
+    kalla: 'https://exempel.se',
+    kontrollerad: null,
+  }
+
+  it('visar torkning, tillagning, allergener och spår', () => {
+    expect(pasdetaljer(pase)).toEqual(['Frystorkad', 'Varmt vatten, 450 ml, 8 min', 'Innehåller soja och selleri', 'Kan innehålla spår av sesam'])
+  })
+
+  it('skiljer på okända allergener och inga', () => {
+    const bara = { ...pase, torkning: null, tillagning_vatten: null, spar: null }
+    expect(pasdetaljer({ ...bara, allergener: null })).toEqual(['Allergenerna är okända'])
+    expect(pasdetaljer({ ...bara, allergener: [] })).toEqual(['Ingen av de 14 allergenerna'])
+  })
+})
+
+describe('pasnamn och PASAR_TILL', () => {
+  it('sätter ihop märke och namn', () => {
+    expect(pasnamn({ marke: 'Testmat', namn: 'Gryta' })).toBe('Testmat Gryta')
+  })
+
+  it('visar efterrätter vid middag och mellanmål', () => {
+    expect(PASAR_TILL.middag).toContain('dessert')
+    expect(PASAR_TILL.frukost).toEqual(['frukost'])
   })
 })
