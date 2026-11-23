@@ -175,7 +175,7 @@ export function Forrad() {
       {ny && <SakFormular forval={ny} onKlar={klar} onAvbryt={() => oppnaSok()} />}
 
       {tillagd && (
-        <div role="status" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-md bg-primary-soft px-4 py-2 text-sm text-primary">
+        <div role="status" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-md bg-hjortron-soft px-4 py-2 text-sm text-hjortron-strong">
           <p className="font-medium">{tillagd.namn} ligger nu i ditt förråd.</p>
           <button
             type="button"

@@ -287,6 +287,8 @@ function Utfallt({
                 v.id === vald.id ? 'border-primary bg-primary-soft font-semibold text-primary' : 'border-border bg-card hover:bg-muted',
               )}
             >
+              {/* En prick i hjortron på den valda storleken, utöver den gröna markeringen. */}
+              {v.id === vald.id && <span aria-hidden className="size-2 shrink-0 rounded-full bg-hjortron" />}
               {v.version || 'Utan storlek'}
               <span className="tabular-nums opacity-80">{formateraVikt(v.packvikt_g)}</span>
             </button>
@@ -336,7 +338,7 @@ type IForradetInfo = { produkt: Katalogprodukt; text: string }
 function IForradet({ finns }: { finns: IForradetInfo }) {
   return (
     <p className="flex flex-wrap items-center gap-x-3 text-sm">
-      <span className="inline-flex items-center gap-1.5 font-medium text-primary">
+      <span className="inline-flex items-center gap-1.5 rounded-full bg-hjortron-soft px-2.5 py-0.5 font-medium text-hjortron-strong">
         <Check className="size-4 shrink-0" aria-hidden />
         {finns.text}
       </span>
