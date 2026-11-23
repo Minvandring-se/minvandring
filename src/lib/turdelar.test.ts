@@ -21,6 +21,12 @@ describe('turens delar', () => {
     expect(aktivTurdel('/tur/mat')).toBe('oversikt')
   })
 
+  it('markerar samma flik som sidan visar för gamla adresser', () => {
+    expect(aktivTurdel('/tur/abc/packa')).toBe('packning')
+    expect(aktivTurdel('/tur/abc/rutt')).toBe('etapper')
+    for (const sokvag of ['packa', 'rutt', 'karta', 'okand']) expect(aktivTurdel(`/tur/abc/${sokvag}`)).toBe(delFranSokvag(sokvag))
+  })
+
   it('visar bara översikten som byggd, och varje planerad del säger vad den blir', () => {
     expect(TURDELAR.filter((d) => d.byggd).map((d) => d.del)).toEqual(['oversikt'])
     for (const d of TURDELAR.filter((d) => !d.byggd)) expect(d.blir.length).toBeGreaterThan(20)

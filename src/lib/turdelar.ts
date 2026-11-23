@@ -43,10 +43,12 @@ export function turdelAdress(turId: string, del: Turdel): string {
   return sokvag ? `/tur/${turId}/${sokvag}` : `/tur/${turId}`
 }
 
-/** Vilken del av turen en adress visar. Okända adresser under turen räknas som översikten. */
+/**
+ * Vilken del av turen en adress visar, för fliken som markeras och sidans titel. Okända adresser under turen
+ * räknas som översikten, och gamla adresser (packa, rutt) som sina nya flikar, precis som sidan som visas.
+ */
 export function aktivTurdel(pathname: string): Turdel {
-  const sista = /^\/tur\/[^/]+\/([^/]+)/.exec(pathname)?.[1]
-  return TURDELAR.find((d) => d.sokvag !== '' && d.sokvag === sista)?.del ?? 'oversikt'
+  return delFranSokvag(/^\/tur\/[^/]+\/([^/]+)/.exec(pathname)?.[1])
 }
 
 /** Den del som en okänd delsökväg ska visa. Gamla adresser (packa, rutt) leder till sina nya flikar. */
