@@ -15,7 +15,7 @@ export function Logotyp({ yta = 'ljus', className }: { yta?: 'ljus' | 'mork'; cl
   return (
     <span
       className={cn(
-        'flex items-center gap-[0.45em] font-heading text-lg font-semibold tracking-tight',
+        'flex items-center gap-[0.45em] font-logo text-lg font-semibold tracking-tight',
         yta === 'mork' ? 'text-pa-bild' : 'text-primary',
         className,
       )}

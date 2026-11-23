@@ -504,11 +504,41 @@ export function antalGranskade(saker: readonly Forradssak[]): number {
   return saker.filter((s) => s.produkter && !viktjamforelse(s).egen && granskning(s.produkter).niva !== 'ingen').length
 }
 
-/** De fyra tyngsta sakerna i en packning. Underkategorierna i varje grupp räknas som samma sorts sak. */
+/**
+ * De fyra tyngsta sakerna i en packning. Underkategorierna i varje grupp räknas som samma sorts sak, och den första
+ * är den som väljs när man lägger till en. saknas och hjalp är texterna i Mitt förråd när gruppen saknar en sak.
+ */
 const TUNGA = [
-  { grupp: 'ryggsack', namn: 'Ryggsäck', under: ['ryggsack'], kategori: 'packning', laggTill: 'Lägg till en ryggsäck', fyllI: 'Fyll i vikten på din ryggsäck' },
-  { grupp: 'talt', namn: 'Tält', under: ['talt'], kategori: 'talt', laggTill: 'Lägg till ett tält', fyllI: 'Fyll i vikten på ditt tält' },
-  { grupp: 'sovsack', namn: 'Sovsäck', under: ['sovsack', 'quilt'], kategori: 'sova', laggTill: 'Lägg till en sovsäck', fyllI: 'Fyll i vikten på din sovsäck' },
+  {
+    grupp: 'ryggsack',
+    namn: 'Ryggsäck',
+    under: ['ryggsack'],
+    kategori: 'packning',
+    laggTill: 'Lägg till en ryggsäck',
+    fyllI: 'Fyll i vikten på din ryggsäck',
+    saknas: 'Du har ingen ryggsäck än',
+    hjalp: 'Lägg till den du bär på flerdagsturer.',
+  },
+  {
+    grupp: 'talt',
+    namn: 'Tält eller tarp',
+    under: ['talt', 'tarp'],
+    kategori: 'talt',
+    laggTill: 'Lägg till ett tält eller en tarp',
+    fyllI: 'Fyll i vikten på ditt tält',
+    saknas: 'Du har inget tält eller tarp än',
+    hjalp: 'Lägg till det du sover under på flerdagsturer.',
+  },
+  {
+    grupp: 'sovsack',
+    namn: 'Sovsäck',
+    under: ['sovsack', 'quilt'],
+    kategori: 'sova',
+    laggTill: 'Lägg till en sovsäck',
+    fyllI: 'Fyll i vikten på din sovsäck',
+    saknas: 'Du har ingen sovsäck än',
+    hjalp: 'Lägg till din, så räknas den med i vikten.',
+  },
   {
     grupp: 'liggunderlag',
     namn: 'Liggunderlag',
@@ -516,8 +546,19 @@ const TUNGA = [
     kategori: 'sova',
     laggTill: 'Lägg till ett liggunderlag',
     fyllI: 'Fyll i vikten på ditt liggunderlag',
+    saknas: 'Du har inget liggunderlag än',
+    hjalp: 'Sök i katalogen eller skriv in det själv.',
   },
-] as const satisfies readonly { grupp: string; namn: string; under: readonly UnderkategoriNyckel[]; kategori: KategoriNyckel; laggTill: string; fyllI: string }[]
+] as const satisfies readonly {
+  grupp: string
+  namn: string
+  under: readonly UnderkategoriNyckel[]
+  kategori: KategoriNyckel
+  laggTill: string
+  fyllI: string
+  saknas: string
+  hjalp: string
+}[]
 
 export type TungGrupp = (typeof TUNGA)[number]['grupp']
 
@@ -572,7 +613,7 @@ export function fyraTunga(saker: readonly Forradssak[]): FyraTunga | null {
       grupper.push({ grupp: t.grupp, namn: t.namn, sak: { id: lattast.id, namn: lattast.namn, viktG: lattast.vikt_g }, utanVikt: null, uppmaning: null })
     } else if (iGruppen.length > 0) {
       const forsta = [...iGruppen].sort((a, b) => a.namn.localeCompare(b.namn, 'sv'))[0]
-      const text = forsta.underkategori === 'quilt' ? 'Fyll i vikten på din quilt' : t.fyllI
+      const text = forsta.underkategori === 'quilt' ? 'Fyll i vikten på din quilt' : forsta.underkategori === 'tarp' ? 'Fyll i vikten på din tarp' : t.fyllI
       grupper.push({ grupp: t.grupp, namn: t.namn, sak: null, utanVikt: forsta.namn, uppmaning: { grupp: t.grupp, text, gor: 'fyllIVikt', sakId: forsta.id } })
     } else {
       const baraDagsryggsack = t.grupp === 'ryggsack' && saker.some((s) => s.underkategori === 'dagsryggsack')
@@ -584,4 +625,35 @@ export function fyraTunga(saker: readonly Forradssak[]): FyraTunga | null {
   const varde = medVikt === 0 ? null : komplett ? formateraVikt(viktG) : `Minst ${formateraVikt(viktG)}`
   const uppmaningar = grupper.flatMap((g) => (g.uppmaning ? [g.uppmaning] : []))
   return { viktG, komplett, medVikt, varde, grupper, uppmaningar }
+}
+
+/** En av de fyra tunga som saknas helt i förrådet, med det som visas i den tomma rutan. */
+export interface SaknadGrundsak {
+  grupp: TungGrupp
+  kategori: KategoriNyckel
+  /** Underkategorin som väljs när man lägger till, till exempel tält för gruppen tält eller tarp. */
+  underkategori: UnderkategoriNyckel
+  /** "Du har ingen sovsäck än". */
+  rubrik: string
+  hjalp: string
+}
+
+/**
+ * De av de fyra tunga som saknas helt: ingen sak alls i gruppen, med eller utan vikt. I samma ordning som KATEGORIER
+ * (ryggsäck, tält eller tarp, sovsäck, liggunderlag). En dagsryggsäck räknas inte som ryggsäck. Ett tomt förråd saknar alla fyra.
+ */
+export function saknadeGrundsaker(saker: readonly Forradssak[]): SaknadGrundsak[] {
+  return TUNGA.filter((t) => {
+    const under: readonly string[] = t.under
+    return !saker.some((s) => s.underkategori !== null && under.includes(s.underkategori))
+  }).map((t) => ({ grupp: t.grupp, kategori: t.kategori, underkategori: t.under[0], rubrik: t.saknas, hjalp: t.hjalp }))
+}
+
+/** Kategorierna under Fyll på fler kategorier, i den ordning knapparna står. */
+const FLER_KATEGORIER = ['kok', 'vatten', 'klader', 'prylar', 'medicin'] as const satisfies readonly KategoriNyckel[]
+
+/** De kategorier under Fyll på fler kategorier som saknar saker, med etiketten som står på knappen. */
+export function flerKategorier(saker: readonly Forradssak[]): { nyckel: KategoriNyckel; etikett: string }[] {
+  const finns = new Set(saker.map((s) => kategoriFor(s.kategori).nyckel))
+  return FLER_KATEGORIER.filter((k) => !finns.has(k)).map((nyckel) => ({ nyckel, etikett: kategoriFor(nyckel).etikett }))
 }

@@ -5,6 +5,7 @@ import {
   arKategori,
   storstaVinsten,
   faltFran,
+  flerKategorier,
   formateraVikt,
   forradsrad,
   fyraTunga,
@@ -14,6 +15,7 @@ import {
   medKategori,
   medUnderkategori,
   sakdetaljer,
+  saknadeGrundsaker,
   summeraForrad,
   tolkaSak,
   typEfterVal,
@@ -481,7 +483,7 @@ describe('fyraTunga', () => {
   it('har en rad per grupp med saken som räknas, i fast ordning', () => {
     expect(fyraTunga(alla)?.grupper.map((g) => [g.namn, g.sak?.namn, g.sak?.viktG])).toEqual([
       ['Ryggsäck', 'Kajka 65', 3300],
-      ['Tält', 'Akto', 1700],
+      ['Tält eller tarp', 'Akto', 1700],
       ['Sovsäck', 'Neutrino', 870],
       ['Liggunderlag', 'Ultra 5R', 585],
     ])
@@ -500,9 +502,20 @@ describe('fyraTunga', () => {
 
   it('räknar inte in andra saker, och inte antal', () => {
     const kok = sak({ kategori: 'kok', underkategori: 'brannare', vikt_g: 400 })
-    const tarp = sak({ kategori: 'talt', underkategori: 'tarp', vikt_g: 500 })
+    const vindsack = sak({ kategori: 'talt', underkategori: 'vindsack', vikt_g: 300 })
     const utanUnder = sak({ kategori: 'sova', underkategori: null, vikt_g: 900 })
-    expect(fyraTunga([...alla, kok, tarp, utanUnder, { ...sovsack, id: 's2', vikt_g: 900, antal: 3 }])?.viktG).toBe(6455)
+    expect(fyraTunga([...alla, kok, vindsack, utanUnder, { ...sovsack, id: 's2', vikt_g: 900, antal: 3 }])?.viktG).toBe(6455)
+  })
+
+  it('räknar en tarp som tält, och den lättaste av de två', () => {
+    const tarp = sak({ id: 'tp', namn: 'Tarp', kategori: 'talt', underkategori: 'tarp', vikt_g: 500 })
+    expect(fyraTunga([ryggsack, tarp, sovsack, underlag])).toMatchObject({ komplett: true, viktG: 3300 + 500 + 870 + 585 })
+    expect(fyraTunga([...alla, tarp])?.grupper[1].sak?.namn).toBe('Tarp')
+  })
+
+  it('säger tarp när det är en tarp som saknar vikt', () => {
+    const tarp = sak({ id: 'tp', kategori: 'talt', underkategori: 'tarp', vikt_g: null })
+    expect(fyraTunga([ryggsack, tarp, sovsack, underlag])?.uppmaningar).toEqual([{ grupp: 'talt', text: 'Fyll i vikten på din tarp', gor: 'fyllIVikt', sakId: 'tp' }])
   })
 
   it('räknar den lättaste när man har flera i samma grupp', () => {
@@ -527,7 +540,7 @@ describe('fyraTunga', () => {
     expect(r).toMatchObject({ viktG: 0, komplett: false, medVikt: 0, varde: null })
     expect(r?.uppmaningar.map((u) => [u.text, u.gor === 'laggTill' ? u.kategori : null])).toEqual([
       ['Lägg till en ryggsäck', 'packning'],
-      ['Lägg till ett tält', 'talt'],
+      ['Lägg till ett tält eller en tarp', 'talt'],
       ['Lägg till en sovsäck', 'sova'],
       ['Lägg till ett liggunderlag', 'sova'],
     ])
@@ -582,6 +595,59 @@ describe('fyraTunga', () => {
 
   it('räknar vikten 0 g som en ifylld vikt', () => {
     expect(fyraTunga([ryggsack, talt, sovsack, { ...underlag, vikt_g: 0 }])).toMatchObject({ komplett: true, viktG: 5870 })
+  })
+})
+
+describe('saknadeGrundsaker', () => {
+  const ryggsack = sak({ kategori: 'packning', underkategori: 'ryggsack', vikt_g: 3300 })
+  const talt = sak({ kategori: 'talt', underkategori: 'talt', vikt_g: 1700 })
+  const sovsack = sak({ kategori: 'sova', underkategori: 'sovsack', vikt_g: 870 })
+  const underlag = sak({ kategori: 'sova', underkategori: 'liggunderlag', vikt_g: 585 })
+
+  it('ett tomt förråd saknar alla fyra, i ordningen i KATEGORIER, med texter och underkategori att öppna', () => {
+    expect(saknadeGrundsaker([])).toEqual([
+      { grupp: 'ryggsack', kategori: 'packning', underkategori: 'ryggsack', rubrik: 'Du har ingen ryggsäck än', hjalp: 'Lägg till den du bär på flerdagsturer.' },
+      { grupp: 'talt', kategori: 'talt', underkategori: 'talt', rubrik: 'Du har inget tält eller tarp än', hjalp: 'Lägg till det du sover under på flerdagsturer.' },
+      { grupp: 'sovsack', kategori: 'sova', underkategori: 'sovsack', rubrik: 'Du har ingen sovsäck än', hjalp: 'Lägg till din, så räknas den med i vikten.' },
+      { grupp: 'liggunderlag', kategori: 'sova', underkategori: 'liggunderlag', rubrik: 'Du har inget liggunderlag än', hjalp: 'Sök i katalogen eller skriv in det själv.' },
+    ])
+  })
+
+  it('saknar ingenting när alla fyra finns, även utan vikt', () => {
+    expect(saknadeGrundsaker([ryggsack, talt, sovsack, underlag])).toEqual([])
+    expect(saknadeGrundsaker([ryggsack, talt, sovsack, underlag].map((s) => ({ ...s, vikt_g: null })))).toEqual([])
+  })
+
+  it('en tarp räcker för tält, men inte en vindsäck', () => {
+    const tarp = sak({ kategori: 'talt', underkategori: 'tarp' })
+    const vindsack = sak({ kategori: 'talt', underkategori: 'vindsack' })
+    expect(saknadeGrundsaker([ryggsack, tarp, sovsack, underlag])).toEqual([])
+    expect(saknadeGrundsaker([ryggsack, vindsack, sovsack, underlag]).map((s) => s.grupp)).toEqual(['talt'])
+  })
+
+  it('en quilt räcker för sovsäck, men en dagsryggsäck räcker inte för ryggsäck', () => {
+    const quilt = sak({ kategori: 'sova', underkategori: 'quilt' })
+    const dag = sak({ kategori: 'packning', underkategori: 'dagsryggsack' })
+    expect(saknadeGrundsaker([dag, talt, quilt, underlag]).map((s) => s.grupp)).toEqual(['ryggsack'])
+  })
+
+  it('en sak utan underkategori räknas inte', () => {
+    expect(saknadeGrundsaker([sak({ kategori: 'sova', underkategori: null }), ryggsack, talt]).map((s) => s.grupp)).toEqual(['sovsack', 'liggunderlag'])
+  })
+})
+
+describe('flerKategorier', () => {
+  it('ger Kök, Vatten, Kläder, Prylar och elektronik och Första hjälpen och medicin när förrådet saknar dem', () => {
+    expect(flerKategorier([]).map((k) => k.etikett)).toEqual(['Kök', 'Vatten', 'Kläder', 'Prylar och elektronik', 'Första hjälpen och medicin'])
+  })
+
+  it('tar bara med de kategorier som saknar saker', () => {
+    const saker = [sak({ kategori: 'kok' }), sak({ kategori: 'klader' }), sak({ kategori: 'talt' })]
+    expect(flerKategorier(saker).map((k) => k.nyckel)).toEqual(['vatten', 'prylar', 'medicin'])
+  })
+
+  it('är tom när alla fem har saker', () => {
+    expect(flerKategorier(['kok', 'vatten', 'klader', 'prylar', 'medicin'].map((kategori) => sak({ kategori })))).toEqual([])
   })
 })
 
