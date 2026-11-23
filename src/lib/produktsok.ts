@@ -1,6 +1,6 @@
 // Sökningen i produktkatalogen: vilka ord som söks, filtret till databasen, ordningen på träffarna
 // och hur en träff blir en sak i förrådet. Rena funktioner utan databas.
-import { KATEGORIER, MAX_NAMN, forvaldTyp, type SakVarden } from './forrad'
+import { KATEGORIER, MAX_NAMN, arKategori, forvaldTyp, kategoriForUnder, type Forval, type SakVarden, type UnderkategoriNyckel } from './forrad'
 import type { Produkt } from './typer'
 
 /** Kortaste söktexten som ger en sökning. */
@@ -54,7 +54,7 @@ function rang(p: Produkt, text: string, ord: string[]): number {
 }
 
 /** Träffarna i den ordning de visas: bäst träff först, sedan i bokstavsordning på namn och version. */
-export function sorteraTraffar(produkter: Produkt[], text: string): Produkt[] {
+export function sorteraTraffar<P extends Produkt>(produkter: P[], text: string): P[] {
   const ord = sokord(text)
   return [...produkter].sort(
     (a, b) =>
@@ -78,22 +78,37 @@ export function sakFranProdukt(p: Produkt): SakVarden & { produkt_id: string } {
   }
 }
 
+/**
+ * Förvalen i formuläret när en produkt läggs i förrådet från katalogen. Samma uppgifter som när man väljer
+ * produkten i Lägg till utrustning, men antal och anteckning går att ändra innan man sparar.
+ */
+export function forvalFranProdukt(p: Produkt): Forval {
+  const sak = sakFranProdukt(p)
+  return {
+    namn: sak.namn,
+    kategori: arKategori(sak.kategori) ? sak.kategori : undefined,
+    underkategori: kategoriForUnder(p.underkategori) ? (p.underkategori as UnderkategoriNyckel) : undefined,
+    vikt_g: sak.vikt_g,
+    produkt_id: sak.produkt_id,
+  }
+}
+
 /** En modell i träfflistan: alla produkter med samma märke och modell, till exempel en sovsäck i tre längder. */
-export interface Modell {
+export interface Modell<P extends Produkt = Produkt> {
   /** Märke och modell med små bokstäver. Unik i listan. */
   nyckel: string
   marke: string
   modell: string
   /** Varianterna (storlekarna), lättast först. Alltid minst en. */
-  varianter: Produkt[]
+  varianter: P[]
 }
 
 /**
  * Slår ihop produkter med samma märke och modell till en rad. Modellerna står i den ordning de först
  * förekommer, så sorteringen av träffarna behålls. Varianterna sorteras på vikt och sedan på version.
  */
-export function grupperaModeller(produkter: Produkt[]): Modell[] {
-  const modeller = new Map<string, Modell>()
+export function grupperaModeller<P extends Produkt>(produkter: P[]): Modell<P>[] {
+  const modeller = new Map<string, Modell<P>>()
   for (const p of produkter) {
     const nyckel = `${p.marke.trim().toLowerCase()}|${p.modell.trim().toLowerCase()}`
     const m = modeller.get(nyckel)
@@ -128,6 +143,23 @@ export function ingaTraffarText(val: { harText: boolean; kategori: string; under
   if (val.underkategori) return 'Inga produkter i katalogen i den här underkategorin än.'
   if (val.kategori) return 'Inga produkter i katalogen i den här kategorin än.'
   return 'Inga produkter matchar din sökning.'
+}
+
+/** En version som inte är en storlek att välja mellan, till exempel "One Size". */
+function utanStorlek(version: string | null): boolean {
+  return !version?.trim() || /^one ?size$/i.test(version.trim())
+}
+
+/**
+ * Texten i katalogkortet för en modell man har i förrådet. Med storlek: "Du har Regular i ditt förråd", eller
+ * "Du har Regular och Long i ditt förråd" för flera. Utan storlek (eller One Size): "Finns i ditt förråd".
+ * Storlekarna står i den ordning de kommer in, utan dubbletter.
+ */
+export function iForradetText(versioner: readonly (string | null)[]): string {
+  const storlekar = [...new Set(versioner.filter((v): v is string => !utanStorlek(v)).map((v) => v.trim()))]
+  if (storlekar.length === 0) return 'Finns i ditt förråd'
+  const lista = storlekar.length === 1 ? storlekar[0] : `${storlekar.slice(0, -1).join(', ')} och ${storlekar.at(-1)}`
+  return `Du har ${lista} i ditt förråd`
 }
 
 /** "1 produkt" eller "42 produkter", för raden ovanför träfflistan. */

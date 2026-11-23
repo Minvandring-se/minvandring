@@ -14,6 +14,8 @@ import {
   listdelar,
   medKategori,
   medUnderkategori,
+  egenskapsdelar,
+  produktdetaljer,
   sakdetaljer,
   saknadeGrundsaker,
   summeraForrad,
@@ -255,6 +257,37 @@ describe('tolkaSak', () => {
 
   it('begränsar anteckningens längd', () => {
     expect(tolkaSak({ ...falt, notering: 'a'.repeat(301) }).ok).toBe(false)
+  })
+})
+
+describe('produktdetaljer', () => {
+  const talt = {
+    packvikt_g: 1700,
+    minvikt_g: 1450,
+    pris_sek_ca: 8995,
+    underkategori: 'talt',
+    egenskaper: { personer: 1, sasong: 4, konstruktion: 'tunnel', golvyta_m2: 1.6, absider: 1, ingangar: 1, packmatt_cm: '48 x 15' },
+  }
+  const text = (rader: { etikett: string; varde: string }[]) => rader.map((r) => `${r.etikett}: ${r.varde}`)
+
+  it('visar vikt, minsta vikt och ungefärligt pris först', () => {
+    expect(text(produktdetaljer(talt).grund)).toEqual(['Vikt: 1,7 kg', 'Minsta vikt: 1,45 kg', 'Ungefärligt pris: 8 995 kr'])
+  })
+
+  it('hoppar över minsta vikt och pris när de saknas', () => {
+    expect(text(produktdetaljer({ ...talt, minvikt_g: null, pris_sek_ca: null }).grund)).toEqual(['Vikt: 1,7 kg'])
+  })
+
+  it('delar egenskaperna i de viktiga och de övriga, som i Mitt förråd', () => {
+    const d = produktdetaljer(talt)
+    expect(text(d.viktiga)).toEqual(['Personer: 1', 'Säsonger: 4', 'Konstruktion: Tunnel', 'Golvyta: 1,6 m²', 'Absider: 1'])
+    expect(text(d.ovriga)).toEqual(['Ingångar: 1', 'Packmått (cm): 48 x 15'])
+    expect(egenskapsdelar(talt)).toEqual({ viktiga: d.viktiga, ovriga: d.ovriga })
+  })
+
+  it('har inga egenskaper för en produkt utan egenskaper', () => {
+    const d = produktdetaljer({ ...talt, underkategori: 'kudde', egenskaper: {} })
+    expect([d.viktiga, d.ovriga]).toEqual([[], []])
   })
 })
 

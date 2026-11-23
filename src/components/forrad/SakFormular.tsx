@@ -62,7 +62,8 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
     setFel('')
     const { error } = sak
       ? await supabase.from('forradssaker').update(tolkad.varden).eq('id', sak.id)
-      : await supabase.from('forradssaker').insert(tolkad.varden)
+      : // En sak från katalogen sparas med sin produkt, som när man väljer produkten i Lägg till utrustning.
+        await supabase.from('forradssaker').insert({ ...tolkad.varden, produkt_id: forval?.produkt_id ?? null })
     setArbetar(false)
     if (error) {
       setFel('Det gick inte att spara. Försök igen.')

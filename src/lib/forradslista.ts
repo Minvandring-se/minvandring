@@ -60,6 +60,12 @@ export function adressFranVal(val: Listval): Record<string, string> {
   return ut
 }
 
+/** Adressen till Mitt förråd filtrerat på en kategori och underkategori, till exempel /forrad?kategori=sova&under=sovsack. */
+export function forradsadress(kategori: string, underkategori: string): string {
+  const fraga = new URLSearchParams(adressFranVal(valjKategori(FORVALDA_VAL, kategori, underkategori))).toString()
+  return fraga ? `/forrad?${fraga}` : '/forrad'
+}
+
 /**
  * Valen efter att kategori eller underkategori har valts. En okänd kategori blir alla, och en underkategori som
  * inte hör till kategorin blir alla. Byts kategorin går underkategorin alltså tillbaka till alla.

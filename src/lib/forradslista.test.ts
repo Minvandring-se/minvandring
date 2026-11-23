@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   FORVALDA_VAL,
   adressFranVal,
+  forradsadress,
   antalPerKategori,
   antalPerUnderkategori,
   filtrera,
@@ -107,6 +108,18 @@ describe('filtrera', () => {
     expect(namn(filtrera(lista, { sok: '', kategori: 'sova', underkategori: 'quilt' }))).toEqual(['Quilt'])
     expect(namn(filtrera(lista, { sok: '', kategori: 'sova', underkategori: '' }))).toEqual(['Quilt', 'Xlite', 'Utan'])
     expect(namn(filtrera(lista, { sok: 'x', kategori: 'sova', underkategori: 'quilt' }))).toEqual([])
+  })
+})
+
+describe('forradsadress', () => {
+  it('pekar på Mitt förråd med kategori och underkategori', () => {
+    expect(forradsadress('sova', 'sovsack')).toBe('/forrad?kategori=sova&under=sovsack')
+  })
+
+  it('tar bara med det som finns och hör ihop', () => {
+    expect(forradsadress('sova', '')).toBe('/forrad?kategori=sova')
+    expect(forradsadress('talt', 'sovsack')).toBe('/forrad?kategori=talt')
+    expect(forradsadress('finns-inte', 'sovsack')).toBe('/forrad')
   })
 })
 

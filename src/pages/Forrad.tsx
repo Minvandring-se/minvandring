@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { TomtLage } from '@/components/app/TomtLage'
 import { HelaForradet, Onskelista, StorstaVinsten, ViktPerKategori } from '@/components/forrad/Forradsoversikt'
+import { Detaljlista } from '@/components/forrad/Detaljlista'
 import { Granskad } from '@/components/forrad/Granskad'
 import { Kategorifilter } from '@/components/forrad/Kategorifilter'
 import { ProduktSok } from '@/components/forrad/ProduktSok'
@@ -28,7 +29,6 @@ import {
   summeraForrad,
   underkategoriFor,
   viktjamforelse,
-  type Detaljrad,
   type Forval,
   type KategoriNyckel,
   type Listdel,
@@ -488,20 +488,6 @@ function Prick() {
 }
 
 const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4', fokus)
-
-/** Rader med rubrik och värde. */
-function Detaljlista({ rader }: { rader: Detaljrad[] }) {
-  return (
-    <dl className="text-sm">
-      {rader.map((rad) => (
-        <div key={rad.etikett} className="flex justify-between gap-4 border-b border-border py-1.5">
-          <dt className="text-muted-foreground">{rad.etikett}</dt>
-          <dd className="min-w-0 text-right font-medium break-words">{rad.varde}</dd>
-        </div>
-      ))}
-    </dl>
-  )
-}
 
 /** Versionen och underkategorin under namnet, som var sin liten etikett, till exempel Regular och Sovsäck. */
 function Underrad({ sak }: { sak: Forradssak }) {

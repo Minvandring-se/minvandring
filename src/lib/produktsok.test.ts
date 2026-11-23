@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { antalText, gArAttSoka, ingaTraffarText, grupperaModeller, markenMedAntal, produktnamn, sakFranProdukt, sokfilter, sokord, sorteraTraffar } from './produktsok'
+import { faltFran } from './forrad'
+import {
+  antalText,
+  forvalFranProdukt,
+  gArAttSoka,
+  iForradetText,
+  ingaTraffarText,
+  grupperaModeller,
+  markenMedAntal,
+  produktnamn,
+  sakFranProdukt,
+  sokfilter,
+  sokord,
+  sorteraTraffar,
+} from './produktsok'
 import type { Produkt } from './typer'
 
 function produkt(marke: string, modell: string, delar: Partial<Produkt> = {}): Produkt {
@@ -116,6 +130,31 @@ describe('sakFranProdukt', () => {
   })
 })
 
+describe('forvalFranProdukt', () => {
+  it('fyller formuläret med samma uppgifter som när produkten väljs i Lägg till utrustning', () => {
+    const p = produkt('Rab', 'Neutrino 400', { id: 'p2', version: 'Long', kategori: 'sova', underkategori: 'sovsack', packvikt_g: 1010 })
+    expect(forvalFranProdukt(p)).toEqual({ namn: 'Rab Neutrino 400', kategori: 'sova', underkategori: 'sovsack', vikt_g: 1010, produkt_id: 'p2' })
+  })
+
+  it('ger formulärets startvärden med vikt och typ, och antal 1', () => {
+    const p = produkt('Primus', 'Gas 230', { id: 'p3', kategori: 'kok', underkategori: 'bransle', packvikt_g: 360 })
+    expect(faltFran(undefined, forvalFranProdukt(p))).toEqual({
+      namn: 'Primus Gas 230',
+      kategori: 'kok',
+      underkategori: 'bransle',
+      typ: 'forbrukas',
+      antal: '1',
+      vikt: '360',
+      notering: '',
+    })
+  })
+
+  it('hoppar över en kategori eller underkategori som inte finns', () => {
+    const p = produkt('X', 'Y', { kategori: 'finns-inte', underkategori: 'finns-inte' })
+    expect(forvalFranProdukt(p)).toMatchObject({ kategori: undefined, underkategori: undefined })
+  })
+})
+
 describe('grupperaModeller', () => {
   const regular = produkt('Rab', 'Neutrino -6 °C', { id: 'r', version: 'Regular', packvikt_g: 870 })
   const lang = produkt('Rab', 'Neutrino -6 °C', { id: 'l', version: 'Long', packvikt_g: 930 })
@@ -206,6 +245,28 @@ describe('ingaTraffarText', () => {
 
   it('säger att kategorin är tom när bara en kategori är vald utan söktext', () => {
     expect(ingaTraffarText({ harText: false, kategori: 'vatten', underkategori: '' })).toBe('Inga produkter i katalogen i den här kategorin än.')
+  })
+})
+
+describe('iForradetText', () => {
+  it('säger vilken storlek man har', () => {
+    expect(iForradetText(['Regular'])).toBe('Du har Regular i ditt förråd')
+  })
+
+  it('räknar upp flera storlekar', () => {
+    expect(iForradetText(['Regular', 'Long'])).toBe('Du har Regular och Long i ditt förråd')
+    expect(iForradetText(['S', 'M', 'L'])).toBe('Du har S, M och L i ditt förråd')
+  })
+
+  it('säger bara Finns i ditt förråd för en sak utan storlek', () => {
+    expect(iForradetText([null])).toBe('Finns i ditt förråd')
+    expect(iForradetText(['  '])).toBe('Finns i ditt förråd')
+    expect(iForradetText(['One Size'])).toBe('Finns i ditt förråd')
+    expect(iForradetText(['one size'])).toBe('Finns i ditt förråd')
+  })
+
+  it('hoppar över dubbletter och storlekslösa bland flera', () => {
+    expect(iForradetText(['Regular', 'Regular', null])).toBe('Du har Regular i ditt förråd')
   })
 })
 
