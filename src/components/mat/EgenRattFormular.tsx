@@ -28,6 +28,7 @@ export function EgenRattFormular({
   varor,
   onSpara,
   onAvbryt,
+  onTaBort,
 }: {
   /** En ny rätt läggs i måltiden när den sparas. */
   ny: boolean
@@ -35,6 +36,8 @@ export function EgenRattFormular({
   varor: readonly Vara[]
   onSpara: (namn: string, rader: TolkadIngrediens[]) => Promise<boolean>
   onAvbryt: () => void
+  /** Finns när en befintlig rätt ändras. Tar bort rätten ur turen. */
+  onTaBort?: () => Promise<boolean>
 }) {
   const id = useId()
   const [namn, setNamn] = useState(forsta?.namn ?? '')
@@ -43,6 +46,18 @@ export function EgenRattFormular({
   )
   const [fel, setFel] = useState<string | null>(null)
   const [sparar, setSparar] = useState(false)
+  // Borttagningen kräver två tryck: först frågar knappen, sedan tar den bort.
+  const [sakerPa, setSakerPa] = useState(false)
+
+  async function taBort() {
+    if (!onTaBort) return
+    if (!sakerPa) return setSakerPa(true)
+    setFel(null)
+    setSparar(true)
+    const ok = await onTaBort()
+    setSparar(false)
+    if (!ok) setFel('Det gick inte att ta bort rätten. Kontrollera uppkopplingen och försök igen.')
+  }
 
   const tolkat = tolkaRattformular(namn || 'namn', falt)
   const portion = tolkat.ok ? naringForRader(tolkat.rader) : null
@@ -152,6 +167,15 @@ export function EgenRattFormular({
           Avbryt
         </Button>
       </div>
+
+      {onTaBort && (
+        <div className="space-y-2 border-t border-border pt-4">
+          {sakerPa && <p className="text-sm">Rätten försvinner ur alla måltider i turen. Det går inte att ångra.</p>}
+          <Button type="button" variant="ghost" className="text-destructive" disabled={sparar} onClick={taBort}>
+            {sakerPa ? 'Ja, ta bort rätten' : 'Ta bort rätten'}
+          </Button>
+        </div>
+      )}
     </form>
   )
 }

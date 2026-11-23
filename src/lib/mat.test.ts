@@ -16,6 +16,7 @@ import {
   rattPerPortion,
   tolkaRattformular,
   tolkaTal,
+  varorBaraIRatten,
   type Ingrediensfalt,
   type Matdata,
   type Pase,
@@ -329,5 +330,17 @@ describe('pasnamn och PASAR_TILL', () => {
   it('visar efterrätter vid middag och mellanmål', () => {
     expect(PASAR_TILL.middag).toContain('dessert')
     expect(PASAR_TILL.frukost).toEqual(['frukost'])
+  })
+})
+
+describe('varorBaraIRatten', () => {
+  it('tar bara med varor som ingen annan rätt använder och som saknar extra mängd', () => {
+    const ingredienser = [ing('Gröt', 'Havregryn', 90), ing('Gröt', 'Russin', 30), ing('Gröt', 'Kaffe', 5), ing('Müsli', 'Russin', 20)]
+    const varor = [vara('Havregryn'), vara('Russin'), vara('Kaffe', { extra_g: 100 }), vara('Oanvänd')]
+    expect(varorBaraIRatten('Gröt', ingredienser, varor)).toEqual(['Havregryn'])
+  })
+
+  it('är tom för en rätt utan ingredienser', () => {
+    expect(varorBaraIRatten('Gryta', [], [vara('Havregryn')])).toEqual([])
   })
 })

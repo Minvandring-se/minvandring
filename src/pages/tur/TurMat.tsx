@@ -11,9 +11,9 @@ import { ValjRatt } from '@/components/mat/ValjRatt'
 import { useTur } from '@/components/tur/turKontext'
 import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
-import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
+import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
-import { dagssummor, inkopslista, MALTIDER, matdagar, matsummering, matviktTotalt, rattPerPortion, type Matdag as Dag } from '@/lib/mat'
+import { dagssummor, inkopslista, MALTIDER, matdagar, matsummering, matviktTotalt, rattPerPortion, varorBaraIRatten, type Matdag as Dag } from '@/lib/mat'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import { turdelAdress } from '@/lib/turdelar'
 import type { DeltagareRad, Maltid, Maltidsrad } from '@/lib/typer'
@@ -185,6 +185,11 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
               setValjer(null)
               await laddaOm()
             }
+            return ok
+          }}
+          onTaBortRatt={async (rattId) => {
+            const ok = await taBortEgenRatt(rattId, varorBaraIRatten(rattId, plan.ingredienser, plan.varor))
+            if (ok) await laddaOm()
             return ok
           }}
           onSparaRatt={async (rattId, namn, rader) => {

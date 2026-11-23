@@ -242,6 +242,16 @@ export function matsummering(summor: readonly Dagssumma[]): Matsummering {
   }
 }
 
+/**
+ * Varorna som ska tas bort tillsammans med en egen rätt: de som bara rätten använder och som inte har någon
+ * extra mängd. En vara som en annan rätt också använder, eller som har en egen mängd (till exempel kaffe), blir kvar.
+ */
+export function varorBaraIRatten(rattId: string, ingredienser: readonly Ingrediens[], varor: readonly Vara[]): string[] {
+  const iRatten = new Set(ingredienser.filter((i) => i.ratt_id === rattId).map((i) => i.vara_id))
+  const iAndra = new Set(ingredienser.filter((i) => i.ratt_id !== rattId).map((i) => i.vara_id))
+  return varor.filter((v) => iRatten.has(v.id) && !iAndra.has(v.id) && v.extra_g <= 0).map((v) => v.id)
+}
+
 /** Vilka slags påsar i katalogen som visas först för en måltid i planen. */
 export const PASAR_TILL: Record<Maltid, readonly Katalogmaltid[]> = {
   frukost: ['frukost'],

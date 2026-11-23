@@ -36,6 +36,7 @@ export function ValjRatt({
   onValjPase,
   onValjRatt,
   onSparaRatt,
+  onTaBortRatt,
   onStang,
 }: {
   /** Till exempel "Frukost, dag 2". */
@@ -50,6 +51,8 @@ export function ValjRatt({
   onValjRatt: (rattId: string) => Promise<boolean>
   /** Sparar en ny eller ändrad egen rätt. En ny läggs också i måltiden. */
   onSparaRatt: (rattId: string | null, namn: string, rader: TolkadIngrediens[]) => Promise<boolean>
+  /** Tar bort en egen rätt ur turen. */
+  onTaBortRatt: (rattId: string) => Promise<boolean>
   onStang: () => void
 }) {
   const id = useId()
@@ -88,6 +91,15 @@ export function ValjRatt({
           forsta={forsta}
           varor={varor}
           onAvbryt={() => setVy({ typ: 'lista' })}
+          onTaBort={
+            ratt
+              ? async () => {
+                  const ok = await onTaBortRatt(ratt.id)
+                  if (ok) setVy({ typ: 'lista' })
+                  return ok
+                }
+              : undefined
+          }
           onSpara={async (namn, rader) => {
             const ok = await onSparaRatt(ratt?.id ?? null, namn, rader)
             if (ok && ratt) setVy({ typ: 'lista' })

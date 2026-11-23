@@ -225,3 +225,14 @@ export async function taBortKostbehov(deltagareId: string): Promise<boolean> {
   const { error } = await supabase.from('kostbehov').delete().eq('deltagare_id', deltagareId)
   return !error
 }
+
+/** Tar bort en egen rätt ur turen, med måltiderna den ligger i och varorna som bara den använde. */
+export async function taBortEgenRatt(rattId: string, varuIds: readonly string[]): Promise<boolean> {
+  if (!supabase) return false
+  // Måltider och ingredienser försvinner med rätten (on delete cascade). Varorna tas bort efteråt.
+  const { error } = await supabase.from('ratter').delete().eq('id', rattId)
+  if (error) return false
+  if (varuIds.length === 0) return true
+  const varor = await supabase.from('varor').delete().in('id', varuIds)
+  return !varor.error
+}
