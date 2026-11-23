@@ -29,6 +29,8 @@
   --color-hjortron: #e8a33d;
   --color-hjortron-soft: #fbefd3;
   --color-hjortron-strong: #7a5410;
+  /* Ikon i hjortron på huvudknappen (bg-primary). Knappen är ljus i mörkt läge, så där är ikonen mörk hjortron. */
+  --color-hjortron-ikon: #e8a33d;
   --color-sand: #e8dcc4;
   /* Fyllda ytor i illustrationerna. Ljusare än primary så att detaljerna syns mot de mörka konturerna. */
   --color-illustration: #356854;
@@ -99,6 +101,7 @@ html[data-tema='mork'] {
   --color-hjortron: #f0b84a;
   --color-hjortron-soft: #3a2f1a;
   --color-hjortron-strong: #f5d58f;
+  --color-hjortron-ikon: #7a5410;
   --color-sand: #4a4234;
   --color-illustration: #5f8a72;
   --color-trail-marker: #d08a6c;
@@ -130,6 +133,7 @@ html[data-tema='mork'] {
     --color-hjortron: #f0b84a;
     --color-hjortron-soft: #3a2f1a;
     --color-hjortron-strong: #f5d58f;
+    --color-hjortron-ikon: #7a5410;
     --color-sand: #4a4234;
     --color-illustration: #5f8a72;
     --color-trail-marker: #d08a6c;

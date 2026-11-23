@@ -28,7 +28,7 @@ Skandinavisk, lugn och naturnära, som en välgjord fjällkarta. Allt ska gå at
 
 - Grönt (`primary`) bär appen. Resten är neutralt.
 - Rost (`accent`), som ledkrysset på en fjälled, är för det man ska lägga märke till: det som saknas, nedräkningen, aktiv flik.
-- Hjortron (`hjortron`) är för möjligheter och det positiva: tips, vinster och att lägga till något. Den används sparsamt, högst ett par ställen per sida.
+- Hjortron (`hjortron`) är för möjligheter och det positiva: tips, vinster och att lägga till något. Den får också användas för sidans viktigaste siffra och för små markeringar: ikonen i huvudknappen (`hjortron-ikon`), det aktiva antalet i en flik och den korta linjen under en rubrik. Den används sparsamt, aldrig som text eller signal på ljusa ytor.
 - Hjortron är aldrig text på ljusa ytor. Den används som fyllning (en prick, `bg-hjortron-soft`) eller som text på den mörkgröna ytan (`yta-stark`). Text på `hjortron-soft` är `hjortron-strong` eller `foreground`, och `hjortron-strong` går också som text på ytorna.
 - Använd aldrig fler signalfärger. Fel visas med `destructive`.
 

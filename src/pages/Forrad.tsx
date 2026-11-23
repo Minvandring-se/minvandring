@@ -123,7 +123,7 @@ export function Forrad() {
   const sok = oppet !== null && 'sok' in oppet ? oppet : null
   const laggTillKnapp = (
     <Button onClick={() => oppnaSok()}>
-      <Plus className="size-4" aria-hidden />
+      <Plus className="size-4 text-hjortron-ikon" aria-hidden />
       Lägg till utrustning
     </Button>
   )
@@ -309,7 +309,7 @@ function Forradsdelar({ antal }: { antal: number }) {
   return (
     <div className="flex flex-wrap items-center gap-2">
       <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground">
-        Mitt förråd <span className="rounded-full bg-primary-foreground/20 px-1.5 text-xs tabular-nums">{antal}</span>
+        Mitt förråd <span className="rounded-full bg-hjortron px-1.5 text-xs font-semibold text-yta-stark tabular-nums">{antal}</span>
       </span>
       {/* Exempel på kommande delar. Inte knappar, eftersom de inte går att öppna än. */}
       {FORRAD_EXEMPEL.flikar.map((f) => (
@@ -426,10 +426,14 @@ function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; 
   const lista = grupp ? sortera(grupp.saker, sortering) : []
   return (
     <section aria-labelledby={rubrikId} className="min-w-0 space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border pb-2">
-        <h2 id={rubrikId} className="min-w-0 text-2xl break-words text-primary sm:text-[28px]">
-          {kategori.etikett}
-        </h2>
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
+        <div className="min-w-0">
+          <h2 id={rubrikId} className="text-2xl break-words text-primary sm:text-[28px]">
+            {kategori.etikett}
+          </h2>
+          {/* En kort markering i hjortron under rubriken. */}
+          <span aria-hidden className="mt-1.5 block h-[3px] w-10 rounded-full bg-hjortron" />
+        </div>
         {grupp ? (
           <p className="flex gap-3 text-[13px] text-muted-foreground tabular-nums">
             <span>{antalText(grupp.antal)}</span>

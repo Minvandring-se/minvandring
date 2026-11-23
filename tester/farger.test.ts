@@ -43,6 +43,10 @@ const PAR: [text: string, yta: string, krav: number][] = [
   ['hjortron-strong', 'card', 4.5],
   ['hjortron-strong', 'background', 4.5],
   ['hjortron', 'yta-stark', 4.5],
+  // Antalet i den aktiva fliken och plusikonen i huvudknappen.
+  ['yta-stark', 'hjortron', 4.5],
+  ['hjortron-ikon', 'primary', 3],
+  ['hjortron-ikon', 'primary-hover', 3],
   ['accent', 'card', 3],
   ['accent', 'background', 3],
   ['ring', 'background', 3],
