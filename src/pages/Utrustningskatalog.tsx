@@ -207,7 +207,7 @@ function Produktkort({
         onClick={() => setUtfalld((u) => !u)}
         className="flex w-full items-start gap-3 rounded-lg p-4 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
-        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-hjortron-soft text-hjortron-strong">
           <Ikon className="size-5" aria-hidden />
         </span>
         <span className="min-w-0 flex-1">
