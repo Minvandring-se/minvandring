@@ -36,7 +36,7 @@ export const SIDOR: Record<Sida, Menysida> = {
     namn: 'Matplanering',
     till: '/matplanering',
     byggd: true,
-    beskrivning: 'Matplanen för varje tur',
+    beskrivning: 'Matplaner, matkatalog och skafferi',
     blir: '',
   },
   packlistor: {
@@ -100,6 +100,22 @@ export const SIDOR: Record<Sida, Menysida> = {
   profil: { sida: 'profil', namn: 'Profil', till: '/profil', byggd: true, beskrivning: 'Ditt namn och din bild', blir: '' },
 }
 
+/** En del av en sida i menyn, till exempel Matkatalog under Matplanering. */
+export interface Undersida {
+  namn: string
+  /** Sökvägen, utan å, ä och ö. Den första delen har samma sökväg som sidan. */
+  till: string
+}
+
+/** Sidor som har flera delar. De står indragna under sidan i sidomenyn och som en flikrad överst på delarna. */
+export const UNDERSIDOR: Partial<Record<Sida, readonly Undersida[]>> = {
+  matplanering: [
+    { namn: 'Mina matplaner', till: '/matplanering' },
+    { namn: 'Matkatalog', till: '/matplanering/katalog' },
+    { namn: 'Skafferi', till: '/matplanering/skafferi' },
+  ],
+}
+
 /** Grupperna i sidomenyn på dator, i ordning. */
 export const MENYGRUPPER: readonly { rubrik: string; sidor: readonly Sida[] }[] = [
   { rubrik: 'Planera', sidor: ['turer', 'matplanering', 'packlistor'] },
@@ -138,11 +154,20 @@ export function bladIState(state: unknown): { blad: Blad; steg: boolean } | null
   return { blad: s.blad, steg: s.steg === true }
 }
 
-/** Vilken sida en adress hör till, för att markera rätt rad i menyn. Turens sidor hör till Mina turer. */
+/** Vilken sida en adress hör till, för att markera rätt rad i menyn. Turens sidor hör till Mina turer, och delarna till sin sida. */
 export function aktivSida(pathname: string): Sida | null {
   const sokvag = pathname.replace(/\/+$/, '') || '/'
   if (sokvag === '/turer' || sokvag.startsWith('/tur/')) return 'turer'
-  return Object.values(SIDOR).find((s) => s.till === sokvag)?.sida ?? null
+  const sida = Object.values(SIDOR).find((s) => s.till === sokvag)?.sida
+  if (sida) return sida
+  const med = (Object.keys(UNDERSIDOR) as Sida[]).find((s) => UNDERSIDOR[s]!.some((u) => u.till === sokvag))
+  return med ?? null
+}
+
+/** Vilken del av en sida en adress är. null när adressen inte är en av delarna. */
+export function aktivUndersida(pathname: string): string | null {
+  const sokvag = pathname.replace(/\/+$/, '') || '/'
+  return Object.values(UNDERSIDOR).some((delar) => delar!.some((u) => u.till === sokvag)) ? sokvag : null
 }
 
 /** Är fliken aktiv? En sida när adressen hör till den, ett blad när en av dess sidor är öppen. */

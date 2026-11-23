@@ -1855,3 +1855,143 @@ describe('matplanens migrering mot befintliga rader', () => {
     expect(await antal(`public.varor where id = '00000000-0000-0000-0000-0000000000c2' and ansvarig is null`)).toBe(1)
   })
 })
+
+describe('skafferiet', () => {
+  // Egna användare: Sara och Tor delar en tur, Ulla tas bort på slutet.
+  const SARA = '00000000-0000-0000-0000-000000000031'
+  const TOR = '00000000-0000-0000-0000-000000000032'
+  const ULLA = '00000000-0000-0000-0000-000000000033'
+  let gryta: string
+  let grot: string
+  let sarasRad: string
+
+  const nyPase = async (namn: string) => {
+    const r = await db.query<{ id: string }>(
+      `insert into public.matprodukter (marke, namn, maltid, vikt_torr_g, kcal, kalla) values ('Skafferitest', $1, 'lunch_middag', 150, 600, 'https://exempel.se/pase') returning id`,
+      [namn],
+    )
+    return r.rows[0].id
+  }
+
+  const sarasSkafferi = () => db.query<{ antal: number; user_id: string }>('select antal, user_id from public.skafferi where id = $1', [sarasRad])
+
+  beforeAll(async () => {
+    await db.query(`insert into auth.users (id, email) values ('${SARA}', 'sara@exempel.se'), ('${TOR}', 'tor@exempel.se'), ('${ULLA}', 'ulla@exempel.se')`)
+    // Sara och Tor delar en tur. Det ska inte ge Tor någon åtkomst till Saras skafferi.
+    const tur = await skapaTur(SARA, 'Tur med skafferi')
+    const kod = await kodFor(tur)
+    await som(TOR, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    gryta = await nyPase('Skafferigryta')
+    grot = await nyPase('Skafferigröt')
+    const r = await som(SARA, (tx) =>
+      tx.query<{ id: string }>(`insert into public.skafferi (matprodukt_id, antal, bast_fore) values ($1, 2, '2027-06-01') returning id`, [gryta]),
+    )
+    sarasRad = r.rows[0].id
+    await som(SARA, (tx) => tx.query('insert into public.matfavoriter (matprodukt_id) values ($1)', [gryta]))
+  })
+
+  it('raden blir ens egen utan att user_id anges, och man ser den själv', async () => {
+    expect((await sarasSkafferi()).rows).toEqual([{ antal: 2, user_id: SARA }])
+    const r = await som(SARA, (tx) => tx.query<{ id: string }>('select id from public.skafferi'))
+    expect(r.rows.map((x) => x.id)).toEqual([sarasRad])
+    const f = await som(SARA, (tx) => tx.query<{ matprodukt_id: string; user_id: string }>('select matprodukt_id, user_id from public.matfavoriter'))
+    expect(f.rows).toEqual([{ matprodukt_id: gryta, user_id: SARA }])
+  })
+
+  it('ägaren kan ändra antal och datum och ta bort', async () => {
+    const andrad = await som(SARA, (tx) => tx.query(`update public.skafferi set antal = 3, bast_fore = null where id = $1`, [sarasRad]))
+    expect(andrad.affectedRows).toBe(1)
+    const r = await som(SARA, (tx) => tx.query<{ id: string }>('insert into public.skafferi (matprodukt_id) values ($1) returning id', [grot]))
+    const borta = await som(SARA, (tx) => tx.query('delete from public.skafferi where id = $1', [r.rows[0].id]))
+    expect(borta.affectedRows).toBe(1)
+    await som(SARA, (tx) => tx.query('insert into public.matfavoriter (matprodukt_id) values ($1)', [grot]))
+    const ingenFavorit = await som(SARA, (tx) => tx.query('delete from public.matfavoriter where matprodukt_id = $1', [grot]))
+    expect(ingenFavorit.affectedRows).toBe(1)
+  })
+
+  it('någon annan ser inte skafferiet eller favoriterna, inte ens i samma tur', async () => {
+    for (const vem of [TOR, C]) {
+      expect((await som(vem, (tx) => tx.query('select id from public.skafferi'))).rows).toHaveLength(0)
+      expect((await som(vem, (tx) => tx.query('select matprodukt_id from public.matfavoriter'))).rows).toHaveLength(0)
+    }
+  })
+
+  it('någon annan kan inte ändra eller ta bort raderna', async () => {
+    const andrad = await som(TOR, (tx) => tx.query('update public.skafferi set antal = 99 where id = $1', [sarasRad]))
+    expect(andrad.affectedRows).toBe(0)
+    const borta = await som(TOR, (tx) => tx.query('delete from public.skafferi where id = $1', [sarasRad]))
+    expect(borta.affectedRows).toBe(0)
+    const favorit = await som(TOR, (tx) => tx.query('delete from public.matfavoriter where matprodukt_id = $1', [gryta]))
+    expect(favorit.affectedRows).toBe(0)
+    expect((await sarasSkafferi()).rows).toEqual([{ antal: 3, user_id: SARA }])
+  })
+
+  it('man kan inte lägga något hos någon annan eller ge bort sina rader', async () => {
+    const rls = /row-level security/
+    await expect(som(TOR, (tx) => tx.query(`insert into public.skafferi (matprodukt_id, user_id) values ($1, '${SARA}')`, [grot]))).rejects.toThrow(rls)
+    await expect(som(TOR, (tx) => tx.query(`insert into public.matfavoriter (matprodukt_id, user_id) values ($1, '${SARA}')`, [grot]))).rejects.toThrow(rls)
+    await expect(som(SARA, (tx) => tx.query(`update public.skafferi set user_id = '${TOR}' where id = $1`, [sarasRad]))).rejects.toThrow(rls)
+    // En favorit går inte att ändra alls, bara lägga till och ta bort.
+    await forvantaFel(som(SARA, (tx) => tx.query(`update public.matfavoriter set user_id = '${TOR}' where matprodukt_id = $1`, [gryta])))
+    expect((await sarasSkafferi()).rows[0].user_id).toBe(SARA)
+  })
+
+  it('går inte att nå utan inloggning', async () => {
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.skafferi')))
+    await forvantaFel(somAnon((tx) => tx.query('select matprodukt_id from public.matfavoriter')))
+    await forvantaFel(somAnon((tx) => tx.query(`insert into public.skafferi (matprodukt_id, user_id) values ($1, '${SARA}')`, [grot])))
+    await forvantaFel(somAnon((tx) => tx.query('update public.skafferi set antal = 5')))
+    await forvantaFel(somAnon((tx) => tx.query('delete from public.skafferi')))
+    await forvantaFel(somAnon((tx) => tx.query(`insert into public.matfavoriter (matprodukt_id, user_id) values ($1, '${SARA}')`, [grot])))
+    await forvantaFel(somAnon((tx) => tx.query('delete from public.matfavoriter')))
+  })
+
+  it('har bara de avsedda rättigheterna: inget för anon, och favoriter ändras inte', async () => {
+    const har = async (roll: string, tabell: string, rattighet: string) =>
+      (await db.query<{ ok: boolean }>('select has_table_privilege($1, $2, $3) as ok', [roll, tabell, rattighet])).rows[0].ok
+    for (const r of ['select', 'insert', 'update', 'delete']) {
+      expect(await har('anon', 'public.skafferi', r)).toBe(false)
+      expect(await har('anon', 'public.matfavoriter', r)).toBe(false)
+      expect(await har('authenticated', 'public.skafferi', r)).toBe(true)
+    }
+    expect(await har('authenticated', 'public.matfavoriter', 'update')).toBe(false)
+  })
+
+  it('kräver ett antal mellan 1 och 999, en påse i katalogen och en rad per påse', async () => {
+    const r = await som(SARA, (tx) => tx.query<{ id: string }>('insert into public.skafferi (matprodukt_id) values ($1) returning id', [grot]))
+    const grotRad = r.rows[0].id
+    await forvantaFel(som(SARA, (tx) => tx.query('insert into public.skafferi (matprodukt_id, antal) values ($1, 0)', [crypto.randomUUID()])))
+    await forvantaFel(som(SARA, (tx) => tx.query('update public.skafferi set antal = 0 where id = $1', [grotRad])))
+    await forvantaFel(som(SARA, (tx) => tx.query('update public.skafferi set antal = 1000 where id = $1', [grotRad])))
+    expect((await som(SARA, (tx) => tx.query('update public.skafferi set antal = 999 where id = $1', [grotRad]))).affectedRows).toBe(1)
+    await forvantaFel(som(SARA, (tx) => tx.query('insert into public.skafferi (matprodukt_id) values ($1)', [crypto.randomUUID()])))
+    // Samma påse två gånger, både som ny rad och genom att byta påse på en befintlig.
+    const unik = (p: Promise<unknown>) => expect(p).rejects.toMatchObject({ code: '23505' })
+    await unik(som(SARA, (tx) => tx.query('insert into public.skafferi (matprodukt_id) values ($1)', [grot])))
+    await unik(som(SARA, (tx) => tx.query('update public.skafferi set matprodukt_id = $1 where id = $2', [grot, sarasRad])))
+    await som(SARA, (tx) => tx.query('insert into public.matfavoriter (matprodukt_id) values ($1) on conflict do nothing', [gryta]))
+    await unik(som(SARA, (tx) => tx.query('insert into public.matfavoriter (matprodukt_id) values ($1)', [gryta])))
+    await som(SARA, (tx) => tx.query('delete from public.skafferi where id = $1', [grotRad]))
+  })
+
+  it('raderna försvinner när påsen tas bort ur katalogen', async () => {
+    const pase = await nyPase('Skafferiutgående')
+    await som(ULLA, async (tx) => {
+      await tx.query('insert into public.skafferi (matprodukt_id) values ($1)', [pase])
+      await tx.query('insert into public.matfavoriter (matprodukt_id) values ($1)', [pase])
+    })
+    await db.query('delete from public.matprodukter where id = $1', [pase])
+    expect((await db.query('select 1 from public.skafferi where matprodukt_id = $1', [pase])).rows).toHaveLength(0)
+    expect((await db.query('select 1 from public.matfavoriter where matprodukt_id = $1', [pase])).rows).toHaveLength(0)
+  })
+
+  it('skafferiet och favoriterna försvinner när kontot tas bort', async () => {
+    await som(ULLA, async (tx) => {
+      await tx.query('insert into public.skafferi (matprodukt_id) values ($1)', [grot])
+      await tx.query('insert into public.matfavoriter (matprodukt_id) values ($1)', [grot])
+    })
+    await db.query('delete from auth.users where id = $1', [ULLA])
+    expect((await db.query('select 1 from public.skafferi where user_id = $1', [ULLA])).rows).toHaveLength(0)
+    expect((await db.query('select 1 from public.matfavoriter where user_id = $1', [ULLA])).rows).toHaveLength(0)
+  })
+})

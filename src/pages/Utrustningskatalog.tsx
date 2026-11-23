@@ -12,8 +12,9 @@ import { Select } from '@/components/ui/select'
 import { KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { Panel } from '@/components/ui/panel'
 import { Sektion } from '@/components/ui/sektion'
+import { Specrutor } from '@/components/ui/specrutor'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, underkategoriFor, underkategorierFor, type Detaljrad, type KategoriNyckel } from '@/lib/forrad'
+import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, underkategoriFor, underkategorierFor, type KategoriNyckel } from '@/lib/forrad'
 import { forradsadress } from '@/lib/forradslista'
 import { arKokgrupp, filtreraKokgrupp, KOKGRUPPER, kokEtikettFor, type Kokgrupp } from '@/lib/kokkarl'
 import {
@@ -443,20 +444,6 @@ function Produktpanel({
         </div>
       </div>
     </Panel>
-  )
-}
-
-/** Specifikationerna som rutor med etiketten över värdet, två i bredd. */
-function Specrutor({ rader }: { rader: Detaljrad[] }) {
-  return (
-    <dl className="grid grid-cols-2 gap-2">
-      {rader.map((rad) => (
-        <div key={rad.etikett} className="min-w-0 rounded-md bg-muted px-3 py-2">
-          <dt className="text-xs text-muted-foreground">{rad.etikett}</dt>
-          <dd className="font-semibold break-words">{rad.varde}</dd>
-        </div>
-      ))}
-    </dl>
   )
 }
 

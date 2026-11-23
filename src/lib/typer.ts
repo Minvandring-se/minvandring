@@ -125,6 +125,14 @@ export interface Matprodukt {
   kontrollerad: string | null
 }
 
+/** En påse man har hemma, i ens eget skafferi. bast_fore är ÅÅÅÅ-MM-DD. */
+export interface Skafferirad {
+  id: string
+  matprodukt_id: string
+  antal: number
+  bast_fore: string | null
+}
+
 /** En rätt i turen: en egen rätt med ingredienser, eller en påse ur katalogen (matprodukt_id). */
 export interface Ratt {
   id: string

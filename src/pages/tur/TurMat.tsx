@@ -11,10 +11,13 @@ import { ValjRatt } from '@/components/mat/ValjRatt'
 import { useTur } from '@/components/tur/turKontext'
 import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
+import { useSkafferi } from '@/hooks/useSkafferi'
 import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
 import { dagssummor, inkopslista, MALTIDER, matdagar, matsummering, matviktTotalt, rattPerPortion, type Matdag as Dag } from '@/lib/mat'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
+import { hemma } from '@/lib/skafferi'
+import { lokaltDatum } from '@/lib/turlista'
 import { turdelAdress } from '@/lib/turdelar'
 import type { DeltagareRad, Maltid, Maltidsrad } from '@/lib/typer'
 import { matvikter } from '@/lib/vikt'
@@ -73,6 +76,14 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
   const kanAndra = rollKanAndra(minRoll)
   const [valjer, setValjer] = useState<{ dag: Dag; maltid: Maltid } | null>(null)
   const [fel, setFel] = useState<string | null>(null)
+  // Ens eget skafferi. Om det inte går att hämta visas matplanen ändå, utan uppgifterna om vad man har hemma.
+  const { skafferi } = useSkafferi()
+  const egnaRader = useMemo(() => (skafferi && skafferi !== 'fel' ? skafferi.rader : []), [skafferi])
+  const egetSkafferi = useMemo(
+    () => ({ favoriter: skafferi && skafferi !== 'fel' ? skafferi.favoriter : new Set<string>(), hemma: hemma(egnaRader, lokaltDatum()) }),
+    [skafferi, egnaRader],
+  )
+  const mittDeltagareId = deltagare.find((d) => d.user_id === mittUserId)?.id ?? null
 
   const personer = plan.matdeltagare.filter((d) => d.typ === 'person').length
   const behov = useMemo(() => behovMedNamn(plan, deltagare), [plan, deltagare])
@@ -153,6 +164,8 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
         rader={inkop}
         deltagare={deltagare}
         kanAndra={kanAndra}
+        mittDeltagareId={mittDeltagareId}
+        skafferi={egnaRader}
         onAndra={async (rad, andring) => {
           const ok = await andraInkopsrad(rad.typ, rad.id, andring)
           if (ok) await laddaOm()
@@ -169,6 +182,7 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
           ingredienser={plan.ingredienser}
           varor={plan.varor}
           behov={behov}
+          skafferi={egetSkafferi}
           onStang={() => setValjer(null)}
           onValjPase={async (pase) => {
             const befintlig = plan.ratter.find((r) => r.matprodukt_id === pase.id)
