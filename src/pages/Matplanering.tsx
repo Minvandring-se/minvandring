@@ -4,22 +4,23 @@ import { useApp } from '@/components/app/appKontext'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
+import { Matflikar } from '@/components/mat/Matflikar'
 import { knappStil } from '@/components/ui/knappStil'
 import { useDinaTurer } from '@/hooks/useDinaTurer'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { SIDOR } from '@/lib/meny'
 import { turdelAdress } from '@/lib/turdelar'
 import { datumrad, delaUppTurer, lokaltDatum, type TurIListan } from '@/lib/turlista'
 
-/** Menyns Matplanering: dina turer, med en länk till varje turs matplan. Kommande turer först. */
+/** Mina matplaner, den första delen av Matplanering: dina turer, med en länk till varje turs matplan. Kommande turer först. */
 export function Matplanering() {
-  const { namn, rubrik = namn } = SIDOR.matplanering
+  const rubrik = 'Mina matplaner'
   useSidtitel(rubrik)
   const { anvandarId } = useApp()
   const turer = useDinaTurer(anvandarId, 'matplanering')
 
   return (
     <div className="space-y-6">
+      <Matflikar />
       <SidRubrik rubrik={rubrik} text="Välj en tur för att planera maten dag för dag." />
       {turer === null ? (
         <Laddar text="Hämtar dina turer" className="space-y-3">

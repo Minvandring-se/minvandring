@@ -152,6 +152,7 @@ describe('inkopslista', () => {
       namn: 'Gryta',
       gram: 900,
       pasar: 3,
+      matproduktId: 'p-gryta',
       varifran: 'kopa',
       ansvarig: 'erik',
       klart: false,

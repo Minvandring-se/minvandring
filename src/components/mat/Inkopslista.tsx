@@ -3,7 +3,9 @@ import { Select } from '@/components/ui/select'
 import { Sektion } from '@/components/ui/sektion'
 import { formateraVikt } from '@/lib/forrad'
 import { inkopsgrupper, type Inkopsrad } from '@/lib/mat'
-import type { DeltagareRad } from '@/lib/typer'
+import { bastForeStatus, BASTFORE_TEXT, hemma, kopText } from '@/lib/skafferi'
+import { lokaltDatum } from '@/lib/turlista'
+import type { DeltagareRad, Skafferirad } from '@/lib/typer'
 import { cn } from '@/lib/utils'
 
 type Andring = { ansvarig?: string | null; klart?: boolean; varifran?: 'kopa' | 'hemifran' }
@@ -14,22 +16,45 @@ function mangd(r: Inkopsrad): string {
   return `${r.pasar === 1 ? '1 påse' : `${r.pasar} påsar`}, ${formateraVikt(r.gram)}`
 }
 
+/** Det ens eget skafferi säger om en påse man själv ansvarar för. Andras skafferier hämtas aldrig. */
+interface Skafferiinfo {
+  text: string | null
+  bastFore: string | null
+}
+
 /**
  * Inköpslistan för hela turen: det som ska köpas, grupperat per ansvarig, och det som tas hemifrån.
  * Ägare och redigerare bockar av, väljer ansvarig och flyttar varor mellan köpa och hemifrån. Läsare ser listan.
+ * På påsar man själv ansvarar för står hur många man har hemma i sitt skafferi.
  */
 export function Inkopslista({
   rader,
   deltagare,
   kanAndra,
+  mittDeltagareId,
+  skafferi,
   onAndra,
 }: {
   rader: readonly Inkopsrad[]
   deltagare: readonly DeltagareRad[]
   kanAndra: boolean
+  /** Den inloggades rad i turen. */
+  mittDeltagareId: string | null
+  /** Ens eget skafferi. */
+  skafferi: readonly Skafferirad[]
   onAndra: (rad: Inkopsrad, andring: Andring) => Promise<boolean>
 }) {
   const [fel, setFel] = useState(false)
+  const idag = lokaltDatum()
+  const iSkafferiet = hemma(skafferi, idag)
+  const infoFor = (r: Inkopsrad): Skafferiinfo | null => {
+    if (r.typ !== 'pase' || !r.matproduktId || !mittDeltagareId || r.ansvarig !== mittDeltagareId) return null
+    const rad = skafferi.find((s) => s.matprodukt_id === r.matproduktId)
+    const status = rad ? bastForeStatus(rad.bast_fore, idag) : null
+    const text = kopText(r.pasar ?? 0, iSkafferiet.get(r.matproduktId) ?? 0)
+    const bastFore = status === 'passerat' || status === 'snart' ? BASTFORE_TEXT[status] : null
+    return text || bastFore ? { text, bastFore } : null
+  }
   const personer = deltagare.filter((d) => d.typ === 'person')
   const { attKopa, hemifran } = inkopsgrupper(
     rader,
@@ -57,9 +82,9 @@ export function Inkopslista({
             </p>
           )}
           {attKopa.map((g) => (
-            <Grupp key={g.ansvarig ?? 'ingen'} rubrik={namnFor(g.ansvarig)} saknas={g.ansvarig === null} rader={g.rader} personer={personer} kanAndra={kanAndra} onAndra={andra} />
+            <Grupp key={g.ansvarig ?? 'ingen'} rubrik={namnFor(g.ansvarig)} saknas={g.ansvarig === null} rader={g.rader} personer={personer} kanAndra={kanAndra} infoFor={infoFor} onAndra={andra} />
           ))}
-          {hemifran.length > 0 && <Grupp rubrik="Tas hemifrån" rader={hemifran} personer={personer} kanAndra={kanAndra} onAndra={andra} />}
+          {hemifran.length > 0 && <Grupp rubrik="Tas hemifrån" rader={hemifran} personer={personer} kanAndra={kanAndra} infoFor={infoFor} onAndra={andra} />}
         </div>
       )}
     </Sektion>
@@ -72,6 +97,7 @@ function Grupp({
   rader,
   personer,
   kanAndra,
+  infoFor,
   onAndra,
 }: {
   rubrik: string
@@ -80,6 +106,7 @@ function Grupp({
   rader: readonly Inkopsrad[]
   personer: readonly DeltagareRad[]
   kanAndra: boolean
+  infoFor: (r: Inkopsrad) => Skafferiinfo | null
   onAndra: (rad: Inkopsrad, andring: Andring) => void
 }) {
   return (
@@ -87,14 +114,26 @@ function Grupp({
       <h3 className={cn('text-base', saknas && 'text-accent-strong')}>{rubrik}</h3>
       <ul className="divide-y divide-border">
         {rader.map((r) => (
-          <Rad key={`${r.typ}-${r.id}`} rad={r} personer={personer} kanAndra={kanAndra} onAndra={(a) => onAndra(r, a)} />
+          <Rad key={`${r.typ}-${r.id}`} rad={r} personer={personer} kanAndra={kanAndra} info={infoFor(r)} onAndra={(a) => onAndra(r, a)} />
         ))}
       </ul>
     </div>
   )
 }
 
-function Rad({ rad, personer, kanAndra, onAndra }: { rad: Inkopsrad; personer: readonly DeltagareRad[]; kanAndra: boolean; onAndra: (a: Andring) => void }) {
+function Rad({
+  rad,
+  personer,
+  kanAndra,
+  info,
+  onAndra,
+}: {
+  rad: Inkopsrad
+  personer: readonly DeltagareRad[]
+  kanAndra: boolean
+  info: Skafferiinfo | null
+  onAndra: (a: Andring) => void
+}) {
   const id = useId()
   return (
     <li className="space-y-2 py-2">
@@ -109,6 +148,12 @@ function Rad({ rad, personer, kanAndra, onAndra }: { rad: Inkopsrad; personer: r
         <span className={cn('min-w-0 flex-1 break-words', rad.klart && 'text-muted-foreground line-through')}>{rad.namn}</span>
         <span className="shrink-0 text-sm tabular-nums">{mangd(rad)}</span>
       </label>
+      {info && (
+        <p className="pl-8 text-sm">
+          {info.text && <span className="block font-medium text-primary">{info.text}</span>}
+          {info.bastFore && <span className="block font-medium text-accent-strong">{info.bastFore}, se Skafferi</span>}
+        </p>
+      )}
       {kanAndra && (
         <div className="grid grid-cols-2 gap-2 pl-8">
           <div className="min-w-0 space-y-1">
