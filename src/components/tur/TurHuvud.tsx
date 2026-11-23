@@ -86,7 +86,7 @@ export function TurHuvud({ tur, deltagare, minRoll }: { tur: Tur; deltagare: Del
             </div>
           )}
           {/* Långa ord avstavas på svenska (lang="sv") i stället för att brytas mitt i. */}
-          <h1 id="tur-namn" className="text-3xl leading-tight font-bold break-words hyphens-auto lg:text-4xl xl:text-5xl xl:leading-[1.05]">
+          <h1 id="tur-namn" className="text-3xl leading-tight font-semibold break-words hyphens-auto lg:text-4xl xl:text-5xl xl:leading-[1.05]">
             {tur.namn}
           </h1>
           {tur.destination && <p className="text-muted-foreground break-words lg:text-lg">{tur.destination}</p>}

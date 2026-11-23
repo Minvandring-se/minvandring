@@ -5,17 +5,19 @@ import {
   arKategori,
   storstaVinsten,
   faltFran,
+  flerKategorier,
   formateraVikt,
   forradsrad,
-  fyraTunga,
   forvaldTyp,
   kategoriFor,
   kategoriForUnder,
+  listdelar,
   medKategori,
   medUnderkategori,
   egenskapsdelar,
   produktdetaljer,
   sakdetaljer,
+  saknadeGrundsaker,
   summeraForrad,
   tolkaSak,
   typEfterVal,
@@ -408,7 +410,7 @@ describe('sakdetaljer', () => {
   it('säger att vikten saknas, och upprepar inte kategorin när underkategorin heter likadant eller saknas', () => {
     expect(text(sakdetaljer(sak({ kategori: 'ovrigt', underkategori: 'ovrigt' })).grund)).toEqual([
       'Kategori: Övrigt',
-      'Vikt per styck: Saknas',
+      'Vikt per styck: Ingen vikt',
       'Antal: 1',
       'Räknas som: I ryggsäcken',
     ])
@@ -444,7 +446,7 @@ describe('sakdetaljer', () => {
 
   it('visar katalogens vikt även när den egna vikten är borttagen', () => {
     const d = sakdetaljer(sak({ produkt_id: 'p1', kategori: 'talt', vikt_g: null, produkter: katalogprodukt() }))
-    expect(text(d.grund).slice(1, 3)).toEqual(['Vikt per styck: Saknas', 'Katalogens vikt: 1,7 kg'])
+    expect(text(d.grund).slice(1, 3)).toEqual(['Vikt per styck: Ingen vikt', 'Katalogens vikt: 1,7 kg'])
   })
 
   it('en egen sak får aldrig texten egen vikt', () => {
@@ -505,125 +507,83 @@ describe('forradsrad', () => {
   })
 })
 
-describe('fyraTunga', () => {
-  const ryggsack = sak({ id: 'r', namn: 'Kajka 65', kategori: 'packning', underkategori: 'ryggsack', vikt_g: 3300 })
-  const talt = sak({ id: 't', namn: 'Akto', kategori: 'talt', underkategori: 'talt', vikt_g: 1700 })
-  const sovsack = sak({ id: 's', namn: 'Neutrino', kategori: 'sova', underkategori: 'sovsack', vikt_g: 870 })
-  const underlag = sak({ id: 'l', namn: 'Ultra 5R', kategori: 'sova', underkategori: 'liggunderlag', vikt_g: 585 })
-  const alla = [ryggsack, talt, sovsack, underlag]
+describe('saknadeGrundsaker', () => {
+  const ryggsack = sak({ kategori: 'packning', underkategori: 'ryggsack', vikt_g: 3300 })
+  const talt = sak({ kategori: 'talt', underkategori: 'talt', vikt_g: 1700 })
+  const sovsack = sak({ kategori: 'sova', underkategori: 'sovsack', vikt_g: 870 })
+  const underlag = sak({ kategori: 'sova', underkategori: 'liggunderlag', vikt_g: 585 })
 
-  it('visas inte när förrådet är tomt', () => {
-    expect(fyraTunga([])).toBeNull()
-  })
-
-  it('summerar ryggsäck, tält, sovsäck och liggunderlag när alla finns med vikt', () => {
-    expect(fyraTunga(alla)).toMatchObject({ viktG: 6455, komplett: true, medVikt: 4, varde: '6,46 kg', uppmaningar: [] })
-  })
-
-  it('har en rad per grupp med saken som räknas, i fast ordning', () => {
-    expect(fyraTunga(alla)?.grupper.map((g) => [g.namn, g.sak?.namn, g.sak?.viktG])).toEqual([
-      ['Ryggsäck', 'Kajka 65', 3300],
-      ['Tält', 'Akto', 1700],
-      ['Sovsäck', 'Neutrino', 870],
-      ['Liggunderlag', 'Ultra 5R', 585],
+  it('ett tomt förråd saknar alla fyra, i ordningen i KATEGORIER, med texter och underkategori att öppna', () => {
+    expect(saknadeGrundsaker([])).toEqual([
+      { grupp: 'ryggsack', kategori: 'packning', underkategori: 'ryggsack', rubrik: 'Du har ingen ryggsäck än', hjalp: 'Lägg till den du bär på flerdagsturer.' },
+      { grupp: 'talt', kategori: 'talt', underkategori: 'talt', rubrik: 'Du har inget tält eller tarp än', hjalp: 'Lägg till det du sover under på flerdagsturer.' },
+      { grupp: 'sovsack', kategori: 'sova', underkategori: 'sovsack', rubrik: 'Du har ingen sovsäck än', hjalp: 'Lägg till din, så räknas den med i vikten.' },
+      { grupp: 'liggunderlag', kategori: 'sova', underkategori: 'liggunderlag', rubrik: 'Du har inget liggunderlag än', hjalp: 'Sök i katalogen eller skriv in det själv.' },
     ])
   })
 
-  it('har uppmaningen på raden för det som saknas', () => {
-    const rad = fyraTunga([ryggsack, talt, sovsack])?.grupper[3]
-    expect(rad).toEqual({
-      grupp: 'liggunderlag',
-      namn: 'Liggunderlag',
-      sak: null,
-      utanVikt: null,
-      uppmaning: { grupp: 'liggunderlag', text: 'Lägg till ett liggunderlag', gor: 'laggTill', kategori: 'sova' },
-    })
+  it('saknar ingenting när alla fyra finns, även utan vikt', () => {
+    expect(saknadeGrundsaker([ryggsack, talt, sovsack, underlag])).toEqual([])
+    expect(saknadeGrundsaker([ryggsack, talt, sovsack, underlag].map((s) => ({ ...s, vikt_g: null })))).toEqual([])
   })
 
-  it('räknar inte in andra saker, och inte antal', () => {
-    const kok = sak({ kategori: 'kok', underkategori: 'brannare', vikt_g: 400 })
-    const tarp = sak({ kategori: 'talt', underkategori: 'tarp', vikt_g: 500 })
-    const utanUnder = sak({ kategori: 'sova', underkategori: null, vikt_g: 900 })
-    expect(fyraTunga([...alla, kok, tarp, utanUnder, { ...sovsack, id: 's2', vikt_g: 900, antal: 3 }])?.viktG).toBe(6455)
+  it('en tarp räcker för tält, men inte en vindsäck', () => {
+    const tarp = sak({ kategori: 'talt', underkategori: 'tarp' })
+    const vindsack = sak({ kategori: 'talt', underkategori: 'vindsack' })
+    expect(saknadeGrundsaker([ryggsack, tarp, sovsack, underlag])).toEqual([])
+    expect(saknadeGrundsaker([ryggsack, vindsack, sovsack, underlag]).map((s) => s.grupp)).toEqual(['talt'])
   })
 
-  it('räknar den lättaste när man har flera i samma grupp', () => {
-    const lattTalt = sak({ id: 't2', kategori: 'talt', underkategori: 'talt', vikt_g: 835 })
-    expect(fyraTunga([...alla, lattTalt])).toMatchObject({ viktG: 6455 - 1700 + 835, komplett: true })
+  it('en quilt räcker för sovsäck, men en dagsryggsäck räcker inte för ryggsäck', () => {
+    const quilt = sak({ kategori: 'sova', underkategori: 'quilt' })
+    const dag = sak({ kategori: 'packning', underkategori: 'dagsryggsack' })
+    expect(saknadeGrundsaker([dag, talt, quilt, underlag]).map((s) => s.grupp)).toEqual(['ryggsack'])
   })
 
-  it('räknar en quilt som sovsäck, och den lättaste av de två', () => {
-    const quilt = sak({ id: 'q', kategori: 'sova', underkategori: 'quilt', vikt_g: 527 })
-    expect(fyraTunga([ryggsack, talt, quilt, underlag])).toMatchObject({ komplett: true, viktG: 3300 + 1700 + 527 + 585 })
-    expect(fyraTunga([...alla, quilt])?.viktG).toBe(3300 + 1700 + 527 + 585)
+  it('en sak utan underkategori räknas inte', () => {
+    expect(saknadeGrundsaker([sak({ kategori: 'sova', underkategori: null }), ryggsack, talt]).map((s) => s.grupp)).toEqual(['sovsack', 'liggunderlag'])
   })
+})
 
-  it('uppmanar att lägga till det som saknas, och skriver summan som minst', () => {
-    const r = fyraTunga([ryggsack, talt, sovsack])
-    expect(r).toMatchObject({ viktG: 5870, komplett: false, medVikt: 3, varde: 'Minst 5,87 kg' })
-    expect(r?.uppmaningar).toEqual([{ grupp: 'liggunderlag', text: 'Lägg till ett liggunderlag', gor: 'laggTill', kategori: 'sova' }])
-  })
-
-  it('har en uppmaning per saknad grupp, med rätt kategori att öppna', () => {
-    const r = fyraTunga([sak({ kategori: 'kok', underkategori: 'brannare', vikt_g: 400 })])
-    expect(r).toMatchObject({ viktG: 0, komplett: false, medVikt: 0, varde: null })
-    expect(r?.uppmaningar.map((u) => [u.text, u.gor === 'laggTill' ? u.kategori : null])).toEqual([
-      ['Lägg till en ryggsäck', 'packning'],
-      ['Lägg till ett tält', 'talt'],
-      ['Lägg till en sovsäck', 'sova'],
-      ['Lägg till ett liggunderlag', 'sova'],
+describe('listdelar', () => {
+  it('blandar kategorier med saker och kategorier där en grundsak saknas, i ordningen i KATEGORIER', () => {
+    const talt = sak({ namn: 'Akto', kategori: 'talt', underkategori: 'talt', vikt_g: 1700 })
+    const kok = sak({ namn: 'Trangia', kategori: 'kok', underkategori: 'brannare', vikt_g: 900 })
+    const saker = [kok, talt]
+    const delar = listdelar(summeraForrad(saker).grupper, saknadeGrundsaker(saker))
+    expect(delar.map((d) => [d.kategori.nyckel, d.grupp?.antal ?? null, d.saknade.map((s) => s.grupp)])).toEqual([
+      ['packning', null, ['ryggsack']],
+      ['talt', 1, []],
+      ['sova', null, ['sovsack', 'liggunderlag']],
+      ['kok', 1, []],
     ])
   })
 
-  it('en dagsryggsäck räknas inte som ryggsäck, och uppmaningen säger vandringsryggsäck', () => {
-    const dag = sak({ id: 'd', kategori: 'packning', underkategori: 'dagsryggsack', vikt_g: 600 })
-    const r = fyraTunga([dag, talt, sovsack, underlag])
-    expect(r).toMatchObject({ viktG: 1700 + 870 + 585, komplett: false })
-    expect(r?.uppmaningar).toEqual([{ grupp: 'ryggsack', text: 'Lägg till en vandringsryggsäck', gor: 'laggTill', kategori: 'packning' }])
-    // Med en vanlig ryggsäck också räknas bara den.
-    expect(fyraTunga([dag, ...alla])).toMatchObject({ viktG: 6455, komplett: true })
+  it('lägger det som saknas i en kategori som har andra saker', () => {
+    const kudde = sak({ kategori: 'sova', underkategori: 'kudde', vikt_g: 80 })
+    const sovsack = sak({ kategori: 'sova', underkategori: 'sovsack', vikt_g: 870 })
+    const delar = listdelar(summeraForrad([kudde, sovsack]).grupper, saknadeGrundsaker([kudde, sovsack]))
+    expect(delar.find((d) => d.kategori.nyckel === 'sova')).toMatchObject({ grupp: { antal: 2 }, saknade: [{ grupp: 'liggunderlag' }] })
   })
 
-  it('en sak utan vikt räknas inte i summan, och uppmaningen pekar på saken', () => {
-    const utan = { ...sovsack, vikt_g: null }
-    const r = fyraTunga([ryggsack, talt, utan, underlag])
-    expect(r).toMatchObject({ viktG: 3300 + 1700 + 585, komplett: false, varde: 'Minst 5,58 kg' })
-    expect(r?.uppmaningar).toEqual([{ grupp: 'sovsack', text: 'Fyll i vikten på din sovsäck', gor: 'fyllIVikt', sakId: 's' }])
-    expect(r?.grupper[2]).toMatchObject({ sak: null, utanVikt: 'Neutrino' })
+  it('visar bara kategorier med saker när inget saknas skickas in, till exempel med filter', () => {
+    const kok = sak({ kategori: 'kok', vikt_g: 900 })
+    expect(listdelar(summeraForrad([kok]).grupper, []).map((d) => d.kategori.nyckel)).toEqual(['kok'])
+  })
+})
+
+describe('flerKategorier', () => {
+  it('ger Kök, Vatten, Kläder, Prylar och elektronik och Första hjälpen och medicin när förrådet saknar dem', () => {
+    expect(flerKategorier([]).map((k) => k.etikett)).toEqual(['Kök', 'Vatten', 'Kläder', 'Prylar och elektronik', 'Första hjälpen och medicin'])
   })
 
-  it('använder den lättaste som har vikt när någon i gruppen saknar vikt', () => {
-    const utan = sak({ id: 't0', kategori: 'talt', underkategori: 'talt', vikt_g: null })
-    const tungt = sak({ id: 't3', kategori: 'talt', underkategori: 'talt', vikt_g: 2400 })
-    const r = fyraTunga([ryggsack, utan, tungt, talt, sovsack, underlag])
-    expect(r).toMatchObject({ viktG: 6455, komplett: true, varde: '6,46 kg', uppmaningar: [] })
-    expect(r?.grupper[1].sak?.id).toBe('t')
+  it('tar bara med de kategorier som saknar saker', () => {
+    const saker = [sak({ kategori: 'kok' }), sak({ kategori: 'klader' }), sak({ kategori: 'talt' })]
+    expect(flerKategorier(saker).map((k) => k.nyckel)).toEqual(['vatten', 'prylar', 'medicin'])
   })
 
-  it('säger rätt sak för varje grupp som bara har saker utan vikt', () => {
-    const r = fyraTunga(alla.map((s) => ({ ...s, vikt_g: null })))
-    expect(r).toMatchObject({ viktG: 0, komplett: false, varde: null })
-    expect(r?.uppmaningar.map((u) => u.text)).toEqual([
-      'Fyll i vikten på din ryggsäck',
-      'Fyll i vikten på ditt tält',
-      'Fyll i vikten på din sovsäck',
-      'Fyll i vikten på ditt liggunderlag',
-    ])
-  })
-
-  it('säger quilt när det är en quilt som saknar vikt', () => {
-    const quilt = sak({ id: 'q', kategori: 'sova', underkategori: 'quilt', vikt_g: null })
-    expect(fyraTunga([ryggsack, talt, quilt, underlag])?.uppmaningar).toEqual([{ grupp: 'sovsack', text: 'Fyll i vikten på din quilt', gor: 'fyllIVikt', sakId: 'q' }])
-  })
-
-  it('blandar saknade saker och saknade vikter', () => {
-    const r = fyraTunga([{ ...ryggsack, vikt_g: null }, talt])
-    expect(r).toMatchObject({ viktG: 1700, varde: 'Minst 1,7 kg' })
-    expect(r?.uppmaningar.map((u) => u.gor)).toEqual(['fyllIVikt', 'laggTill', 'laggTill'])
-  })
-
-  it('räknar vikten 0 g som en ifylld vikt', () => {
-    expect(fyraTunga([ryggsack, talt, sovsack, { ...underlag, vikt_g: 0 }])).toMatchObject({ komplett: true, viktG: 5870 })
+  it('är tom när alla fem har saker', () => {
+    expect(flerKategorier(['kok', 'vatten', 'klader', 'prylar', 'medicin'].map((kategori) => sak({ kategori })))).toEqual([])
   })
 })
 

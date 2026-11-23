@@ -22,6 +22,13 @@
   --color-accent-soft: #f5e4dc;
   /* Text i accentfärg, på accent-soft eller på ytorna. */
   --color-accent-strong: #7a3a24;
+  /*
+   * Hjortron: möjligheter och det positiva (tips, vinster, lägg till), sparsamt. Aldrig som text på ljusa ytor,
+   * bara på yta-stark eller som fyllning. Text på hjortron-soft är hjortron-strong eller foreground.
+   */
+  --color-hjortron: #e8a33d;
+  --color-hjortron-soft: #fbefd3;
+  --color-hjortron-strong: #7a5410;
   --color-sand: #e8dcc4;
   /* Fyllda ytor i illustrationerna. Ljusare än primary så att detaljerna syns mot de mörka konturerna. */
   --color-illustration: #356854;
@@ -47,9 +54,12 @@
 
   --shadow-soft: 0 1px 2px rgb(31 42 36 / 0.06), 0 6px 20px rgb(31 42 36 / 0.06);
 
-  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
-  /* Rubriker och logotyp. Laddas lokalt från @fontsource-variable/montserrat i main.tsx. */
-  --font-heading: 'Montserrat Variable', ui-sans-serif, system-ui, sans-serif;
+  /* Typsnitten laddas lokalt från @fontsource-variable i main.tsx. Inter för text, knappar och formulär. */
+  --font-sans: 'Inter Variable', 'Inter', ui-sans-serif, system-ui, -apple-system, 'Segoe UI', Roboto, sans-serif;
+  /* Rubriker. */
+  --font-heading: 'Fraunces Variable', Georgia, serif;
+  /* Bara logotypen. */
+  --font-logo: 'Montserrat Variable', ui-sans-serif, system-ui, sans-serif;
 
   /* Långsam zoom på bilderna i startsidans bildspel. */
   --animate-zoom-langsam: zoom-langsam 9s ease-out forwards;
@@ -86,6 +96,9 @@ html[data-tema='mork'] {
   --color-accent: #e0a37f;
   --color-accent-soft: #3a2a22;
   --color-accent-strong: #f0c2a6;
+  --color-hjortron: #f0b84a;
+  --color-hjortron-soft: #3a2f1a;
+  --color-hjortron-strong: #f5d58f;
   --color-sand: #4a4234;
   --color-illustration: #5f8a72;
   --color-trail-marker: #d08a6c;
@@ -114,6 +127,9 @@ html[data-tema='mork'] {
     --color-accent: #e0a37f;
     --color-accent-soft: #3a2a22;
     --color-accent-strong: #f0c2a6;
+    --color-hjortron: #f0b84a;
+    --color-hjortron-soft: #3a2f1a;
+    --color-hjortron-strong: #f5d58f;
     --color-sand: #4a4234;
     --color-illustration: #5f8a72;
     --color-trail-marker: #d08a6c;
@@ -152,10 +168,15 @@ html[data-tema='mork'] {
   body {
     @apply bg-background text-foreground font-sans antialiased;
   }
+  /* Rubrikerna i Fraunces, vikt 600, med lite tätare tecken på de stora. */
   h1,
   h2,
   h3 {
-    @apply font-heading font-semibold tracking-tight;
+    @apply font-heading font-semibold;
+    letter-spacing: -0.01em;
+  }
+  h1 {
+    letter-spacing: -0.02em;
   }
 }
 

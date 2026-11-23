@@ -1,25 +1,30 @@
+import { Check } from 'lucide-react'
 import { KommerSnart } from '@/components/ui/kommerSnart'
 import { Sektion } from '@/components/ui/sektion'
 import { FORRAD_EXEMPEL } from '@/lib/exempeldata'
 import { formateraVikt, type Forradssumma } from '@/lib/forrad'
+import { cn } from '@/lib/utils'
 
-/** Hela förrådet i den mörkgröna rutan: vikten stort, antal saker, hur många som är granskade och hur många som saknar vikt. */
+/** Rubrikerna i korten bredvid listan. */
+const kortrubrik = 'text-[22px] sm:text-[22px]'
+
+/** Hela förrådet i den mörkgröna rutan: vikten stort, antal saker, hur många som är granskade och hur många som är utan vikt. */
 export function HelaForradet({ summa, granskade, className }: { summa: Forradssumma; granskade: number; className?: string }) {
-  const rader = [
-    summa.antal === 1 ? '1 sak' : `${summa.antal} saker`,
-    granskade > 0 && `${granskade} med vikt granskad mot tillverkaren`,
-    summa.utanVikt > 0 && `${summa.utanVikt} saknar vikt`,
-  ].filter(Boolean)
   return (
-    <section aria-labelledby="hela-forradet" className={`rounded-lg bg-yta-stark p-5 text-yta-stark-foreground sm:p-6 ${className ?? ''}`}>
-      <h2 id="hela-forradet" className="font-sans text-sm font-semibold text-yta-stark-muted">
+    <section aria-labelledby="hela-forradet" className={cn('rounded-lg bg-yta-stark p-5 text-yta-stark-foreground sm:p-6', className)}>
+      <h2 id="hela-forradet" className="font-sans text-sm font-semibold text-hjortron">
         Hela förrådet
       </h2>
-      <p className="mt-1 font-heading text-4xl font-bold tracking-tight tabular-nums">{formateraVikt(summa.viktG)}</p>
-      <ul className="mt-2 space-y-0.5 text-sm text-yta-stark-muted">
-        {rader.map((r) => (
-          <li key={String(r)}>{r}</li>
-        ))}
+      <p className="mt-1 font-heading text-[52px] leading-none font-semibold tracking-[-0.02em] tabular-nums">{formateraVikt(summa.viktG)}</p>
+      <ul className="mt-3 space-y-0.5 text-sm text-yta-stark-muted">
+        <li>{summa.antal === 1 ? '1 sak' : `${summa.antal} saker`}</li>
+        {granskade > 0 && (
+          <li className="flex items-center gap-1.5">
+            <Check className="size-4 shrink-0 text-hjortron" aria-hidden />
+            {granskade} med vikt granskad mot tillverkaren
+          </li>
+        )}
+        {summa.utanVikt > 0 && <li>{summa.utanVikt} utan vikt</li>}
       </ul>
     </section>
   )
@@ -31,7 +36,7 @@ export function ViktPerKategori({ summa }: { summa: Forradssumma }) {
   if (grupper.length === 0) return null
   const max = grupper[0].viktG
   return (
-    <Sektion rubrik="Vikt per kategori">
+    <Sektion rubrik="Vikt per kategori" rubrikKlass={kortrubrik}>
       <ul className="space-y-3">
         {grupper.map((g) => (
           <li key={g.kategori.nyckel} className="space-y-1">
@@ -53,7 +58,7 @@ export function ViktPerKategori({ summa }: { summa: Forradssumma }) {
 export function StorstaVinsten({ vinst }: { vinst: { namn: string; viktG: number; kategori: string } | null }) {
   if (!vinst) return null
   return (
-    <Sektion rubrik="Största vinsten" variant="accent">
+    <Sektion rubrik="Största vinsten" variant="hjortron" rubrikKlass={kortrubrik}>
       <p className="text-sm">
         <span className="font-semibold">{vinst.namn}</span> är din tyngsta sak, {formateraVikt(vinst.viktG)}. Vill du gå lättare är det här det finns mest att vinna.
       </p>

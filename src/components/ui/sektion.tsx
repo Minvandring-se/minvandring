@@ -2,7 +2,7 @@ import { useId, type ReactNode } from 'react'
 import { KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { cn } from '@/lib/utils'
 
-type Variant = 'yta' | 'stark' | 'accent'
+type Variant = 'yta' | 'stark' | 'accent' | 'hjortron'
 
 const VARIANT: Record<Variant, string> = {
   // Vit yta på den färgade bakgrunden. Det vanliga.
@@ -11,6 +11,8 @@ const VARIANT: Record<Variant, string> = {
   stark: 'bg-yta-stark text-yta-stark-foreground',
   // Rostens mjuka ton, för det man ska komma ihåg.
   accent: 'border border-accent/25 bg-accent-soft text-foreground',
+  // Hjortronets mjuka ton, för möjligheter och det positiva. Rubriken står i hjortron-strong.
+  hjortron: 'border border-hjortron/30 bg-hjortron-soft text-foreground',
 }
 
 /**
@@ -25,6 +27,7 @@ export function Sektion({
   kommerSnart = false,
   variant = 'yta',
   rubrikniva = 2,
+  rubrikKlass,
   className,
   children,
 }: {
@@ -38,6 +41,8 @@ export function Sektion({
   kommerSnart?: boolean
   variant?: Variant
   rubrikniva?: 2 | 3
+  /** Egen storlek på rubriken, till exempel text-[22px]. */
+  rubrikKlass?: string
   className?: string
   children?: ReactNode
 }) {
@@ -56,7 +61,7 @@ export function Sektion({
             </p>
           )}
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <Rubrik id={id} className="min-w-0 text-lg wrap-anywhere sm:text-xl">
+            <Rubrik id={id} className={cn('min-w-0 text-lg wrap-anywhere sm:text-xl', variant === 'hjortron' && 'text-hjortron-strong', rubrikKlass)}>
               {rubrik}
             </Rubrik>
             {etikett && <span {...exempel}>{etikett}</span>}
