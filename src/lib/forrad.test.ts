@@ -21,6 +21,7 @@ import {
   typEfterVal,
   TYPVAL,
   underkategoriFor,
+  underkategorierFor,
   viktjamforelse,
   type SakFalt,
 } from './forrad'
@@ -78,6 +79,14 @@ describe('kategorier', () => {
     expect(underkategoriFor('talt', 'sovsack')).toBeNull()
     expect(underkategoriFor('sova', null)).toBeNull()
     expect(underkategoriFor('sova', '')).toBeNull()
+  })
+
+  it('ger en kategoris underkategorier i samma ordning som i KATEGORIER', () => {
+    expect(underkategorierFor('sova').map((u) => u.nyckel)).toEqual(KATEGORIER.find((k) => k.nyckel === 'sova')?.under.map((u) => u.nyckel))
+    expect(underkategorierFor('vatten')[0].etikett).toBe('Flaska')
+    expect(underkategorierFor('')).toEqual([])
+    expect(underkategorierFor('finns-inte')).toEqual([])
+    expect(underkategorierFor('sovsack')).toEqual([])
   })
 })
 

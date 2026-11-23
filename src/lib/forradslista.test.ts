@@ -1,5 +1,19 @@
 import { describe, expect, it } from 'vitest'
-import { FORVALDA_VAL, adressFranVal, antalPerKategori, filtrera, harFilter, kategorierIForradet, matcharSok, sortera, valFranAdress } from './forradslista'
+import {
+  FORVALDA_VAL,
+  adressFranVal,
+  antalPerKategori,
+  antalPerUnderkategori,
+  filtrera,
+  harFilter,
+  kategorierIForradet,
+  kategorivalIForradet,
+  matcharSok,
+  sortera,
+  underkategorivalIForradet,
+  valFranAdress,
+  valjKategori,
+} from './forradslista'
 import type { Forradssak } from './typer'
 
 function sak(delar: Partial<Forradssak>): Forradssak {
@@ -84,6 +98,38 @@ describe('filtrera', () => {
     filtrera(lista, { sok: 'a', kategori: '' })
     expect(lista).toEqual(alla)
   })
+
+  it('visar bara en underkategori, och saker utan underkategori bara när alla visas', () => {
+    const quilt = sak({ namn: 'Quilt', kategori: 'sova', underkategori: 'quilt' })
+    const liggunderlag = sak({ namn: 'Xlite', kategori: 'sova', underkategori: 'liggunderlag' })
+    const utan = sak({ namn: 'Utan', kategori: 'sova' })
+    const lista = [quilt, liggunderlag, utan, akto]
+    expect(namn(filtrera(lista, { sok: '', kategori: 'sova', underkategori: 'quilt' }))).toEqual(['Quilt'])
+    expect(namn(filtrera(lista, { sok: '', kategori: 'sova', underkategori: '' }))).toEqual(['Quilt', 'Xlite', 'Utan'])
+    expect(namn(filtrera(lista, { sok: 'x', kategori: 'sova', underkategori: 'quilt' }))).toEqual([])
+  })
+})
+
+describe('valjKategori', () => {
+  it('sätter kategori och underkategori', () => {
+    expect(valjKategori(FORVALDA_VAL, 'sova', 'quilt')).toEqual({ ...FORVALDA_VAL, kategori: 'sova', underkategori: 'quilt' })
+  })
+
+  it('sätter underkategorin till alla när kategorin byts', () => {
+    const val = { ...FORVALDA_VAL, kategori: 'sova', underkategori: 'quilt' } as const
+    expect(valjKategori(val, 'talt', '')).toEqual({ ...FORVALDA_VAL, kategori: 'talt', underkategori: '' })
+  })
+
+  it('byter en okänd kategori eller en underkategori från fel kategori mot alla', () => {
+    expect(valjKategori(FORVALDA_VAL, 'finns-inte', 'quilt')).toEqual(FORVALDA_VAL)
+    expect(valjKategori(FORVALDA_VAL, 'talt', 'quilt')).toEqual({ ...FORVALDA_VAL, kategori: 'talt' })
+    expect(valjKategori(FORVALDA_VAL, '', 'quilt')).toEqual(FORVALDA_VAL)
+  })
+
+  it('behåller sök, sortering och vy', () => {
+    const val = { ...FORVALDA_VAL, sok: 'rab', sortering: 'namn', vy: 'rutnat' } as const
+    expect(valjKategori(val, 'sova', '')).toEqual({ ...val, kategori: 'sova' })
+  })
 })
 
 describe('sortera', () => {
@@ -124,23 +170,31 @@ describe('valen i adressen', () => {
   })
 
   it('läser söktext, sortering, kategori och vy', () => {
-    expect(las('q=akto&sortera=lattast&kategori=talt&vy=rutnat')).toEqual({ sok: 'akto', sortering: 'lattast', kategori: 'talt', vy: 'rutnat' })
+    expect(las('q=akto&sortera=lattast&kategori=talt&vy=rutnat')).toEqual({ sok: 'akto', sortering: 'lattast', kategori: 'talt', underkategori: '', vy: 'rutnat' })
   })
 
   it('skriver bara det som skiljer sig från förvalen', () => {
-    expect(adressFranVal({ sok: 'akto', sortering: 'tyngst', kategori: '', vy: 'lista' })).toEqual({ q: 'akto' })
-    expect(adressFranVal({ sok: '', sortering: 'namn', kategori: 'sova', vy: 'rutnat' })).toEqual({ sortera: 'namn', kategori: 'sova', vy: 'rutnat' })
-    expect(adressFranVal({ sok: '   ', sortering: 'tyngst', kategori: '', vy: 'lista' })).toEqual({})
+    expect(adressFranVal({ sok: 'akto', sortering: 'tyngst', kategori: '', underkategori: '', vy: 'lista' })).toEqual({ q: 'akto' })
+    expect(adressFranVal({ sok: '', sortering: 'namn', kategori: 'sova', underkategori: '', vy: 'rutnat' })).toEqual({ sortera: 'namn', kategori: 'sova', vy: 'rutnat' })
+    expect(adressFranVal({ sok: '   ', sortering: 'tyngst', kategori: '', underkategori: '', vy: 'lista' })).toEqual({})
   })
 
-  it('räknar bara sök och kategori som filter', () => {
+  it('räknar bara sök, kategori och underkategori som filter', () => {
     expect(harFilter({ sok: 'akto', kategori: '' })).toBe(true)
     expect(harFilter({ sok: '', kategori: 'sova' })).toBe(true)
+    expect(harFilter({ sok: '', kategori: 'sova', underkategori: 'quilt' })).toBe(true)
     expect(harFilter({ sok: '  ', kategori: '' })).toBe(false)
   })
 
+  it('läser och skriver underkategorin som under, bara ihop med sin kategori', () => {
+    expect(las('kategori=sova&under=quilt')).toEqual({ ...FORVALDA_VAL, kategori: 'sova', underkategori: 'quilt' })
+    expect(adressFranVal({ ...FORVALDA_VAL, kategori: 'sova', underkategori: 'quilt' })).toEqual({ kategori: 'sova', under: 'quilt' })
+    expect(las('kategori=talt&under=quilt')).toEqual({ ...FORVALDA_VAL, kategori: 'talt' })
+    expect(las('under=quilt')).toEqual(FORVALDA_VAL)
+  })
+
   it('går runt: det som skrivs till adressen läses tillbaka likadant', () => {
-    const val = { sok: 'röd säck', sortering: 'namn', kategori: 'packning', vy: 'rutnat' } as const
+    const val = { sok: 'röd säck', sortering: 'namn', kategori: 'packning', underkategori: 'ryggsack', vy: 'rutnat' } as const
     expect(valFranAdress(new URLSearchParams(adressFranVal(val)))).toEqual(val)
   })
 
@@ -170,5 +224,50 @@ describe('kategorierIForradet', () => {
 
   it('ger en tom lista för ett tomt förråd', () => {
     expect(kategorierIForradet([])).toEqual([])
+  })
+})
+
+describe('alternativen i kategorifiltret', () => {
+  const quilt = sak({ namn: 'Quilt', kategori: 'sova', underkategori: 'quilt' })
+  const sovsack2 = sak({ namn: 'Säck', kategori: 'sova', underkategori: 'sovsack' })
+  const sovsack3 = sak({ namn: 'Säck 2', kategori: 'sova', underkategori: 'sovsack' })
+  const utan = sak({ namn: 'Utan', kategori: 'sova' })
+  const fel = sak({ namn: 'Fel', kategori: 'sova', underkategori: 'talt' })
+  const forrad = [quilt, sovsack2, sovsack3, utan, fel, akto]
+
+  it('kategorierna med antal, i visningsordning', () => {
+    expect(kategorivalIForradet(forrad, '')).toEqual([
+      { nyckel: 'talt', etikett: 'Tält och vindskydd', antal: 1 },
+      { nyckel: 'sova', etikett: 'Sova', antal: 5 },
+    ])
+  })
+
+  it('räknar underkategorierna i en kategori, utan saker som saknar eller har fel underkategori', () => {
+    expect(antalPerUnderkategori(forrad, 'sova')).toEqual({ sovsack: 2, quilt: 1 })
+    expect(antalPerUnderkategori(forrad, '')).toEqual({})
+  })
+
+  it('underkategorierna med antal, i samma ordning som i KATEGORIER', () => {
+    expect(underkategorivalIForradet(forrad, 'sova', '')).toEqual([
+      { nyckel: 'sovsack', etikett: 'Sovsäck', antal: 2 },
+      { nyckel: 'quilt', etikett: 'Quilt', antal: 1 },
+    ])
+    expect(underkategorivalIForradet(forrad, '', '')).toEqual([])
+  })
+
+  it('tar med den valda kategorin och underkategorin med 0 när de saknar saker', () => {
+    // Till exempel efter att den sista saken tagits bort, eller via en gammal länk.
+    expect(kategorivalIForradet(forrad, 'kok')).toEqual([
+      { nyckel: 'talt', etikett: 'Tält och vindskydd', antal: 1 },
+      { nyckel: 'sova', etikett: 'Sova', antal: 5 },
+      { nyckel: 'kok', etikett: 'Kök', antal: 0 },
+    ])
+    expect(kategorivalIForradet([], 'sova')).toEqual([{ nyckel: 'sova', etikett: 'Sova', antal: 0 }])
+    expect(underkategorivalIForradet(forrad, 'sova', 'liggunderlag')).toEqual([
+      { nyckel: 'sovsack', etikett: 'Sovsäck', antal: 2 },
+      { nyckel: 'quilt', etikett: 'Quilt', antal: 1 },
+      { nyckel: 'liggunderlag', etikett: 'Liggunderlag', antal: 0 },
+    ])
+    expect(underkategorivalIForradet([], 'kok', 'brannare')).toEqual([{ nyckel: 'brannare', etikett: 'Kök och brännare', antal: 0 }])
   })
 })

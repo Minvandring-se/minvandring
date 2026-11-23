@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { antalText, gArAttSoka, grupperaModeller, markenMedAntal, produktnamn, sakFranProdukt, sokfilter, sokord, sorteraTraffar } from './produktsok'
+import { antalText, gArAttSoka, ingaTraffarText, grupperaModeller, markenMedAntal, produktnamn, sakFranProdukt, sokfilter, sokord, sorteraTraffar } from './produktsok'
 import type { Produkt } from './typer'
 
 function produkt(marke: string, modell: string, delar: Partial<Produkt> = {}): Produkt {
@@ -191,6 +191,21 @@ describe('markenMedAntal', () => {
 
   it('ger en tom lista utan modeller', () => {
     expect(markenMedAntal([])).toEqual([])
+  })
+})
+
+describe('ingaTraffarText', () => {
+  it('säger att sökningen inte matchar när det finns söktext, oavsett kategori', () => {
+    expect(ingaTraffarText({ harText: true, kategori: '', underkategori: '' })).toBe('Inga produkter matchar din sökning.')
+    expect(ingaTraffarText({ harText: true, kategori: 'sova', underkategori: 'kudde' })).toBe('Inga produkter matchar din sökning.')
+  })
+
+  it('säger att underkategorin är tom när en underkategori är vald utan söktext', () => {
+    expect(ingaTraffarText({ harText: false, kategori: 'sova', underkategori: 'kudde' })).toBe('Inga produkter i katalogen i den här underkategorin än.')
+  })
+
+  it('säger att kategorin är tom när bara en kategori är vald utan söktext', () => {
+    expect(ingaTraffarText({ harText: false, kategori: 'vatten', underkategori: '' })).toBe('Inga produkter i katalogen i den här kategorin än.')
   })
 })
 

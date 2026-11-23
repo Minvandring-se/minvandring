@@ -119,6 +119,17 @@ export function markenMedAntal(modeller: Modell[]): Marke[] {
   return [...antal].map(([marke, n]) => ({ marke, antal: n })).sort((a, b) => a.marke.localeCompare(b.marke, 'sv'))
 }
 
+/**
+ * Texten när katalogen inte har några träffar. Med söktext är det sökningen som inte matchar, annars är
+ * kategorin eller underkategorin tom.
+ */
+export function ingaTraffarText(val: { harText: boolean; kategori: string; underkategori: string }): string {
+  if (val.harText) return 'Inga produkter matchar din sökning.'
+  if (val.underkategori) return 'Inga produkter i katalogen i den här underkategorin än.'
+  if (val.kategori) return 'Inga produkter i katalogen i den här kategorin än.'
+  return 'Inga produkter matchar din sökning.'
+}
+
 /** "1 produkt" eller "42 produkter", för raden ovanför träfflistan. */
 export function antalText(antal: number): string {
   return antal === 1 ? '1 produkt' : `${antal} produkter`

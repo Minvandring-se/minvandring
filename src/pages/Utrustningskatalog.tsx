@@ -2,12 +2,12 @@ import { Search } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { Granskad } from '@/components/forrad/Granskad'
+import { Kategorifilter } from '@/components/forrad/Kategorifilter'
 import { Input } from '@/components/ui/input'
 import { Sektion } from '@/components/ui/sektion'
-import { Select } from '@/components/ui/select'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { arKategori, formateraVikt, KATEGORIER, kategoriFor, type KategoriNyckel } from '@/lib/forrad'
-import { antalText, gArAttSoka, grupperaModeller, produktnamn, sokfilter, sokord, sorteraTraffar, type Modell } from '@/lib/produktsok'
+import { arKategori, formateraVikt, KATEGORIER, kategoriFor, underkategoriFor, underkategorierFor, type KategoriNyckel } from '@/lib/forrad'
+import { antalText, gArAttSoka, grupperaModeller, ingaTraffarText, produktnamn, sokfilter, sokord, sorteraTraffar, type Modell } from '@/lib/produktsok'
 import { supabase } from '@/lib/supabase'
 import type { Produkt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -27,12 +27,13 @@ export function Utrustningskatalog() {
   const id = useId()
   const [text, setText] = useState('')
   const [kategori, setKategori] = useState<KategoriNyckel | ''>('')
+  const [underkategori, setUnderkategori] = useState('')
   const [antal, setAntal] = useState<number | null>(null)
   const [lage, setLage] = useState<Lage>(null)
 
   const harText = gArAttSoka(text)
   const sokbar = harText || kategori !== ''
-  const nyckel = `${kategori}|${text}`
+  const nyckel = `${kategori}|${underkategori}|${text}`
 
   useEffect(() => {
     supabase
@@ -48,6 +49,7 @@ export function Utrustningskatalog() {
     const timer = window.setTimeout(async () => {
       let fraga = klient.from('produkter').select(KOLUMNER).limit(MAX)
       if (kategori) fraga = fraga.eq('kategori', kategori)
+      if (underkategori) fraga = fraga.eq('underkategori', underkategori)
       if (harText) for (const ord of sokord(text)) fraga = fraga.or(sokfilter(ord))
       const { data, error } = await fraga.order('marke').order('modell')
       if (avbruten) return
@@ -62,7 +64,7 @@ export function Utrustningskatalog() {
       avbruten = true
       window.clearTimeout(timer)
     }
-  }, [text, kategori, harText, sokbar, nyckel])
+  }, [text, kategori, underkategori, harText, sokbar, nyckel])
 
   const aktuellt = sokbar && lage?.nyckel === nyckel ? lage : null
   // Förra träfflistan ligger kvar, dämpad, tills nästa kommer. Då hoppar inte sidan medan man skriver.
@@ -80,7 +82,7 @@ export function Utrustningskatalog() {
         }
       />
 
-      <div className="grid gap-4 sm:grid-cols-[minmax(0,1fr)_16rem]">
+      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)]">
         <div className="space-y-1">
           <label htmlFor={`${id}-sok`} className="block text-sm font-medium">
             Sök på märke eller modell
@@ -99,26 +101,26 @@ export function Utrustningskatalog() {
             />
           </div>
         </div>
-        <div className="space-y-1">
-          <label htmlFor={`${id}-kategori`} className="block text-sm font-medium">
-            Kategori
-          </label>
-          <Select id={`${id}-kategori`} value={kategori} onChange={(e) => setKategori(arKategori(e.target.value) ? e.target.value : '')}>
-            <option value="">Alla kategorier</option>
-            {KATEGORIER.map((k) => (
-              <option key={k.nyckel} value={k.nyckel}>
-                {k.etikett}
-              </option>
-            ))}
-          </Select>
-        </div>
+        <Kategorifilter
+          kategorier={KATEGORIER}
+          underkategorier={underkategorierFor(kategori)}
+          kategori={kategori}
+          underkategori={underkategori}
+          onAndra={(k, u) => {
+            const ny = arKategori(k) ? k : ''
+            setKategori(ny)
+            setUnderkategori(ny && underkategoriFor(ny, u) ? u : '')
+          }}
+        />
       </div>
 
       {!sokbar && <p className="text-sm text-muted-foreground">Skriv minst två tecken eller välj en kategori.</p>}
       {sokbar && !aktuellt && !modeller && <p className="text-sm text-muted-foreground">Söker …</p>}
       <div aria-live="polite" className="text-sm text-muted-foreground">
         {aktuellt && 'fel' in aktuellt && <p className="text-destructive">Det gick inte att söka. Kontrollera uppkopplingen och försök igen.</p>}
-        {!gammal && modeller?.length === 0 && <p>Inga produkter matchar din sökning.</p>}
+        {!gammal && modeller?.length === 0 && (
+          <p>{ingaTraffarText({ harText, kategori, underkategori })}</p>
+        )}
         {!gammal && modeller && modeller.length > 0 && (
           <p className="font-medium text-foreground">
             {antalText(modeller.length)}
