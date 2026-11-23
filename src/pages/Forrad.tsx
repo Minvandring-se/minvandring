@@ -7,6 +7,7 @@ import { TomtLage } from '@/components/app/TomtLage'
 import { HelaForradet, Onskelista, StorstaVinsten, ViktPerKategori } from '@/components/forrad/Forradsoversikt'
 import { Granskad } from '@/components/forrad/Granskad'
 import { Grunden } from '@/components/forrad/Grunden'
+import { Kategorifilter } from '@/components/forrad/Kategorifilter'
 import { ProduktSok } from '@/components/forrad/ProduktSok'
 import { SakFormular } from '@/components/forrad/SakFormular'
 import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
@@ -33,7 +34,19 @@ import {
   type KategoriNyckel,
   type Kategorigrupp,
 } from '@/lib/forrad'
-import { SORTERINGAR, adressFranVal, antalPerKategori, filtrera, harFilter, kategorierIForradet, sortera, valFranAdress, type Listval, type Vy } from '@/lib/forradslista'
+import {
+  SORTERINGAR,
+  adressFranVal,
+  filtrera,
+  harFilter,
+  kategorivalIForradet,
+  sortera,
+  underkategorivalIForradet,
+  valFranAdress,
+  valjKategori,
+  type Listval,
+  type Vy,
+} from '@/lib/forradslista'
 import { granskning } from '@/lib/granskning'
 import { felrapportLank } from '@/lib/kontakt'
 import { supabase } from '@/lib/supabase'
@@ -216,9 +229,9 @@ export function Forrad() {
             {visade.length === 0 ? (
               <TomtLage
                 kompakt
-                text="Inga saker i förrådet matchar."
+                text={val.underkategori && !val.sok.trim() ? 'Inga saker i den här underkategorin.' : 'Inga saker i förrådet matchar.'}
                 knapp={
-                  <Button variant="outline" onClick={() => setVal({ ...val, sok: '', kategori: '' })}>
+                  <Button variant="outline" onClick={() => setVal({ ...val, sok: '', kategori: '', underkategori: '' })}>
                     Visa hela förrådet
                   </Button>
                 }
@@ -265,17 +278,9 @@ interface Radhjalp {
   onAvbryt: () => void
 }
 
-/** Sök, kategori, sortering och val mellan lista och rutnät. */
+/** Sök, kategori och underkategori, sortering och val mellan lista och rutnät. */
 function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: Listval) => void; saker: Forradssak[]; visas: number }) {
   const id = useId()
-  const antal = antalPerKategori(saker)
-  const kategorier = kategorierIForradet(saker)
-  const chip = (aktiv: boolean) =>
-    cn(
-      'inline-flex min-h-11 items-center gap-1.5 rounded-full border px-4 text-sm transition-colors',
-      fokus,
-      aktiv ? 'border-primary bg-primary font-semibold text-primary-foreground' : 'border-border bg-card hover:bg-muted',
-    )
   return (
     <section aria-label="Sök och sortera" className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
@@ -330,21 +335,29 @@ function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: List
         </div>
       </div>
 
-      <div role="group" aria-label="Kategori" className="flex flex-wrap gap-2">
-        <button type="button" aria-pressed={val.kategori === ''} onClick={() => onVal({ ...val, kategori: '' })} className={chip(val.kategori === '')}>
-          Allt <span className="tabular-nums opacity-80">{saker.length}</span>
-        </button>
-        {kategorier.map((k) => (
-          <button key={k.nyckel} type="button" aria-pressed={val.kategori === k.nyckel} onClick={() => onVal({ ...val, kategori: k.nyckel })} className={chip(val.kategori === k.nyckel)}>
-            {k.etikett} <span className="tabular-nums opacity-80">{antal[k.nyckel]}</span>
-          </button>
-        ))}
-      </div>
+      <Kategorifilter
+        kategorier={kategorivalIForradet(saker, val.kategori)}
+        underkategorier={underkategorivalIForradet(saker, val.kategori, val.underkategori)}
+        kategori={val.kategori}
+        underkategori={val.underkategori}
+        onAndra={(kategori, underkategori) => onVal(valjKategori(val, kategori, underkategori))}
+      />
 
       {/* Säger hur mycket av förrådet som visas, så att det märks att ett filter är på. */}
-      <p role="status" className="min-h-5 text-sm text-muted-foreground">
-        {harFilter(val) && `Visar ${visas} av ${saker.length} saker.`}
-      </p>
+      <div className="flex min-h-11 flex-wrap items-center gap-x-4">
+        <p role="status" className="text-sm text-muted-foreground">
+          {harFilter(val) && `Visar ${visas} av ${saker.length} saker.`}
+        </p>
+        {harFilter(val) && (
+          <button
+            type="button"
+            onClick={() => onVal({ ...val, sok: '', kategori: '', underkategori: '' })}
+            className={cn('min-h-11 text-sm font-medium text-primary underline underline-offset-4', fokus)}
+          >
+            Visa hela förrådet
+          </button>
+        )}
+      </div>
     </section>
   )
 }
