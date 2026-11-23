@@ -259,7 +259,11 @@ describe('roller', () => {
   })
 
   it('editor kan inte göra sig själv till owner', async () => {
-    await forvantaFel(som(C, (tx) => tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [cillasDeltagare])))
+    // Policyn släpper inte fram redigerarens egen rad, så ingenting ändras.
+    const r = await som(C, (tx) => tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [cillasDeltagare]))
+    expect(r.affectedRows).toBe(0)
+    const roll = await db.query<{ roll: string }>('select roll from public.deltagare where id = $1', [cillasDeltagare])
+    expect(roll.rows[0].roll).toBe('editor')
   })
 
   it('editor kan lägga till en hund men inte en annan användare', async () => {
@@ -284,7 +288,10 @@ describe('roller', () => {
     const kvar = await db.query('select id from public.deltagare where id = $1', [davidsDeltagare])
     expect(kvar.rows).toHaveLength(1)
 
-    await forvantaFel(som(C, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [davidsDeltagare])))
+    const r = await som(C, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [davidsDeltagare]))
+    expect(r.affectedRows).toBe(0)
+    const roll = await db.query<{ roll: string }>('select roll from public.deltagare where id = $1', [davidsDeltagare])
+    expect(roll.rows[0].roll).toBe('editor')
   })
 
   it('viewer ser turen men kan inte ändra den', async () => {
@@ -348,6 +355,202 @@ describe('roller', () => {
     expect(await turnamn(tur)).toBeUndefined()
     const d = await db.query('select id from public.deltagare where tur_id = $1', [tur])
     expect(d.rows).toHaveLength(0)
+  })
+})
+
+// Ägaren ändrar alla rader, redigeraren bara rader utan konto och läsaren ingen.
+describe('ändra deltagare', () => {
+  let tur: string
+  let agare: string
+  let redigerare: string
+  let annanRedigerare: string
+  let lasare: string
+  let hund: string
+  let platshallare: string
+
+  interface Rad {
+    namn: string
+    typ: string
+    roll: string
+    user_id: string | null
+    sortering: number
+    max_barvikt_kg: string
+    matandel: string | null
+    hundmat_per_dag_g: number | null
+  }
+  const rad = async (id: string) =>
+    (
+      await db.query<Rad>(
+        'select namn, typ, roll, user_id, sortering, max_barvikt_kg, matandel, hundmat_per_dag_g from public.deltagare where id = $1',
+        [id],
+      )
+    ).rows[0]
+
+  /** Försöker ändra allt utom rollen på raden. Ger antalet ändrade rader. */
+  const forsokAndra = (vem: string, id: string) =>
+    som(vem, (tx) =>
+      tx.query(
+        `update public.deltagare set namn = 'Kapad', typ = 'hund', sortering = 99, max_barvikt_kg = 1, matandel = 1, hundmat_per_dag_g = 999 where id = $1`,
+        [id],
+      ),
+    ).then((r) => r.affectedRows)
+
+  /** Rollbyte som policyn ska dölja raden för: ingen rad ändras och inget fel kastas. */
+  async function forvantaSammaRoll(vem: string, id: string, nyRoll: string) {
+    const fore = await rad(id)
+    const r = await som(vem, (tx) => tx.query('update public.deltagare set roll = $1 where id = $2', [nyRoll, id]))
+    expect(r.affectedRows).toBe(0)
+    expect(await rad(id)).toEqual(fore)
+  }
+
+  /** Raden ska vara orörd efter ett försök som inte fick gå igenom. */
+  async function forvantaOrord(vem: string, id: string) {
+    const fore = await rad(id)
+    expect(await forsokAndra(vem, id)).toBe(0)
+    expect(await rad(id)).toEqual(fore)
+  }
+
+  beforeAll(async () => {
+    tur = await skapaTur(A, 'Tur med alla roller')
+    const kod = await kodFor(tur)
+    for (const vem of [B, C, D]) await som(vem, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const utanKonto = await som(A, (tx) =>
+      tx.query<{ id: string; typ: string }>(
+        `insert into public.deltagare (tur_id, namn, typ) values ($1, 'Bamse', 'hund'), ($1, 'Pichi', 'person') returning id, typ`,
+        [tur],
+      ),
+    )
+    hund = utanKonto.rows.find((r) => r.typ === 'hund')!.id
+    platshallare = utanKonto.rows.find((r) => r.typ === 'person')!.id
+    const d = await db.query<{ id: string; user_id: string }>('select id, user_id from public.deltagare where tur_id = $1', [tur])
+    const radFor = (vem: string) => d.rows.find((r) => r.user_id === vem)!.id
+    agare = radFor(A)
+    lasare = radFor(B)
+    redigerare = radFor(C)
+    annanRedigerare = radFor(D)
+    await som(A, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [lasare]))
+  })
+
+  it('ägaren kan ändra alla rader i sin tur: sin egen, andras och de utan konto', async () => {
+    for (const id of [agare, redigerare, lasare, hund, platshallare]) {
+      const r = await som(A, (tx) => tx.query('update public.deltagare set max_barvikt_kg = 12.5, sortering = 7 where id = $1', [id]))
+      expect(r.affectedRows).toBe(1)
+      expect(await rad(id)).toMatchObject({ max_barvikt_kg: '12.5', sortering: 7 })
+    }
+    await som(A, (tx) => tx.query(`update public.deltagare set namn = 'Bamse den store' where id = $1`, [hund]))
+    expect((await rad(hund)).namn).toBe('Bamse den store')
+  })
+
+  it('redigeraren kan ändra en hund och en person utan konto', async () => {
+    await som(C, (tx) => tx.query(`update public.deltagare set namn = 'Bamse', sortering = 3, max_barvikt_kg = 8 where id = $1`, [hund]))
+    expect(await rad(hund)).toMatchObject({ namn: 'Bamse', sortering: 3, max_barvikt_kg: '8.0' })
+    await som(C, (tx) => tx.query(`update public.deltagare set namn = 'Pichi P', matandel = 0.5 where id = $1`, [platshallare]))
+    expect(await rad(platshallare)).toMatchObject({ namn: 'Pichi P', matandel: '0.500' })
+  })
+
+  it('redigeraren kan inte ändra ägarens rad, och inte ägarens roll', async () => {
+    await forvantaOrord(C, agare)
+    await forvantaSammaRoll(C, agare, 'viewer')
+  })
+
+  it('redigeraren kan inte ändra en annan redigerares eller en läsares rad', async () => {
+    await forvantaOrord(C, annanRedigerare)
+    await forvantaOrord(C, lasare)
+    await forvantaSammaRoll(C, annanRedigerare, 'viewer')
+  })
+
+  it('redigeraren kan inte ändra sin egen rad, och inte göra sig själv till ägare', async () => {
+    await forvantaOrord(C, redigerare)
+    await forvantaSammaRoll(C, redigerare, 'owner')
+  })
+
+  // Tre olika skydd, ett per försök: triggern för roller, with check i policyn och triggern för flytt.
+  it('redigeraren kan inte ändra rollen på en rad utan konto, och inte koppla den till ett konto', async () => {
+    const forsok = (sql: string, id: string) => som(C, (tx) => tx.query(sql, [id]))
+    await expect(forsok(`update public.deltagare set roll = 'owner' where id = $1`, platshallare)).rejects.toThrow(/Bara ägaren/)
+    await expect(forsok(`update public.deltagare set roll = 'viewer' where id = $1`, hund)).rejects.toThrow(/Bara ägaren/)
+    await expect(forsok(`update public.deltagare set user_id = '${C}' where id = $1`, platshallare)).rejects.toThrow(/row-level security/)
+    await expect(forsok(`update public.deltagare set user_id = '${E}' where id = $1`, platshallare)).rejects.toThrow(/flytta/)
+    expect(await rad(platshallare)).toMatchObject({ roll: 'editor', user_id: null })
+    expect(await rad(hund)).toMatchObject({ roll: 'editor', user_id: null })
+  })
+
+  it('redigeraren kan inte ändra en person utan konto som är ägare, men ägaren kan', async () => {
+    const r = await som(A, (tx) =>
+      tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn, typ) values ($1, 'Platsägare', 'person') returning id`, [tur]),
+    )
+    const platsagare = r.rows[0].id
+    await som(A, (tx) => tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [platsagare]))
+
+    await forvantaOrord(C, platsagare)
+    await forvantaSammaRoll(C, platsagare, 'editor')
+
+    await som(A, (tx) => tx.query(`update public.deltagare set namn = 'Platsägaren' where id = $1`, [platsagare]))
+    expect((await rad(platsagare)).namn).toBe('Platsägaren')
+    // Tillbaka till en vanlig person utan konto: då når redigeraren raden igen.
+    await som(A, (tx) => tx.query(`update public.deltagare set roll = 'editor' where id = $1`, [platsagare]))
+    await som(C, (tx) => tx.query(`update public.deltagare set namn = 'Plats' where id = $1`, [platsagare]))
+    expect((await rad(platsagare)).namn).toBe('Plats')
+  })
+
+  it('redigeraren kan inte flytta en rad utan konto till en annan tur', async () => {
+    const egen = await skapaTur(C, 'Cillas egen tur')
+    await forvantaFel(som(C, (tx) => tx.query('update public.deltagare set tur_id = $1 where id = $2', [egen, hund])))
+    expect((await db.query<{ tur_id: string }>('select tur_id from public.deltagare where id = $1', [hund])).rows[0].tur_id).toBe(tur)
+  })
+
+  it('läsaren kan inte ändra någon rad, inte ens sin egen eller en hund', async () => {
+    for (const id of [agare, redigerare, lasare, hund, platshallare]) await forvantaOrord(B, id)
+  })
+
+  it('läsaren kan inte ge sig själv eller någon annan en annan roll', async () => {
+    await forvantaSammaRoll(B, lasare, 'editor')
+    await forvantaSammaRoll(B, lasare, 'owner')
+    await forvantaSammaRoll(B, hund, 'owner')
+    await forvantaSammaRoll(B, agare, 'viewer')
+  })
+
+  it('den som inte är med i turen kan inte ändra någon rad, och inte heller den som inte är inloggad', async () => {
+    for (const id of [agare, redigerare, hund, platshallare]) await forvantaOrord(E, id)
+    const fore = await rad(hund)
+    await forvantaFel(somAnon((tx) => tx.query(`update public.deltagare set namn = 'Kapad' where id = $1`, [hund])))
+    expect(await rad(hund)).toEqual(fore)
+  })
+
+  it('ägaren i en annan tur kan inte ändra raderna här', async () => {
+    await skapaTur(E, 'Eriks tur')
+    for (const id of [agare, hund]) await forvantaOrord(E, id)
+  })
+
+  it('namnet i profilen följer fortfarande med till redigerarens och läsarens rader', async () => {
+    for (const [vem, id] of [[D, annanRedigerare], [B, lasare]] as const) {
+      const fore = (await rad(id)).namn
+      await som(vem, (tx) => tx.query(`update public.profiler set namn = 'Nytt namn' where id = '${vem}'`))
+      expect((await rad(id)).namn).toBe('Nytt namn')
+      await som(vem, (tx) => tx.query('update public.profiler set namn = $1 where id = $2', [fore, vem]))
+      expect((await rad(id)).namn).toBe(fore)
+    }
+  })
+
+  it('en ny medlem kan fortfarande ta över en person utan konto via länken', async () => {
+    const kod = await kodFor(tur)
+    await som(G, (tx) => tx.query('select public.ga_med($1, $2)', [kod, platshallare]))
+    expect(await rad(platshallare)).toMatchObject({ user_id: G, roll: 'editor' })
+    // Nu har raden ett konto, så redigeraren når den inte längre.
+    await forvantaOrord(C, platshallare)
+  })
+
+  it('en läsare som blir redigerare kan ändra hunden, och en redigerare som blir läsare kan det inte längre', async () => {
+    await som(A, (tx) => tx.query(`update public.deltagare set roll = 'editor' where id = $1`, [lasare]))
+    await som(B, (tx) => tx.query(`update public.deltagare set sortering = 4 where id = $1`, [hund]))
+    expect((await rad(hund)).sortering).toBe(4)
+    await som(A, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [lasare]))
+    await forvantaOrord(B, hund)
+  })
+
+  it('en borttagen redigerare kan inte längre ändra hunden', async () => {
+    await som(A, (tx) => tx.query('delete from public.deltagare where id = $1', [redigerare]))
+    await forvantaOrord(C, hund)
   })
 })
 
