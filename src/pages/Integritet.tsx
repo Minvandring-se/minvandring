@@ -55,8 +55,8 @@ export function Integritet() {
           <li>Dina turer och det ni lägger in i dem: deltagare, packning och mat.</li>
           <li>Namn på deltagare utan konto, som någon annan i turen har lagt till, till exempel en kompis eller en hund.</li>
           <li>
-            Kostbehov och allergier, om du anger dem i matplanen. Det är frivilligt. Uppgifterna sparas per tur och försvinner när
-            du lämnar turen eller turen raderas. Du kan ändra eller ta bort dina egna när som helst under Mat i turen.
+            Dina kostbehov och allergier, om du själv anger dem under Mat i en tur. Det är frivilligt, och bara du kan ange dina. De
+            sparas för en tur i taget, tillsammans med när du samtyckte.
           </li>
         </ul>
       </Avsnitt>
@@ -67,13 +67,19 @@ export function Integritet() {
           är den rättsliga grunden, ett avtal mellan dig och oss när du skapar ett konto. Vi använder inte uppgifterna till reklam och
           säljer dem inte vidare.
         </p>
+        <p>
+          Kostbehov och allergier är uppgifter om hälsa. Dem sparar vi bara med ditt samtycke, som du ger med en kryssruta när du
+          sparar dem i en tur. Samtycket gäller den turen. Du återkallar det genom att ta bort dina kostbehov: tryck på Ta bort mina
+          kostbehov, eller bocka ur allt och spara. Då raderas uppgifterna direkt. De raderas också när du lämnar turen eller turen
+          raderas.
+        </p>
       </Avsnitt>
 
       <Avsnitt rubrik="Vem som ser dina uppgifter">
         <p>
           Bara de som är med i samma tur ser turen, deltagarna och deras namn. Den som har turens inbjudningslänk kan gå med i turen
           efter att ha loggat in, så dela länken bara med dem du vill ha med. Det gäller också kostbehov och allergier: de syns för
-          alla i turen, så att ni kan välja mat som passar, men inte för någon annan.
+          alla i samma tur, så att ni kan välja mat som passar, men inte för någon annan. Ingen annan kan ange eller ändra dina.
         </p>
       </Avsnitt>
 

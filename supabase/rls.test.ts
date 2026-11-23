@@ -1621,17 +1621,37 @@ describe('matplanen', () => {
   })
 
   describe('kostbehov', () => {
+    // Samtycket sparas som en tidpunkt när personen själv sparar sina kostbehov.
     const satt = (vem: string, deltagare: string, utan = `array['gluten']`) =>
-      som(vem, (tx) => tx.query(`insert into public.kostbehov (deltagare_id, glutenfri, utan) values ($1, true, ${utan})`, [deltagare]))
+      som(vem, (tx) =>
+        tx.query(`insert into public.kostbehov (deltagare_id, glutenfri, utan, samtycke_tid) values ($1, true, ${utan}, now())`, [deltagare]),
+      )
+    const andra = (vem: string, deltagare: string) =>
+      som(vem, (tx) => tx.query('update public.kostbehov set vegansk = true, vegetarisk = true where deltagare_id = $1', [deltagare]))
+    const taBort = (vem: string, deltagare: string) => som(vem, (tx) => tx.query('delete from public.kostbehov where deltagare_id = $1', [deltagare]))
+    const nyPlatshallare = async (namn: string) => {
+      const r = await som(AGARE, (tx) => tx.query<{ id: string }>('insert into public.deltagare (tur_id, namn) values ($1, $2) returning id', [tur, namn]))
+      return r.rows[0].id
+    }
 
     beforeAll(async () => {
       await satt(REDIGERARE, redigerarensDeltagare)
+      await satt(AGARE, agarensDeltagare)
     })
 
-    it('var och en kan ange sina egna, även läsaren', async () => {
+    it('var och en kan ange, ändra och ta bort sina egna, även läsaren', async () => {
       await satt(LASARE, lasarensDeltagare, `array['notter']`)
-      const andrad = await som(LASARE, (tx) => tx.query('update public.kostbehov set vegetarisk = true where deltagare_id = $1', [lasarensDeltagare]))
-      expect(andrad.affectedRows).toBe(1)
+      expect((await andra(LASARE, lasarensDeltagare)).affectedRows).toBe(1)
+      expect((await taBort(LASARE, lasarensDeltagare)).affectedRows).toBe(1)
+      await satt(LASARE, lasarensDeltagare, `array['notter']`)
+    })
+
+    it('kräver en tidpunkt för samtycket', async () => {
+      const kod = await kodFor(tur)
+      await som(NYKOMLING, (tx) => tx.query('select public.ga_med($1)', [kod]))
+      const nykomling = await deltagareFor(tur, NYKOMLING)
+      await forvantaFel(som(NYKOMLING, (tx) => tx.query('insert into public.kostbehov (deltagare_id, glutenfri) values ($1, true)', [nykomling])))
+      await forvantaFel(som(REDIGERARE, (tx) => tx.query('update public.kostbehov set samtycke_tid = null where deltagare_id = $1', [redigerarensDeltagare])))
     })
 
     it('alla i turen ser dem, men ingen utanför', async () => {
@@ -1644,96 +1664,46 @@ describe('matplanen', () => {
       await forvantaFel(somAnon((tx) => tx.query('select deltagare_id from public.kostbehov')))
     })
 
-    it('inte ens ägaren kan ange, ändra eller ta bort kostbehoven för någon med eget konto', async () => {
-      const andrad = await som(AGARE, (tx) => tx.query('update public.kostbehov set glutenfri = false where deltagare_id = $1', [redigerarensDeltagare]))
-      expect(andrad.affectedRows).toBe(0)
-      const borta = await som(AGARE, (tx) => tx.query('delete from public.kostbehov where deltagare_id = $1', [redigerarensDeltagare]))
-      expect(borta.affectedRows).toBe(0)
-      await forvantaFel(satt(REDIGERARE, agarensDeltagare))
+    it('ingen kan ange, ändra eller ta bort någon annans, inte ens ägaren', async () => {
+      for (const [vem, deltagare] of [
+        [AGARE, redigerarensDeltagare],
+        [AGARE, lasarensDeltagare],
+        [REDIGERARE, agarensDeltagare],
+        [REDIGERARE, lasarensDeltagare],
+        [LASARE, agarensDeltagare],
+        [UTOMSTAENDE, agarensDeltagare],
+      ]) {
+        expect((await andra(vem, deltagare)).affectedRows, `${vem} ändrar`).toBe(0)
+        expect((await taBort(vem, deltagare)).affectedRows, `${vem} tar bort`).toBe(0)
+      }
+      await forvantaFel(satt(AGARE, await deltagareFor(tur, NYKOMLING)))
+      await forvantaFel(satt(REDIGERARE, await deltagareFor(tur, NYKOMLING)))
     })
 
-    it('ägaren och redigeraren anger dem för en person utan konto, men inte läsaren och inte för en hund', async () => {
-      await satt(AGARE, lisa)
-      const andrad = await som(REDIGERARE, (tx) => tx.query('update public.kostbehov set laktosfri = true where deltagare_id = $1', [lisa]))
-      expect(andrad.affectedRows).toBe(1)
-      const lasaren = await som(LASARE, (tx) => tx.query('update public.kostbehov set laktosfri = false where deltagare_id = $1', [lisa]))
-      expect(lasaren.affectedRows).toBe(0)
+    it('ingen anger kostbehov för en person utan konto, inte ägaren, redigeraren, läsaren eller någon utanför', async () => {
+      const platshallare = await nyPlatshallare('Utan konto')
+      for (const vem of [AGARE, REDIGERARE, LASARE, UTOMSTAENDE]) await forvantaFel(satt(vem, platshallare))
+      await forvantaFel(satt(AGARE, lisa))
       await forvantaFel(satt(AGARE, hund))
     })
 
     it('ingen kan flytta sina kostbehov till någon annan', async () => {
-      await forvantaFel(
-        som(LASARE, (tx) => tx.query('update public.kostbehov set deltagare_id = $1 where deltagare_id = $2', [lisa, lasarensDeltagare])),
-      )
+      await forvantaFel(som(LASARE, (tx) => tx.query('update public.kostbehov set deltagare_id = $1 where deltagare_id = $2', [lisa, lasarensDeltagare])))
+      const nykomling = await deltagareFor(tur, NYKOMLING)
+      await forvantaFel(som(LASARE, (tx) => tx.query('update public.kostbehov set deltagare_id = $1 where deltagare_id = $2', [nykomling, lasarensDeltagare])))
     })
 
     it('tar bara emot de 14 allergenerna', async () => {
       await forvantaFel(som(LASARE, (tx) => tx.query(`update public.kostbehov set utan = array['jordgubbar'] where deltagare_id = $1`, [lasarensDeltagare])))
     })
 
-    const nyPlatshallare = async (namn: string) => {
-      const r = await som(AGARE, (tx) => tx.query<{ id: string }>('insert into public.deltagare (tur_id, namn) values ($1, $2) returning id', [tur, namn]))
-      return r.rows[0].id
-    }
-    const andra = (vem: string, deltagare: string) =>
-      som(vem, (tx) => tx.query('update public.kostbehov set vegansk = true, vegetarisk = true where deltagare_id = $1', [deltagare]))
-    const taBort = (vem: string, deltagare: string) => som(vem, (tx) => tx.query('delete from public.kostbehov where deltagare_id = $1', [deltagare]))
-
-    it('den som inte är med i turen kan inte ange, ändra eller ta bort kostbehov, inte heller för en person utan konto', async () => {
-      await forvantaFel(satt(UTOMSTAENDE, await nyPlatshallare('Ute')))
-      expect((await andra(UTOMSTAENDE, lisa)).affectedRows).toBe(0)
-      expect((await taBort(UTOMSTAENDE, lisa)).affectedRows).toBe(0)
-    })
-
-    it('ägaren kan inte ange kostbehov för en deltagare med eget konto', async () => {
-      const kod = await kodFor(tur)
-      await som(NYKOMLING, (tx) => tx.query('select public.ga_med($1)', [kod]))
-      await forvantaFel(satt(AGARE, await deltagareFor(tur, NYKOMLING)))
-    })
-
-    it('redigeraren kan inte ändra eller ta bort kostbehoven för läsaren eller ägaren', async () => {
-      await satt(AGARE, agarensDeltagare)
-      for (const deltagare of [lasarensDeltagare, agarensDeltagare]) {
-        expect((await andra(REDIGERARE, deltagare)).affectedRows).toBe(0)
-        expect((await taBort(REDIGERARE, deltagare)).affectedRows).toBe(0)
-      }
-    })
-
-    it('läsaren kan inte ange kostbehov för en person utan konto', async () => {
-      await forvantaFel(satt(LASARE, await nyPlatshallare('Ny utan konto')))
-    })
-
-    it('redigeraren kan inte flytta kostbehoven för en person utan konto till någon med konto', async () => {
-      const medKonto = await deltagareFor(tur, NYKOMLING)
-      await forvantaFel(som(REDIGERARE, (tx) => tx.query('update public.kostbehov set deltagare_id = $1 where deltagare_id = $2', [medKonto, lisa])))
-    })
-
-    it('en platshållare med rollen owner är ägarens: ägaren anger kostbehoven, inte redigeraren', async () => {
-      const platshallare = await nyPlatshallare('Medägare')
-      await som(AGARE, (tx) => tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [platshallare]))
-      await forvantaFel(satt(REDIGERARE, platshallare))
-      await satt(AGARE, platshallare)
-      expect((await andra(REDIGERARE, platshallare)).affectedRows).toBe(0)
-      expect((await taBort(REDIGERARE, platshallare)).affectedRows).toBe(0)
-      expect((await andra(AGARE, platshallare)).affectedRows).toBe(1)
-    })
-
-    it('när någon tar över en person utan konto ändrar bara den personen kostbehoven', async () => {
+    it('den som tar över en person utan konto kan sedan ange sina egna', async () => {
       const platshallare = await nyPlatshallare('Övertagen')
-      await satt(REDIGERARE, platshallare)
       const kod = await kodFor(tur)
       await som(TAR_OVER, (tx) => tx.query('select public.ga_med($1, $2)', [kod, platshallare]))
+      await satt(TAR_OVER, platshallare)
       expect((await andra(AGARE, platshallare)).affectedRows).toBe(0)
-      expect((await andra(REDIGERARE, platshallare)).affectedRows).toBe(0)
       expect((await andra(TAR_OVER, platshallare)).affectedRows).toBe(1)
-    })
-
-    it('när en person utan konto blir en hund går kostbehoven inte längre att ändra', async () => {
-      const platshallare = await nyPlatshallare('Blir hund')
-      await satt(REDIGERARE, platshallare)
-      await som(REDIGERARE, (tx) => tx.query(`update public.deltagare set typ = 'hund' where id = $1`, [platshallare]))
-      expect((await andra(REDIGERARE, platshallare)).affectedRows).toBe(0)
-      expect((await andra(AGARE, platshallare)).affectedRows).toBe(0)
     })
 
     it('en borttagen deltagare förlorar åtkomsten och kostbehoven raderas', async () => {

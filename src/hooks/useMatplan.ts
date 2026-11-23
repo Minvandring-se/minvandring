@@ -36,7 +36,7 @@ async function hamtaMatplan(turId: string): Promise<Matplan | null> {
   const pasIds = [...new Set(rattrader.map((r) => r.matprodukt_id).filter((id): id is string => id !== null))]
   const [pasar, kostbehov] = await Promise.all([
     pasIds.length ? supabase.from('matprodukter').select(MATPRODUKT).in('id', pasIds) : Promise.resolve({ data: [], error: null }),
-    supabase.from('kostbehov').select('deltagare_id, vegetarisk, vegansk, glutenfri, laktosfri, utan').in(
+    supabase.from('kostbehov').select('deltagare_id, vegetarisk, vegansk, glutenfri, laktosfri, utan, samtycke_tid').in(
       'deltagare_id',
       deltagarrader.map((d) => d.id),
     ),
@@ -207,12 +207,21 @@ export async function andraInkopsrad(
   return !error
 }
 
-/** Sparar en deltagares kostbehov. Utan några behov tas raden bort, så att inget sparas i onödan. */
-export async function sparaKostbehov(behov: Kostbehov): Promise<boolean> {
+/**
+ * Sparar den inloggades kostbehov med tiden för samtycket. Anropas bara när kryssrutan för samtycke är ikryssad.
+ * Utan några behov tas raden bort i stället, och då är samtycket återkallat.
+ */
+export async function sparaKostbehov(behov: Omit<Kostbehov, 'samtycke_tid'>): Promise<boolean> {
   if (!supabase) return false
   const tomt = !behov.vegetarisk && !behov.vegansk && !behov.glutenfri && !behov.laktosfri && behov.utan.length === 0
-  const { error } = tomt
-    ? await supabase.from('kostbehov').delete().eq('deltagare_id', behov.deltagare_id)
-    : await supabase.from('kostbehov').upsert(behov)
+  if (tomt) return taBortKostbehov(behov.deltagare_id)
+  const { error } = await supabase.from('kostbehov').upsert({ ...behov, samtycke_tid: new Date().toISOString() })
+  return !error
+}
+
+/** Tar bort den inloggades kostbehov i turen. Samtycket är då återkallat. */
+export async function taBortKostbehov(deltagareId: string): Promise<boolean> {
+  if (!supabase) return false
+  const { error } = await supabase.from('kostbehov').delete().eq('deltagare_id', deltagareId)
   return !error
 }

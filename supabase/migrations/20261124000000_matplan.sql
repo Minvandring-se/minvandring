@@ -4,7 +4,7 @@
 -- matprodukter fylls bara via migreringar från supabase/katalog/mat/. Alla inloggade läser, ingen användare skriver.
 -- ratter, varor, ingredienser och maltider har redan sina policyer: medlemmar ser, owner och editor ändrar.
 -- Här kommer nya kolumner och främmande nycklar som kräver att allt i en matplan hör till samma tur.
--- kostbehov är känsliga uppgifter: bara deltagarna i samma tur ser dem, och bara personen själv ändrar sina.
+-- kostbehov är känsliga uppgifter som bygger på samtycke: bara deltagarna i samma tur ser dem, och bara personen själv anger dem.
 
 -- ─── Allergener ──────────────────────────────────────────────────────────────
 -- EU:s 14 allergener. Samma nycklar som i src/lib/kost.ts.
@@ -132,10 +132,10 @@ alter table public.maltider
 create index maltider_tur_dag on public.maltider (tur_id, dag);
 
 -- ─── Kostbehov ───────────────────────────────────────────────────────────────
--- Uppgifter om hälsa, och därför känsliga. De sparas per tur och försvinner med deltagaren.
--- Läsa: deltagarna i samma tur. Ändra: personen själv, och owner och editor bara för personer utan konto.
--- En platshållare med rollen owner räknas som ägarens och är stängd för redigeraren, som i policyerna på deltagare.
--- Inte ens ägaren ändrar kostbehoven för någon som har ett eget konto.
+-- Uppgifter om hälsa, och därför känsliga. De bygger på personens eget samtycke, som gäller per tur.
+-- Läsa: deltagarna i samma tur. Skapa, ändra och ta bort: bara personen själv, alltså deltagaren vars user_id är
+-- den inloggade. Ingen annan, inte ens ägaren, anger kostbehov åt någon, och personer utan konto har inga.
+-- Raden försvinner med deltagaren. Att ta bort raden är att återkalla samtycket.
 create table public.kostbehov (
   deltagare_id uuid primary key references public.deltagare (id) on delete cascade,
   vegetarisk boolean not null default false,
@@ -143,7 +143,10 @@ create table public.kostbehov (
   glutenfri boolean not null default false,
   laktosfri boolean not null default false,
   -- Allergener som personen inte tål.
-  utan public.allergenlista not null default '{}'
+  utan public.allergenlista not null default '{}',
+  -- När personen senast samtyckte, det vill säga sparade. Har inget standardvärde: appen skickar det bara när
+  -- kryssrutan för samtycke är ikryssad.
+  samtycke_tid timestamptz not null
 );
 
 -- ─── Rättigheter ─────────────────────────────────────────────────────────────
@@ -161,18 +164,6 @@ create policy "inloggade läser matkatalogen" on public.matprodukter for select 
 create policy "medlemmar ser kostbehoven" on public.kostbehov for select to authenticated
   using (public.ar_medlem((select d.tur_id from public.deltagare d where d.id = deltagare_id)));
 
-create policy "egna kostbehov eller person utan konto" on public.kostbehov for all to authenticated
-  using (exists (
-    select 1 from public.deltagare d
-    where d.id = deltagare_id
-      and (d.user_id = (select auth.uid())
-           or (d.user_id is null and d.typ = 'person'
-               and (public.ar_agare(d.tur_id) or (public.kan_andra(d.tur_id) and d.roll <> 'owner'))))
-  ))
-  with check (exists (
-    select 1 from public.deltagare d
-    where d.id = deltagare_id
-      and (d.user_id = (select auth.uid())
-           or (d.user_id is null and d.typ = 'person'
-               and (public.ar_agare(d.tur_id) or (public.kan_andra(d.tur_id) and d.roll <> 'owner'))))
-  ));
+create policy "bara egna kostbehov" on public.kostbehov for all to authenticated
+  using (exists (select 1 from public.deltagare d where d.id = deltagare_id and d.user_id = (select auth.uid())))
+  with check (exists (select 1 from public.deltagare d where d.id = deltagare_id and d.user_id = (select auth.uid())));

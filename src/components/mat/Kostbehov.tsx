@@ -3,28 +3,30 @@ import { useId, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { Sektion } from '@/components/ui/sektion'
-import { ALLERGENER, behovstext, KOSTVAL, type Allergen, type Kostval } from '@/lib/kost'
-import { kanAndraKostbehov, type Roll } from '@/lib/roller'
+import { ALLERGENER, behovstext, KOSTVAL, SAMTYCKE, type Allergen, type Kostval } from '@/lib/kost'
+import { kanAndraKostbehov } from '@/lib/roller'
 import type { DeltagareRad, Kostbehov as Behovsrad } from '@/lib/typer'
 
-const TOMT: Omit<Behovsrad, 'deltagare_id'> = { vegetarisk: false, vegansk: false, glutenfri: false, laktosfri: false, utan: [] }
+type Behovsval = Omit<Behovsrad, 'samtycke_tid'>
+
+const TOMT: Omit<Behovsval, 'deltagare_id'> = { vegetarisk: false, vegansk: false, glutenfri: false, laktosfri: false, utan: [] }
 
 /**
- * Kostbehoven i gruppen: en rad per person. Var och en ändrar sina egna, och ägare och redigerare ändrar för
- * personer utan konto. Uppgifterna syns bara för deltagarna i turen.
+ * Kostbehoven i gruppen: en rad per person. Bara personen själv anger sina, eftersom uppgifterna bygger på
+ * personens eget samtycke. Personer utan konto kan fylla i själva när de har gått med.
  */
 export function Kostbehov({
   deltagare,
   kostbehov,
-  minRoll,
   mittUserId,
   onSpara,
+  onTaBort,
 }: {
   deltagare: readonly DeltagareRad[]
   kostbehov: readonly Behovsrad[]
-  minRoll: Roll | null
   mittUserId: string
-  onSpara: (behov: Behovsrad) => Promise<boolean>
+  onSpara: (behov: Behovsval) => Promise<boolean>
+  onTaBort: (deltagareId: string) => Promise<boolean>
 }) {
   const [andrar, setAndrar] = useState<DeltagareRad | null>(null)
   const personer = deltagare.filter((d) => d.typ === 'person')
@@ -39,17 +41,16 @@ export function Kostbehov({
       <ul className="divide-y divide-border">
         {personer.map((d) => {
           const behov = behovFor(d.id)
-          const text = behov ? behovstext(behov) : ''
-          const kan = kanAndraKostbehov(minRoll, { typ: d.typ, roll: d.roll, userId: d.user_id }, mittUserId)
-          const jag = d.user_id === mittUserId
+          const jag = kanAndraKostbehov({ typ: d.typ, userId: d.user_id }, mittUserId)
+          const text = d.user_id === null ? 'Kan fylla i själv när hen har gått med.' : (behov && behovstext(behov)) || 'Inga kostbehov angivna'
           return (
             <li key={d.id} className="flex items-center gap-3 py-2">
               <div className="min-w-0 flex-1">
                 <p className="font-medium break-words">{jag ? `${d.namn} (du)` : d.namn}</p>
-                <p className="text-sm text-muted-foreground">{text || 'Inga kostbehov angivna'}</p>
+                <p className="text-sm text-muted-foreground">{text}</p>
               </div>
-              {kan && (
-                <Button variant="outline" onClick={() => setAndrar(d)} aria-label={jag ? 'Ändra dina kostbehov' : `Ändra kostbehov för ${d.namn}`}>
+              {jag && (
+                <Button variant="outline" onClick={() => setAndrar(d)} aria-label="Ändra dina kostbehov">
                   Ändra
                 </Button>
               )}
@@ -59,12 +60,16 @@ export function Kostbehov({
       </ul>
       {andrar && (
         <Behovspanel
-          deltagare={andrar}
-          jag={andrar.user_id === mittUserId}
+          finns={behovFor(andrar.id) !== undefined}
           forsta={behovFor(andrar.id) ?? { deltagare_id: andrar.id, ...TOMT }}
           onStang={() => setAndrar(null)}
           onSpara={async (b) => {
             const ok = await onSpara(b)
+            if (ok) setAndrar(null)
+            return ok
+          }}
+          onTaBort={async () => {
+            const ok = await onTaBort(andrar.id)
             if (ok) setAndrar(null)
             return ok
           }}
@@ -75,56 +80,75 @@ export function Kostbehov({
 }
 
 function Behovspanel({
-  deltagare,
-  jag,
+  finns,
   forsta,
   onStang,
   onSpara,
+  onTaBort,
 }: {
-  deltagare: DeltagareRad
-  jag: boolean
-  forsta: Behovsrad
+  /** Har personen redan sparat kostbehov i turen? Då går de att ta bort. */
+  finns: boolean
+  forsta: Behovsval
   onStang: () => void
-  onSpara: (b: Behovsrad) => Promise<boolean>
+  onSpara: (b: Behovsval) => Promise<boolean>
+  onTaBort: () => Promise<boolean>
 }) {
   const formId = useId()
-  const [behov, setBehov] = useState(forsta)
+  const [behov, setBehov] = useState<Behovsval>({
+    deltagare_id: forsta.deltagare_id,
+    vegetarisk: forsta.vegetarisk,
+    vegansk: forsta.vegansk,
+    glutenfri: forsta.glutenfri,
+    laktosfri: forsta.laktosfri,
+    utan: forsta.utan,
+  })
+  // Samtycket är aldrig förvalt, inte heller när man ändrar uppgifter man redan har sparat.
+  const [samtycke, setSamtycke] = useState(false)
   const [sparar, setSparar] = useState(false)
-  const [fel, setFel] = useState(false)
-  const rubrik = jag ? 'Dina kostbehov' : `Kostbehov för ${deltagare.namn}`
+  const [fel, setFel] = useState<string | null>(null)
 
+  const tomt = !behov.vegetarisk && !behov.vegansk && !behov.glutenfri && !behov.laktosfri && behov.utan.length === 0
   const vaxlaVal = (k: Kostval, pa: boolean) => setBehov((b) => ({ ...b, [k]: pa }))
-  const vaxlaAllergen = (a: Allergen, pa: boolean) =>
-    setBehov((b) => ({ ...b, utan: pa ? [...b.utan, a] : b.utan.filter((x) => x !== a) }))
+  const vaxlaAllergen = (a: Allergen, pa: boolean) => setBehov((b) => ({ ...b, utan: pa ? [...b.utan, a] : b.utan.filter((x) => x !== a) }))
 
-  async function spara(e: FormEvent) {
-    e.preventDefault()
-    setFel(false)
+  async function gor(atgard: () => Promise<boolean>) {
+    setFel(null)
     setSparar(true)
-    const ok = await onSpara(behov)
+    const ok = await atgard()
     setSparar(false)
-    if (!ok) setFel(true)
+    if (!ok) setFel('Det gick inte att spara. Kontrollera uppkopplingen och försök igen.')
+  }
+
+  function spara(e: FormEvent) {
+    e.preventDefault()
+    // Allt urbockat betyder att uppgifterna tas bort. Det kräver inget samtycke.
+    if (tomt) return void gor(finns ? onTaBort : async () => true)
+    if (!samtycke) return setFel('Kryssa i att du samtycker för att kunna spara.')
+    void gor(() => onSpara(behov))
   }
 
   return (
     <Panel
-      etikett={rubrik}
+      etikett="Dina kostbehov"
       onStang={onStang}
-      rubrik={<h2 className="text-2xl break-words">{rubrik}</h2>}
+      rubrik={<h2 className="text-2xl">Dina kostbehov</h2>}
       fot={
         <div className="flex flex-wrap gap-2">
           <Button type="submit" form={formId} disabled={sparar}>
             {sparar ? 'Sparar …' : 'Spara'}
           </Button>
-          <Button variant="outline" onClick={onStang}>
-            Avbryt
-          </Button>
+          {finns && (
+            <Button variant="outline" disabled={sparar} onClick={() => gor(onTaBort)}>
+              Ta bort mina kostbehov
+            </Button>
+          )}
         </div>
       }
     >
-      <form id={formId} onSubmit={spara} className="space-y-5">
+      <form id={formId} onSubmit={spara} noValidate className="space-y-5">
         <p className="text-sm text-muted-foreground">
-          Uppgifterna syns för alla som är med i turen, så att ni kan välja mat som passar. Vill du ta bort uppgifterna bockar du ur allt och sparar.
+          Uppgifterna sparas bara för den här turen och syns för alla som är med i den, så att ni kan välja mat som passar. Det är
+          frivilligt. Bockar du ur allt och sparar, eller tar bort dem, raderas de och samtycket är återkallat.
         </p>
         <fieldset className="space-y-1">
           <legend className="mb-1 text-sm font-medium">Kost</legend>
@@ -140,9 +164,15 @@ function Behovspanel({
             ))}
           </div>
         </fieldset>
+        {!tomt && (
+          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3">
+            <input type="checkbox" checked={samtycke} onChange={(e) => setSamtycke(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-primary" />
+            <span className="text-sm">{SAMTYCKE}</span>
+          </label>
+        )}
         {fel && (
           <p role="alert" className="text-sm text-destructive">
-            Det gick inte att spara. Kontrollera uppkopplingen och försök igen.
+            {fel}
           </p>
         )}
       </form>

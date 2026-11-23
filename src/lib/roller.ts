@@ -12,7 +12,7 @@ export const ROLLNAMN: Record<Roll, string> = {
 
 // Bara det som går att göra i appen i dag. Packning läggs till här när den delen är byggd.
 export const ROLLBESKRIVNING: Record<Roll, string> = {
-  owner: 'Kan ändra allt, ändra roller och radera turen',
+  owner: 'Kan ändra turen och matplanen, ändra roller och radera turen',
   editor: 'Kan ändra turen och matplanen och bjuda in andra',
   viewer: 'Kan se allt i turen och ange sina egna kostbehov',
 }
@@ -39,20 +39,11 @@ export function kanTaBort(min: Roll | null, deltagare: DeltagareRoll, mittUserId
   return deltagare.userId === mittUserId
 }
 
-interface KostbehovsDeltagare {
-  typ: 'person' | 'hund'
-  roll: Roll
-  userId: string | null
-}
-
 /**
- * Får den inloggade ändra deltagarens kostbehov? Samma regel som policyn på kostbehov:
- * var och en sina egna. Ägare och redigerare för personer utan konto, men en platshållare med rollen owner
- * bara av ägaren. Ingen ändrar kostbehoven för någon annan som har ett konto, och hundar har inga.
+ * Får den inloggade ändra deltagarens kostbehov? Samma regel som policyn på kostbehov: bara personen själv,
+ * eftersom uppgifterna bygger på personens eget samtycke. Ingen anger kostbehov åt någon annan, inte ens ägaren,
+ * och personer utan konto har inga förrän de har gått med.
  */
-export function kanAndraKostbehov(min: Roll | null, d: KostbehovsDeltagare, mittUserId: string): boolean {
-  if (d.typ !== 'person') return false
-  if (d.userId !== null) return d.userId === mittUserId
-  if (d.roll === 'owner') return arAgare(min)
-  return kanAndra(min)
+export function kanAndraKostbehov(d: { typ: 'person' | 'hund'; userId: string | null }, mittUserId: string): boolean {
+  return d.typ === 'person' && d.userId !== null && d.userId === mittUserId
 }

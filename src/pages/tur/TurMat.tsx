@@ -11,7 +11,7 @@ import { ValjRatt } from '@/components/mat/ValjRatt'
 import { useTur } from '@/components/tur/turKontext'
 import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
-import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
+import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
 import { dagssummor, inkopslista, MALTIDER, matdagar, matsummering, matviktTotalt, rattPerPortion, type Matdag as Dag } from '@/lib/mat'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
@@ -114,11 +114,15 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
       <Kostbehov
         deltagare={deltagare}
         kostbehov={plan.kostbehov}
-        minRoll={minRoll}
         mittUserId={mittUserId}
+        // Panelen visar själv felet om det inte gick att spara.
         onSpara={async (b) => {
-          // Panelen visar själv felet om det inte gick att spara.
           const ok = await sparaKostbehov(b)
+          if (ok) await laddaOm()
+          return ok
+        }}
+        onTaBort={async (id) => {
+          const ok = await taBortKostbehov(id)
           if (ok) await laddaOm()
           return ok
         }}

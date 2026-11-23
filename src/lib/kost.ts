@@ -169,3 +169,6 @@ export function behovstext(b: Omit<Behov, 'namn'>): string {
   const text = delar.join(', ')
   return text.charAt(0).toUpperCase() + text.slice(1)
 }
+
+/** Texten vid kryssrutan för samtycke. Kostbehov sparas bara när den är ikryssad. */
+export const SAMTYCKE = 'Jag samtycker till att mina kostbehov och allergier sparas och visas för deltagarna i den här turen.'

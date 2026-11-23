@@ -172,4 +172,6 @@ export interface Kostbehov {
   glutenfri: boolean
   laktosfri: boolean
   utan: Allergen[]
+  /** När personen samtyckte till att uppgifterna sparas och visas för deltagarna i turen. */
+  samtycke_tid: string
 }
