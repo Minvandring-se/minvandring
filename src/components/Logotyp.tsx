@@ -1,6 +1,6 @@
 import { cn } from '@/lib/utils'
 
-const symbolKlass = '-mx-[0.18em] size-[2.1em] shrink-0'
+const symbolKlass = '-mx-[0.14em] size-[2.5em] shrink-0'
 
 const symboler = {
   ljus: '/brand/minvandring-symbol-green.svg',
