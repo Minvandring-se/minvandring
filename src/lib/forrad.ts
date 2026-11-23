@@ -280,6 +280,18 @@ export function kategoriForUnder(underkategori: string): Kategori | null {
   return ALLA.find((k) => k.under.some((u) => u.nyckel === underkategori)) ?? null
 }
 
+/** Underkategorierna i en huvudkategori, i samma ordning som i KATEGORIER. Ingen eller en okänd kategori ger en tom lista. */
+export function underkategorierFor(kategori: string): readonly Underkategori[] {
+  return ALLA.find((k) => k.nyckel === kategori)?.under ?? []
+}
+
+/** Ett alternativ i kategorifiltret. Antalet visas inom parentes när det finns. */
+export interface Filterval {
+  nyckel: string
+  etikett: string
+  antal?: number
+}
+
 /** Typen en ny sak får: underkategorins förval om det finns ett, annars huvudkategorins. */
 export function forvaldTyp(kategori: string, underkategori: string | null = null): Typ {
   return underkategoriFor(kategori, underkategori)?.typ ?? kategoriFor(kategori).typ
