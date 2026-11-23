@@ -196,6 +196,90 @@ const KASTRULL: Egenskap[] = [
   { nyckel: 'bara_system', etikett: 'Bara för sitt kök', sort: 'janej' },
 ]
 
+/** Så renar produkten vattnet. Tabletterna ligger i underkategorin rening, övriga i filter. */
+export const RENINGSTYPER = ['tabletter', 'flaskfilter', 'filter', 'pump', 'gravitationsfilter'] as const
+
+/** Vattenrening: filter, flaskor med filter, pumpar, gravitationsfilter och reningstabletter. packvikt_g är produkten som den säljs. */
+const VATTENRENING: Egenskap[] = [
+  { nyckel: 'typ', etikett: 'Typ', sort: 'val', val: RENINGSTYPER, forJamforelse: true, viktig: true },
+  { nyckel: 'kapacitet_l', etikett: 'Kapacitet', sort: 'heltal', min: 1, max: 100_000, enhet: 'l', viktig: true },
+  { nyckel: 'flode_l_min', etikett: 'Flöde', sort: 'decimal', min: 0.1, max: 20, enhet: 'l/min', viktig: true },
+  { nyckel: 'porstorlek_mikron', etikett: 'Porstorlek', sort: 'decimal', min: 0.01, max: 5, enhet: 'µm' },
+  { nyckel: 'renar_bakterier', etikett: 'Renar bakterier', sort: 'janej', forJamforelse: true },
+  { nyckel: 'renar_virus', etikett: 'Renar virus', sort: 'janej', forJamforelse: true, viktig: true },
+  { nyckel: 'verkningstid_min', etikett: 'Verkningstid', sort: 'heltal', min: 1, max: 600, enhet: 'min' },
+  { nyckel: 'tal_frost', etikett: 'Tål frost', sort: 'val', val: ['ja', 'nej', 'ej_angivet'] },
+  // Fri text, till exempel "42 mm" eller "Nalgene Wide Mouth".
+  { nyckel: 'passar_flaskgang', etikett: 'Passar flaskgänga', sort: 'text' },
+]
+
+export const STAVTYPER = ['fallbar', 'teleskop', 'fast'] as const
+export const STAVMATERIAL = ['kol', 'aluminium', 'blandat'] as const
+/** Hur längden låses. "fallbart" är stavar som viks ihop med lina och kon (till exempel Z-Pole) och "annat" är det som inte passar in. */
+export const STAVLASNINGAR = ['klamlas', 'vridlas', 'tryckknapp', 'fallbart', 'annat'] as const
+export const STAVGREPP = ['kork', 'skum', 'kork_och_skum', 'plast', 'gummi', 'annat'] as const
+
+/** Vandringsstavar. packvikt_g är vikten för ett par, och längden är det spann stavarna går att ställa in på. */
+const STAVAR: Egenskap[] = [
+  { nyckel: 'typ', etikett: 'Typ', sort: 'val', val: STAVTYPER, forJamforelse: true, viktig: true },
+  { nyckel: 'langd_min_cm', etikett: 'Längd från', sort: 'heltal', min: 20, max: 200, enhet: 'cm', forJamforelse: true, viktig: true, visaIhop: stavlangd },
+  // Visas ihop med den kortaste längden när den finns, annars för sig som Längd.
+  { nyckel: 'langd_max_cm', etikett: 'Längd till', sort: 'heltal', min: 20, max: 200, enhet: 'cm', forJamforelse: true, viktig: true, ingarI: 'langd_min_cm', visaIhop: stavlangd },
+  { nyckel: 'packlangd_cm', etikett: 'Packlängd', sort: 'decimal', min: 20, max: 150, enhet: 'cm' },
+  { nyckel: 'material', etikett: 'Material', sort: 'val', val: STAVMATERIAL, forJamforelse: true, viktig: true },
+  { nyckel: 'lasning', etikett: 'Låsning', sort: 'val', val: STAVLASNINGAR, viktig: true },
+  { nyckel: 'grepp', etikett: 'Grepp', sort: 'val', val: STAVGREPP },
+  { nyckel: 'fjadring', etikett: 'Fjädring', sort: 'janej' },
+]
+
+/** Stavarnas längd som ett spann, "110–125 cm", eller bara det ena värdet när det andra saknas. */
+function stavlangd(e: Record<string, unknown>): { etikett: string; varde: string } | null {
+  const min = typeof e.langd_min_cm === 'number' ? e.langd_min_cm : null
+  const max = typeof e.langd_max_cm === 'number' ? e.langd_max_cm : null
+  if (min === null && max === null) return null
+  const varde = min !== null && max !== null && min !== max ? `${min}–${max} cm` : `${min ?? max} cm`
+  return { etikett: 'Längd', varde }
+}
+
+/** Den kortaste längden kan inte vara större än den längsta. */
+function stavregler(e: Record<string, unknown>): string[] {
+  return typeof e.langd_min_cm === 'number' && typeof e.langd_max_cm === 'number' && e.langd_min_cm > e.langd_max_cm
+    ? ['langd_min_cm: får inte vara större än langd_max_cm']
+    : []
+}
+
+export const LAMPTYPER = ['pannlampa', 'lykta'] as const
+/** Batteriet i grova drag. Kapaciteten och modellen står i kommentaren. "hybrid" tar både laddbart batteri och vanliga batterier. */
+export const LAMPBATTERIER = ['inbyggt', 'aaa', 'aa', 'cr2032', 'hybrid', 'batteripack'] as const
+export const LADDPORTAR = ['usb-c', 'micro-usb', 'magnetkontakt', 'annat'] as const
+/** Tålighet mot vatten och damm som tillverkaren anger. */
+export const LAMPTALIGHET = ['ipx3', 'ipx4', 'ipx5', 'ipx6', 'ipx7', 'ipx8', 'ip65', 'ip66', 'ip67', 'ip68', 'ip69'] as const
+
+/**
+ * Pannlampor. packvikt_g är lampan med batterier, enligt tillverkaren. Brinntiden gäller den lägre gränsen
+ * när tillverkaren anger ett intervall: brinntid_hogsta_h på högsta läget och brinntid_max_h på det svagaste.
+ */
+const PANNLAMPA: Egenskap[] = [
+  { nyckel: 'typ', etikett: 'Typ', sort: 'val', val: LAMPTYPER },
+  { nyckel: 'lumen_max', etikett: 'Ljusstyrka', sort: 'heltal', min: 10, max: 12_000, enhet: 'lumen', forJamforelse: true, viktig: true },
+  { nyckel: 'rackvidd_max_m', etikett: 'Räckvidd', sort: 'heltal', min: 5, max: 1000, enhet: 'm' },
+  { nyckel: 'brinntid_hogsta_h', etikett: 'Brinntid på högsta läget', sort: 'decimal', min: 0.1, max: 100, enhet: 'h', forJamforelse: true, viktig: true },
+  { nyckel: 'brinntid_max_h', etikett: 'Brinntid på lägsta läget', sort: 'decimal', min: 1, max: 5000, enhet: 'h' },
+  { nyckel: 'batteri', etikett: 'Batteri', sort: 'val', val: LAMPBATTERIER, forJamforelse: true, viktig: true },
+  { nyckel: 'laddbar', etikett: 'Laddbar', sort: 'janej' },
+  { nyckel: 'laddport', etikett: 'Laddport', sort: 'val', val: LADDPORTAR },
+  { nyckel: 'rott_ljus', etikett: 'Rött ljus', sort: 'janej' },
+  { nyckel: 'laslage', etikett: 'Låsläge', sort: 'janej' },
+  { nyckel: 'vattentalighet', etikett: 'Vattentålighet', sort: 'val', val: LAMPTALIGHET },
+]
+
+/** Brinntiden på högsta läget kan inte vara längre än på det svagaste. */
+function lampregler(e: Record<string, unknown>): string[] {
+  return typeof e.brinntid_hogsta_h === 'number' && typeof e.brinntid_max_h === 'number' && e.brinntid_hogsta_h > e.brinntid_max_h
+    ? ['brinntid_hogsta_h: får inte vara längre än brinntid_max_h']
+    : []
+}
+
 /** Ett kokkärl som bara fungerar med sitt eget kök måste ha ett kokkärlssystem. */
 function kastrullregler(e: Record<string, unknown>): string[] {
   return e.bara_system === true && saknas(e.system) ? ['bara_system: kräver att system anges'] : []
@@ -254,6 +338,10 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   dagsryggsack: RYGGSACK,
   brannare: BRANNARE,
   kastrull: KASTRULL,
+  filter: VATTENRENING,
+  rening: VATTENRENING,
+  stavar: STAVAR,
+  pannlampa: PANNLAMPA,
 }
 
 const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, unknown>) => string[]>> = {
@@ -264,6 +352,8 @@ const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, un
   dagsryggsack: ryggsacksregler,
   brannare: brannarregler,
   kastrull: kastrullregler,
+  stavar: stavregler,
+  pannlampa: lampregler,
 }
 
 /** Alla nycklar som finns som egenskap i någon underkategori. */
@@ -386,6 +476,19 @@ const VALNAMN: Record<string, string> = {
   trangia_28: 'Trangia 28 (Mini)',
   hardanodiserad_aluminium: 'Hårdanodiserad aluminium',
   rostfritt_stal: 'Rostfritt stål',
+  flaskfilter: 'Flaskfilter',
+  gravitationsfilter: 'Gravitationsfilter',
+  ej_angivet: 'Inte angivet',
+  klamlas: 'Klämlås',
+  vridlas: 'Vridlås',
+  fallbart: 'Fällbart',
+  kork_och_skum: 'Kork och skum',
+  aaa: 'AAA',
+  aa: 'AA',
+  cr2032: 'CR2032',
+  'usb-c': 'USB-C',
+  'micro-usb': 'Micro-USB',
+  ...Object.fromEntries(LAMPTALIGHET.map((t) => [t, t.toUpperCase()])),
 }
 
 /** Tal med decimalkomma och ett riktigt minustecken. */
