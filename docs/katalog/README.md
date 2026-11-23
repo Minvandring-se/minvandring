@@ -22,6 +22,7 @@ Filerna här ligger medvetet utanför `supabase/katalog/`, så att `npm run kata
 | Sovsäckar och quilts | ✓ 2026-11-19 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 |
 | Liggunderlag | ✓ 2026-11-19 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 |
 | Ryggsäckar | ✓ 2026-11-19 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 |
+| Kök | – | – | – | – | – |
 
 ## Kolumnerna i genomgangar.csv
 
@@ -33,7 +34,7 @@ Filerna här ligger medvetet utanför `supabase/katalog/`, så att `npm run kata
 - `redan_fanns`: hur många som redan fanns från en tidigare genomgång
 - `utelamnade`: hur många som inte togs med, med skäl i `kommentar`
 - `kommentar`: vilka som utelämnades och varför
-- `genomgang`: genomgångens id, `ÅÅÅÅ-MM-DD-butik-kategori` med små bokstäver utan å, ä, ö, till exempel `2026-11-22-xxl-talt`. Kategorierna är `talt`, `sov`, `ligg` och `ryggsack`. Samma id står i kolumnen `genomgang` på varje rad i CSV:n som kom med genomgången. Det lagras bara i CSV:erna, inte i databasen.
+- `genomgang`: genomgångens id, `ÅÅÅÅ-MM-DD-butik-kategori` med små bokstäver utan å, ä, ö, till exempel `2026-11-22-xxl-talt`. Kategorierna är `talt`, `sov`, `ligg`, `ryggsack` och `kok`. Samma id står i kolumnen `genomgang` på varje rad i CSV:n som kom med genomgången. Det lagras bara i CSV:erna, inte i databasen.
 - `godkand`: datum då en av grundarna godkände genomgången efter stickprov. Tomt tills dess. Sätts av `--godkann`.
 
 ## Granskningsnivåer

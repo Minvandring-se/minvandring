@@ -143,6 +143,43 @@ const RYGGSACK: Egenskap[] = [
   { nyckel: 'material_beskrivning', etikett: 'Materialbeskrivning', sort: 'text' },
 ]
 
+/** Köket i grova drag. Ett systemkök har brännare och kokkärl som sitter ihop, ett stormkök har vindskydd och kastruller i ett set. */
+export const KOKTYPER = ['toppmonterat', 'slangkok', 'systemkok', 'stormkok', 'annat'] as const
+
+export const BRANSLEN = ['gas', 'sprit', 'multibransle', 'ved', 'fast_bransle', 'annat'] as const
+
+/**
+ * Kök och brännare. packvikt_g är hela förpackningen utan bränsle. Koktiden gäller 1 liter: anger tillverkaren
+ * bara 0,5 liter står den tiden i kommentaren, eftersom den inte går att räkna om rakt av.
+ */
+const BRANNARE: Egenskap[] = [
+  { nyckel: 'typ', etikett: 'Typ', sort: 'val', val: KOKTYPER, forJamforelse: true, viktig: true },
+  { nyckel: 'bransle', etikett: 'Bränsle', sort: 'val', val: BRANSLEN, forJamforelse: true, viktig: true },
+  { nyckel: 'personer', etikett: 'Personer', sort: 'heltal', min: 1, max: 8, forJamforelse: true, viktig: true },
+  { nyckel: 'effekt_w', etikett: 'Effekt', sort: 'heltal', min: 500, max: 5000, enhet: 'W', forJamforelse: true },
+  { nyckel: 'koktid_1l_min', etikett: 'Koktid 1 l', sort: 'decimal', min: 1, max: 20, enhet: 'min', forJamforelse: true, viktig: true },
+  { nyckel: 'forbrukning_g_h', etikett: 'Förbrukning', sort: 'heltal', min: 20, max: 500, enhet: 'g/h' },
+  { nyckel: 'regulator', etikett: 'Tryckregulator', sort: 'janej' },
+  { nyckel: 'kokkarl_l', etikett: 'Kokkärl', sort: 'decimal', min: 0.3, max: 5, enhet: 'l', viktig: true },
+  { nyckel: 'tandare', etikett: 'Inbyggd tändare', sort: 'janej' },
+  // Fri text, till exempel "EN 417" eller "EN 417 och bränsleflaska".
+  { nyckel: 'patronfaste', etikett: 'Patronfäste', sort: 'text' },
+  { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text' },
+]
+
+/** Tändare och regulator finns bara på kök som går på gas, och ett stormkök har alltid kastruller. */
+function brannarregler(e: Record<string, unknown>): string[] {
+  const fel: string[] = []
+  // Ett okänt bränsle ger redan ett fel för bransle, så reglerna gäller bara kända bränslen.
+  const utanGas = e.bransle === 'sprit' || e.bransle === 'ved' || e.bransle === 'fast_bransle'
+  if (utanGas) {
+    if (e.regulator === true) fel.push('regulator: anges bara när bransle är gas eller multibransle')
+    if (e.tandare === true) fel.push('tandare: anges bara när bransle är gas eller multibransle')
+  }
+  if (e.typ === 'stormkok' && saknas(e.kokkarl_l)) fel.push('kokkarl_l: ska anges när typ är stormkok')
+  return fel
+}
+
 /** Den minsta rygglängden kan inte vara större än den största. */
 function ryggsacksregler(e: Record<string, unknown>): string[] {
   return typeof e.torso_min_cm === 'number' && typeof e.torso_max_cm === 'number' && e.torso_min_cm > e.torso_max_cm
@@ -181,6 +218,7 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   liggunderlag: LIGGUNDERLAG,
   ryggsack: RYGGSACK,
   dagsryggsack: RYGGSACK,
+  brannare: BRANNARE,
 }
 
 const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, unknown>) => string[]>> = {
@@ -189,6 +227,7 @@ const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, un
   liggunderlag: liggunderlagsregler,
   ryggsack: ryggsacksregler,
   dagsryggsack: ryggsacksregler,
+  brannare: brannarregler,
 }
 
 /** Alla nycklar som finns som egenskap i någon underkategori. */
@@ -296,6 +335,11 @@ const VALNAMN: Record<string, string> = {
   astm: 'ASTM',
   topp_och_front: 'Topp och front',
   topp_och_sida: 'Topp och sida',
+  slangkok: 'Slangkök',
+  systemkok: 'Systemkök',
+  stormkok: 'Stormkök',
+  multibransle: 'Multibränsle',
+  fast_bransle: 'Fast bränsle',
 }
 
 /** Tal med decimalkomma och ett riktigt minustecken. */

@@ -153,8 +153,8 @@ describe('tolkaEgenskap', () => {
 })
 
 describe('underkategorier utan egna egenskaper', () => {
-  it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag och ryggsäckar har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack'])
+  it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar och kök har egenskaper än så länge', () => {
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
@@ -620,5 +620,60 @@ describe('egenskaper för ryggsäck och dagsryggsäck', () => {
       expect(rader({ volym_l: 22.5, atkomst: 'topp_och_sida', regnskydd_ingar: false })).toEqual(['Volym: 22,5 l', 'Åtkomst: Topp och sida', 'Regnskydd ingår: Nej'])
       expect(rader({})).toEqual([])
     })
+  })
+})
+
+describe('egenskaper för kök och brännare', () => {
+  const kok = {
+    typ: 'systemkok',
+    bransle: 'gas',
+    personer: 2,
+    effekt_w: 1500,
+    koktid_1l_min: 4.5,
+    forbrukning_g_h: 120,
+    regulator: false,
+    kokkarl_l: 1,
+    tandare: true,
+    patronfaste: 'EN 417',
+    packmatt_cm: '12 x 16',
+  }
+  const felnycklar = (e: Record<string, unknown>) => valideraEgenskaper('brannare', e).fel.map((f) => f.split(':')[0])
+
+  it('har elva egenskaper, varav fem behövs för jämförelser', () => {
+    expect(egenskaperFor('brannare').map((e) => e.nyckel)).toEqual(Object.keys(kok))
+    expect(egenskaperFor('brannare').filter((e) => e.forJamforelse).map((e) => e.nyckel)).toEqual(['typ', 'bransle', 'personer', 'effekt_w', 'koktid_1l_min'])
+  })
+
+  it('godkänner ett komplett kök utan fel eller varningar', () => {
+    expect(valideraEgenskaper('brannare', kok)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('varnar men stoppar inte när ett spritkök saknar effekt och koktid', () => {
+    const r = valideraEgenskaper('brannare', { typ: 'stormkok', bransle: 'sprit', personer: 2, kokkarl_l: 1.5 })
+    expect(r.fel).toEqual([])
+    expect(r.varningar.map((v) => v.split(':')[0])).toEqual(['effekt_w', 'koktid_1l_min'])
+  })
+
+  it('tillåter tändare och regulator bara på kök för gas eller multibränsle', () => {
+    expect(felnycklar({ ...kok, bransle: 'sprit' })).toEqual(['tandare'])
+    expect(felnycklar({ ...kok, bransle: 'ved', regulator: true })).toEqual(['regulator', 'tandare'])
+    expect(felnycklar({ ...kok, bransle: 'multibransle', regulator: true })).toEqual([])
+    // Nej är alltid tillåtet, också för spritkök.
+    expect(felnycklar({ ...kok, bransle: 'sprit', tandare: false })).toEqual([])
+  })
+
+  it('kräver kokkärl för ett stormkök', () => {
+    const { kokkarl_l: _, ...utanKokkarl } = kok
+    expect(felnycklar({ ...utanKokkarl, typ: 'stormkok' })).toEqual(['kokkarl_l'])
+    expect(felnycklar({ ...utanKokkarl, typ: 'toppmonterat' })).toEqual([])
+  })
+
+  it('ger fel för typer och bränslen som inte finns', () => {
+    expect(felnycklar({ ...kok, typ: 'gasolkok', bransle: 'gasol' })).toEqual(['typ', 'bransle'])
+  })
+
+  it('visar typ och bränsle med svenska namn', () => {
+    const rader = visaEgenskaper('brannare', { typ: 'slangkok', bransle: 'multibransle', koktid_1l_min: 3.5 })
+    expect(rader.map((r) => r.varde)).toEqual(['Slangkök', 'Multibränsle', '3,5 min'])
   })
 })
