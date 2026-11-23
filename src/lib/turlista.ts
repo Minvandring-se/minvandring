@@ -96,8 +96,9 @@ export function deltagareText(deltagare: readonly { typ: 'person' | 'hund' }[]):
 export function initialer(namn: string): string {
   const ord = namn.trim().split(/\s+/).filter(Boolean)
   if (ord.length === 0) return '?'
-  const forsta = ord[0][0]
-  const sista = ord.length > 1 ? ord[ord.length - 1][0] : ''
+  // Hela tecken, inte halva: en emoji eller ett annat tecken utanför grundplanet är två enheter i strängen.
+  const forsta = [...ord[0]][0]
+  const sista = ord.length > 1 ? [...ord[ord.length - 1]][0] : ''
   return (forsta + sista).toUpperCase()
 }
 

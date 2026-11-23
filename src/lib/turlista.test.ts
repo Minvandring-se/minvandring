@@ -108,6 +108,12 @@ describe('texter', () => {
     expect(initialer('')).toBe('?')
   })
 
+  it('delar inte en emoji i namnet på mitten', () => {
+    expect(initialer('🐕 Rex')).toBe('🐕R')
+    expect(initialer('Åsa 🏔')).toBe('Å🏔')
+    expect(initialer('🥾')).toBe('🥾')
+  })
+
   it('ger dagens datum i lokal tid', () => {
     expect(lokaltDatum(new Date(2027, 7, 4, 23, 30))).toBe('2027-08-04')
   })
