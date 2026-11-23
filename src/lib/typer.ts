@@ -125,6 +125,32 @@ export interface Matprodukt {
   kontrollerad: string | null
 }
 
+/** En påse man har hemma, i ens eget skafferi. bast_fore är ÅÅÅÅ-MM-DD. */
+export interface Skafferirad {
+  id: string
+  matprodukt_id: string
+  antal: number
+  bast_fore: string | null
+}
+
+/** En ingrediens i ett eget recept. Gram per portion, kcal och protein per 100 g. */
+export interface Receptrad {
+  id: string
+  recept_id: string
+  vara: string
+  gram_per_portion: number
+  kcal_per_100g: number | null
+  protein_per_100g: number | null
+  sortering: number
+}
+
+/** Ett eget recept på kontot. Kopieras till turens rätter när det läggs i en tur. */
+export interface Recept {
+  id: string
+  namn: string
+  rader: Receptrad[]
+}
+
 /** En rätt i turen: en egen rätt med ingredienser, eller en påse ur katalogen (matprodukt_id). */
 export interface Ratt {
   id: string

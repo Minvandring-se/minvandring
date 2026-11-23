@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aktivSida, BLAD, bladIState, FLIKAR, flikAktiv, MENYGRUPPER, SIDOR } from '@/lib/meny'
+import { aktivSida, aktivUndersida, BLAD, bladIState, FLIKAR, flikAktiv, MENYGRUPPER, SIDOR, UNDERSIDOR } from '@/lib/meny'
 
 describe('menyns sidor', () => {
   it('har sökvägar utan å, ä och ö, och alla är olika', () => {
@@ -58,6 +58,28 @@ describe('aktivSida och flikAktiv', () => {
     expect(aktivSida('/statistik')).toBe('statistik')
     expect(aktivSida('/kom-ihag')).toBe('kom-ihag')
     expect(aktivSida('/okand')).toBeNull()
+  })
+
+  it('delarna av Matplanering hör till Matplanering, och fliken Mat är aktiv på alla', () => {
+    expect(UNDERSIDOR.matplanering!.map((u) => [u.namn, u.till])).toEqual([
+      ['Mina matplaner', '/matplanering'],
+      ['Matkatalog', '/matplanering/katalog'],
+      ['Recept', '/matplanering/recept'],
+      ['Skafferi', '/matplanering/skafferi'],
+      ['Tips', '/matplanering/tips'],
+    ])
+    const mat = FLIKAR.find((f) => f.namn === 'Mat')!
+    for (const adress of ['/matplanering', '/matplanering/katalog', '/matplanering/recept', '/matplanering/skafferi/', '/matplanering/tips']) {
+      expect(aktivSida(adress)).toBe('matplanering')
+      expect(flikAktiv(mat, aktivSida(adress))).toBe(true)
+    }
+    expect(aktivSida('/matplanering/annat')).toBeNull()
+    expect(aktivUndersida('/matplanering/skafferi/')).toBe('/matplanering/skafferi')
+    expect(aktivUndersida('/forrad')).toBeNull()
+  })
+
+  it('delarna har sökvägar utan å, ä och ö', () => {
+    for (const delar of Object.values(UNDERSIDOR)) for (const u of delar!) expect(u.till).toMatch(/^\/[a-z-]+(\/[a-z-]+)?$/)
   })
 
   it('markerar bladet när en av dess sidor är öppen', () => {

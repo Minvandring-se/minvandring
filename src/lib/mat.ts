@@ -141,6 +141,8 @@ export interface Inkopsrad {
   gram: number
   /** Antal påsar. Bara för påsar. */
   pasar?: number
+  /** Påsens id i matkatalogen. Bara för påsar. */
+  matproduktId?: string
   varifran: 'kopa' | 'hemifran'
   ansvarig: string | null
   klart: boolean
@@ -187,6 +189,7 @@ export function inkopslista(data: Matdata, dagar: readonly Matdag[], personer: n
       namn: ratt.namn,
       gram: antal * pase.vikt_torr_g,
       pasar: antal,
+      matproduktId: pase.id,
       varifran: 'kopa',
       ansvarig: ratt.ansvarig,
       klart: ratt.klart,
@@ -255,7 +258,7 @@ export function pasnamn(p: Pick<Matprodukt, 'marke' | 'namn'>): string {
   return `${p.marke} ${p.namn}`
 }
 
-const TILLAGNING: Record<NonNullable<Matprodukt['tillagning_vatten']>, string> = {
+export const TILLAGNING: Record<NonNullable<Matprodukt['tillagning_vatten']>, string> = {
   varmt: 'Varmt vatten',
   kallt: 'Kallt vatten',
   varmt_eller_kallt: 'Varmt eller kallt vatten',
