@@ -354,7 +354,7 @@ function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: List
             onClick={() => onVal({ ...val, sok: '', kategori: '', underkategori: '' })}
             className={cn('min-h-11 text-sm font-medium text-primary underline underline-offset-4', fokus)}
           >
-            Visa alla
+            Visa hela förrådet
           </button>
         )}
       </div>

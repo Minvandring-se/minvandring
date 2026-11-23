@@ -7,7 +7,7 @@ import { Input } from '@/components/ui/input'
 import { Sektion } from '@/components/ui/sektion'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { arKategori, formateraVikt, KATEGORIER, kategoriFor, underkategoriFor, underkategorierFor, type KategoriNyckel } from '@/lib/forrad'
-import { antalText, gArAttSoka, grupperaModeller, produktnamn, sokfilter, sokord, sorteraTraffar, type Modell } from '@/lib/produktsok'
+import { antalText, gArAttSoka, grupperaModeller, ingaTraffarText, produktnamn, sokfilter, sokord, sorteraTraffar, type Modell } from '@/lib/produktsok'
 import { supabase } from '@/lib/supabase'
 import type { Produkt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -119,7 +119,7 @@ export function Utrustningskatalog() {
       <div aria-live="polite" className="text-sm text-muted-foreground">
         {aktuellt && 'fel' in aktuellt && <p className="text-destructive">Det gick inte att söka. Kontrollera uppkopplingen och försök igen.</p>}
         {!gammal && modeller?.length === 0 && (
-          <p>{underkategori && !harText ? 'Inga produkter i katalogen i den här underkategorin än.' : 'Inga produkter matchar din sökning.'}</p>
+          <p>{ingaTraffarText({ harText, kategori, underkategori })}</p>
         )}
         {!gammal && modeller && modeller.length > 0 && (
           <p className="font-medium text-foreground">
