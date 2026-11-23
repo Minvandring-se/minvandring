@@ -23,10 +23,11 @@ const TurOversikt = lazy(() => import('@/pages/tur/TurOversikt').then((m) => ({ 
 const TurMat = lazy(() => import('@/pages/tur/TurMat').then((m) => ({ default: m.TurMat })))
 const TurKommerSnart = lazy(() => import('@/pages/tur/TurKommerSnart').then((m) => ({ default: m.TurKommerSnart })))
 const Installningar = lazy(() => import('@/pages/Installningar').then((m) => ({ default: m.Installningar })))
+const Matplanering = lazy(() => import('@/pages/Matplanering').then((m) => ({ default: m.Matplanering })))
 const PlaneradSida = lazy(() => import('@/pages/PlaneradSida').then((m) => ({ default: m.PlaneradSida })))
 
 /** Sidorna i menyn som inte är byggda än. De visar vad sidan blir, med "Kommer snart". */
-const PLANERADE = ['matplanering', 'packlistor', 'dagbok', 'kom-ihag', 'statistik', 'kompisar'] as const
+const PLANERADE = ['packlistor', 'dagbok', 'kom-ihag', 'statistik', 'kompisar'] as const
 const Utrustningskatalog = lazy(() => import('@/pages/Utrustningskatalog').then((m) => ({ default: m.Utrustningskatalog })))
 
 function Laddar({ text = 'Laddar …' }: { text?: string }) {
@@ -77,6 +78,7 @@ export default function App() {
           <Route path="/profil" element={<Profil />} />
           <Route path="/installningar" element={<Installningar />} />
           <Route path="/utrustning" element={<Utrustningskatalog />} />
+          <Route path="/matplanering" element={<Matplanering />} />
           {PLANERADE.map((sida) => (
             <Route key={sida} path={`/${sida}`} element={<PlaneradSida key={sida} sida={sida} />} />
           ))}

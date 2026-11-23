@@ -35,9 +35,9 @@ export const SIDOR: Record<Sida, Menysida> = {
     sida: 'matplanering',
     namn: 'Matplanering',
     till: '/matplanering',
-    byggd: false,
-    beskrivning: 'Era rätter och matplaner',
-    blir: 'Era egna rätter med energi och vikt per portion, att lägga in i matplanen för en tur.',
+    byggd: true,
+    beskrivning: 'Matplanen för varje tur',
+    blir: '',
   },
   packlistor: {
     sida: 'packlistor',
