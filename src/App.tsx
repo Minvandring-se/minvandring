@@ -39,9 +39,10 @@ function Laddar({ text = 'Laddar …' }: { text?: string }) {
 /** Sidor som kräver inloggning. Skickar till inloggningen och tillbaka efteråt. */
 function Inloggad({ children }: { children: ReactNode }) {
   const session = useSession()
-  const { pathname } = useLocation()
+  const { pathname, search, hash } = useLocation()
   if (session === undefined) return <Laddar />
-  if (session === null) return <Navigate to={`/logga-in?vidare=${encodeURIComponent(pathname)}`} replace />
+  // Hela adressen följer med, så att till exempel filtret i förrådet eller #bjud-in i en tur finns kvar efter inloggningen.
+  if (session === null) return <Navigate to={`/logga-in?vidare=${encodeURIComponent(pathname + search + hash)}`} replace />
   return children
 }
 
