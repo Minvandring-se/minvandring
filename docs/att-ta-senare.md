@@ -197,3 +197,7 @@ Villkor och källor:
 ## Katalogen: Nordisk och OMM
 
 Nordisks produktsidor säger inte vad "Official weight" är och anger ingen temperaturstandard för sovsäckarna, så raderna har totalvikten i `packvikt_g` och `ej_angiven`. Fråga Nordisk (eller läs deras FAQ) vad den officiella vikten och temperaturerna bygger på. Nordisk-tälten som redan ligger i katalogen har trimvikten som minvikt. OMM Mountain Raid utelämnades eftersom OMM bara anger Leanweight, "all extras removed", utan att säga vilka delar som avses för sovsäckarna.
+
+## Kostbehov när ett konto tas bort
+
+I dag går ett konto i `auth.users` inte att ta bort så länge det är deltagare i en tur. Den främmande nyckeln `deltagare.user_id` sätter null, men triggern `skydda_deltagare` stoppar det bytet. När vi tillåter att konton tas bort (se Radera kontot ovan) ska de känsliga `kostbehov` raderas samtidigt, till exempel med `on delete cascade` på deltagaren eller en trigger som tar bort kostbehoven när `user_id` blir null. Annars blir raden en person utan konto, och då kan alla som är owner eller editor ändra kostbehoven. Lägg till ett test i `supabase/rls.test.ts` när det byggs.
