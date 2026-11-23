@@ -149,7 +149,7 @@ marke;modell;version;underkategori;packvikt_g;minvikt_g;typ;bransle;personer;eff
 Lösa kastruller, kittlar, stekpannor och kokset utan brännare går i samma fil som köken (`kok.csv`) med `underkategori` `kastrull`. Kåsor och muggar lämnas ute.
 
 ```
-marke;modell;version;underkategori;packvikt_g;typ;packmatt_cm;system;volym_l;material;varmevaxlare;lock;antal_delar;pris_sek_ca;ean;kalla;kontrollerad_datum;kommentar
+marke;modell;version;underkategori;packvikt_g;typ;packmatt_cm;system;volym_l;material;varmevaxlare;lock;antal_delar;bara_system;pris_sek_ca;ean;kalla;kontrollerad_datum;kommentar
 ```
 
 - `underkategori`: alltid `kastrull`
@@ -160,3 +160,4 @@ marke;modell;version;underkategori;packvikt_g;typ;packmatt_cm;system;volym_l;mat
 - `system`: bara när tillverkaren själv säger vilka kök kokkärlet är gjort för: `jetboil_fluxring`, `msr_windburner`, `msr_reactor`, `primus_lite`, `primus_primetech`, `trangia_25`, `trangia_27` eller `trangia_28`. Skriv i kommentaren vad tillverkaren säger. Tomt för en vanlig kastrull som passar alla öppna brännare. Passar kokkärlet ett system som inte finns i listan: lämna tomt och skriv det i kommentaren
 - `varmevaxlare` och `lock`: `ja` eller `nej`, tomt om det inte framgår
 - `antal_delar`: heltal, kastruller, lock och stekpannor räknade för sig
+- `bara_system`: `ja` bara när tillverkaren säger att kokkärlet enbart fungerar med sitt eget kök (MSR skriver till exempel att Reactor-kastrullerna bara passar Reactor). Kräver `system`. Annars tomt

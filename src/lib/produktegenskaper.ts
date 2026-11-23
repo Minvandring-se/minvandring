@@ -192,7 +192,14 @@ const KASTRULL: Egenskap[] = [
   { nyckel: 'lock', etikett: 'Lock ingår', sort: 'janej' },
   { nyckel: 'antal_delar', etikett: 'Antal delar', sort: 'heltal', min: 1, max: 12 },
   { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text' },
+  // Tillverkaren säger att kokkärlet bara fungerar med sitt eget kök, till exempel MSR:s Reactor-kastruller.
+  { nyckel: 'bara_system', etikett: 'Bara för sitt kök', sort: 'janej' },
 ]
+
+/** Ett kokkärl som bara fungerar med sitt eget kök måste ha ett kokkärlssystem. */
+function kastrullregler(e: Record<string, unknown>): string[] {
+  return e.bara_system === true && saknas(e.system) ? ['bara_system: kräver att system anges'] : []
+}
 
 /** Tändare och regulator finns bara på kök som går på gas, och ett stormkök eller systemkök har alltid kastruller. */
 function brannarregler(e: Record<string, unknown>): string[] {
@@ -256,6 +263,7 @@ const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, un
   ryggsack: ryggsacksregler,
   dagsryggsack: ryggsacksregler,
   brannare: brannarregler,
+  kastrull: kastrullregler,
 }
 
 /** Alla nycklar som finns som egenskap i någon underkategori. */
