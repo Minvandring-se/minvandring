@@ -229,6 +229,7 @@ describe('roller', () => {
   let tur: string
   let cillasDeltagare: string
   let annasDeltagare: string
+  let davidsDeltagare: string
   let packrad: string
 
   beforeAll(async () => {
@@ -268,6 +269,24 @@ describe('roller', () => {
     )
   })
 
+  // Samma regler som kanTaBort i src/lib/roller.ts, som styr vilka kryss som visas i deltagarlistan.
+  it('editor kan ta bort en hund, men inte en deltagare med konto, och kan inte ändra någon annans roll', async () => {
+    const kod = await kodFor(tur)
+    await som(D, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const d = await db.query<{ id: string }>(`select id from public.deltagare where tur_id = $1 and user_id = '${D}'`, [tur])
+    davidsDeltagare = d.rows[0].id
+
+    await som(C, (tx) => tx.query(`delete from public.deltagare where tur_id = $1 and namn = 'Bamse'`, [tur]))
+    const hundar = await db.query(`select id from public.deltagare where tur_id = $1 and typ = 'hund'`, [tur])
+    expect(hundar.rows).toHaveLength(0)
+
+    await som(C, (tx) => tx.query('delete from public.deltagare where id = $1', [davidsDeltagare]))
+    const kvar = await db.query('select id from public.deltagare where id = $1', [davidsDeltagare])
+    expect(kvar.rows).toHaveLength(1)
+
+    await forvantaFel(som(C, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [davidsDeltagare])))
+  })
+
   it('viewer ser turen men kan inte ändra den', async () => {
     await som(A, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [cillasDeltagare]))
     const syns = await som(C, (tx) => tx.query('select id from public.turer where id = $1', [tur]))
@@ -288,6 +307,17 @@ describe('roller', () => {
     )
   })
 
+  it('viewer kan inte lägga till eller ta bort deltagare, och kan inte ändra dem', async () => {
+    await forvantaFel(som(C, (tx) => tx.query(`insert into public.deltagare (tur_id, namn, typ) values ($1, 'Smyghund', 'hund')`, [tur])))
+
+    await som(A, (tx) => tx.query(`insert into public.deltagare (tur_id, namn, typ) values ($1, 'Rex', 'hund')`, [tur]))
+    await som(C, (tx) => tx.query(`delete from public.deltagare where tur_id = $1 and namn = 'Rex'`, [tur]))
+    await som(C, (tx) => tx.query('delete from public.deltagare where id = $1', [davidsDeltagare]))
+    await som(C, (tx) => tx.query(`update public.deltagare set namn = 'Ändrad av viewer' where tur_id = $1 and namn = 'Rex'`, [tur]))
+    const kvar = await db.query<{ namn: string }>(`select namn from public.deltagare where tur_id = $1 and (namn = 'Rex' or id = $2)`, [tur, davidsDeltagare])
+    expect(kvar.rows).toHaveLength(2)
+  })
+
   it('en tur måste alltid ha en owner', async () => {
     await forvantaFel(som(A, (tx) => tx.query(`update public.deltagare set roll = 'editor' where id = $1`, [annasDeltagare])))
     await forvantaFel(som(A, (tx) => tx.query('delete from public.deltagare where id = $1', [annasDeltagare])))
@@ -297,6 +327,20 @@ describe('roller', () => {
     await som(A, (tx) => tx.query(`update public.profiler set namn = 'Anna' where id = '${A}'`))
     const r = await db.query<{ namn: string }>('select namn from public.deltagare where id = $1', [annasDeltagare])
     expect(r.rows[0].namn).toBe('Anna')
+  })
+
+  it('viewer kan lämna turen, och ser den inte längre', async () => {
+    await som(C, (tx) => tx.query('delete from public.deltagare where id = $1', [cillasDeltagare]))
+    const kvar = await db.query('select id from public.deltagare where id = $1', [cillasDeltagare])
+    expect(kvar.rows).toHaveLength(0)
+    const syns = await som(C, (tx) => tx.query('select id from public.turer where id = $1', [tur]))
+    expect(syns.rows).toHaveLength(0)
+  })
+
+  it('owner kan ta bort en deltagare med konto', async () => {
+    await som(A, (tx) => tx.query('delete from public.deltagare where id = $1', [davidsDeltagare]))
+    const kvar = await db.query('select id from public.deltagare where id = $1', [davidsDeltagare])
+    expect(kvar.rows).toHaveLength(0)
   })
 
   it('owner kan radera turen, och då försvinner allt i den', async () => {
