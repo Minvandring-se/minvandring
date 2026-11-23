@@ -3,13 +3,15 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { TomtLage } from '@/components/app/TomtLage'
+import { Inkopslista } from '@/components/mat/Inkopslista'
+import { Kostbehov } from '@/components/mat/Kostbehov'
 import { Matdag } from '@/components/mat/Matdag'
 import { Matsummering } from '@/components/mat/Matsummering'
 import { ValjRatt } from '@/components/mat/ValjRatt'
 import { useTur } from '@/components/tur/turKontext'
 import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
-import { laggIMaltid, laggTillPase, sparaEgenRatt, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
+import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
 import { dagssummor, inkopslista, MALTIDER, matdagar, matsummering, matviktTotalt, rattPerPortion, type Matdag as Dag } from '@/lib/mat'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
@@ -67,7 +69,7 @@ function behovMedNamn(plan: Matplan, deltagare: readonly DeltagareRad[]): Behov[
 }
 
 function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; laddaOm: () => Promise<void> }) {
-  const { tur, deltagare, minRoll } = useTur()
+  const { tur, deltagare, minRoll, mittUserId } = useTur()
   const kanAndra = rollKanAndra(minRoll)
   const [valjer, setValjer] = useState<{ dag: Dag; maltid: Maltid } | null>(null)
   const [fel, setFel] = useState<string | null>(null)
@@ -78,7 +80,8 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
   const perPortion = useMemo(() => new Map(plan.ratter.map((r) => [r.id, rattPerPortion(r, plan)])), [plan])
   const ratter = useMemo(() => ({ ratter: new Map(plan.ratter.map((r) => [r.id, r])), perPortion, pasar: plan.pasar }), [plan, perPortion])
   const summor = dagssummor(plan, dagar)
-  const totaltG = matviktTotalt(inkopslista(plan, dagar, personer))
+  const inkop = inkopslista(plan, dagar, personer)
+  const totaltG = matviktTotalt(inkop)
   const vikter = matvikter(totaltG, plan.matdeltagare, dagar.length)
   const perPerson = deltagare.filter((d) => (vikter.get(d.id) ?? 0) > 0).map((d) => ({ id: d.id, namn: d.namn, g: vikter.get(d.id)! }))
 
@@ -104,9 +107,22 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
 
   return (
     <div className="space-y-5">
-      {!kanAndra && <p className="text-muted-foreground">Du är läsare och kan se matplanen. Ägare och redigerare ändrar den.</p>}
+      {!kanAndra && <p className="text-muted-foreground">Du är läsare. Du kan se matplanen och ange dina egna kostbehov. Ägare och redigerare ändrar resten.</p>}
 
       <Matsummering summering={matsummering(summor)} totaltG={totaltG} perPerson={perPerson} />
+
+      <Kostbehov
+        deltagare={deltagare}
+        kostbehov={plan.kostbehov}
+        minRoll={minRoll}
+        mittUserId={mittUserId}
+        onSpara={async (b) => {
+          // Panelen visar själv felet om det inte gick att spara.
+          const ok = await sparaKostbehov(b)
+          if (ok) await laddaOm()
+          return ok
+        }}
+      />
 
       {fel && (
         <p role="alert" className="text-destructive">
@@ -128,6 +144,17 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
           />
         ))}
       </div>
+
+      <Inkopslista
+        rader={inkop}
+        deltagare={deltagare}
+        kanAndra={kanAndra}
+        onAndra={async (rad, andring) => {
+          const ok = await andraInkopsrad(rad.typ, rad.id, andring)
+          if (ok) await laddaOm()
+          return ok
+        }}
+      />
 
       {valjer && (
         <ValjRatt

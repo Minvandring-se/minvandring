@@ -54,6 +54,10 @@ export function Integritet() {
           <li>Ditt lösenord. Det sparas krypterat hos Supabase, så varken vi eller någon annan kan se det.</li>
           <li>Dina turer och det ni lägger in i dem: deltagare, packning och mat.</li>
           <li>Namn på deltagare utan konto, som någon annan i turen har lagt till, till exempel en kompis eller en hund.</li>
+          <li>
+            Kostbehov och allergier, om du anger dem i matplanen. Det är frivilligt. Uppgifterna sparas per tur och försvinner när
+            du lämnar turen eller turen raderas. Du kan ändra eller ta bort dina egna när som helst under Mat i turen.
+          </li>
         </ul>
       </Avsnitt>
 
@@ -68,7 +72,8 @@ export function Integritet() {
       <Avsnitt rubrik="Vem som ser dina uppgifter">
         <p>
           Bara de som är med i samma tur ser turen, deltagarna och deras namn. Den som har turens inbjudningslänk kan gå med i turen
-          efter att ha loggat in, så dela länken bara med dem du vill ha med.
+          efter att ha loggat in, så dela länken bara med dem du vill ha med. Det gäller också kostbehov och allergier: de syns för
+          alla i turen, så att ni kan välja mat som passar, men inte för någon annan.
         </p>
       </Avsnitt>
 

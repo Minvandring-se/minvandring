@@ -157,3 +157,15 @@ export function varningar(p: Kostinfo, behov: readonly Behov[]): Varning[] {
   }))
   return [...ut.filter((v) => !v.okand), ...ut.filter((v) => v.okand)]
 }
+
+/** En persons kostbehov på en rad: "Vegetarisk, glutenfri, tål inte nötter och sesam". Tom text när inget är angivet. */
+export function behovstext(b: Omit<Behov, 'namn'>): string {
+  const val = KOSTVAL.filter((k) => b[k.nyckel]).map((k) => k.etikett.toLowerCase())
+  // Vegansk innebär vegetarisk, så det räcker att skriva vegansk.
+  const visade = b.vegansk ? val.filter((v) => v !== 'vegetarisk') : val
+  const delar = [...visade]
+  const utan = ALLERGENER.filter((a) => b.utan.includes(a.nyckel)).map((a) => a.etikett.toLowerCase())
+  if (utan.length) delar.push(`tål inte ${uppraknade(utan)}`)
+  const text = delar.join(', ')
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}

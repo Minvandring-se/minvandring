@@ -194,3 +194,25 @@ export async function sparaEgenRatt(
   if (error) return misslyckades()
   return id
 }
+
+/** Ändrar en rad i inköpslistan: en vara (ansvarig, klart, varifrån) eller en påse (ansvarig, klart). */
+export async function andraInkopsrad(
+  typ: 'vara' | 'pase',
+  id: string,
+  andring: { ansvarig?: string | null; klart?: boolean; varifran?: 'kopa' | 'hemifran' },
+): Promise<boolean> {
+  if (!supabase) return false
+  if (typ === 'pase' && andring.varifran) return false
+  const { error } = await supabase.from(typ === 'vara' ? 'varor' : 'ratter').update(andring).eq('id', id)
+  return !error
+}
+
+/** Sparar en deltagares kostbehov. Utan några behov tas raden bort, så att inget sparas i onödan. */
+export async function sparaKostbehov(behov: Kostbehov): Promise<boolean> {
+  if (!supabase) return false
+  const tomt = !behov.vegetarisk && !behov.vegansk && !behov.glutenfri && !behov.laktosfri && behov.utan.length === 0
+  const { error } = tomt
+    ? await supabase.from('kostbehov').delete().eq('deltagare_id', behov.deltagare_id)
+    : await supabase.from('kostbehov').upsert(behov)
+  return !error
+}

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arAllergen, filterForGruppen, passarFilter, skalForPerson, uppraknade, varningar, type Behov, type Kostinfo } from './kost'
+import { arAllergen, behovstext, filterForGruppen, passarFilter, skalForPerson, uppraknade, varningar, type Behov, type Kostinfo } from './kost'
 
 const kand: Kostinfo = { vegetarisk: true, vegansk: false, glutenfri: true, laktosfri: true, allergener: ['soja', 'selleri'] }
 const okand: Kostinfo = { vegetarisk: null, vegansk: null, glutenfri: null, laktosfri: null, allergener: null }
@@ -114,5 +114,23 @@ describe('arAllergen', () => {
     expect(arAllergen('jordnotter')).toBe(true)
     expect(arAllergen('Jordnötter')).toBe(false)
     expect(arAllergen('inga')).toBe(false)
+  })
+})
+
+describe('behovstext', () => {
+  it('räknar upp kostval och allergener', () => {
+    expect(behovstext(behov('Lisa', { vegetarisk: true, glutenfri: true, utan: ['sesam', 'notter'] }))).toBe('Vegetarisk, glutenfri, tål inte nötter och sesam')
+  })
+
+  it('skriver bara vegansk när personen är både vegetarian och vegan', () => {
+    expect(behovstext(behov('Lisa', { vegetarisk: true, vegansk: true }))).toBe('Vegansk')
+  })
+
+  it('börjar med versal även när det bara finns allergener', () => {
+    expect(behovstext(behov('Lisa', { utan: ['jordnotter'] }))).toBe('Tål inte jordnötter')
+  })
+
+  it('är tom utan behov', () => {
+    expect(behovstext(behov('Lisa'))).toBe('')
   })
 })
