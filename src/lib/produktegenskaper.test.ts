@@ -153,8 +153,8 @@ describe('tolkaEgenskap', () => {
 })
 
 describe('underkategorier utan egna egenskaper', () => {
-  it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar och kök har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare'])
+  it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar, kök och kokkärl har egenskaper än så länge', () => {
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'kastrull'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
@@ -636,10 +636,11 @@ describe('egenskaper för kök och brännare', () => {
     tandare: true,
     patronfaste: 'EN 417',
     packmatt_cm: '12 x 16',
+    system: 'jetboil_fluxring',
   }
   const felnycklar = (e: Record<string, unknown>) => valideraEgenskaper('brannare', e).fel.map((f) => f.split(':')[0])
 
-  it('har elva egenskaper, varav fem behövs för jämförelser', () => {
+  it('har tolv egenskaper, varav fem behövs för jämförelser', () => {
     expect(egenskaperFor('brannare').map((e) => e.nyckel)).toEqual(Object.keys(kok))
     expect(egenskaperFor('brannare').filter((e) => e.forJamforelse).map((e) => e.nyckel)).toEqual(['typ', 'bransle', 'personer', 'effekt_w', 'koktid_1l_min'])
   })
@@ -662,9 +663,10 @@ describe('egenskaper för kök och brännare', () => {
     expect(felnycklar({ ...kok, bransle: 'sprit', tandare: false })).toEqual([])
   })
 
-  it('kräver kokkärl för ett stormkök', () => {
+  it('kräver kokkärl för ett stormkök och ett systemkök', () => {
     const { kokkarl_l: _, ...utanKokkarl } = kok
     expect(felnycklar({ ...utanKokkarl, typ: 'stormkok' })).toEqual(['kokkarl_l'])
+    expect(felnycklar({ ...utanKokkarl, typ: 'systemkok' })).toEqual(['kokkarl_l'])
     expect(felnycklar({ ...utanKokkarl, typ: 'toppmonterat' })).toEqual([])
   })
 
@@ -675,5 +677,44 @@ describe('egenskaper för kök och brännare', () => {
   it('visar typ och bränsle med svenska namn', () => {
     const rader = visaEgenskaper('brannare', { typ: 'slangkok', bransle: 'multibransle', koktid_1l_min: 3.5 })
     expect(rader.map((r) => r.varde)).toEqual(['Slangkök', 'Multibränsle', '3,5 min'])
+  })
+})
+
+describe('egenskaper för kokkärl', () => {
+  const kastrull = {
+    typ: 'kastrull',
+    volym_l: 1.3,
+    material: 'hardanodiserad_aluminium',
+    system: 'trangia_25',
+    varmevaxlare: false,
+    lock: true,
+    antal_delar: 2,
+    packmatt_cm: '18 x 10',
+    bara_system: false,
+  }
+
+  it('har nio egenskaper, varav tre behövs för jämförelser', () => {
+    expect(egenskaperFor('kastrull').map((e) => e.nyckel)).toEqual(Object.keys(kastrull))
+    expect(egenskaperFor('kastrull').filter((e) => e.forJamforelse).map((e) => e.nyckel)).toEqual(['typ', 'volym_l', 'material'])
+  })
+
+  it('godkänner ett komplett kokkärl, också utan system', () => {
+    expect(valideraEgenskaper('kastrull', kastrull)).toEqual({ fel: [], varningar: [] })
+    const { system: _, ...utanSystem } = kastrull
+    expect(valideraEgenskaper('kastrull', utanSystem)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('kräver system när kokkärlet bara passar sitt eget kök', () => {
+    const { system: _, ...utanSystem } = kastrull
+    expect(valideraEgenskaper('kastrull', { ...utanSystem, bara_system: true }).fel.map((f) => f.split(':')[0])).toEqual(['bara_system'])
+  })
+
+  it('ger fel för system som inte finns', () => {
+    expect(valideraEgenskaper('kastrull', { ...kastrull, system: 'egen' }).fel.map((f) => f.split(':')[0])).toEqual(['system'])
+  })
+
+  it('visar system och material med svenska namn', () => {
+    const rader = visaEgenskaper('kastrull', { material: 'hardanodiserad_aluminium', system: 'trangia_28' })
+    expect(rader.map((r) => r.varde)).toEqual(['Hårdanodiserad aluminium', 'Trangia 28 (Mini)'])
   })
 })

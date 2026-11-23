@@ -149,6 +149,17 @@ export const KOKTYPER = ['toppmonterat', 'slangkok', 'systemkok', 'stormkok', 'a
 export const BRANSLEN = ['gas', 'sprit', 'multibransle', 'ved', 'fast_bransle', 'annat'] as const
 
 /**
+ * Kokkärlssystem: brännare och kokkärl som bara passar ihop med varandra, till exempel Jetboils kastruller med
+ * värmeväxlare. Samma system på en brännare och ett kokkärl betyder att de passar. Anges bara när tillverkaren
+ * själv säger vad som är kompatibelt. Ett nytt system läggs till här och i VALNAMN.
+ */
+export const KOKSYSTEM = ['jetboil_fluxring', 'msr_windburner', 'msr_reactor', 'primus_lite', 'primus_primetech', 'trangia_25', 'trangia_27', 'trangia_28'] as const
+
+export const KOKKARLSTYPER = ['kastrull', 'kittel', 'stekpanna', 'kokset', 'annat'] as const
+
+export const KOKKARLSMATERIAL = ['aluminium', 'hardanodiserad_aluminium', 'titan', 'rostfritt_stal', 'annat'] as const
+
+/**
  * Kök och brännare. packvikt_g är hela förpackningen utan bränsle. Koktiden gäller 1 liter: anger tillverkaren
  * bara 0,5 liter står den tiden i kommentaren, eftersom den inte går att räkna om rakt av.
  */
@@ -165,9 +176,32 @@ const BRANNARE: Egenskap[] = [
   // Fri text, till exempel "EN 417" eller "EN 417 och bränsleflaska".
   { nyckel: 'patronfaste', etikett: 'Patronfäste', sort: 'text' },
   { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text' },
+  { nyckel: 'system', etikett: 'Kokkärlssystem', sort: 'val', val: KOKSYSTEM },
 ]
 
-/** Tändare och regulator finns bara på kök som går på gas, och ett stormkök har alltid kastruller. */
+/**
+ * Lösa kokkärl: kastruller, kittlar, stekpannor och kokset utan brännare. packvikt_g är allt som ingår.
+ * system anges bara för kokkärl som är gjorda för ett visst kök, till exempel med värmeväxlare för Jetboil.
+ */
+const KASTRULL: Egenskap[] = [
+  { nyckel: 'typ', etikett: 'Typ', sort: 'val', val: KOKKARLSTYPER, forJamforelse: true, viktig: true },
+  { nyckel: 'volym_l', etikett: 'Volym', sort: 'decimal', min: 0.2, max: 6, enhet: 'l', forJamforelse: true, viktig: true },
+  { nyckel: 'material', etikett: 'Material', sort: 'val', val: KOKKARLSMATERIAL, forJamforelse: true, viktig: true },
+  { nyckel: 'system', etikett: 'Kokkärlssystem', sort: 'val', val: KOKSYSTEM, viktig: true },
+  { nyckel: 'varmevaxlare', etikett: 'Värmeväxlare', sort: 'janej' },
+  { nyckel: 'lock', etikett: 'Lock ingår', sort: 'janej' },
+  { nyckel: 'antal_delar', etikett: 'Antal delar', sort: 'heltal', min: 1, max: 12 },
+  { nyckel: 'packmatt_cm', etikett: 'Packmått (cm)', sort: 'text' },
+  // Tillverkaren säger att kokkärlet bara fungerar med sitt eget kök, till exempel MSR:s Reactor-kastruller.
+  { nyckel: 'bara_system', etikett: 'Bara för sitt kök', sort: 'janej' },
+]
+
+/** Ett kokkärl som bara fungerar med sitt eget kök måste ha ett kokkärlssystem. */
+function kastrullregler(e: Record<string, unknown>): string[] {
+  return e.bara_system === true && saknas(e.system) ? ['bara_system: kräver att system anges'] : []
+}
+
+/** Tändare och regulator finns bara på kök som går på gas, och ett stormkök eller systemkök har alltid kastruller. */
 function brannarregler(e: Record<string, unknown>): string[] {
   const fel: string[] = []
   // Ett okänt bränsle ger redan ett fel för bransle, så reglerna gäller bara kända bränslen.
@@ -176,7 +210,7 @@ function brannarregler(e: Record<string, unknown>): string[] {
     if (e.regulator === true) fel.push('regulator: anges bara när bransle är gas eller multibransle')
     if (e.tandare === true) fel.push('tandare: anges bara när bransle är gas eller multibransle')
   }
-  if (e.typ === 'stormkok' && saknas(e.kokkarl_l)) fel.push('kokkarl_l: ska anges när typ är stormkok')
+  if ((e.typ === 'stormkok' || e.typ === 'systemkok') && saknas(e.kokkarl_l)) fel.push(`kokkarl_l: ska anges när typ är ${e.typ}`)
   return fel
 }
 
@@ -219,6 +253,7 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   ryggsack: RYGGSACK,
   dagsryggsack: RYGGSACK,
   brannare: BRANNARE,
+  kastrull: KASTRULL,
 }
 
 const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, unknown>) => string[]>> = {
@@ -228,6 +263,7 @@ const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, un
   ryggsack: ryggsacksregler,
   dagsryggsack: ryggsacksregler,
   brannare: brannarregler,
+  kastrull: kastrullregler,
 }
 
 /** Alla nycklar som finns som egenskap i någon underkategori. */
@@ -340,6 +376,16 @@ const VALNAMN: Record<string, string> = {
   stormkok: 'Stormkök',
   multibransle: 'Multibränsle',
   fast_bransle: 'Fast bränsle',
+  jetboil_fluxring: 'Jetboil FluxRing',
+  msr_windburner: 'MSR WindBurner',
+  msr_reactor: 'MSR Reactor',
+  primus_lite: 'Primus Lite',
+  primus_primetech: 'Primus PrimeTech',
+  trangia_25: 'Trangia 25',
+  trangia_27: 'Trangia 27',
+  trangia_28: 'Trangia 28 (Mini)',
+  hardanodiserad_aluminium: 'Hårdanodiserad aluminium',
+  rostfritt_stal: 'Rostfritt stål',
 }
 
 /** Tal med decimalkomma och ett riktigt minustecken. */

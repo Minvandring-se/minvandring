@@ -24,7 +24,7 @@ Filerna här ligger medvetet utanför `supabase/katalog/`, så att `npm run kata
 | Sovsäckar och quilts | ✓ 2026-11-19 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 |
 | Liggunderlag | ✓ 2026-11-19 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 |
 | Ryggsäckar | ✓ 2026-11-19 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 | ✓ 2026-11-22 |
-| Kök | ✓ 2026-11-23 | ✓ 2026-11-23 (utan Trangia) | – | – | – |
+| Kök | ✓ 2026-11-23 | ✓ 2026-11-23 | – | – | – |
 
 ## Kolumnerna i genomgangar.csv
 
