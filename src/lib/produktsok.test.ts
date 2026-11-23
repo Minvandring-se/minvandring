@@ -1,5 +1,18 @@
 import { describe, expect, it } from 'vitest'
-import { antalText, gArAttSoka, ingaTraffarText, grupperaModeller, markenMedAntal, produktnamn, sakFranProdukt, sokfilter, sokord, sorteraTraffar } from './produktsok'
+import { faltFran } from './forrad'
+import {
+  antalText,
+  forvalFranProdukt,
+  gArAttSoka,
+  ingaTraffarText,
+  grupperaModeller,
+  markenMedAntal,
+  produktnamn,
+  sakFranProdukt,
+  sokfilter,
+  sokord,
+  sorteraTraffar,
+} from './produktsok'
 import type { Produkt } from './typer'
 
 function produkt(marke: string, modell: string, delar: Partial<Produkt> = {}): Produkt {
@@ -113,6 +126,31 @@ describe('sakFranProdukt', () => {
 
   it('kortar ett namn som är längre än förrådet tillåter', () => {
     expect(sakFranProdukt(produkt('M', 'x'.repeat(200))).namn).toHaveLength(80)
+  })
+})
+
+describe('forvalFranProdukt', () => {
+  it('fyller formuläret med samma uppgifter som när produkten väljs i Lägg till utrustning', () => {
+    const p = produkt('Rab', 'Neutrino 400', { id: 'p2', version: 'Long', kategori: 'sova', underkategori: 'sovsack', packvikt_g: 1010 })
+    expect(forvalFranProdukt(p)).toEqual({ namn: 'Rab Neutrino 400', kategori: 'sova', underkategori: 'sovsack', vikt_g: 1010, produkt_id: 'p2' })
+  })
+
+  it('ger formulärets startvärden med vikt och typ, och antal 1', () => {
+    const p = produkt('Primus', 'Gas 230', { id: 'p3', kategori: 'kok', underkategori: 'bransle', packvikt_g: 360 })
+    expect(faltFran(undefined, forvalFranProdukt(p))).toEqual({
+      namn: 'Primus Gas 230',
+      kategori: 'kok',
+      underkategori: 'bransle',
+      typ: 'forbrukas',
+      antal: '1',
+      vikt: '360',
+      notering: '',
+    })
+  })
+
+  it('hoppar över en kategori eller underkategori som inte finns', () => {
+    const p = produkt('X', 'Y', { kategori: 'finns-inte', underkategori: 'finns-inte' })
+    expect(forvalFranProdukt(p)).toMatchObject({ kategori: undefined, underkategori: undefined })
   })
 })
 

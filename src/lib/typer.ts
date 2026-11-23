@@ -59,6 +59,15 @@ export interface Produkt {
   kalla_typ: KallaTyp
 }
 
+/** En produkt i Utrustningskatalogen, med det som visas när kortet fälls ut. */
+export interface Katalogprodukt extends Produkt {
+  minvikt_g: number | null
+  pris_sek_ca: number | null
+  /** Tillverkarens sida, eller butikens när kalla_typ är butik. */
+  kalla: string
+  egenskaper: Record<string, unknown>
+}
+
 export interface Tur {
   id: string
   namn: string

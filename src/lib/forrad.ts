@@ -401,15 +401,20 @@ export interface Forval {
   namn?: string
   kategori?: KategoriNyckel
   underkategori?: UnderkategoriNyckel
+  /** Vikten per styck, när saken kommer från en produkt i katalogen. */
+  vikt_g?: number | null
+  /** Produkten saken kommer från. Sparas med saken, så att den kopplas till katalogen. */
+  produkt_id?: string
 }
 
-/** Formulärets startvärden: en befintlig sak, eller en ny med eventuellt förvalt namn, kategori och underkategori. */
+/** Formulärets startvärden: en befintlig sak, eller en ny med eventuellt förvalt namn, kategori, underkategori och vikt. */
 export function faltFran(sak?: Forradssak, forval?: Forval): SakFalt {
   if (!sak) {
     const kategori = forval?.kategori ?? ''
     const underkategori = forval?.underkategori ?? ''
     const namn = (forval?.namn ?? '').trim().slice(0, MAX_NAMN)
-    return { namn, kategori, underkategori, typ: forvaldTyp(kategori, underkategori), antal: '1', vikt: '', notering: '' }
+    const vikt = forval?.vikt_g == null ? '' : String(forval.vikt_g)
+    return { namn, kategori, underkategori, typ: forvaldTyp(kategori, underkategori), antal: '1', vikt, notering: '' }
   }
   return {
     namn: sak.namn,
@@ -475,12 +480,50 @@ export function sakdetaljer(sak: Forradssak): Sakdetaljer {
 
   const p = sak.produkter
   if (!p) return { grund, viktiga: [], ovriga: [] }
-  const egenskaper = visaEgenskaper(p.underkategori, p.egenskaper)
+  const egenskaper = egenskapsdelar(p)
   const ovriga: Detaljrad[] = []
   if (p.version) ovriga.push({ etikett: 'Version', varde: p.version })
   if (p.minvikt_g) ovriga.push({ etikett: 'Minsta vikt', varde: formateraVikt(p.minvikt_g) })
-  ovriga.push(...egenskaper.filter((e) => !e.viktig))
-  return { grund, viktiga: egenskaper.filter((e) => e.viktig), ovriga }
+  ovriga.push(...egenskaper.ovriga)
+  return { grund, viktiga: egenskaper.viktiga, ovriga }
+}
+
+/**
+ * Katalogens egenskaper för en produkt, delade i de viktigaste för underkategorin (som visas direkt) och de övriga
+ * (under "Visa alla specifikationer"). Gemensamt för Mitt förråd och Utrustningskatalogen.
+ */
+export function egenskapsdelar(p: { underkategori: string; egenskaper: Record<string, unknown> | null | undefined }): { viktiga: Detaljrad[]; ovriga: Detaljrad[] } {
+  const egenskaper = visaEgenskaper(p.underkategori, p.egenskaper)
+  return { viktiga: egenskaper.filter((e) => e.viktig), ovriga: egenskaper.filter((e) => !e.viktig) }
+}
+
+export interface Produktdetaljer {
+  /** Vikten, minsta vikten och det ungefärliga priset, det som finns. */
+  grund: Detaljrad[]
+  viktiga: Detaljrad[]
+  ovriga: Detaljrad[]
+}
+
+/** Pris i hela kronor med mellanrum mellan tusentalen: "1 299 kr". */
+function formateraPris(kr: number): string {
+  return `${kr.toLocaleString('sv-SE')} kr`
+}
+
+/**
+ * Det som visas när ett kort i Utrustningskatalogen fälls ut: vikt, minsta vikt och ungefärligt pris när de finns,
+ * och egenskaperna delade som i Mitt förråd.
+ */
+export function produktdetaljer(p: {
+  packvikt_g: number
+  minvikt_g: number | null
+  pris_sek_ca: number | null
+  underkategori: string
+  egenskaper: Record<string, unknown> | null | undefined
+}): Produktdetaljer {
+  const grund: Detaljrad[] = [{ etikett: 'Vikt', varde: formateraVikt(p.packvikt_g) }]
+  if (p.minvikt_g) grund.push({ etikett: 'Minsta vikt', varde: formateraVikt(p.minvikt_g) })
+  if (p.pris_sek_ca) grund.push({ etikett: 'Ungefärligt pris', varde: formateraPris(p.pris_sek_ca) })
+  return { grund, ...egenskapsdelar(p) }
 }
 
 /**
