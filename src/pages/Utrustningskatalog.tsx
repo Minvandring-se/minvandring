@@ -8,12 +8,14 @@ import { SakFormular } from '@/components/forrad/SakFormular'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { Panel } from '@/components/ui/panel'
 import { Sektion } from '@/components/ui/sektion'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, underkategoriFor, underkategorierFor, type Detaljrad, type KategoriNyckel } from '@/lib/forrad'
 import { forradsadress } from '@/lib/forradslista'
+import { arKokgrupp, filtreraKokgrupp, KOKGRUPPER, kokEtikettFor, type Kokgrupp } from '@/lib/kokkarl'
 import {
   antalText,
   forvalFranProdukt,
@@ -64,6 +66,8 @@ export function Utrustningskatalog() {
   const [text, setText] = useState('')
   const [kategori, setKategori] = useState<KategoriNyckel | ''>('')
   const [underkategori, setUnderkategori] = useState('')
+  // Bara brännare eller med kokkärl. Väljs bara när kategorin är kök.
+  const [kokval, setKokval] = useState<Kokgrupp | ''>('')
   const [antal, setAntal] = useState<number | null>(null)
   const [lage, setLage] = useState<Lage>(null)
   // Produkterna i träfflistan som finns i ens förråd, med produktens version (storlek). Hämtas med en fråga per träfflista.
@@ -80,7 +84,7 @@ export function Utrustningskatalog() {
 
   const harText = gArAttSoka(text)
   const sokbar = harText || kategori !== ''
-  const nyckel = `${kategori}|${underkategori}|${text}`
+  const nyckel = `${kategori}|${underkategori}|${kokval}|${text}`
 
   useEffect(() => {
     supabase
@@ -100,21 +104,21 @@ export function Utrustningskatalog() {
       if (harText) for (const ord of sokord(text)) fraga = fraga.or(sokfilter(ord))
       const { data, error } = await fraga.order('marke').order('modell')
       if (avbruten) return
-      const produkter = (data as Katalogprodukt[] | null) ?? []
+      const produkter = filtreraKokgrupp((data as Katalogprodukt[] | null) ?? [], kokval)
       const egna = await hamtaIForradet(produkter.map((p) => p.id))
       if (avbruten) return
       setIForradet(egna)
       setLage(
         error
           ? { nyckel, fel: true }
-          : { nyckel, modeller: grupperaModeller(sorteraTraffar(produkter, harText ? text : '')), avkortad: produkter.length === MAX },
+          : { nyckel, modeller: grupperaModeller(sorteraTraffar(produkter, harText ? text : '')), avkortad: (data?.length ?? 0) === MAX },
       )
     }, FORDROJNING_MS)
     return () => {
       avbruten = true
       window.clearTimeout(timer)
     }
-  }, [text, kategori, underkategori, harText, sokbar, nyckel])
+  }, [text, kategori, underkategori, kokval, harText, sokbar, nyckel])
 
   const aktuellt = sokbar && lage?.nyckel === nyckel ? lage : null
   // Förra träfflistan ligger kvar, dämpad, tills nästa kommer. Då hoppar inte sidan medan man skriver.
@@ -210,9 +214,26 @@ export function Utrustningskatalog() {
             const ny = arKategori(k) ? k : ''
             setKategori(ny)
             setUnderkategori(ny && underkategoriFor(ny, u) ? u : '')
+            if (ny !== 'kok') setKokval('')
           }}
         />
       </div>
+
+      {kategori === 'kok' && (
+        <div className="space-y-1 sm:max-w-xs">
+          <label htmlFor={`${id}-kokval`} className="block text-sm font-medium">
+            Innehåll
+          </label>
+          <Select id={`${id}-kokval`} value={kokval} onChange={(e) => setKokval(arKokgrupp(e.target.value) ? e.target.value : '')}>
+            <option value="">Alla</option>
+            {KOKGRUPPER.map((g) => (
+              <option key={g.nyckel} value={g.nyckel}>
+                {g.etikett}
+              </option>
+            ))}
+          </Select>
+        </div>
+      )}
 
       {!sokbar && <p className="text-sm text-muted-foreground">Skriv minst två tecken eller välj en kategori.</p>}
       {sokbar && !aktuellt && !modeller && <p className="text-sm text-muted-foreground">Söker …</p>}
@@ -298,7 +319,9 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-semibold break-words">{produktnamn(modell)}</span>
-            <span className="block text-sm text-muted-foreground">{flera ? `${etikett}, ${modell.varianter.length} storlekar` : [etikett, forsta.version].filter(Boolean).join(', ')}</span>
+            <span className="block text-sm text-muted-foreground">
+              {flera ? `${etikett}, ${modell.varianter.length} storlekar` : [etikett, forsta.version, kokEtikettFor(forsta)].filter(Boolean).join(', ')}
+            </span>
           </span>
           <span className="shrink-0 font-heading text-lg font-semibold tabular-nums">
             {flera && <span className="font-sans text-sm font-normal text-muted-foreground">från </span>}
@@ -309,7 +332,7 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
           <span className="block w-full space-y-0.5 border-t border-border pt-2 text-sm">
             {modell.varianter.map((v) => (
               <span key={v.id} className="flex justify-between gap-3">
-                <span className="min-w-0 break-words text-muted-foreground">{v.version || 'Utan storlek'}</span>
+                <span className="min-w-0 break-words text-muted-foreground">{[v.version || 'Utan storlek', kokEtikettFor(v)].filter(Boolean).join(', ')}</span>
                 <span className="shrink-0 tabular-nums">{formateraVikt(v.packvikt_g)}</span>
               </span>
             ))}
@@ -358,7 +381,7 @@ function Produktpanel({
         <div className="space-y-1">
           <h2 className="text-2xl break-words text-primary">{produktnamn(modell)}</h2>
           <p className="font-heading text-3xl font-semibold tabular-nums">{formateraVikt(vald.packvikt_g)}</p>
-          {vald.version && <p className="text-sm text-muted-foreground">{vald.version}</p>}
+          {(vald.version || kokEtikettFor(vald)) && <p className="text-sm text-muted-foreground">{[vald.version, kokEtikettFor(vald)].filter(Boolean).join(', ')}</p>}
           {finns && <IForradet finns={finns} />}
         </div>
       }
