@@ -18,7 +18,7 @@ Stickprov (steg 4)             en av oss kontrollerar ett urval → hela genomg�
 
 Två nivåer syns i appen: **Granskad mot tillverkaren** (granskaren har läst tillverkarens sida och bekräftat vikten) och **Stickprovskontrollerad** (en av oss har kontrollerat ett stickprov och godkänt genomgången). Rader med butikens vikt (butiksrader) får ingen nivå.
 
-En genomgång är en butik och en kategori, till exempel Outdoorexperten och liggunderlag. Den får ett id: `ÅÅÅÅ-MM-DD-butik-kategori`, till exempel `2026-11-22-outdoorexperten-ligg`. Kategorierna heter `talt`, `sov`, `ligg` och `ryggsack` i id:t.
+En genomgång är en butik och en kategori, till exempel Outdoorexperten och liggunderlag. Den får ett id: `ÅÅÅÅ-MM-DD-butik-kategori`, till exempel `2026-11-22-outdoorexperten-ligg`. Kategorierna heter `talt`, `sov`, `ligg`, `ryggsack` och `kok` i id:t.
 
 ## 2. Steg 1: Astra
 
@@ -29,7 +29,7 @@ En genomgång är en butik och en kategori, till exempel Outdoorexperten och lig
    cut -d';' -f1-3 supabase/katalog/ryggsackar.csv | tail -n +2 | sed 's/;/ | /g' | sort
    ```
 
-   Byt filnamn efter kategori: `talt-och-vindskydd.csv`, `sovsackar.csv`, `liggunderlag.csv` eller `ryggsackar.csv`. Listan ska vara hämtad från senaste main (`git pull` först), annars missar Astra det som nyss lagts in.
+   Byt filnamn efter kategori: `talt-och-vindskydd.csv`, `sovsackar.csv`, `liggunderlag.csv`, `ryggsackar.csv` eller `kok.csv`. `kok.csv` skapas vid den första kökgenomgången, så första gången är listan tom: skriv "Inga ännu." Listan ska vara hämtad från senaste main (`git pull` först), annars missar Astra det som nyss lagts in.
 3. Skicka prompten. En butik och en kategori per körning.
 4. Spara svaret i mappen `Claude outputs/` (den ligger utanför Git): CSV:n som `<butik>-<kategori>.csv` och sammanfattningen som `<butik>-<kategori>-genomgang.md`.
 

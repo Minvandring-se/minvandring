@@ -8,11 +8,11 @@ Formatet (kolumnerna) skiljer sig per kategori. Klistra in rätt block under "Fo
 
 ## Platser som skiljer sig per kategori
 
-| Plats | Tält och vindskydd | Sovsäckar och quilts | Liggunderlag | Ryggsäckar |
-|---|---|---|---|---|
-| {KATEGORI_BESKRIVNING} | tält, tarpar och vindsäckar som passar för vandring | sovsäckar och quilts | liggunderlag | vandringsryggsäckar och dagsryggsäckar för vandring |
-| {UTELAMNA} | biltält, taktält, campingtält, familjetält, glamping- och bomullstält, festtält, strandtält, popup-tält, isfiske- och bastutält, separata innertält och tillbehör. Riktmärke: tält tyngre än cirka 5 kg för två personer är oftast campingtält | campingsovsäckar, rektangulära täcken, sovsäckslakan, liners, resekuddar och tillbehör | luftmadrasser och bäddar för bil eller camping, tillbehör (reparationssatser, pumpar, lakan, kuddar) | vardags-, pendlar-, dator-, skol-, rese-, cykel-, löpar-, skid- och klätterryggsäckar, duffelväskor, midjeväskor, packpåsar, regnskydd och andra tillbehör |
-| {MINVIKTSREGEL} | tält och tarpar gäller: anger tillverkaren bara en minimivikt (utan pinnar, linor, lock) och ingen totalvikt, lämna ute produkten, även om butiken anger en vikt. | sovsäckar gäller: bara en minimivikt och ingen totalvikt betyder utelämnad. Bara en vikt utan packpåse går in i `packvikt_g` med kommentar. | liggunderlag gäller: bara en minimivikt och ingen totalvikt betyder utelämnad. Bara en vikt utan packpåse eller pumpsäck går in i `packvikt_g` med kommentar. | ryggsäckar gäller: anger tillverkaren bara en minimivikt (utan höftbälte, lock eller ram) och ingen totalvikt, lämna ute produkten. |
+| Plats | Tält och vindskydd | Sovsäckar och quilts | Liggunderlag | Ryggsäckar | Kök |
+|---|---|---|---|---|---|
+| {KATEGORI_BESKRIVNING} | tält, tarpar och vindsäckar som passar för vandring | sovsäckar och quilts | liggunderlag | vandringsryggsäckar och dagsryggsäckar för vandring | kök och brännare för vandring: toppmonterade gaskök, slangkök, systemkök, stormkök, spritkök, multibränslekök, vedkök och kök för fast bränsle |
+| {UTELAMNA} | biltält, taktält, campingtält, familjetält, glamping- och bomullstält, festtält, strandtält, popup-tält, isfiske- och bastutält, separata innertält och tillbehör. Riktmärke: tält tyngre än cirka 5 kg för två personer är oftast campingtält | campingsovsäckar, rektangulära täcken, sovsäckslakan, liners, resekuddar och tillbehör | luftmadrasser och bäddar för bil eller camping, tillbehör (reparationssatser, pumpar, lakan, kuddar) | vardags-, pendlar-, dator-, skol-, rese-, cykel-, löpar-, skid- och klätterryggsäckar, duffelväskor, midjeväskor, packpåsar, regnskydd och andra tillbehör | kök för gasolflaska (med slang och regulator), campingkök med två eller fler lågor, grillar, bordsspisar, gaspatroner och bränsle, lösa kastruller och kåsor, och tillbehör (vindskydd, patronstativ, tändare, reservdelar, brännare som säljs som reservdel). Stormkök med gasbrännare för skruvpatron (EN 417) ska med |
+| {MINVIKTSREGEL} | tält och tarpar gäller: anger tillverkaren bara en minimivikt (utan pinnar, linor, lock) och ingen totalvikt, lämna ute produkten, även om butiken anger en vikt. | sovsäckar gäller: bara en minimivikt och ingen totalvikt betyder utelämnad. Bara en vikt utan packpåse går in i `packvikt_g` med kommentar. | liggunderlag gäller: bara en minimivikt och ingen totalvikt betyder utelämnad. Bara en vikt utan packpåse eller pumpsäck går in i `packvikt_g` med kommentar. | ryggsäckar gäller: anger tillverkaren bara en minimivikt (utan höftbälte, lock eller ram) och ingen totalvikt, lämna ute produkten. | kök gäller: `packvikt_g` är hela förpackningen utan bränsle. Anger tillverkaren bara brännarens vikt för ett kök som säljs med kokkärl, och ingen totalvikt, lämna ute produkten. Skriv i kommentaren vad vikten omfattar. |
 
 ---
 
@@ -121,3 +121,23 @@ marke;modell;version;underkategori;packvikt_g;minvikt_g;volym_l;passform;torso_m
 - `ram`: `intern`, `ingen`, `extern` eller `annat`. `hoftbalte`: `fast`, `avtagbart`, `enkelt` eller `inget`. `atkomst`: `topp`, `topp_och_front`, `topp_och_sida`, `front` eller `annat`
 - `regnskydd_ingar`: `ja` eller `nej`, tomt om det inte framgår
 - Vardags-, pendlar-, dator-, skol-, rese-, cykel-, löpar-, skid- och klätterryggsäckar, duffelväskor, packpåsar, regnskydd och andra tillbehör lämnas ute. En ryggsäck utan riktigt höftbälte och utan tydlig koppling till vandring lämnas ute.
+
+### Kök
+
+```
+marke;modell;version;underkategori;packvikt_g;minvikt_g;typ;bransle;personer;effekt_w;koktid_1l_min;forbrukning_g_h;regulator;kokkarl_l;tandare;patronfaste;packmatt_cm;pris_sek_ca;ean;kalla;kontrollerad_datum;kommentar
+```
+
+- `version`: varianten (`1,0 l`, `Duo`, `UL`, `HA`). En rad per variant, eftersom vikt och kokkärl skiljer sig.
+- `underkategori`: alltid `brannare`
+- `packvikt_g`: hela förpackningen utan bränsle, i gram: brännare, kokkärl, vindskydd och det som följer med. Skriv i `kommentar` vad som ingår. `minvikt_g`: bara om tillverkaren anger en separat lägre vikt, till exempel bara brännaren, och då tillsammans med packvikten
+- `typ`: `toppmonterat` (skruvas på patronen), `slangkok` (brännaren står på marken med slang till patron eller flaska), `systemkok` (brännare och kokkärl sitter ihop, till exempel Jetboil), `stormkok` (vindskydd och kastruller i ett set, till exempel Trangia) eller `annat`
+- `bransle`: `gas`, `sprit`, `multibransle`, `ved`, `fast_bransle` eller `annat`
+- `personer`: heltal, det tillverkaren anger
+- `effekt_w`: heltal i watt. Räkna om från BTU/h (1 W = 3,412 BTU/h) eller kcal/h och säg det i kommentaren
+- `koktid_1l_min`: minuter för 1 liter vatten, med komma (3:30 skrivs 3,5). Anger tillverkaren bara tiden för 0,5 liter: lämna fältet tomt och skriv tiden i kommentaren
+- `forbrukning_g_h`: gram per timme på full effekt. Anger tillverkaren förbrukningen på annat sätt (liter vatten per patron, minuter per patron): lämna fältet tomt och skriv uppgiften i kommentaren
+- `regulator` och `tandare`: `ja` eller `nej`, bara för gas och multibränsle, tomt om det inte framgår
+- `kokkarl_l`: volymen på det största kokkärlet som ingår, med komma. Tomt om inget kokkärl ingår. Ska alltid anges för stormkök
+- `patronfaste`: fri text, till exempel `EN 417` eller `EN 417 och bränsleflaska`
+- `packmatt_cm`: till exempel `12 x 16`, största måttet först

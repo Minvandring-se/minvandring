@@ -32,7 +32,8 @@ CSV-filerna i `supabase/katalog/` är huvudlistan. Tabellen `produkter` fylls ba
 - Anger tillverkaren en vikt men inte vad den omfattar: skriv den i `packvikt_g` och skriv i `kommentar` att det inte framgår vad vikten omfattar. Lägg aldrig vikten bara i kommentaren.
 - **Utgångna produkter.** Att tillverkaren markerar en produkt som utgången är inget skäl att utelämna den, så länge tillverkarens uppgifter finns. Skriv i `kommentar`: "Tillverkarens sida anger att produkten har utgått."
 - **Utgångna produkter utan tillverkarsida.** Finns tillverkarens produktsida inte längre (404, omdirigering eller bortflyttad) behålls raden, men källan är aldrig en arkiverad sida (web.archive.org). `kalla` blir butikens egen produktsida om den finns kvar (utan `?color=`-delen), och kommentaren blir "Utgången. Tillverkarens produktsida finns inte längre." Raden får ingen `granskad_datum`. `kalla` får inte vara tom, eftersom importen och databasen kräver en adress. Finns varken tillverkarens eller butikens sida går raden inte att lägga in.
-- **Ur kategorin utelämnas** också: campingprodukter, tillbehör (reparationssatser, pumpar, lakan, liners) och specialprodukter. För ryggsäckar gäller dessutom cykel-, löpar-, vardags-, dator- och barnryggsäckar och specialryggsäckar för klättring. För liggunderlag luftmadrasser och bäddar för bil eller camping.
+- **Ur kategorin utelämnas** också: campingprodukter, tillbehör (reparationssatser, pumpar, lakan, liners) och specialprodukter. För ryggsäckar gäller dessutom cykel-, löpar-, vardags-, dator- och barnryggsäckar och specialryggsäckar för klättring. För liggunderlag luftmadrasser och bäddar för bil eller camping. För kök: kök för gasolflaska, campingkök med två eller fler lågor, grillar, bränsle, lösa kokkärl och tillbehör. Stormkök med gasbrännare för skruvpatron ska med.
+- **Kök: vikten är hela förpackningen utan bränsle** (brännare, kokkärl, vindskydd). Anger tillverkaren bara brännarens vikt för ett kök som säljs med kokkärl, och ingen totalvikt: utelämna produkten. `kok.csv` skapas vid den första kökgenomgången, med kolumnerna i kökblocket i `docs/katalog/astra-mall.md`. Koktid som bara anges för 0,5 liter och förbrukning som inte anges i g/h skrivs i kommentaren, aldrig omräknad.
 
 ## Namn
 
@@ -88,7 +89,7 @@ datum;kategori;katalogfil;kalla;rader_i_kallan;nya;redan_fanns;utelamnade;kommen
 
 - `rader_i_kallan` ska vara summan av `nya`, `redan_fanns` och `utelamnade`. Räkna efter.
 - `kommentar` anger vilka som utelämnades och varför.
-- `genomgang` är id:t `ÅÅÅÅ-MM-DD-butik-kategori` med små bokstäver utan å, ä, ö, till exempel `2026-11-22-xxl-talt` (kategorier: `talt`, `sov`, `ligg`, `ryggsack`). Samma id sätts på varje ny rad i CSV:n. `godkand` lämnas tomt: det fylls av `--godkann`.
+- `genomgang` är id:t `ÅÅÅÅ-MM-DD-butik-kategori` med små bokstäver utan å, ä, ö, till exempel `2026-11-22-xxl-talt` (kategorier: `talt`, `sov`, `ligg`, `ryggsack`, `kok`). Samma id sätts på varje ny rad i CSV:n. `godkand` lämnas tomt: det fylls av `--godkann`.
 - En rad per kategori och butik. Kontrollera att raden inte redan finns.
 
 **Täckningstabellen i `docs/katalog/README.md`:** byt `–` mot `✓` och datumet i rätt cell. Ny butik blir en ny kolumn, ny kategori en ny rad.
