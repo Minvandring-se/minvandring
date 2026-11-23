@@ -12,6 +12,7 @@ import {
   forvaldTyp,
   kategoriFor,
   kategoriForUnder,
+  listdelar,
   medKategori,
   medUnderkategori,
   sakdetaljer,
@@ -642,6 +643,33 @@ describe('saknadeGrundsaker', () => {
 
   it('en sak utan underkategori räknas inte', () => {
     expect(saknadeGrundsaker([sak({ kategori: 'sova', underkategori: null }), ryggsack, talt]).map((s) => s.grupp)).toEqual(['sovsack', 'liggunderlag'])
+  })
+})
+
+describe('listdelar', () => {
+  it('blandar kategorier med saker och kategorier där en grundsak saknas, i ordningen i KATEGORIER', () => {
+    const talt = sak({ namn: 'Akto', kategori: 'talt', underkategori: 'talt', vikt_g: 1700 })
+    const kok = sak({ namn: 'Trangia', kategori: 'kok', underkategori: 'brannare', vikt_g: 900 })
+    const saker = [kok, talt]
+    const delar = listdelar(summeraForrad(saker).grupper, saknadeGrundsaker(saker))
+    expect(delar.map((d) => [d.kategori.nyckel, d.grupp?.antal ?? null, d.saknade.map((s) => s.grupp)])).toEqual([
+      ['packning', null, ['ryggsack']],
+      ['talt', 1, []],
+      ['sova', null, ['sovsack', 'liggunderlag']],
+      ['kok', 1, []],
+    ])
+  })
+
+  it('lägger det som saknas i en kategori som har andra saker', () => {
+    const kudde = sak({ kategori: 'sova', underkategori: 'kudde', vikt_g: 80 })
+    const sovsack = sak({ kategori: 'sova', underkategori: 'sovsack', vikt_g: 870 })
+    const delar = listdelar(summeraForrad([kudde, sovsack]).grupper, saknadeGrundsaker([kudde, sovsack]))
+    expect(delar.find((d) => d.kategori.nyckel === 'sova')).toMatchObject({ grupp: { antal: 2 }, saknade: [{ grupp: 'liggunderlag' }] })
+  })
+
+  it('visar bara kategorier med saker när inget saknas skickas in, till exempel med filter', () => {
+    const kok = sak({ kategori: 'kok', vikt_g: 900 })
+    expect(listdelar(summeraForrad([kok]).grupper, []).map((d) => d.kategori.nyckel)).toEqual(['kok'])
   })
 })
 

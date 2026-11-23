@@ -2,15 +2,12 @@ import { ChevronDown, ExternalLink, LayoutGrid, List, NotebookPen, Pencil, Plus,
 import { useEffect, useId, useState } from 'react'
 import { useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
-import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { HelaForradet, Onskelista, StorstaVinsten, ViktPerKategori } from '@/components/forrad/Forradsoversikt'
 import { Granskad } from '@/components/forrad/Granskad'
-import { Grunden } from '@/components/forrad/Grunden'
 import { Kategorifilter } from '@/components/forrad/Kategorifilter'
 import { ProduktSok } from '@/components/forrad/ProduktSok'
 import { SakFormular } from '@/components/forrad/SakFormular'
-import { ForradIllustration } from '@/components/illustrationer/ForradIllustration'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -21,10 +18,12 @@ import { useSidtitel } from '@/hooks/useSidtitel'
 import { FORRAD_EXEMPEL } from '@/lib/exempeldata'
 import {
   antalGranskade,
+  flerKategorier,
   formateraVikt,
-  fyraTunga,
   kategoriFor,
+  listdelar,
   sakdetaljer,
+  saknadeGrundsaker,
   storstaVinsten,
   summeraForrad,
   underkategoriFor,
@@ -32,7 +31,9 @@ import {
   type Detaljrad,
   type Forval,
   type KategoriNyckel,
-  type Kategorigrupp,
+  type Listdel,
+  type SaknadGrundsak,
+  type UnderkategoriNyckel,
 } from '@/lib/forrad'
 import {
   SORTERINGAR,
@@ -57,7 +58,7 @@ import { cn } from '@/lib/utils'
  * Vad som är öppet: sökningen i katalogen (dialogen Lägg till utrustning), formuläret för en egen sak,
  * eller formuläret för en sak som ändras.
  */
-type Oppet = { sok: true; kategori?: KategoriNyckel } | { ny: Forval } | { sakId: string } | null
+type Oppet = { sok: true; kategori?: KategoriNyckel; underkategori?: UnderkategoriNyckel } | { ny: Forval } | { sakId: string } | null
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
@@ -66,10 +67,11 @@ function antalText(antal: number) {
 }
 
 /**
- * Mitt förråd, enligt skissen Forrad-dator och Forrad-mobil: Grunden (de fyra tunga), översikten med hela förrådet,
- * vikt per kategori och största vinsten, och listan med sök, kategori, sortering och val mellan lista och rutnät.
+ * Mitt förråd: översikten med hela förrådet, vikt per kategori och största vinsten, och listan med sök, kategori,
+ * sortering och val mellan lista och rutnät. Saknas någon av de fyra tunga (ryggsäck, tält eller tarp, sovsäck,
+ * liggunderlag) visas en tom ruta under dess kategori, och under listan knappar för kategorier man inte har fyllt på.
  * Bara man själv ser sitt förråd. På dator ligger listan till vänster och översikten till höger, där den ligger kvar
- * när man scrollar. I mobil kommer den mörka rutan och Grunden först.
+ * när man scrollar. I mobil kommer den mörka rutan direkt under rubriken.
  */
 export function Forrad() {
   useSidtitel('Mitt förråd')
@@ -102,10 +104,9 @@ export function Forrad() {
     hamtaOm()
   }
 
-  // Översikten och Grunden räknas alltid på hela förrådet, oavsett sök och filter.
+  // Översikten räknas alltid på hela förrådet, oavsett sök och filter.
   const alla = saker ?? []
   const summa = summeraForrad(alla)
-  const tunga = fyraTunga(alla)
 
   // Sök, kategori, sortering och vy sparas i adressen, så att de finns kvar vid omladdning.
   const [parametrar, setParametrar] = useSearchParams()
@@ -114,13 +115,12 @@ export function Forrad() {
   const visade = filtrera(alla, val)
   const oppenSak = oppet !== null && 'sakId' in oppet ? oppet.sakId : null
   const radhjalp: Radhjalp = { vy: val.vy, oppenSak, onOppna: (sakId) => setOppet({ sakId }), onKlar: klar, onAndrad: hamtaOm, onAvbryt: () => setOppet(null) }
-  const sokOppen = oppet !== null && 'sok' in oppet
   const ny = oppet !== null && 'ny' in oppet ? oppet.ny : null
-  const oppnaSok = (kategori?: KategoriNyckel) => {
+  const oppnaSok = (kategori?: KategoriNyckel, underkategori?: UnderkategoriNyckel) => {
     setTillagd(null)
-    setOppet({ sok: true, kategori })
+    setOppet({ sok: true, kategori, underkategori })
   }
-  const sokKategori = oppet !== null && 'sok' in oppet ? oppet.kategori : undefined
+  const sok = oppet !== null && 'sok' in oppet ? oppet : null
   const laggTillKnapp = (
     <Button onClick={() => oppnaSok()}>
       <Plus className="size-4" aria-hidden />
@@ -128,28 +128,47 @@ export function Forrad() {
     </Button>
   )
   const finnsRedan = new Set(alla.flatMap((s) => (s.produkt_id ? [s.produkt_id] : [])))
+  // De tomma rutorna och Fyll på fler kategorier visas bara när hela förrådet visas.
+  const heltForrad = !harFilter(val)
+  const delar = listdelar(summeraForrad(visade).grupper, heltForrad ? saknadeGrundsaker(alla) : [])
+  const fler = heltForrad ? flerKategorier(alla) : []
 
   return (
     <div className="space-y-6">
-      <SidRubrik rubrik="Mitt förråd" text="Allt du äger för vandring, samlat på ett ställe." knappar={saker?.length ? laggTillKnapp : null} />
+      <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
+        <div className="min-w-0 space-y-2">
+          <p className="flex items-center gap-2 text-sm font-semibold text-hjortron-strong">
+            <span aria-hidden className="size-2.5 shrink-0 rounded-full bg-hjortron" />
+            Utrustning
+          </p>
+          <h1 className="text-[44px] leading-[1.05] break-words text-primary lg:text-[64px]">Mitt förråd</h1>
+          <p className="max-w-prose text-[17px] text-muted-foreground">Allt du äger för vandring, samlat på ett ställe.</p>
+        </div>
+        <div className="hidden shrink-0 lg:flex">{laggTillKnapp}</div>
+      </div>
+
+      {/* I mobil ligger den mörka rutan direkt under rubriken, före knappen och filtren. På dator står den i översikten. */}
+      {saker && saker.length > 0 && <HelaForradet summa={summa} granskade={antalGranskade(alla)} className="lg:hidden" />}
+      <div className="lg:hidden">{laggTillKnapp}</div>
 
       {saker && saker.length > 0 && <Forradsdelar antal={saker.length} />}
 
-      {sokOppen && (
+      {sok && (
         <Dialog etikett="Lägg till utrustning" onStang={() => setOppet(null)}>
           <ProduktSok
-            // En tom ruta i Grunden öppnar dialogen med rätt kategori vald.
-            key={sokKategori ?? 'alla'}
-            startKategori={sokKategori}
+            // En tom ruta eller en knapp under Fyll på fler kategorier öppnar dialogen med rätt kategori vald.
+            key={`${sok.kategori ?? 'alla'}|${sok.underkategori ?? ''}`}
+            startKategori={sok.kategori}
+            startUnderkategori={sok.underkategori}
             finnsRedan={finnsRedan}
             onTillagd={(sakId, namn) => {
               setTillagd({ sakId, namn })
               setOppet(null)
               hamtaOm()
             }}
-            onEgen={(soktext, kategori) => {
+            onEgen={(soktext, kategori, underkategori) => {
               setTillagd(null)
-              setOppet({ ny: { namn: soktext, kategori } })
+              setOppet({ ny: { namn: soktext, kategori, underkategori } })
             }}
             onStang={() => setOppet(null)}
           />
@@ -185,45 +204,17 @@ export function Forrad() {
           <Skelett className="h-20 rounded-lg" />
         </Laddar>
       ) : saker.length === 0 ? (
+        // Ett tomt förråd börjar med de fyra tunga som tomma rutor, och knapparna för fler kategorier.
         !ny && (
-          <TomtLage
-            bild={<ForradIllustration className="block aspect-[8/5] w-full sm:aspect-[21/9]" />}
-            rubrik="Ditt förråd är tomt"
-            knapp={
-              <Button size="lg" onClick={() => oppnaSok()}>
-                <Plus className="size-5" aria-hidden />
-                Lägg till utrustning
-              </Button>
-            }
-          />
+          <div className="space-y-6">
+            <p className="max-w-prose">Börja med de fyra tunga sakerna. Det är de som avgör mest vad ryggsäcken väger.</p>
+            <Lista delar={delar} sortering={val.sortering} onSaknad={(s) => oppnaSok(s.kategori, s.underkategori)} {...radhjalp} />
+            <FyllPaFler kategorier={fler} onValj={(k) => oppnaSok(k)} />
+          </div>
         )
       ) : (
-        // Andra raden (listan) tar den extra höjden när översikten är högre än listan, så att det inte blir en lucka under Grunden.
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:grid-rows-[auto_1fr] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
-          {/*
-            Översikten. I mobil är omslagen display: contents, så att den mörka rutan kommer först och resten efter listan.
-            På dator ligger den i en egen kolumn till höger och stannar kvar när man scrollar.
-          */}
-          <aside aria-label="Översikt" className="contents lg:col-start-2 lg:row-span-2 lg:row-start-1 lg:block lg:self-stretch">
-            <div className="contents lg:sticky lg:top-6 lg:flex lg:flex-col lg:gap-5">
-              <HelaForradet summa={summa} granskade={antalGranskade(alla)} className="order-1 lg:order-none" />
-              <div className="order-4 space-y-5 lg:order-none">
-                <ViktPerKategori summa={summa} />
-                <StorstaVinsten vinst={storstaVinsten(alla)} />
-                <Onskelista />
-              </div>
-            </div>
-          </aside>
-
-          {tunga && (
-            <Grunden
-              tunga={tunga}
-              onUppmaning={(u) => (u.gor === 'laggTill' ? oppnaSok(u.kategori) : setOppet({ sakId: u.sakId }))}
-              className="order-2 lg:order-none lg:col-start-1 lg:row-start-1"
-            />
-          )}
-
-          <div className="order-3 min-w-0 space-y-6 lg:order-none lg:col-start-1 lg:row-start-2">
+        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
+          <div className="min-w-0 space-y-6">
             <Verktyg val={val} onVal={setVal} saker={saker} visas={visade.length} />
 
             {visade.length === 0 ? (
@@ -237,16 +228,82 @@ export function Forrad() {
                 }
               />
             ) : (
-              <div className={cn('grid gap-6', val.vy === 'lista' && '3xl:grid-cols-2 3xl:items-start')}>
-                {summeraForrad(visade).grupper.map((grupp) => (
-                  <Kategoridel key={grupp.kategori.nyckel} grupp={grupp} sortering={val.sortering} {...radhjalp} />
-                ))}
-              </div>
+              <Lista delar={delar} sortering={val.sortering} onSaknad={(s) => oppnaSok(s.kategori, s.underkategori)} {...radhjalp} />
             )}
+
+            <FyllPaFler kategorier={fler} onValj={(k) => oppnaSok(k)} />
           </div>
+
+          {/* På dator en egen kolumn till höger som stannar kvar när man scrollar. I mobil efter listan. */}
+          <aside aria-label="Översikt" className="space-y-5 lg:sticky lg:top-6">
+            <HelaForradet summa={summa} granskade={antalGranskade(alla)} className="hidden lg:block" />
+            <ViktPerKategori summa={summa} />
+            <StorstaVinsten vinst={storstaVinsten(alla)} />
+            <Onskelista />
+          </aside>
         </div>
       )}
     </div>
+  )
+}
+
+/** Kategorierna i listan, med sakerna och de tomma rutorna för det som saknas. */
+function Lista({ delar, sortering, onSaknad, ...radhjalp }: { delar: Listdel[]; sortering: Listval['sortering']; onSaknad: (s: SaknadGrundsak) => void } & Radhjalp) {
+  return (
+    <div className={cn('grid gap-8', radhjalp.vy === 'lista' && '3xl:grid-cols-2 3xl:items-start')}>
+      {delar.map((del) => (
+        <Kategoridel key={del.kategori.nyckel} del={del} sortering={sortering} onSaknad={onSaknad} {...radhjalp} />
+      ))}
+    </div>
+  )
+}
+
+/** Knappar för kategorier man inte har fyllt på än. Visas inte när alla har saker. */
+function FyllPaFler({ kategorier, onValj }: { kategorier: { nyckel: KategoriNyckel; etikett: string }[]; onValj: (k: KategoriNyckel) => void }) {
+  if (kategorier.length === 0) return null
+  return (
+    <section aria-labelledby="fyll-pa-fler" className="space-y-3">
+      <h2 id="fyll-pa-fler" className="font-sans text-base font-semibold tracking-normal text-muted-foreground">
+        Fyll på fler kategorier
+      </h2>
+      <ul className="flex flex-wrap gap-2">
+        {kategorier.map((k) => (
+          <li key={k.nyckel}>
+            <button
+              type="button"
+              onClick={() => onValj(k.nyckel)}
+              className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted', fokus)}
+            >
+              <Plus className="size-4 text-hjortron-strong" aria-hidden />
+              <span className="sr-only">Lägg till i </span>
+              {k.etikett}
+            </button>
+          </li>
+        ))}
+      </ul>
+    </section>
+  )
+}
+
+/** En tom ruta för en av de fyra tunga som saknas. Hela rutan är en knapp som öppnar Lägg till utrustning. */
+function SaknadRuta({ saknad, onValj }: { saknad: SaknadGrundsak; onValj: () => void }) {
+  return (
+    <button
+      type="button"
+      onClick={onValj}
+      className={cn(
+        'flex w-full items-center gap-4 rounded-lg border-2 border-dashed border-muted-foreground/40 bg-transparent p-4 text-left transition-colors hover:border-primary',
+        fokus,
+      )}
+    >
+      <span aria-hidden className="flex size-11 shrink-0 items-center justify-center rounded-md border-2 border-dashed border-hjortron-strong/40 bg-hjortron-soft text-hjortron-strong">
+        <Plus className="size-5" />
+      </span>
+      <span className="min-w-0">
+        <span className="block font-semibold break-words">{saknad.rubrik}</span>
+        <span className="block text-sm break-words text-muted-foreground">{saknad.hjalp}</span>
+      </span>
+    </button>
   )
 }
 
@@ -362,20 +419,30 @@ function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: List
   )
 }
 
-function Kategoridel({ grupp, sortering, ...radhjalp }: { grupp: Kategorigrupp; sortering: Listval['sortering'] } & Radhjalp) {
-  const { kategori, saker, antal, viktG } = grupp
+/**
+ * En kategori i listan: rubriken med antal och vikt, sakerna, och en tom ruta för varje grundsak som saknas.
+ * En kategori utan saker säger hur många som saknas i stället för antal och vikt.
+ */
+function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; sortering: Listval['sortering']; onSaknad: (s: SaknadGrundsak) => void } & Radhjalp) {
+  const { kategori, grupp, saknade } = del
   const rubrikId = `kategori-${kategori.nyckel}`
-  const lista = sortera(saker, sortering)
+  const lista = grupp ? sortera(grupp.saker, sortering) : []
   return (
-    <section aria-labelledby={rubrikId} className="min-w-0 space-y-2">
-      <div className="flex flex-wrap items-baseline gap-x-3">
-        <h2 id={rubrikId} className="text-lg">
+    <section aria-labelledby={rubrikId} className="min-w-0 space-y-3">
+      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1 border-b border-border pb-2">
+        <h2 id={rubrikId} className="min-w-0 text-2xl break-words text-primary sm:text-[28px]">
           {kategori.etikett}
         </h2>
-        <p className="text-sm text-muted-foreground">
-          {antalText(antal)}, {formateraVikt(viktG)}
-        </p>
+        {grupp ? (
+          <p className="flex gap-3 text-[13px] text-muted-foreground tabular-nums">
+            <span>{antalText(grupp.antal)}</span>
+            <span>{formateraVikt(grupp.viktG)}</span>
+          </p>
+        ) : (
+          <p className="text-[13px] font-semibold text-accent-strong">{saknade.length} saknas</p>
+        )}
       </div>
+      {lista.length > 0 && (
       <ul
         className={cn(
           radhjalp.vy === 'lista'
@@ -404,6 +471,16 @@ function Kategoridel({ grupp, sortering, ...radhjalp }: { grupp: Kategorigrupp; 
           )
         })}
       </ul>
+      )}
+      {saknade.length > 0 && (
+        <ul className="space-y-3">
+          {saknade.map((s) => (
+            <li key={s.grupp}>
+              <SaknadRuta saknad={s} onValj={() => onSaknad(s)} />
+            </li>
+          ))}
+        </ul>
+      )}
     </section>
   )
 }
@@ -429,10 +506,18 @@ function Detaljlista({ rader }: { rader: Detaljrad[] }) {
   )
 }
 
-/** Raden under namnet: versionen och underkategorin, till exempel "Regular, Sovsäck". */
-function underrad(sak: Forradssak): string {
+/** Versionen och underkategorin under namnet, som var sin liten etikett, till exempel Regular och Sovsäck. */
+function Underrad({ sak }: { sak: Forradssak }) {
   const under = underkategoriFor(sak.kategori, sak.underkategori)?.etikett ?? kategoriFor(sak.kategori).etikett
-  return [sak.produkter?.version, under].filter(Boolean).join(', ')
+  return (
+    <span className="mt-1 flex flex-wrap gap-1.5">
+      {[sak.produkter?.version, under].filter(Boolean).map((text) => (
+        <span key={text} className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium break-words text-muted-foreground">
+          {text}
+        </span>
+      ))}
+    </span>
+  )
 }
 
 /**
@@ -452,19 +537,19 @@ function Sakrad({ sak, vy, onAndra, onAndrad }: { sak: Forradssak; vy: Vy; onAnd
       </span>
     ) : (
       <span className="block text-right">
-        <span className="block font-heading text-lg font-bold tabular-nums">{formateraVikt(sak.antal * sak.vikt_g)}</span>
+        <span className="block text-xl font-bold tabular-nums">{formateraVikt(sak.antal * sak.vikt_g)}</span>
         {egen && <span className="block text-xs text-muted-foreground">Egen vikt</span>}
       </span>
     )
   const namn = (
-    <span className="block font-semibold break-words">
+    <span className="block text-base font-semibold break-words">
       {sak.namn}
       {sak.antal > 1 && <span className="font-normal text-muted-foreground"> × {sak.antal}</span>}
     </span>
   )
   const anteckning = sak.notering && (
-    <span className="mt-1 flex gap-1.5 text-sm break-words text-foreground/80">
-      <NotebookPen className="mt-0.5 size-3.5 shrink-0 text-muted-foreground" aria-hidden />
+    <span className="mt-1.5 flex gap-1.5 text-sm break-words text-muted-foreground italic">
+      <NotebookPen className="mt-0.5 size-3.5 shrink-0" aria-hidden />
       <span className="min-w-0">{sak.notering}</span>
     </span>
   )
@@ -491,7 +576,7 @@ function Sakrad({ sak, vy, onAndra, onAndrad }: { sak: Forradssak; vy: Vy; onAnd
             {ikon}
             <span className="min-w-0 flex-1">
               {namn}
-              <span className="block text-sm break-words text-muted-foreground">{underrad(sak)}</span>
+              <Underrad sak={sak} />
               {anteckning}
             </span>
             <span className="shrink-0">{vikt}</span>
@@ -505,7 +590,7 @@ function Sakrad({ sak, vy, onAndra, onAndrad }: { sak: Forradssak; vy: Vy; onAnd
             </span>
             <span className="min-w-0">
               {namn}
-              <span className="block text-sm break-words text-muted-foreground">{underrad(sak)}</span>
+              <Underrad sak={sak} />
               {anteckning}
             </span>
           </>

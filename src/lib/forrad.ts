@@ -661,6 +661,25 @@ export function saknadeGrundsaker(saker: readonly Forradssak[]): SaknadGrundsak[
   }).map((t) => ({ grupp: t.grupp, kategori: t.kategori, underkategori: t.under[0], rubrik: t.saknas, hjalp: t.hjalp }))
 }
 
+/** En kategori i förrådets lista: dess saker (eller null när den inte har några) och grundsakerna som saknas där. */
+export interface Listdel {
+  kategori: Kategori
+  grupp: Kategorigrupp | null
+  saknade: SaknadGrundsak[]
+}
+
+/**
+ * Kategorierna i förrådets lista i samma ordning som KATEGORIER: de som har saker, och de där en grundsak saknas
+ * även om kategorin saknar saker.
+ */
+export function listdelar(grupper: readonly Kategorigrupp[], saknade: readonly SaknadGrundsak[]): Listdel[] {
+  return ALLA.flatMap((kategori) => {
+    const grupp = grupper.find((g) => g.kategori.nyckel === kategori.nyckel) ?? null
+    const iKategorin = saknade.filter((s) => s.kategori === kategori.nyckel)
+    return grupp || iKategorin.length > 0 ? [{ kategori, grupp, saknade: iKategorin }] : []
+  })
+}
+
 /** Kategorierna under Fyll på fler kategorier, i den ordning knapparna står. */
 const FLER_KATEGORIER = ['kok', 'vatten', 'klader', 'prylar', 'medicin'] as const satisfies readonly KategoriNyckel[]
 
