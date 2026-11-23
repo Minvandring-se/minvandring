@@ -98,7 +98,8 @@ export function useMatkatalog(): Matprodukt[] | null | 'fel' {
 }
 
 // ─── Spara ─────────────────────────────────────────────────────────────────
-// Funktionerna svarar true när det gick. Databasen avgör vem som får ändra (RLS), så en läsare får alltid false.
+// Funktionerna svarar true när det gick. Databasen avgör vem som får ändra (RLS). En ändring eller borttagning som
+// RLS stoppar ger inget fel, bara noll rader, så de funktionerna läser tillbaka raderna och räknar dem.
 
 /** Lägger en rätt som redan finns i turen i en måltid, sist. */
 export async function laggIMaltid(turId: string, rattId: string, dag: number, maltid: Maltid, sortering: number): Promise<boolean> {
@@ -132,8 +133,8 @@ export async function laggTillPase(
 
 export async function taBortUrMaltid(maltidId: string): Promise<boolean> {
   if (!supabase) return false
-  const { error } = await supabase.from('maltider').delete().eq('id', maltidId)
-  return !error
+  const { data, error } = await supabase.from('maltider').delete().eq('id', maltidId).select('id')
+  return !error && data.length === 1
 }
 
 /**
@@ -203,8 +204,12 @@ export async function andraInkopsrad(
 ): Promise<boolean> {
   if (!supabase) return false
   if (typ === 'pase' && andring.varifran) return false
-  const { error } = await supabase.from(typ === 'vara' ? 'varor' : 'ratter').update(andring).eq('id', id)
-  return !error
+  // En påse är en rätt med matprodukt_id. Egna rätter har ansvarig och klart på varorna.
+  const { data, error } =
+    typ === 'vara'
+      ? await supabase.from('varor').update(andring).eq('id', id).select('id')
+      : await supabase.from('ratter').update(andring).eq('id', id).not('matprodukt_id', 'is', null).select('id')
+  return !error && data.length === 1
 }
 
 /**
@@ -222,17 +227,16 @@ export async function sparaKostbehov(behov: Omit<Kostbehov, 'samtycke_tid'>): Pr
 /** Tar bort den inloggades kostbehov i turen. Samtycket är då återkallat. */
 export async function taBortKostbehov(deltagareId: string): Promise<boolean> {
   if (!supabase) return false
-  const { error } = await supabase.from('kostbehov').delete().eq('deltagare_id', deltagareId)
-  return !error
+  const { data, error } = await supabase.from('kostbehov').delete().eq('deltagare_id', deltagareId).select('deltagare_id')
+  return !error && data.length === 1
 }
 
-/** Tar bort en egen rätt ur turen, med måltiderna den ligger i och varorna som bara den använde. */
-export async function taBortEgenRatt(rattId: string, varuIds: readonly string[]): Promise<boolean> {
+/**
+ * Raderar en egen rätt ur turen, med måltiderna den ligger i och varorna som ingen annan rätt använder.
+ * Görs av funktionen ta_bort_egen_ratt i databasen, i en transaktion och utifrån databasens läge.
+ */
+export async function taBortEgenRatt(rattId: string): Promise<boolean> {
   if (!supabase) return false
-  // Måltider och ingredienser försvinner med rätten (on delete cascade). Varorna tas bort efteråt.
-  const { error } = await supabase.from('ratter').delete().eq('id', rattId)
-  if (error) return false
-  if (varuIds.length === 0) return true
-  const varor = await supabase.from('varor').delete().in('id', varuIds)
-  return !varor.error
+  const { error } = await supabase.rpc('ta_bort_egen_ratt', { r: rattId })
+  return !error
 }

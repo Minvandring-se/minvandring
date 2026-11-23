@@ -56,7 +56,7 @@ export function EgenRattFormular({
     setSparar(true)
     const ok = await onTaBort()
     setSparar(false)
-    if (!ok) setFel('Det gick inte att ta bort rätten. Kontrollera uppkopplingen och försök igen.')
+    if (!ok) setFel('Det gick inte att radera rätten. Kontrollera uppkopplingen och försök igen.')
   }
 
   const tolkat = tolkaRattformular(namn || 'namn', falt)
@@ -170,10 +170,21 @@ export function EgenRattFormular({
 
       {onTaBort && (
         <div className="space-y-2 border-t border-border pt-4">
-          {sakerPa && <p className="text-sm">Rätten försvinner ur alla måltider i turen. Det går inte att ångra.</p>}
-          <Button type="button" variant="ghost" className="text-destructive" disabled={sparar} onClick={taBort}>
-            {sakerPa ? 'Ja, ta bort rätten' : 'Ta bort rätten'}
-          </Button>
+          {sakerPa && (
+            <p className="text-sm">
+              Rätten raderas och tas bort ur alla måltider i turen. Varor som bara den använde raderas också. Det går inte att få tillbaka.
+            </p>
+          )}
+          <div className="flex flex-wrap gap-2">
+            <Button type="button" variant="ghost" className="text-destructive" disabled={sparar} onClick={taBort}>
+              {sakerPa ? 'Ja, radera rätten' : 'Radera rätten'}
+            </Button>
+            {sakerPa && (
+              <Button type="button" variant="outline" disabled={sparar} onClick={() => setSakerPa(false)}>
+                Nej, behåll rätten
+              </Button>
+            )}
+          </div>
         </div>
       )}
     </form>

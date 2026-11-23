@@ -13,7 +13,7 @@ import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
 import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
-import { dagssummor, inkopslista, MALTIDER, matdagar, matsummering, matviktTotalt, rattPerPortion, varorBaraIRatten, type Matdag as Dag } from '@/lib/mat'
+import { dagssummor, inkopslista, MALTIDER, matdagar, matsummering, matviktTotalt, rattPerPortion, type Matdag as Dag } from '@/lib/mat'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import { turdelAdress } from '@/lib/turdelar'
 import type { DeltagareRad, Maltid, Maltidsrad } from '@/lib/typer'
@@ -100,7 +100,7 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
   }
 
   async function taBort(rad: Maltidsrad) {
-    await efter(await taBortUrMaltid(rad.id), 'Det gick inte att ta bort rätten. Kontrollera uppkopplingen och försök igen.')
+    await efter(await taBortUrMaltid(rad.id), 'Det gick inte att ta bort rätten ur måltiden. Kontrollera uppkopplingen och försök igen.')
   }
 
   const maltidsnamn = (m: Maltid) => MALTIDER.find((x) => x.nyckel === m)!.etikett
@@ -188,7 +188,7 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
             return ok
           }}
           onTaBortRatt={async (rattId) => {
-            const ok = await taBortEgenRatt(rattId, varorBaraIRatten(rattId, plan.ingredienser, plan.varor))
+            const ok = await taBortEgenRatt(rattId)
             if (ok) await laddaOm()
             return ok
           }}
