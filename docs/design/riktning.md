@@ -24,11 +24,21 @@ Skandinavisk, lugn och naturnära, som en välgjord fjällkarta. Allt ska gå at
 - Inga stora siffror med liten etikett och färgtoning som dekoration. Siffran ska svara på en fråga man har.
 - Inga mittpunkter mellan uppgifter (`4 dagar · 3 deltagare`). Varje uppgift får en egen plats.
 
-## En enda accentfärg
+## Två accentfärger: rost och hjortron
 
-- Accenten är rost (`accent`), som ledkrysset på en fjälled. Den används för det man ska lägga märke till: nedräkningen, aktiv flik, det som saknas.
 - Grönt (`primary`) bär appen. Resten är neutralt.
+- Rost (`accent`), som ledkrysset på en fjälled, är för det man ska lägga märke till: det som saknas, nedräkningen, aktiv flik.
+- Hjortron (`hjortron`) är för möjligheter och det positiva: tips, vinster och att lägga till något. Den används sparsamt, högst ett par ställen per sida.
+- Hjortron är aldrig text på ljusa ytor. Den används som fyllning (en prick, `bg-hjortron-soft`) eller som text på den mörkgröna ytan (`yta-stark`). Text på `hjortron-soft` är `hjortron-strong` eller `foreground`, och `hjortron-strong` går också som text på ytorna.
 - Använd aldrig fler signalfärger. Fel visas med `destructive`.
+
+## Typsnitt
+
+- Rubriker i Fraunces (`font-heading`), vikt 600, med teckenavstånd −0.02em på stora rubriker och −0.01em på mellanrubriker.
+- Text, knappar, formulär och etiketter i Inter (`font-sans`).
+- Montserrat bara i logotypen (`font-logo`).
+- Alla tre laddas lokalt från `@fontsource-variable` i `src/main.tsx`.
+- Siffror som ska jämföras (vikter i listor och summor) har tabellsiffror (`tabular-nums`).
 
 ## Vita ytor på färgad bakgrund
 

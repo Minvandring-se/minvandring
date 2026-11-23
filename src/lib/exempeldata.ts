@@ -226,7 +226,7 @@ export const FORRAD_EXEMPEL = {
   lattare: { text: '7 liknande produkter i katalogen väger mindre.', spara: 'Jämför och spara upp till 1,2 kg' },
   knappar: ['Lägg i en packlista', 'Låna ut', 'Pensionera'],
   onskelista: [
-    { namn: 'Uppblåsbart liggunderlag', not: 'Fyller Grunden' },
+    { namn: 'Uppblåsbart liggunderlag', not: 'Saknas i förrådet' },
     { namn: 'Lättare ryggsäck, 60 liter', not: '−1,2 kg' },
   ],
 }

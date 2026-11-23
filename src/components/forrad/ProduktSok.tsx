@@ -5,7 +5,7 @@ import { granskning } from '@/lib/granskning'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { KATEGORIER, arKategori, formateraVikt, kategoriFor, type KategoriNyckel } from '@/lib/forrad'
+import { KATEGORIER, arKategori, formateraVikt, kategoriFor, type KategoriNyckel, type UnderkategoriNyckel } from '@/lib/forrad'
 import {
   antalText,
   gArAttSoka,
@@ -30,8 +30,10 @@ interface Props {
   onTillagd: (sakId: string, namn: string) => void
   /** Kategorin som är vald när rutan öppnas, till exempel från en uppmaning i De fyra tunga. */
   startKategori?: KategoriNyckel
+  /** Underkategorin som följer med till Lägg till egen sak, så länge startkategorin är vald. */
+  startUnderkategori?: UnderkategoriNyckel
   /** Användaren vill skriva in saken själv. Söktexten följer med som namn, och den valda kategorin som förval. */
-  onEgen: (soktext: string, kategori?: KategoriNyckel) => void
+  onEgen: (soktext: string, kategori?: KategoriNyckel, underkategori?: UnderkategoriNyckel) => void
   onStang: () => void
 }
 
@@ -50,7 +52,7 @@ const radKlass =
  * Första steget i Lägg till: välj kategori och märke och sök i produktkatalogen.
  * Varje modell är en rad. Har den flera storlekar väljer man en av dem, annars läggs saken till direkt.
  */
-export function ProduktSok({ finnsRedan, startKategori, onTillagd, onEgen, onStang }: Props) {
+export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTillagd, onEgen, onStang }: Props) {
   const id = useId()
   const falt = useRef<HTMLInputElement>(null)
   const [text, setText] = useState('')
@@ -289,7 +291,7 @@ export function ProduktSok({ finnsRedan, startKategori, onTillagd, onEgen, onSta
         <span className="text-muted-foreground">Hittar du den inte?</span>
         <button
           type="button"
-          onClick={() => onEgen(text, kategori || undefined)}
+          onClick={() => onEgen(text, kategori || undefined, kategori && kategori === startKategori ? startUnderkategori : undefined)}
           className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <Plus className="size-4" aria-hidden />
