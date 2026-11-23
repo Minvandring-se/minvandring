@@ -45,6 +45,11 @@ function csv(...rader: Record<string, string>[]): string {
 }
 
 describe('lasCsv', () => {
+  it('känner igen komma som avgränsare på rubrikraden, och semikolon går före', () => {
+    expect(lasCsv('marke,modell\nHilleberg,"Akto, grön"\n').rader[0].falt).toEqual({ marke: 'Hilleberg', modell: 'Akto, grön' })
+    expect(lasCsv('marke;modell\nHilleberg;Akto, grön\n').rader[0].falt).toEqual({ marke: 'Hilleberg', modell: 'Akto, grön' })
+  })
+
   it('läser kolumnerna efter namn, oavsett ordning', () => {
     const { rader } = lasCsv('modell;packvikt_g;marke\nAkto;1700;Hilleberg\n')
     expect(rader).toEqual([{ rad: 2, falt: { modell: 'Akto', packvikt_g: '1700', marke: 'Hilleberg' }, antalFalt: 3 }])

@@ -48,8 +48,11 @@ export interface Importresultat {
 const GEMENSAMMA = ['marke', 'modell', 'version', 'underkategori', 'packvikt_g', 'minvikt_g', 'pris_sek_ca', 'ean', 'kalla', 'kontrollerad_datum', 'granskad_datum', 'kalla_typ', 'genomgang', 'kommentar']
 const MASTE_FINNAS = ['marke', 'modell', 'underkategori', 'packvikt_g', 'kalla']
 
-/** Delar upp en rad på semikolon. Ett fält inom citattecken får innehålla semikolon, och "" är ett citattecken. */
-function delaRad(rad: string): string[] {
+/**
+ * Delar upp en rad på avgränsaren, semikolon om inget annat anges. Ett fält inom citattecken får innehålla
+ * avgränsaren, och "" är ett citattecken.
+ */
+function delaRad(rad: string, avgransare: ';' | ',' = ';'): string[] {
   const falt: string[] = []
   let nu = ''
   let iCitat = false
@@ -62,7 +65,7 @@ function delaRad(rad: string): string[] {
       } else if (c === '"') iCitat = false
       else nu += c
     } else if (c === '"' && nu === '') iCitat = true
-    else if (c === ';') {
+    else if (c === avgransare) {
       falt.push(nu)
       nu = ''
     } else nu += c
@@ -71,14 +74,24 @@ function delaRad(rad: string): string[] {
   return falt.map((f) => f.trim())
 }
 
-/** Läser en CSV med semikolon som avgränsare. Kolumnerna hittas efter namn, så ordningen spelar ingen roll. */
+/** Avgränsaren som rubrikraden använder: semikolon om det finns ett, annars komma om det finns ett. */
+export function avgransareFor(rubrikrad: string): ';' | ',' {
+  if (rubrikrad.includes(';')) return ';'
+  return rubrikrad.includes(',') ? ',' : ';'
+}
+
+/**
+ * Läser en CSV. Avgränsaren, semikolon eller komma, känns igen på rubrikraden. Kolumnerna hittas efter namn,
+ * så ordningen spelar ingen roll.
+ */
 export function lasCsv(text: string): { kolumner: string[]; rader: { rad: number; falt: Record<string, string>; antalFalt: number }[] } {
   const linjer = text.replace(/^﻿/, '').split(/\r?\n/)
-  const kolumner = delaRad(linjer[0] ?? '').map((k) => k.toLowerCase())
+  const avgransare = avgransareFor(linjer[0] ?? '')
+  const kolumner = delaRad(linjer[0] ?? '', avgransare).map((k) => k.toLowerCase())
   const rader = []
   for (let i = 1; i < linjer.length; i++) {
     if (!linjer[i].trim()) continue
-    const delar = delaRad(linjer[i])
+    const delar = delaRad(linjer[i], avgransare)
     const falt: Record<string, string> = {}
     kolumner.forEach((k, n) => (falt[k] = delar[n] ?? ''))
     rader.push({ rad: i + 1, falt, antalFalt: delar.length })

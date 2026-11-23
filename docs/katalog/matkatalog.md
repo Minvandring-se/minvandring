@@ -4,12 +4,12 @@ Matkatalogen är påsarna man kan välja i turens matplan: frystorkade och luftt
 
 Datan samlas av Astra. Den här filen beskriver formatet hon levererar i.
 
-## Beslut som ännu inte är byggda
+## Beslut om importen
 
-Beslutade 2026-11-24, när Astras första filer kom. De byggs i en egen branch, tillsammans med att filerna läggs in.
+Beslutade 2026-11-24, när Astras första filer kom, och byggda samma dag.
 
-1. **Avgränsaren känns igen på rubrikraden.** Astras filer har kommatecken mellan fälten. Importen ska ta emot både komma och semikolon och välja det som rubrikraden använder. Tills det är byggt läser `npm run matkatalog` bara semikolon.
-2. **Astras `kontrollerad` ignoreras.** Datumet hon skriver är när hon hämtade uppgifterna, och det behöver inte sparas. `matprodukter.kontrollerad` lämnas tom i databasen och sätts bara av oss grundare efter ett stickprov. Kolumnen får finnas kvar i Astras filer.
+1. **Avgränsaren känns igen på rubrikraden.** Astras filer har kommatecken mellan fälten. Importen tar emot både semikolon och komma och väljer det som rubrikraden använder. Finns ett semikolon på rubrikraden gäller semikolon.
+2. **Astras `kontrollerad` ignoreras.** Datumet hon skriver är när hon hämtade uppgifterna, och det sparas inte. `matprodukter.kontrollerad` lämnas tom i databasen och sätts bara av oss grundare efter ett stickprov. Kolumnen får finnas kvar i Astras filer, och vad som står i den spelar ingen roll.
 
 ## Så kommer en fil in i katalogen
 
@@ -25,7 +25,7 @@ En påse som redan finns (samma märke och namn, utan hänsyn till stora och sm�
 
 ## Formatet
 
-Semikolon mellan fälten och UTF-8 (komma ska också gå, se beslut 1 ovan). Ett fält som innehåller avgränsaren sätts inom citattecken. Rubrikraden ska ha exakt de här kolumnerna i den här ordningen:
+Semikolon eller komma mellan fälten, och UTF-8 (se beslut 1 ovan). Ett fält som innehåller avgränsaren sätts inom citattecken, till exempel `"gluten,soja"` i en fil med komma. Rubrikraden ska ha exakt de här kolumnerna i den här ordningen:
 
 ```
 marke;namn;maltid;torkning;vikt_torr_g;portioner;kcal;protein_g;fett_g;kolhydrater_g;vatten_ml;tillagning_vatten;tillagning_min;vegetarisk;vegansk;glutenfri;laktosfri;allergener;spar;pris_sek_ca;pris_kalla;kalla;kontrollerad
@@ -50,7 +50,7 @@ marke;namn;maltid;torkning;vikt_torr_g;portioner;kcal;protein_g;fett_g;kolhydrat
 | `pris_sek_ca` | nej | Ungefärligt pris i kronor, heltal. |
 | `pris_kalla` | nej | Butikens produktsida när priset kommer från en butik i stället för tillverkaren. Tom när priset kommer från tillverkaren. Ska börja med `http` och får bara vara ifylld när `pris_sek_ca` är ifyllt. |
 | `kalla` | ja | Tillverkarens produktsida, där uppgifterna är hämtade. Ska börja med `http`. |
-| `kontrollerad` | nej | Datum (`ÅÅÅÅ-MM-DD`). Det Astra skriver ignoreras (se beslut 2 ovan). I databasen sätts den bara av en av grundarna efter stickprov. |
+| `kontrollerad` | nej | Läses inte (se beslut 2 ovan). I databasen sätts den bara av en av grundarna efter stickprov. |
 
 ## Allergenernas nycklar
 

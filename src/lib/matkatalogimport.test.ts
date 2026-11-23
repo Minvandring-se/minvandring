@@ -82,6 +82,24 @@ describe('importeraMatkatalog', () => {
     expect(importeraMatkatalog(fil(rad({ pris_kalla: 'butik.exempel.se' }))).rader[0].fel).toEqual(['pris_kalla: ska börja med http:// eller https://'])
   })
 
+  it('läser filer med komma mellan fälten, med citattecken runt fält som innehåller komma', () => {
+    const komma = (text: string) =>
+      text
+        .split('\n')
+        .map((rad) => rad.split(';').map((f) => (f.includes(',') ? `"${f}"` : f)).join(','))
+        .join('\n')
+    const r = importeraMatkatalog(komma(fil(rad({ allergener: 'soja,selleri' }))))
+    expect(r.filfel).toEqual([])
+    expect(godkandaPasar(r)).toHaveLength(1)
+    expect(godkandaPasar(r)[0].allergener).toEqual(['soja', 'selleri'])
+  })
+
+  it('ignorerar Astras kontrollerad, även när den inte är ett datum', () => {
+    const r = importeraMatkatalog(fil(rad({ kontrollerad: '2026-11-23' }), rad({ namn: 'Annan', kontrollerad: 'igår' })))
+    expect(r.rader.map((x) => x.fel)).toEqual([[], []])
+    expect(godkandaPasar(r).map((p) => p.kontrollerad)).toEqual([null, null])
+  })
+
   it('stoppar rader med fel och säger varför', () => {
     const r = importeraMatkatalog(
       fil(
@@ -95,7 +113,7 @@ describe('importeraMatkatalog', () => {
       ['namn: saknas', 'kcal: saknas'],
       ['maltid: frukost, lunch_middag, dessert, mellanmal eller tom cell, inte "middag"', 'vegansk: ja, nej eller tom cell, inte "kanske"'],
       ['vegansk: ja kräver att vegetarisk också är ja'],
-      ['vikt_torr_g: heltal mellan 1 och 5000, inte "0"', 'kontrollerad: datum som ÅÅÅÅ-MM-DD eller tom cell'],
+      ['vikt_torr_g: heltal mellan 1 och 5000, inte "0"'],
     ])
     expect(godkandaPasar(r)).toEqual([])
   })
