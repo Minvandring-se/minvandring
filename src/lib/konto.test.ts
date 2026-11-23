@@ -38,6 +38,12 @@ describe('sakerVidare', () => {
     expect(sakerVidare('/ga-med/KOD123')).toBe('/ga-med/KOD123')
   })
 
+  it('behåller frågedelen och ankaret i adressen', () => {
+    expect(sakerVidare('/forrad?kategori=talt&vy=rutnat')).toBe('/forrad?kategori=talt&vy=rutnat')
+    expect(sakerVidare('/tur/abc#bjud-in')).toBe('/tur/abc#bjud-in')
+    expect(medVidare('/skapa-konto', '/turer?ny=1')).toBe('/skapa-konto?vidare=%2Fturer%3Fny%3D1')
+  })
+
   it('skickar till Mina turer när sökvägen saknas eller pekar ut från appen', () => {
     expect(sakerVidare(null)).toBe('/turer')
     expect(sakerVidare('')).toBe('/turer')
