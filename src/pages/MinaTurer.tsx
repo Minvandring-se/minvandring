@@ -120,7 +120,7 @@ export function MinaTurer() {
             <h2 id="fler-turer" className="text-2xl">
               {nasta ? 'Övriga turer' : 'Dina turer'}
             </h2>
-            <div role="tablist" aria-label="Övriga turer" className="flex gap-2">
+            <div role="tablist" aria-labelledby="fler-turer" className="flex gap-2">
               {(
                 [
                   ['kommande', 'Kommande', kommande.length],
@@ -134,7 +134,16 @@ export function MinaTurer() {
                   id={`flik-${varde}`}
                   aria-selected={flik === varde}
                   aria-controls="fler-turer-lista"
+                  // Som flikar brukar fungera: Tab når den valda fliken, och piltangenterna byter flik.
+                  tabIndex={flik === varde ? 0 : -1}
                   onClick={() => setValdFlik(varde)}
+                  onKeyDown={(e) => {
+                    if (e.key !== 'ArrowLeft' && e.key !== 'ArrowRight') return
+                    e.preventDefault()
+                    const annan = varde === 'kommande' ? 'tidigare' : 'kommande'
+                    setValdFlik(annan)
+                    document.getElementById(`flik-${annan}`)?.focus()
+                  }}
                   className={cn(
                     'h-11 rounded-full border px-5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     flik === varde ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted',
