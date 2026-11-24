@@ -284,4 +284,6 @@ export interface Livsmedel {
   vatten_per_100g: number | null
   /** Datumet för livsmedlets version hos Livsmedelsverket (ÅÅÅÅ-MM-DD). */
   version: string | null
+  /** EU:s 14 allergener för enkla råvaror. null: okänt. Tom: ingen av dem. */
+  allergener: Allergen[] | null
 }

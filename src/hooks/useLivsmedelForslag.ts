@@ -2,7 +2,7 @@ import { useEffect, useState } from 'react'
 import { monsterForDatabasen, rangordnaLivsmedel, type Livsmedel } from '@/lib/livsmedel'
 import { supabase } from '@/lib/supabase'
 
-export type Livsmedelsforslag = Pick<Livsmedel, 'nummer' | 'namn' | 'tillstand' | 'kcal_per_100g' | 'protein_per_100g'>
+export type Livsmedelsforslag = Pick<Livsmedel, 'nummer' | 'namn' | 'grupp' | 'tillstand' | 'kcal_per_100g' | 'protein_per_100g' | 'allergener'>
 
 /**
  * Förslag ur livsmedlen för det man har skrivit. Databasen söker med mönstren från monsterForDatabasen (det längsta
@@ -21,7 +21,7 @@ export function useLivsmedelForslag(sok: string, max = 5): Livsmedelsforslag[] {
     const timer = setTimeout(async () => {
       const { data, error } = await supabase!
         .from('livsmedel')
-        .select('nummer, namn, tillstand, kcal_per_100g, protein_per_100g')
+        .select('nummer, namn, grupp, tillstand, kcal_per_100g, protein_per_100g, allergener')
         .or(filter)
         .limit(300)
       if (!aktuell) return

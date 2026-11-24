@@ -1,6 +1,7 @@
 // Baslivsmedel från Livsmedelsverkets livsmedelsdatabas (CC BY 4.0), för förslag när man skriver ingredienser.
 // Rena funktioner: tillståndet (torr, rå eller tillagad) utifrån namnet, och rangordningen av förslagen.
 
+import { arMatratt } from './livsmedelsgrupper'
 import type { Livsmedel, Tillstand } from './typer'
 
 export type { Livsmedel, Tillstand }
@@ -64,8 +65,9 @@ export function monsterForDatabasen(sok: string): string[] | null {
  * - Först ett namn som är exakt det man skrivit ("Gurka" före "Gurka rå" och "Gurka inlagd"), sedan namn som börjar
  *   med det, sedan namn där ett ord börjar med det första sökordet, sedan övriga.
  * - Vid lika träff kommer torrt före rått före okänt före tillagat, eftersom man packar torr vikt, och sedan kortare namn.
+ * - Råvaror kommer före maträtter (arMatratt), eftersom man oftast skriver in det man själv köper och lagar.
  */
-export function rangordnaLivsmedel<T extends Pick<Livsmedel, 'namn' | 'tillstand'>>(kandidater: readonly T[], sok: string, max = 5): T[] {
+export function rangordnaLivsmedel<T extends Pick<Livsmedel, 'namn' | 'tillstand'> & { grupp?: string | null }>(kandidater: readonly T[], sok: string, max = 5): T[] {
   const sokord = ord(sok)
   if (sokord.length === 0) return []
   const fras = sokord.join(' ')
@@ -86,6 +88,7 @@ export function rangordnaLivsmedel<T extends Pick<Livsmedel, 'namn' | 'tillstand
     })
     .sort(
       (a, b) =>
+        Number(arMatratt(a.k.grupp ?? null)) - Number(arMatratt(b.k.grupp ?? null)) ||
         a.t - b.t ||
         TILLSTAND_ORDNING[a.k.tillstand ?? 'okant'] - TILLSTAND_ORDNING[b.k.tillstand ?? 'okant'] ||
         a.k.namn.length - b.k.namn.length ||
