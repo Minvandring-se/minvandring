@@ -112,6 +112,62 @@ function inomTuren(data: Matdata, dagar: readonly Matdag[]): Maltidsrad[] {
   return data.maltider.filter((m) => finns.has(m.dag))
 }
 
+/** En måltid i planen: dag och måltid. */
+export interface Plats {
+  dag: Matdag
+  maltid: Maltid
+}
+
+/**
+ * Huvudmåltiderna (frukost, lunch och middag) som saknar en rätt, i ordning: dag för dag med reservdagarna sist,
+ * och inom dagen frukost, lunch och middag. Mellanmål är frivilliga och räknas inte. En rad räknas bara på en dag som
+ * finns i turen. Samma regel används överallt där saknade måltider visas.
+ */
+export function saknadeMaltider(dagar: readonly Matdag[], maltider: readonly Pick<Maltidsrad, 'dag' | 'maltid'>[]): Plats[] {
+  const har = new Set(maltider.map((m) => `${m.dag}:${m.maltid}`))
+  return dagar.flatMap((dag) => HUVUDMALTIDER.filter((maltid) => !har.has(`${dag.dag}:${maltid}`)).map((maltid) => ({ dag, maltid })))
+}
+
+export interface Matstatus {
+  /** Huvudmåltider i turen: tre per dag, reservdagar inräknade. */
+  totalt: number
+  /** Huvudmåltider som har minst en rätt. */
+  planerade: number
+  saknas: number
+  /** Den första måltiden som saknas, eller null när planen är klar. */
+  forsta: Plats | null
+}
+
+/** Hur långt matplanen har kommit, för Mina matplaner och turens flik Mat. */
+export function matstatus(dagar: readonly Matdag[], maltider: readonly Pick<Maltidsrad, 'dag' | 'maltid'>[]): Matstatus {
+  const saknas = saknadeMaltider(dagar, maltider)
+  const totalt = dagar.length * HUVUDMALTIDER.length
+  return { totalt, planerade: totalt - saknas.length, saknas: saknas.length, forsta: saknas[0] ?? null }
+}
+
+/** Adressen till en måltid på turens flik Mat, till exempel /tur/abc/mat?dag=2&maltid=lunch. */
+export function maltidsAdress(turId: string, dag: number, maltid: Maltid): string {
+  return `/tur/${turId}/mat?dag=${dag}&maltid=${maltid}`
+}
+
+/** "1 måltid saknas" eller "12 måltider saknas". */
+export function saknasText(antal: number): string {
+  return `${antal} ${antal === 1 ? 'måltid' : 'måltider'} saknas`
+}
+
+/** Måltidens namn med liten bokstav, till exempel "lunch". */
+export function maltidsord(maltid: Maltid): string {
+  return MALTIDER.find((m) => m.nyckel === maltid)!.etikett.toLowerCase()
+}
+
+const BESTAMD: Record<Maltid, string> = { frukost: 'frukosten', lunch: 'lunchen', middag: 'middagen', mellanmal: 'mellanmålet' }
+
+/** Var man börjar: "Börja med frukosten fredag 4 december.", eller "dag 2" och "reservdag 1" när datumet saknas. */
+export function borjaMed(plats: Plats, datum: string | null): string {
+  const nar = !plats.dag.reserv && datum ? datum : plats.dag.namn.toLowerCase()
+  return `Börja med ${BESTAMD[plats.maltid]} ${nar}.`
+}
+
 export interface Dagssumma {
   dag: Matdag
   /** Per person. */
@@ -124,11 +180,14 @@ export interface Dagssumma {
 export function dagssummor(data: Matdata, dagar: readonly Matdag[]): Dagssumma[] {
   const ratter = new Map(data.ratter.map((r) => [r.id, r]))
   const perPortion = new Map(data.ratter.map((r) => [r.id, rattPerPortion(r, data)]))
+  const saknas = saknadeMaltider(
+    dagar,
+    data.maltider.filter((m) => ratter.has(m.ratt_id)),
+  )
   return dagar.map((dag) => {
     const rader = data.maltider.filter((m) => m.dag === dag.dag && ratter.has(m.ratt_id))
     const naring = rader.reduce((s, m) => plus(s, perPortion.get(m.ratt_id)!), NOLL)
-    const saknas = HUVUDMALTIDER.filter((maltid) => !rader.some((m) => m.maltid === maltid))
-    return { dag, naring, saknas }
+    return { dag, naring, saknas: saknas.filter((p) => p.dag.dag === dag.dag).map((p) => p.maltid) }
   })
 }
 
