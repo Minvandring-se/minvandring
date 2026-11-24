@@ -1,4 +1,4 @@
-import { useId, useState, type KeyboardEvent } from 'react'
+import { useEffect, useId, useState, type KeyboardEvent } from 'react'
 import { Bricka } from '@/components/ui/bricka'
 import { Input } from '@/components/ui/input'
 import { useLivsmedelForslag, type Livsmedelsforslag } from '@/hooks/useLivsmedelForslag'
@@ -70,6 +70,11 @@ export function IngrediensSok({
 
   const altId = (i: number) => `${listId}-${i}`
 
+  // Det aktiva förslaget skrollas fram, så att det syns även längst ner i en panel som skrollar.
+  useEffect(() => {
+    if (aktivt >= 0) document.getElementById(altId(aktivt))?.scrollIntoView({ block: 'nearest' })
+  })
+
   return (
     <div className="space-y-1.5">
       <Input
@@ -104,7 +109,7 @@ export function IngrediensSok({
                 valj(a)
               }}
               onMouseEnter={() => setAktiv(i)}
-              className={cn('flex min-h-11 cursor-pointer items-center gap-3 px-3 py-2 text-sm', i === aktivt && 'bg-muted')}
+              className={cn('flex min-h-11 cursor-pointer items-center gap-3 px-3 py-2 text-sm', i === aktivt && 'bg-primary-soft ring-2 ring-primary ring-inset')}
             >
               {a.typ === 'vara' ? <Rad namn={a.vara.namn} kcal={a.vara.kcal_per_100g} etikett="I turen" /> : <Rad namn={a.livsmedel.namn} kcal={a.livsmedel.kcal_per_100g} etikett={a.livsmedel.tillstand ? TILLSTAND_ETIKETT[a.livsmedel.tillstand] : null} />}
             </li>
@@ -112,6 +117,10 @@ export function IngrediensSok({
         </ul>
         {livsmedel.length > 0 && <p className="border-t border-border px-3 py-1.5 text-xs text-muted-foreground">Näringsvärden från Livsmedelsverket</p>}
       </div>
+      {/* Antalet förslag läses upp när listan öppnas eller ändras, eftersom förslagen kommer efter en kort paus. */}
+      <p className="sr-only" aria-live="polite">
+        {visas ? `${alternativ.length} förslag` : ''}
+      </p>
     </div>
   )
 }

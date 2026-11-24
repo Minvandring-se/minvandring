@@ -132,7 +132,7 @@ export function Integritet() {
           <a href="https://creativecommons.org/licenses/by/4.0/deed.sv" className={lank}>
             CC BY 4.0
           </a>
-          . Vi har avrundat värdena och läst ut ur namnet om livsmedlet är torrt, rått eller tillagat. Värdena är kopierade till
+          . Vi har avrundat värdena, och om livsmedlet är torrt, rått eller tillagat bedömer vi utifrån namnet. Värdena är kopierade till
           MinVandring, så appen hämtar ingenting från Livsmedelsverket när du använder den, och inga uppgifter om dig skickas dit.
           Du kan ändra värdena när du har valt ett förslag.
         </p>
