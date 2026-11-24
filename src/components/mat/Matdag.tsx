@@ -220,7 +220,7 @@ function Rattrad({
   const barare = barsAv ? folk.personer.find((p) => p.id === barsAv) : undefined
   const atare = atarnyckel(folk, grupp.rader[0])
   const atarnamn = atare ? folk.personer.filter((p) => atare.split(',').includes(p.id)).map((p) => p.namn) : []
-  const vemText = barare ? `Bärs av ${barare.namn}` : 'Ingen bär den än'
+  const vemText = barare ? `${barare.namn} bär` : 'Ingen bär än'
   return (
     // Namnet får hela rutans bredd. Energin och Ta bort står på raden under, så att långa namn går att läsa i smala rutor.
     <li className="space-y-0.5 rounded-knapp bg-muted/60 pt-2 pl-3">
@@ -279,17 +279,17 @@ function Vem({ barare, farg, atare, onAndra, etikett }: { barare: string | undef
       {barare ? <Initial namn={barare} farg={farg} className="size-6 text-xs" /> : <span aria-hidden className="size-6 shrink-0 rounded-full border-2 border-dashed border-muted-foreground/50" />}
       <span className="min-w-0 break-words">
         {barare ? `${barare} bär` : 'Ingen bär än'}
-        {atare.length > 0 && <span className="text-muted-foreground"> · äts av {uppraknade(atare)}</span>}
+        {atare.length > 0 && <span className="block text-muted-foreground">Äts av {uppraknade(atare)}</span>}
       </span>
     </>
   )
-  if (!onAndra) return <p className="flex items-center gap-2 pr-3 text-xs">{innehall}</p>
+  if (!onAndra) return <p className="flex items-center gap-2 py-1 pr-3 text-xs">{innehall}</p>
   return (
     <button
       type="button"
       onClick={onAndra}
       aria-label={etikett}
-      className="-ml-1.5 flex min-h-11 w-[calc(100%-0.375rem)] items-center gap-2 rounded-knapp px-1.5 text-left text-xs hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      className="-ml-1.5 my-1 flex min-h-11 w-[calc(100%-0.375rem)] items-center gap-2 rounded-knapp px-1.5 text-left text-xs hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
       {innehall}
     </button>

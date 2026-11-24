@@ -4,7 +4,8 @@ import { Button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
 import { cn } from '@/lib/utils'
 
-const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
+// Raden får fokusringen när radioknappen eller kryssrutan i den har tangentbordsfokus.
+const fokus = 'has-[:focus-visible]:outline-2 has-[:focus-visible]:outline-offset-2 has-[:focus-visible]:outline-ring'
 
 export interface Person {
   id: string

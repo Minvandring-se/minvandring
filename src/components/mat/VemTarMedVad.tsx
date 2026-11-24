@@ -100,11 +100,11 @@ export function VemTarMedVad({
                 <li key={b} className="flex items-start gap-3 px-4 py-3 sm:px-5">
                   <Initial namn={namn} farg={farger.get(b)} />
                   <div className="min-w-0 flex-1 space-y-1">
-                    <h3 className="flex flex-wrap items-baseline justify-between gap-x-3 font-sans text-base font-semibold break-words">
-                      {b === mittDeltagareId ? `${namn} (du)` : namn}
+                    <h3 className="flex flex-wrap items-baseline justify-between gap-x-3 font-sans text-base font-semibold">
+                      <span className="min-w-0 wrap-anywhere">{b === mittDeltagareId ? `${namn} (du)` : namn}</span>
                       {vikt > 0 && <span className="text-sm font-normal text-muted-foreground tabular-nums">{formateraVikt(vikt)}</span>}
                     </h3>
-                    <ul className="space-y-1">
+                    <ul className="space-y-2">
                       {egna.map((r) => (
                         <li key={r.nyckel} className="flex items-center justify-between gap-3">
                           <Rad rad={r} />
@@ -138,12 +138,12 @@ export function VemTarMedVad({
   )
 }
 
-/** En rätt och dess måltider på en rad: "Pudding · mellanmål dag 3 (6 st)". */
+/** En rätt med måltiderna på raden under: "Pudding" och "Mellanmål dag 3 (6 st)". */
 function Rad({ rad }: { rad: Barrad }) {
   return (
-    <span className="min-w-0 text-sm">
+    <span className="flex min-w-0 flex-col text-sm">
       <span className="font-medium wrap-anywhere">{rad.namn}</span>
-      <span className="text-muted-foreground"> · {platserText(rad.platser).charAt(0).toLowerCase() + platserText(rad.platser).slice(1)}</span>
+      <span className="text-muted-foreground">{platserText(rad.platser)}</span>
     </span>
   )
 }
