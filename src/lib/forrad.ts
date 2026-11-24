@@ -89,7 +89,8 @@ export const KATEGORIER = [
     ikon: CookingPot,
     typ: 'ryggsack',
     under: [
-      { nyckel: 'brannare', etikett: 'Kök och brännare' },
+      { nyckel: 'komplett_kok', etikett: 'Kompletta kök' },
+      { nyckel: 'brannare', etikett: 'Brännare' },
       { nyckel: 'bransle', etikett: 'Bränsle', typ: 'forbrukas' },
       { nyckel: 'kastrull', etikett: 'Kastrull och stekpanna' },
       { nyckel: 'kasa', etikett: 'Kåsa och mugg' },

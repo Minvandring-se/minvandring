@@ -51,7 +51,7 @@ describe('kategorier', () => {
 
   it('har inga dubbletter bland underkategorierna, så varje underkategori hör till exakt en huvudkategori', () => {
     const nycklar = under.map((u) => u.nyckel)
-    expect(nycklar).toHaveLength(78)
+    expect(nycklar).toHaveLength(79)
     expect(new Set(nycklar).size).toBe(nycklar.length)
     for (const u of under) expect(kategoriForUnder(u.nyckel)?.nyckel, u.nyckel).toBe(u.kategori)
     expect(kategoriForUnder('finns-inte')).toBeNull()
@@ -117,7 +117,7 @@ describe('forvaldTyp', () => {
 
   it('alla andra underkategorier ligger i ryggsäcken', () => {
     const under = KATEGORIER.flatMap((k) => k.under.map((u) => forvaldTyp(k.nyckel, u.nyckel)))
-    expect(under.filter((t) => t === 'ryggsack')).toHaveLength(78 - 7)
+    expect(under.filter((t) => t === 'ryggsack')).toHaveLength(79 - 7)
   })
 
   it('en underkategori från en annan huvudkategori påverkar inte typen', () => {
