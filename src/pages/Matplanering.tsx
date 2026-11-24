@@ -34,7 +34,7 @@ export function Matplanering() {
         <Laddfel vad="dina turer" onForsokIgen={forsokIgen} />
       ) : turer === null ? (
         <Laddar text="Hämtar dina turer" className="space-y-4">
-          <Skelett className="h-80 rounded-yta" />
+          <Skelett className="h-[30rem] rounded-yta md:h-80" />
           <Skelett className="h-36 rounded-ruta" />
         </Laddar>
       ) : turer.length === 0 ? (
@@ -61,7 +61,7 @@ function Turlistor({ turer }: { turer: DinTur[] }) {
   const status = (t: DinTur) => statusFor(t, lagen.rader)
   return (
     <div className="space-y-8 lg:space-y-10">
-      {lagen.rader === 'fel' && <Laddfel vad="hur långt matplanerna har kommit" onForsokIgen={lagen.forsokIgen} />}
+      {lagen.rader === 'fel' && <Laddfel vad="matplanerna" onForsokIgen={lagen.forsokIgen} />}
       {nasta && <NastaTurMat tur={nasta} status={status(nasta)} />}
       {kommande.length > 0 && <Lista rubrik={nasta ? 'Övriga kommande turer' : 'Kommande turer'} turer={kommande} status={status} />}
       {tidigare.length > 0 && <Lista rubrik="Tidigare turer" turer={tidigare} status={status} />}
@@ -113,8 +113,8 @@ function Turrad({ tur, status }: { tur: DinTur; status: Matstatus | null | 'fel'
 function Radstatus({ status }: { status: Matstatus | null | 'fel' }) {
   const klass = 'text-sm font-medium lg:text-[0.9375rem]'
   if (status === null) return <Skelett className="h-4 w-32" />
-  if (status === 'fel') return <span />
-  if (status.totalt === 0) return <span className={`${klass} text-muted-foreground`}>Inga dagar angivna</span>
+  if (status === 'fel') return null
+  if (status.totalt === 0) return <span className={`${klass} text-muted-foreground`}>Inga vandringsdagar angivna</span>
   if (status.saknas === 0) return <span className={`${klass} text-primary`}>Matplanen är klar</span>
   return <span className={`${klass} text-accent-strong`}>{saknasText(status.saknas)}</span>
 }
