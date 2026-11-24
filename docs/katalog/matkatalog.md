@@ -35,7 +35,7 @@ marke;namn;andra_namn;maltid;torkning;vikt_torr_g;portioner;kcal;protein_g;fett_
 |---|---|---|
 | `marke` | ja | Märket som tillverkaren skriver det. |
 | `namn` | ja | Tillverkarens namn på måltiden, utan märket. Märke och namn tillsammans ska vara unika. |
-| `andra_namn` | nej | Andra namn på påsen, till exempel det svenska, separerade med `;` (fältet inom citattecken). Det första som blir kvar efter rensningen visas under namnet, så det svenska står först. Se Andra namn nedan. |
+| `andra_namn` | nej | Andra namn på påsen, till exempel det svenska, separerade med `;` (fältet inom citattecken). Det första namnet i listan som blir kvar efter rensningen visas under påsens namn, så det svenska står först. Se Andra namn nedan. |
 | `maltid` | ja | `frukost`, `lunch_middag`, `dessert` eller `mellanmal`. |
 | `torkning` | nej | `frystorkad` eller `lufttorkad`. Tomt när det inte framgår. |
 | `vikt_torr_g` | ja | Hela påsens vikt i gram, torr, som heltal. |
@@ -55,13 +55,13 @@ marke;namn;andra_namn;maltid;torkning;vikt_torr_g;portioner;kcal;protein_g;fett_
 
 ## Andra namn
 
-Andra namn gör att man hittar en påse på det namn man känner igen, till exempel "viltgryta" för Real Turmat Reindeer Stew. Sökningen i Matkatalogen och Välj rätt söker i märket, namnet och de andra namnen, utan hänsyn till stora och små bokstäver. Det första andra namnet visas under namnet. De andra namnen används aldrig för allergener eller kost, även när de säger glutenfri, laktosfri eller vegan.
+Andra namn gör att man hittar en påse på det namn man känner igen, till exempel ”viltgryta” för Real Turmat Reindeer Stew. Sökningen i Matkatalogen och Välj rätt söker i märket, namnet och de andra namnen, utan hänsyn till stora och små bokstäver. Det första namnet i listan visas under påsens namn. De andra namnen används aldrig för allergener eller kost, även när de säger glutenfri, laktosfri eller vegan.
 
 Vid importen (`rensaAndraNamn` i `src/lib/matkatalogimport.ts`) tas det här bort, med en varning för det som tas bort helt:
 
-- namn som bara är siffror, till exempel "8021"
-- namn som är för allmänna för att hitta en viss påse, till exempel "Laks", "Gryta" och "Pasta"
-- butikernas storleksord: "- Stort format", "- Storformat", "- Stor portion", "– Dubbelportion", "Big Portion", "1-port", "(2 portioner)" och liknande
+- namn som bara är siffror, till exempel ”8021”
+- namn som är för allmänna för att hitta en viss påse, till exempel ”Laks”, ”Gryta” och ”Pasta”
+- butikernas storleksord: ”- Stort format”, ”- Storformat”, ”- Stor portion”, ”– Dubbelportion”, ”Big Portion”, ”1-port”, ”(2 portioner)” och liknande
 - dubbletter, och namn som är samma som påsens eget namn
 
 Den första listan kom från Astra 2026-11-24 (`Claude outputs/matkatalog/matkatalog-pasar-namn.csv`). Tre påsar fick inga andra namn, eftersom källorna pekade på en annan påse: Lyofood Apple & Cinnamon Porridge, Travellunch Karibisches Kartoffel-Curry mit Huhn och Travellunch Erbseneintopf mit Schinken (båda storlekarna).

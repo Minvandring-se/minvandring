@@ -268,7 +268,7 @@ function Paspanel({ pase, skafferi, laddaOm, onStang }: { pase: Matprodukt; skaf
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">{pase.marke}</p>
           <h2 className="text-2xl break-words text-primary">{pase.namn}</h2>
-          {forstaAndraNamn(pase) && <p className="text-muted-foreground">{forstaAndraNamn(pase)}</p>}
+          {forstaAndraNamn(pase) && <p className="break-words text-muted-foreground">{forstaAndraNamn(pase)}</p>}
           <p className="font-heading text-3xl font-semibold tabular-nums">{formateraKcal(pase.kcal)}</p>
           <p className="text-sm tabular-nums">
             {formateraVikt(pase.vikt_torr_g)}
