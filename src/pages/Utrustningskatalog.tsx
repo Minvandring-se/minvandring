@@ -18,7 +18,6 @@ import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, un
 import { forradsadress } from '@/lib/forradslista'
 import { arKokgrupp, filtreraKokgrupp, KOKGRUPPER, kokEtikettFor, type Kokgrupp } from '@/lib/kokkarl'
 import {
-  antalText,
   forvalFranProdukt,
   gArAttSoka,
   grupperaModeller,
@@ -29,28 +28,38 @@ import {
   sokfilter,
   sokord,
   sorteraTraffar,
+  visasText,
   type Modell,
 } from '@/lib/produktsok'
 import { supabase } from '@/lib/supabase'
 import type { Katalogprodukt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
 
-const MAX = 200
+// Kort som visas åt gången. "Visa fler" visar lika många till.
+const SIDA = 100
+// Supabase lämnar högst 1 000 rader per fråga, så träffarna hämtas i omgångar. Katalogen är liten (runt 1 300
+// produkter), så alla träffar hämtas: de rangordnas och grupperas till modeller här, och det går inte att göra
+// sida för sida i databasen. Se docs/att-ta-senare.md.
+const OMGANG = 1000
+const MAX_OMGANGAR = 10
 const FORDROJNING_MS = 250
 // Allt som visas i detaljpanelen hämtas i samma fråga, så att det inte blir en fråga per kort.
 const KOLUMNER = 'id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad, granskad, kalla_typ, minvikt_g, pris_sek_ca, kalla, egenskaper'
 
-type Lage = { nyckel: string; modeller: Modell<Katalogprodukt>[]; avkortad: boolean } | { nyckel: string; fel: true } | null
+type Lage = { nyckel: string; modeller: Modell<Katalogprodukt>[] } | { nyckel: string; fel: true } | null
 
 /** Produkt-id mot produktens version (storlek), för de produkter man har i förrådet. */
 type IForradetKarta = ReadonlyMap<string, string | null>
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
-/** Hämtar vilka av produkterna man har i förrådet, med storlek. RLS gör att bara ens egna saker kommer tillbaka. */
-async function hamtaIForradet(ids: string[]): Promise<IForradetKarta> {
-  if (!supabase || ids.length === 0) return new Map()
-  const { data } = await supabase.from('forradssaker').select('produkt_id, produkter(version)').in('produkt_id', ids)
+/**
+ * Hämtar vilka produkter ur katalogen man har i förrådet, med storlek. RLS gör att bara ens egna saker kommer
+ * tillbaka. Hela förrådet hämtas, eftersom det är litet, i stället för att skicka alla träffarnas id i adressen.
+ */
+async function hamtaIForradet(): Promise<IForradetKarta> {
+  if (!supabase) return new Map()
+  const { data } = await supabase.from('forradssaker').select('produkt_id, produkter(version)').not('produkt_id', 'is', null)
   const rader = (data as unknown as { produkt_id: string; produkter: { version: string | null } | null }[] | null) ?? []
   return new Map(rader.map((s) => [s.produkt_id, s.produkter?.version ?? null]))
 }
@@ -71,6 +80,8 @@ export function Utrustningskatalog() {
   const [kokval, setKokval] = useState<Kokgrupp | ''>('')
   const [antal, setAntal] = useState<number | null>(null)
   const [lage, setLage] = useState<Lage>(null)
+  // Hur många kort som visas, för sökningen i nyckel. En ny sökning börjar om från en sida.
+  const [visas, setVisas] = useState<{ nyckel: string; antal: number }>({ nyckel: '', antal: SIDA })
   // Produkterna i träfflistan som finns i ens förråd, med produktens version (storlek). Hämtas med en fråga per träfflista.
   const [iForradet, setIForradet] = useState<IForradetKarta>(new Map())
   // Produkten som läggs i förrådet just nu, i formuläret.
@@ -99,21 +110,28 @@ export function Utrustningskatalog() {
     const klient = supabase
     let avbruten = false
     const timer = window.setTimeout(async () => {
-      let fraga = klient.from('produkter').select(KOLUMNER).limit(MAX)
-      if (kategori) fraga = fraga.eq('kategori', kategori)
-      if (underkategori) fraga = fraga.eq('underkategori', underkategori)
-      if (harText) for (const ord of sokord(text)) fraga = fraga.or(sokfilter(ord))
-      const { data, error } = await fraga.order('marke').order('modell')
-      if (avbruten) return
-      const produkter = filtreraKokgrupp((data as Katalogprodukt[] | null) ?? [], kokval)
-      const egna = await hamtaIForradet(produkter.map((p) => p.id))
+      // Alla träffar, i omgångar. Ordningen på id gör att ingen rad hamnar i två omgångar eller faller bort.
+      const alla: Katalogprodukt[] = []
+      let fel = false
+      for (let i = 0; i < MAX_OMGANGAR; i++) {
+        let fraga = klient.from('produkter').select(KOLUMNER)
+        if (kategori) fraga = fraga.eq('kategori', kategori)
+        if (underkategori) fraga = fraga.eq('underkategori', underkategori)
+        if (harText) for (const ord of sokord(text)) fraga = fraga.or(sokfilter(ord))
+        const { data, error } = await fraga.order('id').range(i * OMGANG, (i + 1) * OMGANG - 1)
+        if (avbruten) return
+        if (error) {
+          fel = true
+          break
+        }
+        alla.push(...((data as Katalogprodukt[] | null) ?? []))
+        if ((data?.length ?? 0) < OMGANG) break
+      }
+      const produkter = filtreraKokgrupp(alla, kokval)
+      const egna = fel ? new Map<string, string | null>() : await hamtaIForradet()
       if (avbruten) return
       setIForradet(egna)
-      setLage(
-        error
-          ? { nyckel, fel: true }
-          : { nyckel, modeller: grupperaModeller(sorteraTraffar(produkter, harText ? text : '')), avkortad: (data?.length ?? 0) === MAX },
-      )
+      setLage(fel ? { nyckel, fel: true } : { nyckel, modeller: grupperaModeller(sorteraTraffar(produkter, harText ? text : '')) })
     }, FORDROJNING_MS)
     return () => {
       avbruten = true
@@ -125,6 +143,8 @@ export function Utrustningskatalog() {
   // Förra träfflistan ligger kvar, dämpad, tills nästa kommer. Då hoppar inte sidan medan man skriver.
   const modeller = sokbar && lage && 'modeller' in lage ? lage.modeller : null
   const gammal = !aktuellt
+  const antalVisas = visas.nyckel === nyckel ? visas.antal : SIDA
+  const synliga = modeller?.slice(0, antalVisas) ?? null
 
   // Den öppna produkten: ur träfflistan, annars den som hämtades för sig.
   const iListan = produktId && modeller ? modellMedProdukt(modeller, produktId) : null
@@ -143,7 +163,7 @@ export function Utrustningskatalog() {
       const p = en as Katalogprodukt | null
       const { data: alla } = p ? await klient.from('produkter').select(KOLUMNER).eq('marke', p.marke).eq('modell', p.modell) : { data: null }
       const produkter = (alla as Katalogprodukt[] | null) ?? []
-      const egna = await hamtaIForradet(produkter.map((x) => x.id))
+      const egna = await hamtaIForradet()
       if (!avbruten) setDirekt({ for: produktId, modeller: grupperaModeller(produkter), iForradet: egna })
     })()
     return () => {
@@ -190,7 +210,7 @@ export function Utrustningskatalog() {
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)]">
         <div className="space-y-1">
           <label htmlFor={`${id}-sok`} className="block text-sm font-medium">
-            Sök på märke eller modell
+            Sök på märke, modell eller version
           </label>
           <div className="relative">
             <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
@@ -241,20 +261,21 @@ export function Utrustningskatalog() {
       <div aria-live="polite" className="text-sm text-muted-foreground">
         {aktuellt && 'fel' in aktuellt && <p className="text-destructive">Det gick inte att söka. Kontrollera uppkopplingen och försök igen.</p>}
         {!gammal && modeller?.length === 0 && <p>{ingaTraffarText({ harText, kategori, underkategori })}</p>}
-        {!gammal && modeller && modeller.length > 0 && (
-          <p className="font-medium text-foreground">
-            {antalText(modeller.length)}
-            {aktuellt && 'avkortad' in aktuellt && aktuellt.avkortad && <span className="font-normal text-muted-foreground">. Skriv mer för att se fler.</span>}
-          </p>
-        )}
+        {!gammal && modeller && modeller.length > 0 && <p className="font-medium text-foreground">{visasText(Math.min(antalVisas, modeller.length), modeller.length)}</p>}
       </div>
 
-      {modeller && modeller.length > 0 && (
+      {synliga && synliga.length > 0 && (
         <ul aria-busy={gammal} className={cn('grid gap-3 transition-opacity md:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4', gammal && 'opacity-60')}>
-          {modeller.map((m) => (
+          {synliga.map((m) => (
             <Produktkort key={m.nyckel} modell={m} iForradet={iForradet} onOppna={() => oppna(m.varianter[0].id)} />
           ))}
         </ul>
+      )}
+
+      {!gammal && modeller && modeller.length > antalVisas && (
+        <Button variant="outline" onClick={() => setVisas({ nyckel, antal: antalVisas + SIDA })}>
+          Visa fler
+        </Button>
       )}
 
       {oppen && (

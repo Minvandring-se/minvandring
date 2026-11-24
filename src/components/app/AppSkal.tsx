@@ -26,7 +26,7 @@ export function AppSkal() {
   const { pathname } = useLocation()
   const aktiv = aktivSida(pathname)
   const anvandarId = session?.user.id ?? ''
-  const dinaTurer = useDinaTurer(anvandarId, pathname)
+  const { turer: dinaTurer } = useDinaTurer(anvandarId, pathname)
   const oppenTurId = /^\/tur\/([^/]+)/.exec(pathname)?.[1] ?? null
   const [namn, setNamn] = useState('')
   const [bildUppdaterad, setBildUppdaterad] = useState<string | null>(null)

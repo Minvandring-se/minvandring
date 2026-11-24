@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useState } from 'react'
 import type { Deltagare as Matdeltagare } from '@/lib/vikt'
-import { pasnamn, type TolkadIngrediens } from '@/lib/mat'
+import { ingredienserTillDatabasen, pasnamn, type TolkadIngrediens } from '@/lib/mat'
 import { supabase } from '@/lib/supabase'
 import type { Ingrediens, Kostbehov, Maltid, Maltidsrad, Matprodukt, Ratt, Vara } from '@/lib/typer'
 
@@ -138,62 +138,29 @@ export async function taBortUrMaltid(maltidId: string): Promise<boolean> {
 }
 
 /**
- * Sparar en egen rätt med ingredienser och svarar med rättens id. Varor som redan finns i turen (samma namn)
- * används igen och får de nya uppgifterna om kcal och protein när de är ifyllda. En ny rätt som inte gick att
- * spara helt tas bort igen. En rätt som ändras får alla sina ingredienser på nytt.
+ * Sparar en egen rätt med ingredienser och svarar med rättens id, eller null om det inte gick. Görs av funktionen
+ * spara_egen_ratt i databasen, i en transaktion: allt sparas eller ingenting. Varor som redan finns i turen (samma
+ * namn) används igen och får de nya uppgifterna om kcal och protein när de är ifyllda. En rätt som ändras får alla
+ * sina ingredienser på nytt. Med maltid läggs en ny rätt också i måltiden, i samma transaktion.
  */
 export async function sparaEgenRatt(
   turId: string,
   rattId: string | null,
   namn: string,
   rader: readonly TolkadIngrediens[],
-  varor: readonly Vara[],
+  maltid?: { dag: number; maltid: Maltid; sortering: number },
 ): Promise<string | null> {
   if (!supabase) return null
-  const db = supabase
-
-  let id = rattId
-  if (id) {
-    const { error } = await db.from('ratter').update({ namn }).eq('id', id)
-    if (error) return null
-    const bort = await db.from('ingredienser').delete().eq('ratt_id', id)
-    if (bort.error) return null
-  } else {
-    const { data, error } = await db.from('ratter').insert({ tur_id: turId, namn }).select('id').single()
-    if (error) return null
-    id = data.id as string
-  }
-
-  const misslyckades = async () => {
-    if (!rattId) await db.from('ratter').delete().eq('id', id)
-    return null
-  }
-
-  const varuIds: string[] = []
-  for (const rad of rader) {
-    const finns = varor.find((v) => v.namn.toLowerCase() === rad.vara.toLowerCase())
-    const uppgifter = {
-      ...(rad.kcalPer100g !== null && { kcal_per_100g: rad.kcalPer100g }),
-      ...(rad.proteinPer100g !== null && { protein_per_100g: rad.proteinPer100g }),
-    }
-    if (finns) {
-      if (Object.keys(uppgifter).length) {
-        const { error } = await db.from('varor').update(uppgifter).eq('id', finns.id)
-        if (error) return misslyckades()
-      }
-      varuIds.push(finns.id)
-    } else {
-      const { data, error } = await db.from('varor').insert({ tur_id: turId, namn: rad.vara, ...uppgifter }).select('id').single()
-      if (error) return misslyckades()
-      varuIds.push(data.id as string)
-    }
-  }
-
-  const { error } = await db
-    .from('ingredienser')
-    .insert(rader.map((r, i) => ({ tur_id: turId, ratt_id: id, vara_id: varuIds[i], gram_per_portion: r.gram })))
-  if (error) return misslyckades()
-  return id
+  const { data, error } = await supabase.rpc('spara_egen_ratt', {
+    t: turId,
+    r: rattId,
+    ratt_namn: namn,
+    rader: ingredienserTillDatabasen(rader),
+    dag_nr: maltid?.dag ?? null,
+    maltid_typ: maltid?.maltid ?? null,
+    plats: maltid?.sortering ?? 0,
+  })
+  return error || typeof data !== 'string' ? null : data
 }
 
 /** Ändrar en rad i inköpslistan: en vara (ansvarig, klart, varifrån) eller en påse (ansvarig, klart). */

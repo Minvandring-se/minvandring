@@ -38,11 +38,13 @@ import {
 import {
   SORTERINGAR,
   adressFranVal,
+  doljsAvFiltret,
   filtrera,
   harFilter,
   kategorivalIForradet,
   sortera,
   underkategorivalIForradet,
+  utanFilter,
   valFranAdress,
   valjKategori,
   type Listval,
@@ -78,8 +80,8 @@ export function Forrad() {
   const [saker, setSaker] = useState<Forradssak[] | null>(null)
   const [laddfel, setLaddfel] = useState(false)
   const [oppet, setOppet] = useState<Oppet>(null)
-  // Det senaste som lades till från katalogen, så att man kan gå vidare och ändra antal eller anteckning.
-  const [tillagd, setTillagd] = useState<{ sakId: string; namn: string } | null>(null)
+  // Det senaste som lades till, från katalogen eller som egen sak, så att man kan gå vidare och ändra antal eller anteckning.
+  const [tillagd, setTillagd] = useState<{ sakId: string } | null>(null)
 
   // Räknas upp när något har sparats eller tagits bort, så att listan hämtas igen.
   const [omgang, setOmgang] = useState(0)
@@ -116,6 +118,10 @@ export function Forrad() {
   const oppenSak = oppet !== null && 'sakId' in oppet ? oppet.sakId : null
   const radhjalp: Radhjalp = { vy: val.vy, oppenSak, onOppna: (sakId) => setOppet({ sakId }), onKlar: klar, onAndrad: hamtaOm, onAvbryt: () => setOppet(null) }
   const ny = oppet !== null && 'ny' in oppet ? oppet.ny : null
+  // En sak som just sparats men som sök eller filter döljer. Då går formuläret för att ändra den inte att öppna i listan.
+  const dold = tillagd !== null && doljsAvFiltret(tillagd.sakId, alla, visade)
+  // Rutan visas först när förrådet har hämtats om och saken finns i det, så att Ändra alltid öppnar något.
+  const tillagdNamn = tillagd ? alla.find((s) => s.id === tillagd.sakId)?.namn : undefined
   const oppnaSok = (kategori?: KategoriNyckel, underkategori?: UnderkategoriNyckel) => {
     setTillagd(null)
     setOppet({ sok: true, kategori, underkategori })
@@ -158,8 +164,8 @@ export function Forrad() {
             startKategori={sok.kategori}
             startUnderkategori={sok.underkategori}
             finnsRedan={finnsRedan}
-            onTillagd={(sakId, namn) => {
-              setTillagd({ sakId, namn })
+            onTillagd={(sakId) => {
+              setTillagd({ sakId })
               setOppet(null)
               hamtaOm()
             }}
@@ -172,11 +178,29 @@ export function Forrad() {
         </Dialog>
       )}
 
-      {ny && <SakFormular forval={ny} onKlar={klar} onAvbryt={() => oppnaSok()} />}
+      {ny && (
+        <SakFormular
+          forval={ny}
+          onKlar={(sakId) => {
+            klar()
+            if (sakId) setTillagd({ sakId })
+          }}
+          onAvbryt={() => oppnaSok()}
+        />
+      )}
 
-      {tillagd && (
+      {tillagd && dold && (
         <div role="status" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-md bg-hjortron-soft px-4 py-2 text-sm text-hjortron-strong">
-          <p className="font-medium">{tillagd.namn} ligger nu i ditt förråd.</p>
+          <p className="font-medium">Sparad. Saken döljs av filtret.</p>
+          <button type="button" className={cn('min-h-11 font-medium underline underline-offset-4', fokus)} onClick={() => setVal(utanFilter(val))}>
+            Visa alla
+          </button>
+        </div>
+      )}
+
+      {tillagd && !dold && tillagdNamn && (
+        <div role="status" className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1 rounded-md bg-hjortron-soft px-4 py-2 text-sm text-hjortron-strong">
+          <p className="font-medium">{tillagdNamn} ligger nu i ditt förråd.</p>
           <button
             type="button"
             className={cn('min-h-11 font-medium underline underline-offset-4', fokus)}
