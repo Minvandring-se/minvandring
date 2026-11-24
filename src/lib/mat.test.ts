@@ -325,7 +325,7 @@ describe('tolkaRattformular', () => {
 
   it('säger vilken rad som är fel', () => {
     expect(tolkaRattformular('Gröt', [rad('Havregryn', '90'), rad('', '30')])).toEqual({ ok: false, fel: 'Ingrediens 2: skriv vad ingrediensen heter.' })
-    expect(tolkaRattformular('Gröt', [rad('Havregryn', '0')])).toMatchObject({ ok: false, fel: expect.stringContaining('Ingrediens 1: skriv mängden') })
+    expect(tolkaRattformular('Gröt', [rad('Havregryn', '0')])).toMatchObject({ ok: false, fel: expect.stringContaining('Ingrediens 1: skriv mängden som ett tal mellan 0,01 och 10 000') })
     expect(tolkaRattformular('Gröt', [rad('Havregryn', '0,4')]).ok).toBe(false)
     expect(tolkaRattformular('Gröt', [rad('Havregryn', '90', '1000')]).ok).toBe(false)
     expect(tolkaRattformular('Gröt', [rad('Havregryn', '90', '', 'mycket')]).ok).toBe(false)

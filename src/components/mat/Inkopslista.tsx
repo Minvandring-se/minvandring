@@ -120,10 +120,10 @@ export function Inkopslista({
           )}
           {fel && (
             <p role="alert" className="text-sm text-destructive">
-              Det gick inte att spara ändringen. Kontrollera uppkopplingen och försök igen.
+              Det gick inte att spara. Kontrollera uppkopplingen och försök igen.
             </p>
           )}
-          {grupper.length === 0 && <p className="text-muted-foreground">Du köper inget än. Ta en rätt i Vem tar med vad.</p>}
+          {grupper.length === 0 && <p className="text-muted-foreground">Du köper inget än. Välj en rätt som du bär i ”Vem tar med vad”.</p>}
           {grupper.map((g) => {
             const person = personer.find((p) => p.id === g.kopare)
             const namn = g.kopare === null ? 'Ingen köper än' : (person?.namn ?? 'Inte längre med i turen')
@@ -133,7 +133,7 @@ export function Inkopslista({
                   {g.kopare !== null && <Initial namn={namn} farg={farger.get(g.kopare)} className="size-8 text-sm" />}
                   <span className="min-w-0 wrap-anywhere">{g.kopare === mittDeltagareId ? `${namn} (du)` : namn}</span>
                 </h3>
-                {g.kopare === null && <p className="-mt-2 text-sm text-muted-foreground">Välj vem som bär rätterna i Vem tar med vad, så hamnar varorna i den personens lista.</p>}
+                {g.kopare === null && <p className="-mt-2 text-sm text-muted-foreground">Välj vem som bär rätterna i ”Vem tar med vad”, så hamnar varorna i hens lista.</p>}
                 {g.avdelningar.map((a) => (
                   <div key={a.avdelning} className="space-y-0.5">
                     <h4 className="font-sans text-sm font-semibold text-muted-foreground">{AVDELNINGAR.find((x) => x.nyckel === a.avdelning)!.etikett}</h4>
@@ -205,7 +205,7 @@ function Rad({
       )}
       {andraAvdelning && (
         <div className="space-y-1 pb-2 pl-8">
-          <label htmlFor={`${id}-avdelning`} className="block text-xs text-muted-foreground">
+          <label htmlFor={`${id}-avdelning`} className="block text-sm text-muted-foreground">
             Butiksavdelning för {rad.namn}
           </label>
           <Select id={`${id}-avdelning`} value={rad.avdelning} onChange={(e) => onAvdelning(e.target.value)}>

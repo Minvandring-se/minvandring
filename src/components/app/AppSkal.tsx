@@ -52,7 +52,7 @@ export function AppSkal() {
   const kontext: AppKontext = { anvandarId, epost: session?.user.email ?? '', namn, profilHamtad, setNamn, bildUppdaterad, setBildUppdaterad }
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[17.5rem_1fr] 3xl:grid-cols-[19.5rem_1fr] print:block">
+    <div className="min-h-dvh lg:grid lg:grid-cols-[17.5rem_1fr] 3xl:grid-cols-[19.5rem_1fr] print:!block">
       {/* Hoppar förbi menyn med tangentbordet. Syns bara när den har fokus. */}
       <a
         href="#innehall"
@@ -62,16 +62,16 @@ export function AppSkal() {
       </a>
       {/* Menyerna och sidfoten skrivs inte ut, till exempel när inköpslistan skrivs ut. */}
       <div className="contents print:hidden">
-      <Sidomeny
-        aktiv={aktiv}
-        turer={dinaTurer}
-        oppenTurId={oppenTurId}
-        namn={namn}
-        epost={session?.user.email ?? ''}
-        bild={minBild}
-        bildLaddar={bildLaddar}
-        profilHamtad={profilHamtad}
-      />
+        <Sidomeny
+          aktiv={aktiv}
+          turer={dinaTurer}
+          oppenTurId={oppenTurId}
+          namn={namn}
+          epost={session?.user.email ?? ''}
+          bild={minBild}
+          bildLaddar={bildLaddar}
+          profilHamtad={profilHamtad}
+        />
       </div>
 
       <div className="flex min-h-dvh min-w-0 flex-col">

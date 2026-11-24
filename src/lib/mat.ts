@@ -637,7 +637,7 @@ export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[])
     if (varor.has(vara.toLowerCase())) return { ok: false, fel: `${vara} står två gånger. Lägg ihop mängden på en rad.` }
     varor.add(vara.toLowerCase())
     const tal = tolkaTal(f.mangd)
-    if (tal !== null && !(tal > 0 && tal <= 10000)) return { ok: false, fel: `${rad}: skriv mängden som ett tal större än 0.` }
+    if (tal !== null && !(tal > 0 && tal <= 10000)) return { ok: false, fel: `${rad}: skriv mängden som ett tal mellan 0,01 och 10 000.` }
     // Mängden sparas med två decimaler, så vikten räknas från den avrundade mängden.
     const mangd = tal === null ? null : Math.round(tal * 100) / 100
     if (mangd === 0) return { ok: false, fel: `${rad}: mängden är för liten.` }
