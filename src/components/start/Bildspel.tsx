@@ -9,13 +9,16 @@ import { cn } from '@/lib/utils'
 // ljus: dämpar ljusa bilder lite. Det mesta av skuggan ligger bakom texten (Start.tsx). Den vita texten klarar
 //   WCAG AA mot bilden bakom rubrik, undertext, knapp och meny.
 // bred: datorbilden är ett eget bredare utsnitt (design/hero/bredbilder.cjs), eftersom motivet annars inte får plats i 2:1.
+// mobil: false betyder att bilden inte visas på stående mobil, där personen annars står bakom texten.
 // zoom (dator): punkten som den långsamma zoomen utgår från, vid personerna, så att de inte skärs bort.
-const bilder = [
+type Bild = { namn: string; alt: string; fokusMobil: string; fokus: string; zoom: string; ljus: number; bred?: boolean; mobil?: boolean }
+
+const alla: Bild[] = [
   { namn: '6-fjallang', alt: 'Två vandrare går över en fjällhed mot ett fjäll', fokusMobil: '50% 50%', fokus: '50% 12%', zoom: '50% 80%', ljus: 0.9 },
   { namn: '7-vinterfjall', alt: 'En person vilar på ett renskinn i snön framför ett snötäckt fjäll', fokusMobil: '50% 50%', fokus: '50% 50%', zoom: '40% 50%', ljus: 0.9, bred: true },
   { namn: '5-norrsken', alt: 'Norrsken över fjäll och sjö', fokusMobil: '30% 50%', fokus: '50% 85%', zoom: '50% 70%', ljus: 1 },
-  { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokusMobil: '20% 50%', fokus: '25% 78%', zoom: '20% 70%', ljus: 0.8 },
-  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokusMobil: '45% 50%', fokus: '40% 12%', zoom: '38% 70%', ljus: 1 },
+  { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokusMobil: '20% 50%', fokus: '25% 78%', zoom: '20% 70%', ljus: 0.8, mobil: false },
+  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokusMobil: '45% 50%', fokus: '40% 12%', zoom: '38% 70%', ljus: 1, mobil: false },
 ]
 
 /** Hur länge varje bild syns. Övertoningen (0,8 s) ligger i klassen duration-800. */
@@ -35,15 +38,15 @@ function srcset(namn: string, bredder: number[], tillagg = '') {
   return bredder.map((b) => `/hero/${namn}${tillagg}-${b}.webp ${b}w`).join(', ')
 }
 
-function useMinskaRorelse() {
-  const [minska, setMinska] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+function useMedia(fraga: string) {
+  const [traff, setTraff] = useState(() => window.matchMedia(fraga).matches)
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const andra = () => setMinska(mq.matches)
+    const mq = window.matchMedia(fraga)
+    const andra = () => setTraff(mq.matches)
     mq.addEventListener('change', andra)
     return () => mq.removeEventListener('change', andra)
-  }, [])
-  return minska
+  }, [fraga])
+  return traff
 }
 
 function useFlikenSyns() {
@@ -56,13 +59,21 @@ function useFlikenSyns() {
   return syns
 }
 
+const mobilens = alla.filter((b) => b.mobil !== false)
+
+/** Stående mobil får färre bilder. Bildspelet börjar om när skärmen vänds, så att räknarna hör till rätt lista. */
+export function Bildspel() {
+  const mobil = useMedia(MOBIL_MEDIA)
+  return <Bilder key={mobil ? 'mobil' : 'dator'} bilder={mobil ? mobilens : alla} />
+}
+
 /**
  * Lugnt bildspel som bakgrund, utan pilar eller prickar.
  * Första bilden laddas direkt. De andra laddas när webbläsaren har tid över efter att sidan visats.
  * Med "minska rörelse" visas bara första bilden. Växlingen pausar när fliken inte syns.
  */
-export function Bildspel() {
-  const minskaRorelse = useMinskaRorelse()
+function Bilder({ bilder }: { bilder: readonly Bild[] }) {
+  const minskaRorelse = useMedia('(prefers-reduced-motion: reduce)')
   const syns = useFlikenSyns()
   const [aktiv, setAktiv] = useState(0)
   const [forra, setForra] = useState<number | null>(null)
@@ -96,7 +107,7 @@ export function Bildspel() {
       setAktiv(nasta)
     }, VISNING_MS)
     return () => clearTimeout(id)
-  }, [aktiv, laddade, laddaResten, minskaRorelse, syns])
+  }, [aktiv, bilder, laddade, laddaResten, minskaRorelse, syns])
 
   return (
     <div className="absolute inset-0 isolate overflow-hidden bg-black">
