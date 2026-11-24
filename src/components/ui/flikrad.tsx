@@ -38,11 +38,12 @@ export function Flikrad({
     <nav
       ref={rad}
       aria-label={etikett}
-      className="relative -mx-4 overflow-x-auto border-b border-border px-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:overflow-visible md:px-0"
+      className="relative -mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:overflow-visible md:px-0"
     >
-      <ul className="-mb-px flex gap-6 md:flex-wrap md:gap-x-7">
+      {/* Linjen ligger på listan och fliken lägger sin linje över den, så att inget sticker ut under raden som skrollar. */}
+      <ul className="flex w-max min-w-full gap-2 border-b border-border md:w-auto md:flex-wrap md:gap-x-3">
         {flikar.map((f) => (
-          <li key={f.nyckel} className="shrink-0">
+          <li key={f.nyckel} className="-mb-px shrink-0">
             {f.till ? (
               <Link
                 to={f.till}
@@ -72,7 +73,7 @@ export function Flikrad({
 }
 
 const bas =
-  'flex min-h-12 items-center gap-2 border-b-2 text-[0.9375rem] whitespace-nowrap transition-colors'
+  'flex min-h-12 min-w-11 items-center justify-center gap-2 border-b-2 px-2 text-[0.9375rem] whitespace-nowrap transition-colors'
 
 function Innehall({ flik }: { flik: Flik }): ReactNode {
   return (
