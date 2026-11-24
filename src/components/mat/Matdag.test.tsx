@@ -89,8 +89,9 @@ describe('Matdag', () => {
       />,
     )
     // Olika ätare blir två rader. Den ena äts bara av Lisa.
-    expect(html.match(/Bärs av Oscar. Ändra vem som bär och äter Gryta/g)?.length).toBe(2)
-    expect(html).toContain('Äts av Lisa')
+    expect(html.match(/Bärs av Oscar/g)?.length).toBe(2)
+    expect(html).toContain('äts av Lisa')
+    expect(html).toContain('Oscar bär')
   })
 
   it('ber en att kontrollera mängderna när portionen verkar orimlig', () => {

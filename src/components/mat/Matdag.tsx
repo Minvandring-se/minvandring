@@ -239,7 +239,15 @@ function Rattrad({
         </ul>
       )}
       {orimligPortion(portion) && <p className="pr-3 text-xs font-medium text-accent-strong">Ovanligt stor portion. Kontrollera mängderna.</p>}
-      {atarnamn.length > 0 && <p className="pr-3 text-xs text-muted-foreground">Äts av {uppraknade(atarnamn)}</p>}
+      {(barare || (kanAndra && onVem) || atarnamn.length > 0) && (
+        <Vem
+          barare={barare?.namn}
+          farg={barsAv ? folk.farger.get(barsAv) : undefined}
+          atare={atarnamn}
+          onAndra={kanAndra && onVem ? () => onVem(grupp.rader) : undefined}
+          etikett={`${vemText}${atarnamn.length > 0 ? `, äts av ${uppraknade(atarnamn)}` : ''}. Ändra vem som bär och äter ${ratt.namn}`}
+        />
+      )}
       <div className="flex items-center justify-between gap-1">
         <p className="py-2 text-xs text-muted-foreground tabular-nums">
           {portion.kcal > 0 ? (
@@ -251,38 +259,41 @@ function Rattrad({
             'Energi saknas'
           )}
         </p>
-        <span className="flex shrink-0 items-center">
-          {kanAndra && onVem ? (
-            <button
-              type="button"
-              onClick={() => onVem(grupp.rader)}
-              aria-label={`${vemText}. Ändra vem som bär och äter ${ratt.namn}`}
-              className="flex size-11 items-center justify-center rounded-knapp hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-            >
-              <Barare namn={barare?.namn} farg={barsAv ? folk.farger.get(barsAv) : undefined} />
-            </button>
-          ) : (
-            barare && (
-              <span role="img" aria-label={vemText} className="flex size-11 items-center justify-center">
-                <Barare namn={barare.namn} farg={folk.farger.get(barare.id)} />
-              </span>
-            )
-          )}
-          {kanAndra && (
-            <Button variant="ghost" size="ikon" onClick={() => onTaBort(grupp.rader.at(-1)!)} aria-label={antal > 1 ? `Ta bort en portion ${ratt.namn} från ${vad}` : `Ta bort ${ratt.namn} från ${vad}`}>
-              <X className="size-4" aria-hidden />
-            </Button>
-          )}
-        </span>
+        {kanAndra && (
+          <Button variant="ghost" size="ikon" onClick={() => onTaBort(grupp.rader.at(-1)!)} aria-label={antal > 1 ? `Ta bort en portion ${ratt.namn} från ${vad}` : `Ta bort ${ratt.namn} från ${vad}`}>
+            <X className="size-4" aria-hidden />
+          </Button>
+        )}
       </div>
     </li>
   )
 }
 
-/** Den som bär en rätt som en liten bricka i sin färg, eller en streckad ring när ingen bär den. */
-function Barare({ namn, farg }: { namn: string | undefined; farg: string | undefined }) {
-  if (!namn) return <span aria-hidden className="size-7 rounded-full border-2 border-dashed border-muted-foreground/50" />
-  return <Initial namn={namn} farg={farg} className="size-7 text-xs" />
+/**
+ * Vem som bär rätten, med initialen i bärarens färg, och vilka som äter den när det inte är alla. För ägare och
+ * redigerare är raden en knapp som öppnar valet.
+ */
+function Vem({ barare, farg, atare, onAndra, etikett }: { barare: string | undefined; farg: string | undefined; atare: readonly string[]; onAndra?: () => void; etikett: string }) {
+  const innehall = (
+    <>
+      {barare ? <Initial namn={barare} farg={farg} className="size-6 text-xs" /> : <span aria-hidden className="size-6 shrink-0 rounded-full border-2 border-dashed border-muted-foreground/50" />}
+      <span className="min-w-0 break-words">
+        {barare ? `${barare} bär` : 'Ingen bär än'}
+        {atare.length > 0 && <span className="text-muted-foreground"> · äts av {uppraknade(atare)}</span>}
+      </span>
+    </>
+  )
+  if (!onAndra) return <p className="flex items-center gap-2 pr-3 text-xs">{innehall}</p>
+  return (
+    <button
+      type="button"
+      onClick={onAndra}
+      aria-label={etikett}
+      className="-ml-1.5 flex min-h-11 w-[calc(100%-0.375rem)] items-center gap-2 rounded-knapp px-1.5 text-left text-xs hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
+      {innehall}
+    </button>
+  )
 }
 
 /** Ingredienserna i en egen rätt: högst tre, och resten fälls ut. */
