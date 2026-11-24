@@ -255,6 +255,14 @@ describe('tolkaRattformular', () => {
     expect(tolkaRattformular('x'.repeat(81), [rad('Havregryn', '90')]).ok).toBe(false)
   })
 
+  it('stoppar en ingrediens med längre namn än receptraderna i databasen tillåter', () => {
+    expect(tolkaRattformular('Gröt', [rad('x'.repeat(80), '90')]).ok).toBe(true)
+    expect(tolkaRattformular('Gröt', [rad('Havregryn', '90'), rad('x'.repeat(81), '30')])).toEqual({
+      ok: false,
+      fel: 'Ingrediens 2: namnet får vara högst 80 tecken.',
+    })
+  })
+
   it('säger vilken rad som är fel', () => {
     expect(tolkaRattformular('Gröt', [rad('Havregryn', '90'), rad('', '30')])).toEqual({ ok: false, fel: 'Ingrediens 2: skriv vad ingrediensen heter.' })
     expect(tolkaRattformular('Gröt', [rad('Havregryn', '0')])).toMatchObject({ ok: false, fel: expect.stringContaining('Ingrediens 1: skriv gram') })

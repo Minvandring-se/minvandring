@@ -481,6 +481,7 @@ const VALNAMN: Record<string, string> = {
   ej_angivet: 'Inte angivet',
   klamlas: 'Klämlås',
   vridlas: 'Vridlås',
+  fallbar: 'Fällbar',
   fallbart: 'Fällbart',
   kork_och_skum: 'Kork och skum',
   aaa: 'AAA',
