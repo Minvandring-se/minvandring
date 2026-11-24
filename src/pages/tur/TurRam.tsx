@@ -1,12 +1,11 @@
-import { RefreshCw } from 'lucide-react'
 import { useCallback, useEffect, useState } from 'react'
 import { Outlet, useLocation, useParams } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
 import { Tillbaka } from '@/components/tur/Tillbaka'
 import type { TurKontext } from '@/components/tur/turKontext'
 import { TurHuvud } from '@/components/tur/TurHuvud'
-import { Button } from '@/components/ui/button'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { tolkaRad } from '@/lib/hamtning'
 import { supabase } from '@/lib/supabase'
@@ -90,19 +89,13 @@ function Ram({ id }: { id: string | undefined }) {
     return (
       <div className="space-y-4">
         <Tillbaka />
-        <div role="alert" className="space-y-3">
-          <p className="text-destructive">Det gick inte att hämta turen. Kontrollera uppkopplingen och försök igen.</p>
-          <Button
-            variant="outline"
-            onClick={() => {
-              setTur(undefined)
-              hamtaTur(id).then(visa)
-            }}
-          >
-            <RefreshCw className="size-4" aria-hidden />
-            Försök igen
-          </Button>
-        </div>
+        <Laddfel
+          vad="turen"
+          onForsokIgen={() => {
+            setTur(undefined)
+            hamtaTur(id).then(visa)
+          }}
+        />
       </div>
     )
 

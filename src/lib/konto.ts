@@ -68,7 +68,7 @@ export function authFel(fel: { code?: string; status?: number; name?: string } |
       return 'Det går inte att skapa nya konton just nu.'
   }
   if (fel?.name === 'AuthRetryableFetchError' || fel?.status === 0) {
-    return 'Kunde inte nå servern. Kolla att du är uppkopplad och försök igen.'
+    return 'Det gick inte att nå servern. Kontrollera uppkopplingen och försök igen.'
   }
   if (fel?.status === 429) return 'För många försök. Vänta en stund och försök igen.'
   return ALLMANT_FEL

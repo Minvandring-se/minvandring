@@ -1,5 +1,8 @@
 import { BookmarkPlus, Pencil, Search, Star } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
+import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
+import { TomtLage } from '@/components/app/TomtLage'
 import { EgenRattFormular } from '@/components/mat/EgenRattFormular'
 import { Kostfilterval } from '@/components/mat/Kostfilterval'
 import { Button } from '@/components/ui/button'
@@ -101,16 +104,25 @@ export function ValjRatt({
     const ratt = vy.typ === 'andra' ? vy.ratt : null
     const forsta = ratt ? { namn: ratt.namn, rader: rattTillRader(ratt.id, ingredienser, varor) } : undefined
     return (
-      <Panel etikett={ratt ? `Ändra ${ratt.namn}` : 'Ny egen rätt'} onStang={onStang} rubrik={<h2 className="text-2xl">{ratt ? 'Ändra rätten' : 'Ny egen rätt'}</h2>}>
-        {ratt && forsta && forsta.rader.length > 0 && onSparaSomRecept && (
-          <SparaSomRecept
-            key={ratt.id}
-            namn={forsta.namn}
-            finns={Array.isArray(recept) && !!receptMedNamn(recept, forsta.namn)}
-            onSpara={() => onSparaSomRecept(forsta.namn, forsta.rader)}
-          />
-        )}
         <EgenRattFormular
+          ram={(falt, knappar) => (
+            <Panel
+              etikett={ratt ? `Ändra ${ratt.namn}` : 'Ny egen rätt'}
+              onStang={onStang}
+              rubrik={<h2 className="text-2xl">{ratt ? 'Ändra rätten' : 'Ny egen rätt'}</h2>}
+              fot={knappar}
+            >
+              {ratt && forsta && forsta.rader.length > 0 && onSparaSomRecept && (
+                <SparaSomRecept
+                  key={ratt.id}
+                  namn={forsta.namn}
+                  finns={Array.isArray(recept) && !!receptMedNamn(recept, forsta.namn)}
+                  onSpara={() => onSparaSomRecept(forsta.namn, forsta.rader)}
+                />
+              )}
+              {falt}
+            </Panel>
+          )}
           ny={!ratt}
           forsta={forsta}
           varor={varor}
@@ -130,7 +142,6 @@ export function ValjRatt({
             return ok
           }}
         />
-      </Panel>
     )
   }
 
@@ -234,7 +245,7 @@ function Pasar({
   onValj: (p: Matprodukt) => void
 }) {
   const id = useId()
-  const katalog = useMatkatalog()
+  const { katalog, forsokIgen } = useMatkatalog()
   const [sok, setSok] = useState('')
   const [filter, setFilter] = useState<Kostfilter>(() => filterForGruppen(behov))
   const [allaMaltider, setAllaMaltider] = useState(false)
@@ -249,14 +260,9 @@ function Pasar({
     return skafferietForst(passar, skafferi.favoriter, skafferi.hemma)
   }, [katalog, sok, filter, allaMaltider, maltid, skafferi])
 
-  if (katalog === null) return <p role="status" className="text-muted-foreground">Hämtar katalogen …</p>
-  if (katalog === 'fel')
-    return (
-      <p role="alert" className="text-destructive">
-        Det gick inte att hämta katalogen. Kontrollera uppkopplingen och försök igen.
-      </p>
-    )
-  if (katalog.length === 0) return <p className="text-muted-foreground">Det finns inga påsar i katalogen än. Lägg till en egen rätt i stället.</p>
+  if (katalog === null) return <Listladdar text="Hämtar katalogen" />
+  if (katalog === 'fel') return <Laddfel vad="katalogen" onForsokIgen={forsokIgen} />
+  if (katalog.length === 0) return <TomtLage kompakt text="Det finns inga påsar i katalogen än. Lägg till en egen rätt i stället." />
 
   return (
     <div className="space-y-4">
@@ -363,19 +369,11 @@ function SparaSomRecept({ namn, finns, onSpara }: { namn: string; finns: boolean
 function Receptlista({ recept, valjer, onValj }: { recept: Receptlage; valjer: boolean; onValj: (r: Recept) => void }) {
   const id = useId()
   const [sok, setSok] = useState('')
-  if (recept === null) return <p role="status" className="text-muted-foreground">Hämtar dina recept …</p>
-  if (recept === 'fel')
-    return (
-      <p role="alert" className="text-destructive">
-        Det gick inte att hämta dina recept. Kontrollera uppkopplingen och försök igen.
-      </p>
-    )
+  if (recept === null) return <Listladdar text="Hämtar dina recept" />
+  // Recepten hämtas av turens mat. Panelen kan stängas och öppnas igen, så här finns ingen Försök igen.
+  if (recept === 'fel') return <Laddfel vad="dina recept" />
   if (recept.length === 0)
-    return (
-      <p className="text-muted-foreground">
-        Du har inga recept än. Skapa dem under Matplanering, Recept, eller spara en egen rätt som recept när du ändrar den.
-      </p>
-    )
+    return <TomtLage kompakt text="Du har inga recept än. Skapa dem under Matplanering, Recept, eller spara en egen rätt som recept när du ändrar den." />
   const s = sok.trim().toLowerCase()
   const traffar = recept.filter((r) => !s || r.namn.toLowerCase().includes(s))
   return (
@@ -412,5 +410,16 @@ function Receptlista({ recept, valjer, onValj }: { recept: Receptlage; valjer: b
       </ul>
       {traffar.length === 0 && <p className="text-muted-foreground">Inget recept passar sökningen.</p>}
     </div>
+  )
+}
+
+/** Laddläget för en lista i panelen: några rader i listans form. */
+function Listladdar({ text }: { text: string }) {
+  return (
+    <Laddar text={text} className="space-y-3">
+      <Skelett className="h-14 rounded-lg" />
+      <Skelett className="h-14 rounded-lg" />
+      <Skelett className="h-14 rounded-lg" />
+    </Laddar>
   )
 }

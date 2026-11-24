@@ -1,7 +1,7 @@
-import { RefreshCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Inkopslista } from '@/components/mat/Inkopslista'
 import { Kostbehov } from '@/components/mat/Kostbehov'
@@ -9,7 +9,6 @@ import { Matdag } from '@/components/mat/Matdag'
 import { Matsummering } from '@/components/mat/Matsummering'
 import { ValjRatt } from '@/components/mat/ValjRatt'
 import { useTur } from '@/components/tur/turKontext'
-import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
 import { sparaRecept, useRecept } from '@/hooks/useRecept'
 import { useSkafferi } from '@/hooks/useSkafferi'
@@ -51,16 +50,7 @@ export function TurMat() {
       </Laddar>
     )
 
-  if (lage.lage === 'fel')
-    return (
-      <div role="alert" className="space-y-3">
-        <p className="text-destructive">Det gick inte att hämta matplanen. Kontrollera uppkopplingen och försök igen.</p>
-        <Button variant="outline" onClick={laddaOm}>
-          <RefreshCw className="size-4" aria-hidden />
-          Försök igen
-        </Button>
-      </div>
-    )
+  if (lage.lage === 'fel') return <Laddfel vad="matplanen" onForsokIgen={laddaOm} />
 
   return <Matplanvy plan={lage.plan} dagar={dagar} laddaOm={laddaOm} />
 }
@@ -201,10 +191,8 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
             const plats = sortering(valjer.dag.dag, valjer.maltid)
             let ok: boolean
             if (val.typ === 'befintlig') ok = await laggIMaltid(tur.id, val.rattId, valjer.dag.dag, valjer.maltid, plats)
-            else {
-              const id = await sparaEgenRatt(tur.id, null, val.namn, rader, plan.varor)
-              ok = !!id && (await laggIMaltid(tur.id, id, valjer.dag.dag, valjer.maltid, plats))
-            }
+            // Kopian och måltiden sparas tillsammans, så att ingen kopia blir kvar i turen om måltiden inte går att spara.
+            else ok = !!(await sparaEgenRatt(tur.id, null, val.namn, rader, { dag: valjer.dag.dag, maltid: valjer.maltid, sortering: plats }))
             if (ok) {
               setBesked(receptbesked(val, r.namn))
               setValjer(null)
@@ -242,13 +230,11 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
             return ok
           }}
           onSparaRatt={async (rattId, namn, rader) => {
-            const id = await sparaEgenRatt(tur.id, rattId, namn, rader, plan.varor)
+            // En ny rätt läggs i måltiden i samma transaktion. En ändrad rätt ligger redan där den ligger.
+            const maltid = rattId ? undefined : { dag: valjer.dag.dag, maltid: valjer.maltid, sortering: sortering(valjer.dag.dag, valjer.maltid) }
+            const id = await sparaEgenRatt(tur.id, rattId, namn, rader, maltid)
             if (!id) return false
-            // En ny rätt läggs direkt i måltiden. En ändrad rätt ligger redan där den ligger.
-            if (!rattId) {
-              await laggIMaltid(tur.id, id, valjer.dag.dag, valjer.maltid, sortering(valjer.dag.dag, valjer.maltid))
-              setValjer(null)
-            }
+            if (!rattId) setValjer(null)
             await laddaOm()
             return true
           }}

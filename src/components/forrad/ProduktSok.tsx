@@ -1,8 +1,8 @@
-import { ChevronDown, Plus, Search, X } from 'lucide-react'
+import { ChevronDown, Plus, Search } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
+import { Laddfel } from '@/components/app/Laddfel'
 import { Granskad } from '@/components/forrad/Granskad'
 import { granskning } from '@/lib/granskning'
-import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { KATEGORIER, arKategori, formateraVikt, kategoriFor, type KategoriNyckel, type UnderkategoriNyckel } from '@/lib/forrad'
@@ -34,7 +34,6 @@ interface Props {
   startUnderkategori?: UnderkategoriNyckel
   /** Användaren vill skriva in saken själv. Söktexten följer med som namn, och den valda kategorin som förval. */
   onEgen: (soktext: string, kategori?: KategoriNyckel, underkategori?: UnderkategoriNyckel) => void
-  onStang: () => void
 }
 
 /** Flest produkter som hämtas åt gången. Listan scrollar, så alla i en kategori ska få plats. */
@@ -52,7 +51,7 @@ const radKlass =
  * Första steget i Lägg till: välj kategori och märke och sök i produktkatalogen.
  * Varje modell är en rad. Har den flera storlekar väljer man en av dem, annars läggs saken till direkt.
  */
-export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTillagd, onEgen, onStang }: Props) {
+export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTillagd, onEgen }: Props) {
   const id = useId()
   const falt = useRef<HTMLInputElement>(null)
   const [text, setText] = useState('')
@@ -128,7 +127,7 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
     const { data, error } = await supabase.from('forradssaker').insert(sak).select('id').single()
     setLaggerTill(null)
     if (error || !data) {
-      setFel('Det gick inte att lägga till. Försök igen.')
+      setFel('Det gick inte att lägga till. Kontrollera uppkopplingen och försök igen.')
       return
     }
     onTillagd((data as { id: string }).id, sak.namn)
@@ -141,16 +140,8 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
   const upptagen = laggerTill !== null
 
   return (
-    <section aria-labelledby={`${id}-rubrik`} className="@container space-y-4 rounded-lg border border-border bg-card p-5 shadow-soft sm:p-6">
-      <div className="flex items-start justify-between gap-4">
-        <h2 id={`${id}-rubrik`} className="text-xl">
-          Lägg till utrustning
-        </h2>
-        <Button type="button" variant="ghost" className="-mt-2 -mr-2 size-11 px-0" aria-label="Stäng" onClick={onStang}>
-          <X className="size-5" aria-hidden />
-        </Button>
-      </div>
-
+    // Ligger i en Panel, som har rubriken och stängknappen.
+    <div className="@container space-y-4">
       {/*
         När rutan är bred nog står kategori och märke i en smal kolumn bredvid sökningen och träffarna.
         Annars ligger allt i en kolumn. Det är samma fält i båda lägena, så söktext och val finns kvar när bredden ändras.
@@ -224,8 +215,8 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
 
       <div className="space-y-2">
         <div aria-live="polite" className="text-sm text-muted-foreground">
-          {sokbar && !aktuellt && <p>Söker …</p>}
-          {aktuellt && 'fel' in aktuellt && <p className="text-destructive">Det gick inte att söka. Försök igen.</p>}
+          {sokbar && !aktuellt && <p>Hämtar produkter …</p>}
+          {aktuellt && 'fel' in aktuellt && <Laddfel vad="produkterna" />}
           {modeller?.length === 0 && (
             <p>
               {/* "Inga produkter matchar" sägs bara när man har sökt. En kategori utan produkter är något annat. */}
@@ -295,10 +286,10 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
           className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <Plus className="size-4" aria-hidden />
-          Lägg till egen sak
+          Ny egen sak
         </button>
       </div>
-    </section>
+    </div>
   )
 }
 

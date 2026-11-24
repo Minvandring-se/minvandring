@@ -1,13 +1,24 @@
-import { useEffect, useState } from 'react'
+import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { TurIListan } from '@/lib/turlista'
 
+export interface DinaTurer {
+  /** null medan listan hämtas första gången, eller när den inte gick att hämta. */
+  turer: TurIListan[] | null
+  /** Sant när den senaste hämtningen misslyckades. En lista som redan hämtats står då kvar. */
+  fel: boolean
+  /** Hämtar listan igen. */
+  forsokIgen: () => void
+}
+
 /**
- * Turerna man är med i, för sidomenyns lista Dina turer. Hämtas om när man byter sida,
- * så att en ny, ändrad eller raderad tur syns direkt. null medan listan hämtas första gången.
+ * Turerna man är med i, för sidomenyns lista Dina turer och för Mina matplaner. Hämtas om när man byter sida,
+ * så att en ny, ändrad eller raderad tur syns direkt.
  */
-export function useDinaTurer(anvandarId: string, sida: string): TurIListan[] | null {
+export function useDinaTurer(anvandarId: string, sida: string): DinaTurer {
   const [turer, setTurer] = useState<TurIListan[] | null>(null)
+  const [fel, setFel] = useState(false)
+  const [omgang, setOmgang] = useState(0)
 
   useEffect(() => {
     if (!supabase || !anvandarId) return
@@ -16,13 +27,20 @@ export function useDinaTurer(anvandarId: string, sida: string): TurIListan[] | n
       .from('turer')
       .select('id, namn, avresa, hemkomst, dagar, skapad')
       .then(({ data, error }) => {
+        if (!aktuell) return
+        setFel(!!error)
         // Går det inte att hämta står den förra listan kvar.
-        if (aktuell && !error) setTurer((data as TurIListan[] | null) ?? [])
+        if (!error) setTurer((data as TurIListan[] | null) ?? [])
       })
     return () => {
       aktuell = false
     }
-  }, [anvandarId, sida])
+  }, [anvandarId, sida, omgang])
 
-  return turer
+  const forsokIgen = useCallback(() => {
+    setFel(false)
+    setOmgang((n) => n + 1)
+  }, [])
+
+  return { turer, fel, forsokIgen }
 }

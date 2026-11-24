@@ -86,7 +86,9 @@ const SORTERA: Record<Sortering, (a: Matprodukt, b: Matprodukt) => number> = {
 /** Påsarna som passar sökningen och filtret, sorterade. Varje ord i sökningen måste finnas i märke och namn. */
 export function sokPasar(katalog: readonly Matprodukt[], sok: string, f: Katalogfilter): Matprodukt[] {
   const ord = sok.toLowerCase().split(/\s+/).filter(Boolean)
-  const marke = f.marke.toLowerCase()
+  // Ett märke som inte finns i katalogen, till exempel från en gammal länk, filtrerar inte. Väljaren visar då Alla märken.
+  const onskat = f.marke.toLowerCase()
+  const marke = katalog.some((p) => p.marke.toLowerCase() === onskat) ? onskat : ''
   return katalog
     .filter((p) => {
       if (f.maltid && p.maltid !== f.maltid) return false

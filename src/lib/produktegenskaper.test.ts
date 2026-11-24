@@ -170,6 +170,10 @@ describe('underkategorier utan egna egenskaper', () => {
 describe('visaEgenskaper', () => {
   const rader = (under: string, egenskaper: Record<string, unknown> | null) => visaEgenskaper(under, egenskaper).map((r) => `${r.etikett}: ${r.varde}`)
 
+  it('skriver stavtypen med ä: Fällbar, inte Fallbar', () => {
+    expect(rader('stavar', { typ: 'fallbar' })).toEqual(['Typ: Fällbar'])
+  })
+
   it('visar tältets egenskaper som text, med enheter, decimalkomma och ja eller nej', () => {
     expect(rader('talt', talt)).toEqual([
       'Personer: 2',

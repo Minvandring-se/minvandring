@@ -11,6 +11,7 @@ import { Input } from '@/components/ui/input'
 import { Sektion } from '@/components/ui/sektion'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { supabase } from '@/lib/supabase'
+import { laddfelText } from '@/lib/texter'
 
 /** Ändra sitt visningsnamn och sin profilbild, och logga ut. Namnet följer med till alla turer man är med i. Utseendet finns under Inställningar. */
 export function Profil() {
@@ -104,7 +105,7 @@ export function Profil() {
                 <span className="text-destructive">Namnet gick inte att spara. Kontrollera uppkopplingen och försök igen.</span>
               )}
               {status === 'laddfel' && (
-                <span className="text-destructive">Det gick inte att hämta ditt namn. Ladda om sidan och försök igen.</span>
+                <span className="text-destructive">{laddfelText('ditt namn')}</span>
               )}
             </p>
           </div>

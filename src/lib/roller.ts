@@ -35,7 +35,7 @@ interface DeltagareRoll {
 export function kanTaBort(min: Roll | null, deltagare: DeltagareRoll, mittUserId: string, alla: DeltagareRoll[]): boolean {
   if (deltagare.roll === 'owner' && alla.filter((d) => d.roll === 'owner').length <= 1) return false
   if (arAgare(min)) return true
-  if (kanAndra(min) && deltagare.userId === null) return true
+  if (kanAndra(min) && deltagare.userId === null && deltagare.roll !== 'owner') return true
   return deltagare.userId === mittUserId
 }
 
