@@ -17,10 +17,11 @@ import { useTur } from '@/components/tur/turKontext'
 import { knappStil } from '@/components/ui/knappStil'
 import { sparaRecept, useRecept } from '@/hooks/useRecept'
 import { useAndraTurer, useSkafferi } from '@/hooks/useSkafferi'
-import { andraInkopsrad, laggIMaltid, laggTillPase, sattAtare, sattBarare, slappRader, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, taRader, useMatplan, type Matplan } from '@/hooks/useMatplan'
+import { bockaInkop, laggIMaltid, laggTillPase, sattAtare, sattAvdelning, sattBarare, slappRader, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, taRader, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
 import { dagssummor, dubblettText, inkopslista, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, matviktTotalt, atareFor, barsAvPerson, fordela, platsText, rattPerPortion, rattPlatser, ratterSomSaknar, saknadeMaltider, saknasPerPerson, vemBarVad, type Barrad, type Matdag as Dag, type Matstatus } from '@/lib/mat'
 import { dagensDatum } from '@/lib/datum'
+import { handlingslista } from '@/lib/handlingslista'
 import { personfarger } from '@/lib/personfarg'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import { receptbesked, receptMedNamn, receptTillRader, valForRecept } from '@/lib/recept'
@@ -284,18 +285,20 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
 
       <div id="inkopslista" tabIndex={-1} className="scroll-mt-6 focus:outline-none">
         <Inkopslista
-        rader={inkop}
-        deltagare={deltagare}
-        kanAndra={kanAndra}
-        mittDeltagareId={mittDeltagareId}
-        skafferi={egnaRader}
-        bokade={bokat}
-        onAndra={async (rad, andring) => {
-          const ok = await andraInkopsrad(rad.typ, rad.id, andring)
-          if (ok) await laddaOm()
-          return ok
-        }}
-      />
+          rader={handlingslista(plan, dagar, personIds)}
+          personer={folk.personer}
+          farger={folk.farger}
+          kanAndra={kanAndra}
+          mittDeltagareId={mittDeltagareId}
+          skafferi={egnaRader}
+          bokade={bokat}
+          utskrift={`${turdelAdress(tur.id, 'mat')}/inkopslista`}
+          onBocka={async (rad, klart) => {
+            if (!rad.kopare) return false
+            return ochLaddaOm(await bockaInkop(tur.id, rad.kopare, rad.typ, rad.id, klart))
+          }}
+          onAvdelning={async (varaId, avdelning) => ochLaddaOm(await sattAvdelning(varaId, avdelning))}
+        />
       </div>
 
       {andrar && andrar.length > 0 && (

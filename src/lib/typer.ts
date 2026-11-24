@@ -1,3 +1,4 @@
+import type { Enhet } from './handla'
 import type { Allergen } from './kost'
 import type { Roll } from './roller'
 import type { Typ } from './vikt'
@@ -175,7 +176,11 @@ export interface Receptrad {
   id: string
   recept_id: string
   vara: string
-  gram_per_portion: number
+  /** Mängd och enhet som receptet skrevs med, till exempel 2 dl. Tomt för det som bara ska med, som salt. */
+  mangd: number | null
+  enhet: Enhet | null
+  /** Vikten som energin räknas med. Räknas ut för g och kg, frivillig för andra enheter. */
+  gram_per_portion: number | null
   kcal_per_100g: number | null
   protein_per_100g: number | null
   sortering: number
@@ -209,13 +214,26 @@ export interface Vara {
   varifran: 'kopa' | 'hemifran' | null
   ansvarig: string | null
   klart: boolean
+  /** Butiksavdelningen. Tom: appen gissar utifrån namnet (avdelningFor i handla.ts). */
+  avdelning?: string | null
 }
 
 export interface Ingrediens {
   id: string
   ratt_id: string
   vara_id: string
-  gram_per_portion: number
+  /** Mängd och enhet som rätten skrevs med. Tomt för det som bara ska med, som salt. */
+  mangd: number | null
+  enhet: Enhet | null
+  /** Vikten som energin räknas med. Räknas ut för g och kg, frivillig för andra enheter. */
+  gram_per_portion: number | null
+}
+
+/** En bock i inköpslistan: deltagaren har köpt varan eller påsen (en rätt ur matkatalogen). */
+export interface InkopKlart {
+  deltagare_id: string
+  vara_id: string | null
+  ratt_id: string | null
 }
 
 /** En rätt i en måltid en viss dag. En måltid kan ha flera rätter. */
