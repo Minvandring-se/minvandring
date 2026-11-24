@@ -1,8 +1,9 @@
 -- Handlingslistan: ingredienser skrivs med mängd och enhet (2 dl, 1 st, 1 msk), gram är frivilligt, en egen rätt
--- och ett recept får sakna ingredienser, och varje vara kan få en butiksavdelning.
+-- och ett recept får sakna ingredienser, varje vara kan få en butiksavdelning, och var och en bockar av det hen
+-- köper i en egen tabell (inkop_klart).
 --
--- Inga rader tas bort. Befintliga ingredienser och receptrader får mängden i gram (mangd = gram, enhet = g), så att
--- de visas som förut.
+-- Inga rader tas bort och inga kolumner tas bort. Befintliga ingredienser och receptrader får mängden i gram
+-- (mangd = gram, enhet = g), så att de visas som förut. Befintliga bockar flyttas till den som bär raden.
 
 -- ─── Mängd och enhet ─────────────────────────────────────────────────────────
 -- Enheterna är desamma som i src/lib/handla.ts, och ett test kontrollerar att de stämmer överens.
@@ -11,13 +12,13 @@
 alter table public.ingredienser
   alter column gram_per_portion drop not null,
   add column mangd numeric(7, 2) check (mangd > 0 and mangd <= 10000),
-  add column enhet text check (enhet in ('g', 'kg', 'dl', 'ml', 'st', 'msk', 'tsk')),
+  add column enhet text check (enhet in ('g', 'kg', 'dl', 'ml', 'st', 'msk', 'tsk', 'krm')),
   add constraint ingredienser_mangd_och_enhet check ((mangd is null) = (enhet is null));
 
 alter table public.receptrader
   alter column gram_per_portion drop not null,
   add column mangd numeric(7, 2) check (mangd > 0 and mangd <= 10000),
-  add column enhet text check (enhet in ('g', 'kg', 'dl', 'ml', 'st', 'msk', 'tsk')),
+  add column enhet text check (enhet in ('g', 'kg', 'dl', 'ml', 'st', 'msk', 'tsk', 'krm')),
   add constraint receptrader_mangd_och_enhet check ((mangd is null) = (enhet is null));
 
 update public.ingredienser set mangd = gram_per_portion, enhet = 'g' where gram_per_portion between 1 and 10000;
@@ -36,7 +37,7 @@ alter table public.receptrader add constraint receptrader_gram_av_mangd check (
 -- namnet. Nycklarna står i src/lib/handla.ts, och ett test kontrollerar att de stämmer överens.
 alter table public.varor
   add column avdelning text check (avdelning in (
-    'frukt_gront', 'brod', 'mejeri', 'kott_fisk', 'torrvaror', 'skafferi', 'fryst', 'snacks', 'dryck', 'friluft', 'ovrigt'
+    'frukt_gront', 'brod', 'mejeri', 'kott_fisk', 'torrvaror', 'kryddor_konserver', 'fryst', 'snacks', 'dryck', 'friluft', 'ovrigt'
   ));
 
 -- ─── Egen rätt ───────────────────────────────────────────────────────────────
@@ -142,7 +143,12 @@ $$;
 
 -- ─── Recept ──────────────────────────────────────────────────────────────────
 -- Samma som förut, men receptet får sakna rader, och raderna har mängd och enhet. Gram räknas ut för g och kg.
--- Tabellens egna gränser (vara, gram, mängd, enhet, kcal, protein och en vara per recept) gäller.
+-- Kontrollerna ligger i tabellerna, med samma gränser som i spara_egen_ratt:
+--   recept.namn          inte tomt, högst 80 tecken (check), och ett namn per person oavsett stora och små
+--                        bokstäver (recept_unikt_namn)
+--   receptrader          vara 1–80 tecken, gram 1–5000, mängd över 0 och högst 10000, enhet i listan, mängd och
+--                        enhet tillsammans, gram som stämmer med mängden för g och kg, kcal 0–900, protein 0–100,
+--                        och en vara en gång per recept (receptrader_unik_vara)
 create or replace function public.spara_recept(r uuid, recept_namn text, rader jsonb) returns uuid
 language plpgsql security invoker set search_path = '' as $$
 declare
@@ -177,3 +183,60 @@ begin
   return receptet;
 end;
 $$;
+
+-- ─── Avbockning per person ───────────────────────────────────────────────────
+-- Var och en köper det hen bär, och bockar av det i sin egen lista. Bär två personer rätter med samma vara blir det
+-- två rader i handlingslistan, som bockas av var för sig. En rad här betyder att personen har köpt varan (vara_id)
+-- eller påsen (ratt_id, en rätt ur matkatalogen). Ingen rad: inte köpt än.
+-- varor.klart och ratter.klart står kvar tills appen inte använder dem (se docs/att-ta-senare.md).
+create table public.inkop_klart (
+  id uuid primary key default gen_random_uuid(),
+  tur_id uuid not null references public.turer (id) on delete cascade,
+  deltagare_id uuid not null,
+  vara_id uuid,
+  ratt_id uuid,
+  constraint inkop_klart_vara_eller_ratt check ((vara_id is null) <> (ratt_id is null)),
+  constraint inkop_klart_deltagare_samma_tur foreign key (deltagare_id, tur_id)
+    references public.deltagare (id, tur_id) on delete cascade,
+  constraint inkop_klart_vara_samma_tur foreign key (vara_id, tur_id)
+    references public.varor (id, tur_id) on delete cascade,
+  constraint inkop_klart_ratt_samma_tur foreign key (ratt_id, tur_id)
+    references public.ratter (id, tur_id) on delete cascade
+);
+
+create unique index inkop_klart_vara on public.inkop_klart (deltagare_id, vara_id) where vara_id is not null;
+create unique index inkop_klart_ratt on public.inkop_klart (deltagare_id, ratt_id) where ratt_id is not null;
+create index inkop_klart_tur on public.inkop_klart (tur_id);
+
+-- Det som redan var avbockat flyttas till var och en som bär en rad med varan eller påsen.
+insert into public.inkop_klart (tur_id, deltagare_id, vara_id)
+  select distinct v.tur_id, m.bars_av, v.id
+  from public.varor v
+  join public.ingredienser i on i.vara_id = v.id
+  join public.maltider m on m.ratt_id = i.ratt_id
+  where v.klart and m.bars_av is not null;
+insert into public.inkop_klart (tur_id, deltagare_id, ratt_id)
+  select distinct r.tur_id, m.bars_av, r.id
+  from public.ratter r
+  join public.maltider m on m.ratt_id = r.id
+  where r.klart and r.matprodukt_id is not null and m.bars_av is not null;
+
+-- Medlemmar ser. Ägare och redigerare bockar av och tar bort bockar för alla, och var och en, även en läsare, för
+-- sig själv. En bock ändras inte, den läggs till eller tas bort.
+revoke all on public.inkop_klart from public, anon, authenticated;
+grant select, insert, delete on public.inkop_klart to authenticated;
+
+alter table public.inkop_klart enable row level security;
+
+create policy "medlemmar ser" on public.inkop_klart for select to authenticated
+  using (public.ar_medlem(tur_id));
+create policy "owner, editor eller egen bock lägger till" on public.inkop_klart for insert to authenticated
+  with check (
+    public.kan_andra(tur_id)
+    or exists (select 1 from public.deltagare d where d.id = deltagare_id and d.tur_id = inkop_klart.tur_id and d.user_id = auth.uid())
+  );
+create policy "owner, editor eller egen bock tar bort" on public.inkop_klart for delete to authenticated
+  using (
+    public.kan_andra(tur_id)
+    or exists (select 1 from public.deltagare d where d.id = deltagare_id and d.tur_id = inkop_klart.tur_id and d.user_id = auth.uid())
+  );

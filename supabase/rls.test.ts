@@ -1874,8 +1874,10 @@ describe('matplanen', () => {
           { vara: 'Ägg', mangd: 1, enhet: 'st' },
           { vara: 'Salt till pannkakor' },
           { vara: 'Smör till pannkakor', mangd: 12.5, enhet: 'g' },
+          { vara: 'Kardemumma', mangd: 2, enhet: 'krm' },
         ])
         expect(await mangderI(id)).toEqual([
+          { namn: 'Kardemumma', mangd: '2.00', enhet: 'krm', gram_per_portion: null },
           { namn: 'Mjölk till pannkakor', mangd: '3.00', enhet: 'dl', gram_per_portion: 300 },
           { namn: 'Salt till pannkakor', mangd: null, enhet: null, gram_per_portion: null },
           { namn: 'Smör till pannkakor', mangd: '12.50', enhet: 'g', gram_per_portion: 13 },
@@ -2101,6 +2103,71 @@ describe('matplanen', () => {
     })
   })
 
+  describe('avbockning per person i inköpslistan', () => {
+    let vara: string
+    let pase: string
+    const bocka = (vem: string, deltagare: string, kolumn: 'vara_id' | 'ratt_id', id: string, t = tur) =>
+      som(vem, (tx) => tx.query(`insert into public.inkop_klart (tur_id, deltagare_id, ${kolumn}) values ($1, $2, $3)`, [t, deltagare, id]))
+    const bockar = async (id: string) => (await db.query<{ deltagare_id: string }>('select deltagare_id from public.inkop_klart where vara_id = $1 or ratt_id = $1 order by deltagare_id', [id])).rows.map((r) => r.deltagare_id)
+
+    beforeAll(async () => {
+      vara = await nyVara(REDIGERARE, tur, 'Bockvara')
+      pase = (await db.query<{ id: string }>('select id from public.ratter where tur_id = $1 and matprodukt_id is not null limit 1', [tur])).rows[0].id
+    })
+
+    it('redigeraren bockar av åt vem som helst, och två personer bockar av samma vara var för sig', async () => {
+      await bocka(REDIGERARE, lisa, 'vara_id', vara)
+      await bocka(REDIGERARE, agarensDeltagare, 'vara_id', vara)
+      await bocka(REDIGERARE, lisa, 'ratt_id', pase)
+      expect(await bockar(vara)).toEqual([lisa, agarensDeltagare].sort())
+      expect(await bockar(pase)).toEqual([lisa])
+      // Samma bock två gånger går inte.
+      await forvantaFel(bocka(REDIGERARE, lisa, 'vara_id', vara))
+    })
+
+    it('läsaren ser alla bockar, bockar av och tar bort sin egen, men inte någon annans', async () => {
+      const ser = await som(LASARE, (tx) => tx.query('select 1 from public.inkop_klart where tur_id = $1', [tur]))
+      expect(ser.rows.length).toBeGreaterThan(0)
+      await bocka(LASARE, lasarensDeltagare, 'vara_id', vara)
+      await forvantaFel(bocka(LASARE, redigerarensDeltagare, 'vara_id', vara))
+      const annans = await som(LASARE, (tx) => tx.query('delete from public.inkop_klart where vara_id = $1 and deltagare_id = $2', [vara, lisa]))
+      expect(annans.affectedRows).toBe(0)
+      const egen = await som(LASARE, (tx) => tx.query('delete from public.inkop_klart where vara_id = $1 and deltagare_id = $2', [vara, lasarensDeltagare]))
+      expect(egen.affectedRows).toBe(1)
+    })
+
+    it('den som inte är med ser inga bockar och kan inte bocka av, och anon får ingenting', async () => {
+      const inget = await som(UTOMSTAENDE, (tx) => tx.query('select 1 from public.inkop_klart where tur_id = $1', [tur]))
+      expect(inget.rows).toHaveLength(0)
+      await forvantaFel(bocka(UTOMSTAENDE, lisa, 'vara_id', vara))
+      await forvantaFel(somAnon((tx) => tx.query('select 1 from public.inkop_klart')))
+      const har = async (roll: string, r: string) =>
+        (await db.query<{ ok: boolean }>("select has_table_privilege($1, 'public.inkop_klart', $2) as ok", [roll, r])).rows[0].ok
+      for (const r of ['select', 'insert', 'update', 'delete']) expect(await har('anon', r), r).toBe(false)
+      expect(await har('authenticated', 'update')).toBe(false)
+      const rls = await db.query("select relrowsecurity from pg_class where oid = 'public.inkop_klart'::regclass")
+      expect(rls.rows).toEqual([{ relrowsecurity: true }])
+    })
+
+    it('en bock gäller antingen en vara eller en påse, och allt måste höra till samma tur', async () => {
+      await forvantaFel(som(AGARE, (tx) => tx.query('insert into public.inkop_klart (tur_id, deltagare_id) values ($1, $2)', [tur, lisa])))
+      await forvantaFel(som(AGARE, (tx) => tx.query('insert into public.inkop_klart (tur_id, deltagare_id, vara_id, ratt_id) values ($1, $2, $3, $4)', [tur, lisa, vara, pase])))
+      const annanVara = await nyVara(AGARE, annanTur, 'Vara i annan tur')
+      await forvantaFel(bocka(AGARE, lisa, 'vara_id', annanVara))
+      await forvantaFel(bocka(AGARE, await deltagareFor(annanTur, AGARE), 'vara_id', vara))
+    })
+
+    it('bockarna försvinner med deltagaren och med varan', async () => {
+      const p = await som(AGARE, (tx) => tx.query<{ id: string }>("insert into public.deltagare (tur_id, namn) values ($1, 'Tillfällig köpare') returning id", [tur]))
+      const v = await nyVara(AGARE, tur, 'Tillfällig bockvara')
+      await bocka(AGARE, p.rows[0].id, 'vara_id', vara)
+      await bocka(AGARE, lisa, 'vara_id', v)
+      await som(AGARE, (tx) => tx.query('delete from public.deltagare where id = $1', [p.rows[0].id]))
+      await som(AGARE, (tx) => tx.query('delete from public.varor where id = $1', [v]))
+      expect((await db.query('select 1 from public.inkop_klart where deltagare_id = $1 or vara_id = $2', [p.rows[0].id, v])).rows).toHaveLength(0)
+    })
+  })
+
   describe('kostbehov', () => {
     // Samtycket sparas som en tidpunkt när personen själv sparar sina kostbehov.
     const satt = (vem: string, deltagare: string, utan = `array['gluten']`) =>
@@ -2235,7 +2302,7 @@ describe('matplanen', () => {
       await som(AGARE, (tx) => tx.query('delete from public.deltagare where id = $1', [lasarensDeltagare]))
       const kvar = await db.query('select 1 from public.kostbehov where deltagare_id = $1', [lasarensDeltagare])
       expect(kvar.rows).toHaveLength(0)
-      for (const tabell of ['kostbehov', 'maltider', 'ratter', 'maltid_atare']) {
+      for (const tabell of ['kostbehov', 'maltider', 'ratter', 'maltid_atare', 'inkop_klart']) {
         const r = await som(LASARE, (tx) => tx.query(`select 1 from public.${tabell}`))
         expect(r.rows, tabell).toHaveLength(0)
       }
@@ -2389,10 +2456,29 @@ describe('handlingslistans migrering mot befintliga rader', () => {
         ('${T}', '00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000e3', 90),
         ('${T}', '00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000e5', 0);
       insert into public.recept (id, user_id, namn) values ('00000000-0000-0000-0000-0000000000e4', '${A}', 'Gammalt recept');
+      update public.varor set klart = true where id = '00000000-0000-0000-0000-0000000000e3';
+      insert into public.deltagare (id, tur_id, namn) values ('00000000-0000-0000-0000-0000000000e6', '${T}', 'Lisa');
+      insert into public.matprodukter (id, marke, namn, maltid, vikt_torr_g, kcal, kalla)
+        values ('00000000-0000-0000-0000-0000000000e7', 'Test', 'Påse', 'lunch_middag', 150, 600, 'https://exempel.se');
+      insert into public.ratter (id, tur_id, namn, matprodukt_id, klart)
+        values ('00000000-0000-0000-0000-0000000000e8', '${T}', 'Test Påse', '00000000-0000-0000-0000-0000000000e7', true);
+      insert into public.maltider (tur_id, dag, maltid, ratt_id, bars_av) values
+        ('${T}', 1, 'frukost', '00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000e6'),
+        ('${T}', 2, 'frukost', '00000000-0000-0000-0000-0000000000e2', null),
+        ('${T}', 1, 'lunch', '00000000-0000-0000-0000-0000000000e8', '00000000-0000-0000-0000-0000000000e6');
       insert into public.receptrader (recept_id, user_id, vara, gram_per_portion)
         values ('00000000-0000-0000-0000-0000000000e4', '${A}', 'Bulgur', 80);
     `)
     await korMigreringar(gammal, (f) => f >= fil)
+  })
+
+  it('flyttar befintliga bockar till den som bär raden, och behåller de gamla kolumnerna', async () => {
+    const r = await gammal.query('select deltagare_id, vara_id, ratt_id from public.inkop_klart order by vara_id nulls last')
+    expect(r.rows).toEqual([
+      { deltagare_id: '00000000-0000-0000-0000-0000000000e6', vara_id: '00000000-0000-0000-0000-0000000000e3', ratt_id: null },
+      { deltagare_id: '00000000-0000-0000-0000-0000000000e6', vara_id: null, ratt_id: '00000000-0000-0000-0000-0000000000e8' },
+    ])
+    expect((await gammal.query('select klart from public.varor where klart')).rows).toHaveLength(1)
   })
 
   it('ger befintliga ingredienser och receptrader mängden i gram, och tar inte bort något', async () => {
@@ -2748,6 +2834,14 @@ describe('egna recept', () => {
       await forvantaFel(spara(VERA, null, 'Aldrig sparat', [{ vara: 'Kikärtor', gram: 50 }, { vara: 'x'.repeat(81), gram: 10 }]))
       await forvantaFel(spara(VERA, null, 'orört RECEPT', [{ vara: 'Kikärtor', gram: 50 }]))
       expect((await db.query(`select 1 from public.recept where namn = 'Aldrig sparat'`)).rows).toHaveLength(0)
+    })
+
+    it('stoppar tomt namn, för långt namn och samma namn två gånger, oavsett stora och små bokstäver', async () => {
+      await forvantaFel(spara(VERA, null, '   ', []))
+      await forvantaFel(spara(VERA, null, 'x'.repeat(81), []))
+      await spara(VERA, null, 'Unikt recept', [])
+      await forvantaFel(spara(VERA, null, 'UNIKT RECEPT', []))
+      expect((await spara(VERA, null, 'y'.repeat(80), [])).length).toBeGreaterThan(0)
     })
 
     it('sparar ett recept utan rader, och rader med mängd och enhet', async () => {

@@ -10,8 +10,8 @@ describe('avdelningFor', () => {
 
   it('gissar utifrån namnet', () => {
     expect(avdelningFor('Mjölk', null)).toBe('mejeri')
-    expect(avdelningFor('Kokosmjölk', null)).toBe('skafferi')
-    expect(avdelningFor('Vetemjöl', null)).toBe('skafferi')
+    expect(avdelningFor('Kokosmjölk', null)).toBe('kryddor_konserver')
+    expect(avdelningFor('Vetemjöl', null)).toBe('kryddor_konserver')
     expect(avdelningFor('Knäckebröd', null)).toBe('brod')
     expect(avdelningFor('Laxfilé', null)).toBe('kott_fisk')
     expect(avdelningFor('Potatismos pulver', null)).toBe('torrvaror')
