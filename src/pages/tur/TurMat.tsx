@@ -16,7 +16,7 @@ import { TurFlikar } from '@/components/tur/TurHuvud'
 import { useTur } from '@/components/tur/turKontext'
 import { knappStil } from '@/components/ui/knappStil'
 import { sparaRecept, useRecept } from '@/hooks/useRecept'
-import { useAndraTurer, useSkafferi } from '@/hooks/useSkafferi'
+import { laggISkafferi, useAndraTurer, useSkafferi } from '@/hooks/useSkafferi'
 import { bockaInkop, laggIMaltid, laggTillPase, sattAtare, sattAvdelning, sattBarare, slappRader, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, taRader, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
 import { dagssummor, dubblettText, inkopslista, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, matviktTotalt, atareFor, barsAvPerson, fordela, platsText, rattPerPortion, rattPlatser, ratterSomSaknar, saknadeMaltider, saknasPerPerson, vemBarVad, type Barrad, type Matdag as Dag, type Matstatus } from '@/lib/mat'
@@ -25,7 +25,7 @@ import { handlingslista } from '@/lib/handlingslista'
 import { personfarger } from '@/lib/personfarg'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import { receptbesked, receptMedNamn, receptTillRader, valForRecept } from '@/lib/recept'
-import { bokade, hemma, ledigaHemma, senastAnvanda, turerFore } from '@/lib/skafferi'
+import { bokade, garUtFore, hemma, jamforDatum, ledigaHemma, senastAnvanda, turerFore } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import { turdelAdress } from '@/lib/turdelar'
 import type { DeltagareRad, Maltid, Maltidsrad } from '@/lib/typer'
@@ -110,7 +110,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
   const [besked, setBesked] = useState<string | null>(null)
   const { recept, laddaOm: laddaOmRecept } = useRecept()
   // Ens eget skafferi. Om det inte går att hämta visas matplanen ändå, utan uppgifterna om vad man har hemma.
-  const { skafferi } = useSkafferi()
+  const { skafferi, laddaOm: laddaOmSkafferi } = useSkafferi()
   const egnaRader = useMemo(() => (skafferi && skafferi !== 'fel' ? skafferi.rader : []), [skafferi])
   const mittDeltagareId = deltagare.find((d) => d.user_id === mittUserId)?.id ?? null
   // Påsarna i ens andra turer: det man har hemma och som går till en tur som börjar före den här är bokat.
@@ -121,10 +121,12 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
     return {
       favoriter: skafferi && skafferi !== 'fel' ? skafferi.favoriter : new Set<string>(),
       hemma: ledigaHemma(hemma(egnaRader, lokaltDatum()), bokat),
+      // Påsar hemma som går ut före turens första dag går att välja, men märks.
+      garUt: new Set(egnaRader.filter((r) => garUtFore(r.bast_fore, jamforDatum(tur.avresa, lokaltDatum()))).map((r) => r.matprodukt_id)),
       bokade: bokat,
       senast: senastAnvanda([...denna, ...andra.pasar], andra.turer, tur.id),
     }
-  }, [skafferi, egnaRader, bokat, plan.ratter, andra, tur.id])
+  }, [skafferi, egnaRader, bokat, plan.ratter, andra, tur.id, tur.avresa])
 
   const personer = plan.matdeltagare.filter((d) => d.typ === 'person').length
   // Personerna i turens ordning, med en färg var. Bara personer bär och äter rätterna.
@@ -231,6 +233,11 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
           onTa={async (r: Barrad) => ochLaddaOm(await taRader(r.maltidIds))}
           onSlapp={async (r: Barrad) => ochLaddaOm(await slappRader(r.maltidIds))}
           onFordela={fordelaRader}
+          pasFor={(rattId) => {
+            const mp = plan.ratter.find((r) => r.id === rattId)?.matprodukt_id
+            const p = mp ? plan.pasar.get(mp) : undefined
+            return p ? { marke: p.marke, namn: p.namn } : undefined
+          }}
         />
       </div>
 
@@ -292,6 +299,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
           mittDeltagareId={mittDeltagareId}
           skafferi={egnaRader}
           bokade={bokat}
+          avresa={tur.avresa}
           utskrift={`${turdelAdress(tur.id, 'mat')}/inkopslista`}
           onBocka={async (rad, klart) => {
             if (!rad.kopare) return false
@@ -335,6 +343,11 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
           skafferi={egetSkafferi}
           recept={recept}
           finnsRedan={(rattId) => dubblettText(rattPlatser(plan.maltider, dagar, rattId))}
+          laggISkafferi={async (pase, antal, bastFore) => {
+            const ny = await laggISkafferi(pase.id, egnaRader.find((r) => r.matprodukt_id === pase.id), antal, bastFore)
+            if (ny) await laddaOmSkafferi()
+            return ny
+          }}
           onValjRecept={async (r) => {
             const rader = receptTillRader(r)
             const val = valForRecept(r.namn, rader, plan.ratter, plan.ingredienser, plan.varor)

@@ -2,6 +2,7 @@ import { ArrowLeft, Printer } from 'lucide-react'
 import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
+import { PasNamn } from '@/components/mat/PasNamn'
 import { useTur } from '@/components/tur/turKontext'
 import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
@@ -77,7 +78,7 @@ export function TurInkopslista() {
                         </span>
                         <span className="min-w-0 flex-1 break-words">
                           <span className="sr-only">{r.klart ? 'Köpt: ' : ''}</span>
-                          {r.namn}
+                          {r.pase ? <PasNamn marke={r.pase.marke} namn={r.pase.namn} /> : r.namn}
                           {r.hemifran && <span className="text-muted-foreground"> (hemifrån)</span>}
                         </span>
                         {r.mangd && <span className="shrink-0 tabular-nums">{r.mangd}</span>}

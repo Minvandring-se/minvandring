@@ -62,7 +62,7 @@ function plus(a: Naring, b: Naring, ganger = 1): Naring {
   }
 }
 
-export type Pase = Pick<Matprodukt, 'id' | 'vikt_torr_g' | 'portioner' | 'kcal' | 'protein_g'>
+export type Pase = Pick<Matprodukt, 'id' | 'vikt_torr_g' | 'portioner' | 'kcal' | 'protein_g'> & Partial<Pick<Matprodukt, 'marke' | 'namn'>>
 
 /** En portion ur en påse. */
 export function pasePerPortion(p: Pase): Naring {
