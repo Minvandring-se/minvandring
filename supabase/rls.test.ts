@@ -2519,6 +2519,44 @@ describe('packlistan', () => {
     expect((await status(sovsack, david)).rows[0]).toMatchObject({ namn: 'Lånad sovsäck', vikt_g: 1200 })
   })
 
+  it('vem som helst i turen, även en läsare, tar på sig en gemensam sak som ingen bär, och släpper den igen', async () => {
+    const k = await som(PA, (tx) =>
+      tx.query<{ id: string }>(`insert into public.packrader (tur_id, namn, kategori, gemensam) values ($1, 'Kök', 'kok', true) returning id`, [tur]),
+    )
+    const kok = k.rows[0].id
+    const barare = async () => (await db.query<{ bars_av: string | null }>('select bars_av from public.packrader where id = $1', [kok])).rows[0].bars_av
+
+    await som(PD, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [kok]))
+    expect(await barare()).toBe(david)
+    // Ingen kan ta en sak som någon annan redan tar med, eller släppa någon annans.
+    await forvantaFel(som(PC, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [kok])))
+    await forvantaFel(som(PC, (tx) => tx.query('select public.ta_med_gemensam($1, false)', [kok])))
+    expect(await barare()).toBe(david)
+
+    await som(PD, (tx) => tx.query('select public.ta_med_gemensam($1, false)', [kok]))
+    expect(await barare()).toBeNull()
+  })
+
+  it('funktionen tar inte en rad som inte är gemensam, och fungerar inte för den som står utanför', async () => {
+    const r = await som(PA, (tx) => tx.query<{ id: string }>(`insert into public.packrader (tur_id, namn) values ($1, 'Annas pannlampa') returning id`, [tur]))
+    await forvantaFel(som(PD, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [r.rows[0].id])))
+    const g = await som(PA, (tx) =>
+      tx.query<{ id: string }>(`insert into public.packrader (tur_id, namn, gemensam) values ($1, 'Karta', true) returning id`, [tur]),
+    )
+    await forvantaFel(som(PB, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [g.rows[0].id])))
+    await forvantaFel(somAnon((tx) => tx.query('select public.ta_med_gemensam($1, true)', [g.rows[0].id])))
+    const b = await db.query<{ bars_av: string | null }>('select bars_av from public.packrader where id = $1', [g.rows[0].id])
+    expect(b.rows[0].bars_av).toBeNull()
+  })
+
+  it('en läsare kan inte svara på frågan om dubbletter, men en redigerare kan', async () => {
+    const r = await som(PD, (tx) => tx.query(`update public.packrader set dubblett_ok = true where id = $1`, [talt]))
+    expect(r.affectedRows).toBe(0)
+    await som(PC, (tx) => tx.query(`update public.packrader set dubblett_ok = true where id = $1`, [talt]))
+    const d = await db.query<{ dubblett_ok: boolean }>('select dubblett_ok from public.packrader where id = $1', [talt])
+    expect(d.rows[0].dubblett_ok).toBe(true)
+  })
+
   it('den som inte är med i turen och den som inte är inloggad ser ingenting', async () => {
     const rader = await som(PB, (tx) => tx.query('select id from public.packrader where tur_id = $1', [tur]))
     expect(rader.rows).toHaveLength(0)

@@ -35,6 +35,10 @@ alter table public.packrader
   add column gemensam boolean not null default false,
   add constraint packrader_gemensam_eller_alla check (not (gemensam and alla));
 
+-- När två i gruppen packar samma sort, till exempel två kök, frågar appen om båda behövs. Svarar man ja sätts
+-- dubblett_ok på raderna, och frågan kommer tillbaka först när en ny rad av samma sort läggs till.
+alter table public.packrader add column dubblett_ok boolean not null default false;
+
 -- Befintliga rader rättas först, så att villkoren går att lägga till.
 update public.packrader set namn = 'Namnlös' where btrim(namn) = '';
 update public.packrader set namn = left(btrim(namn), 120) where char_length(namn) > 120;
@@ -95,3 +99,35 @@ create policy "owner, editor eller egen rad" on public.packstatus for all to aut
     public.kan_andra(tur_id)
     or exists (select 1 from public.deltagare d where d.id = deltagare_id and d.tur_id = packstatus.tur_id and d.user_id = auth.uid())
   );
+
+-- ─── Ta med en gemensam sak ──────────────────────────────────────────────────
+-- Var och en i turen, även en läsare, kan ta på sig en gemensam rad som ingen bär, och släppa en rad hen själv bär.
+-- Funktionen gör bara det och kan inte ta en rad från någon annan. Läsare får annars inte ändra packrader.
+create function public.ta_med_gemensam(rad uuid, ta boolean) returns void
+language plpgsql security definer set search_path = '' as $$
+declare
+  jag uuid;
+begin
+  select d.id into jag
+    from public.packrader r
+    join public.deltagare d on d.tur_id = r.tur_id and d.user_id = auth.uid()
+    where r.id = rad and r.gemensam;
+  if jag is null then
+    raise exception 'Raden finns inte eller är inte gemensam i en tur du är med i';
+  end if;
+  if ta then
+    update public.packrader set bars_av = jag where id = rad and bars_av is null;
+    if not found then
+      raise exception 'Någon annan tar redan med den';
+    end if;
+  else
+    update public.packrader set bars_av = null where id = rad and bars_av = jag;
+    if not found then
+      raise exception 'Du tar inte med den';
+    end if;
+  end if;
+end;
+$$;
+
+revoke execute on function public.ta_med_gemensam(uuid, boolean) from public, anon;
+grant execute on function public.ta_med_gemensam(uuid, boolean) to authenticated;

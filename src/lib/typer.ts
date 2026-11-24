@@ -108,6 +108,8 @@ export interface PackradRad {
   alla: boolean
   /** En person bär raden åt gruppen. */
   gemensam: boolean
+  /** Svaret att alla rader av samma sort behövs, så att appen inte frågar igen. */
+  dubblett_ok: boolean
   med: boolean
   notering: string | null
   sortering: number
