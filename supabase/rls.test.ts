@@ -1607,6 +1607,22 @@ describe('matplanen', () => {
       await forvantaFel(somAnon((tx) => tx.query('select nummer from public.livsmedel')))
     })
 
+    it('har allergener för enkla råvaror från seeden, som inloggade läser, och bara EU:s nycklar', async () => {
+      const r = await som(UTOMSTAENDE, (tx) =>
+        tx.query<{ namn: string; allergener: string[] | null }>(
+          "select namn, allergener from public.livsmedel where namn in ('Vetemjöl', 'Linser torkade', 'Lapskojs') order by namn",
+        ),
+      )
+      expect(r.rows).toEqual([
+        { namn: 'Lapskojs', allergener: null },
+        { namn: 'Linser torkade', allergener: [] },
+        { namn: 'Vetemjöl', allergener: ['gluten'] },
+      ])
+      // Testpastan har gruppen "Pasta", som inte är en enkel grupp, så allergenerna är okända.
+      expect((await db.query('select allergener from public.livsmedel where nummer = 990001')).rows).toEqual([{ allergener: null }])
+      await forvantaFel(db.query("update public.livsmedel set allergener = array['nagot'] where nummer = 990001"))
+    })
+
     it('har bara select för inloggade och ingenting för anon, och RLS är påslaget', async () => {
       // Prövar rättigheterna direkt, så att testet inte litar på att en check eller ett villkor råkar neka.
       const har = async (roll: string, vad: string) =>
