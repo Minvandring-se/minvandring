@@ -172,3 +172,25 @@ export function behovstext(b: Omit<Behov, 'namn'>): string {
 
 /** Texten vid kryssrutan för samtycke. Kostbehov sparas bara när den är ikryssad. */
 export const SAMTYCKE = 'Jag samtycker till att mina kostbehov och allergier sparas och visas för deltagarna i den här turen.'
+
+/**
+ * Vad en person har sagt om sina kostbehov i turen. Ingen rad betyder att personen inte har svarat, och en rad
+ * utan val betyder att personen har sagt att den inte har några kostbehov.
+ */
+export type Kostsvar = { lage: 'behov'; text: string } | { lage: 'inga' } | { lage: 'inte-svarat' } | { lage: 'utan-konto' }
+
+export function kostsvar(person: { user_id: string | null }, rad: Omit<Behov, 'namn'> | undefined): Kostsvar {
+  if (rad) {
+    const text = behovstext(rad)
+    return text ? { lage: 'behov', text } : { lage: 'inga' }
+  }
+  return person.user_id === null ? { lage: 'utan-konto' } : { lage: 'inte-svarat' }
+}
+
+/** Texten för ett svar: kostbehoven, "Inga kostbehov" eller att uppgifterna saknas. */
+export function kostsvarText(svar: Kostsvar): string {
+  if (svar.lage === 'behov') return svar.text
+  if (svar.lage === 'inga') return 'Inga kostbehov'
+  if (svar.lage === 'inte-svarat') return 'Har inte angett något än'
+  return 'Kan fylla i själv när hen har gått med'
+}

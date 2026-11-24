@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arAllergen, behovstext, filterForGruppen, passarFilter, skalForPerson, uppraknade, varningar, type Behov, type Kostinfo } from './kost'
+import { arAllergen, behovstext, filterForGruppen, kostsvar, kostsvarText, passarFilter, skalForPerson, uppraknade, varningar, type Behov, type Kostinfo } from './kost'
 
 const kand: Kostinfo = { vegetarisk: true, vegansk: false, glutenfri: true, laktosfri: true, allergener: ['soja', 'selleri'] }
 const okand: Kostinfo = { vegetarisk: null, vegansk: null, glutenfri: null, laktosfri: null, allergener: null }
@@ -132,5 +132,25 @@ describe('behovstext', () => {
 
   it('är tom utan behov', () => {
     expect(behovstext(behov('Lisa'))).toBe('')
+  })
+})
+
+describe('kostsvar', () => {
+  const inga = { vegetarisk: false, vegansk: false, glutenfri: false, laktosfri: false, utan: [] }
+
+  it('skiljer på att inte ha svarat och att ha sagt att man inte har några kostbehov', () => {
+    expect(kostsvar({ user_id: 'u' }, undefined)).toEqual({ lage: 'inte-svarat' })
+    expect(kostsvar({ user_id: 'u' }, inga)).toEqual({ lage: 'inga' })
+    expect(kostsvarText({ lage: 'inte-svarat' })).toBe('Har inte angett något än')
+    expect(kostsvarText({ lage: 'inga' })).toBe('Inga kostbehov')
+  })
+
+  it('visar kostbehoven som text', () => {
+    const svar = kostsvar({ user_id: 'u' }, { ...inga, glutenfri: true, utan: ['notter'] })
+    expect(svar).toEqual({ lage: 'behov', text: 'Glutenfri, tål inte nötter' })
+  })
+
+  it('säger att en person utan konto kan fylla i själv', () => {
+    expect(kostsvar({ user_id: null }, undefined)).toEqual({ lage: 'utan-konto' })
   })
 })

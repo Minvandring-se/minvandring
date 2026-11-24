@@ -70,7 +70,7 @@ export function Integritet() {
         <p>
           Kostbehov och allergier är uppgifter om hälsa. Dem sparar vi bara med ditt samtycke, som du ger med en kryssruta när du
           sparar dem i en tur. Samtycket gäller den turen. Du återkallar det genom att ta bort dina kostbehov: tryck på Ta bort mina
-          kostbehov, eller bocka ur allt och spara. Då raderas uppgifterna direkt. De raderas också när du lämnar turen eller turen
+          kostbehov. Då raderas uppgifterna direkt. De raderas också när du lämnar turen eller turen
           raderas.
         </p>
       </Avsnitt>

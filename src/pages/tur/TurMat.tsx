@@ -1,5 +1,5 @@
-import { useMemo, useState } from 'react'
-import { Link } from 'react-router'
+import { useEffect, useMemo, useState } from 'react'
+import { Link, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
@@ -7,14 +7,19 @@ import { Inkopslista } from '@/components/mat/Inkopslista'
 import { Kostbehov } from '@/components/mat/Kostbehov'
 import { Matdag } from '@/components/mat/Matdag'
 import { Matsummering } from '@/components/mat/Matsummering'
+import { NastaAttPlanera } from '@/components/mat/NastaAttPlanera'
+import { TurMatHuvud } from '@/components/mat/TurMatHuvud'
 import { ValjRatt } from '@/components/mat/ValjRatt'
+import { VemTarMedVad } from '@/components/mat/VemTarMedVad'
+import { TurFlikar } from '@/components/tur/TurHuvud'
 import { useTur } from '@/components/tur/turKontext'
 import { knappStil } from '@/components/ui/knappStil'
 import { sparaRecept, useRecept } from '@/hooks/useRecept'
 import { useSkafferi } from '@/hooks/useSkafferi'
 import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
-import { dagssummor, inkopslista, MALTIDER, matdagar, matsummering, matviktTotalt, rattPerPortion, type Matdag as Dag } from '@/lib/mat'
+import { dagssummor, inkopslista, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, matviktTotalt, rattPerPortion, vemTarMedVad, type Ansvarsratt, type Matdag as Dag, type Matstatus } from '@/lib/mat'
+import { dagensDatum } from '@/lib/datum'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import { receptbesked, receptMedNamn, receptTillRader, valForRecept } from '@/lib/recept'
 import { hemma } from '@/lib/skafferi'
@@ -23,36 +28,43 @@ import { turdelAdress } from '@/lib/turdelar'
 import type { DeltagareRad, Maltid, Maltidsrad } from '@/lib/typer'
 import { matvikter } from '@/lib/vikt'
 
-/** Turens flik Mat: summeringen och en sektion per dag med måltiderna. Ägare och redigerare ändrar, läsare ser. */
+/**
+ * Turens flik Mat: ett kompakt mörkgrönt huvud med hur många måltider som är planerade, turens flikar, Nästa att
+ * planera och Vem tar med vad, kostbehoven, en ruta per dag och måltid, och sist summeringen och inköpslistan.
+ * Ägare och redigerare ändrar, läsare ser.
+ */
 export function TurMat() {
   const { tur } = useTur()
   const { lage, laddaOm } = useMatplan(tur.id)
   const dagar = matdagar(tur.dagar, tur.reservdagar)
+  const status = lage.lage === 'klar' ? matstatus(dagar, lage.plan.maltider.filter((m) => lage.plan.ratter.some((r) => r.id === m.ratt_id))) : null
 
-  if (dagar.length === 0)
-    return (
-      <TomtLage
-        rubrik="Hur många dagar är turen?"
-        text="Matplanen delas upp dag för dag. Ange antalet vandringsdagar i översikten först."
-        knapp={
-          <Link to={turdelAdress(tur.id, 'oversikt')} className={knappStil({ variant: 'outline' })}>
-            Till översikten
-          </Link>
-        }
-      />
-    )
-
-  if (lage.lage === 'laddar')
-    return (
-      <Laddar text="Hämtar matplanen" className="space-y-4">
-        <Skelett className="h-40 rounded-lg" />
-        <Skelett className="h-72 rounded-lg" />
-      </Laddar>
-    )
-
-  if (lage.lage === 'fel') return <Laddfel vad="matplanen" onForsokIgen={laddaOm} />
-
-  return <Matplanvy plan={lage.plan} dagar={dagar} laddaOm={laddaOm} />
+  return (
+    <div className="space-y-5 lg:space-y-6">
+      <TurMatHuvud tur={tur} status={dagar.length === 0 ? { totalt: 0, planerade: 0, saknas: 0, forsta: null } : status} />
+      <TurFlikar turId={tur.id} />
+      {dagar.length === 0 ? (
+        <TomtLage
+          rubrik="Hur många dagar är turen?"
+          text="Matplanen delas upp dag för dag. Ange antalet vandringsdagar i översikten först."
+          knapp={
+            <Link to={turdelAdress(tur.id, 'oversikt')} className={knappStil({ variant: 'outline' })}>
+              Till översikten
+            </Link>
+          }
+        />
+      ) : lage.lage === 'laddar' ? (
+        <Laddar text="Hämtar matplanen" className="space-y-4">
+          <Skelett className="h-48 rounded-yta" />
+          <Skelett className="h-72 rounded-ruta" />
+        </Laddar>
+      ) : lage.lage === 'fel' ? (
+        <Laddfel vad="matplanen" onForsokIgen={laddaOm} />
+      ) : (
+        <Matplanvy plan={lage.plan} dagar={dagar} status={status!} laddaOm={laddaOm} />
+      )}
+    </div>
+  )
 }
 
 /** Kostbehoven med deltagarnas namn, för varningarna. Bara personer som finns kvar i turen. */
@@ -63,9 +75,31 @@ function behovMedNamn(plan: Matplan, deltagare: readonly DeltagareRad[]): Behov[
   })
 }
 
-function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; laddaOm: () => Promise<void> }) {
+/** Dag och måltid från adressen (?dag=2&maltid=lunch), om de finns i turen. */
+function platsIAdressen(sok: URLSearchParams, dagar: readonly Dag[]): { dag: number; maltid: Maltid } | null {
+  const dag = Number(sok.get('dag'))
+  const maltid = sok.get('maltid')
+  if (!dagar.some((d) => d.dag === dag) || !MALTIDER.some((m) => m.nyckel === maltid)) return null
+  return { dag, maltid: maltid as Maltid }
+}
+
+function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag[]; status: Matstatus; laddaOm: () => Promise<void> }) {
   const { tur, deltagare, minRoll, mittUserId } = useTur()
   const kanAndra = rollKanAndra(minRoll)
+  const [sok] = useSearchParams()
+  // Måltiden som ska ha fokus: den i adressen när sidan öppnas, och sedan den man nyss ändrade, så att man stannar
+  // på samma dag. n gör att samma måltid kan få fokus igen.
+  const [fokus, setFokus] = useState<{ dag: number; maltid: Maltid; n: number } | null>(() => {
+    const plats = platsIAdressen(sok, dagar)
+    return plats && { ...plats, n: 0 }
+  })
+  useEffect(() => {
+    if (!fokus) return
+    const ruta = document.getElementById(maltidsrutaId(fokus.dag, fokus.maltid))
+    ruta?.focus({ preventScroll: true })
+    ruta?.scrollIntoView({ block: fokus.n === 0 ? 'center' : 'nearest' })
+  }, [fokus])
+  const fokusera = (dag: number, maltid: Maltid) => setFokus((f) => ({ dag, maltid, n: (f?.n ?? 0) + 1 }))
   const [valjer, setValjer] = useState<{ dag: Dag; maltid: Maltid } | null>(null)
   const [fel, setFel] = useState<string | null>(null)
   // En kort text om vad som hände när ett recept lades i turen och namnet redan fanns.
@@ -106,16 +140,49 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
   }
 
   async function taBort(rad: Maltidsrad) {
-    await efter(await taBortUrMaltid(rad.id), 'Det gick inte att ta bort rätten ur måltiden. Kontrollera uppkopplingen och försök igen.')
+    const ok = await efter(await taBortUrMaltid(rad.id), 'Det gick inte att ta bort rätten ur måltiden. Kontrollera uppkopplingen och försök igen.')
+    if (ok) fokusera(rad.dag, rad.maltid)
+  }
+
+  /** Jag tar den: påsen, eller den egna rättens varor som saknar ansvarig. Samma fält som inköpslistan. */
+  async function taAnsvar(r: Ansvarsratt): Promise<boolean> {
+    if (!mittDeltagareId) return false
+    const svar =
+      r.typ === 'pase'
+        ? [await andraInkopsrad('pase', r.rattId, { ansvarig: mittDeltagareId })]
+        : await Promise.all(r.varorUtanAnsvarig.map((v) => andraInkopsrad('vara', v, { ansvarig: mittDeltagareId })))
+    // Gick bara en del igenom syns det som gick, och resten står kvar under Saknar ansvarig.
+    await laddaOm()
+    return svar.every(Boolean)
+  }
+
+  /** Efter att en rätt har lagts till: stäng väljaren, hämta om och stanna på samma måltid. */
+  async function lagdTill(dag: number, maltid: Maltid) {
+    setValjer(null)
+    await laddaOm()
+    fokusera(dag, maltid)
   }
 
   const maltidsnamn = (m: Maltid) => MALTIDER.find((x) => x.nyckel === m)!.etikett
+  const vemTar = vemTarMedVad(plan, dagar)
+  const forstaDatum = status.forsta && !status.forsta.dag.reserv ? dagensDatum(tur.avresa, status.forsta.dag.dag) : null
 
   return (
-    <div className="space-y-5">
+    <div className="space-y-6 lg:space-y-8">
       {!kanAndra && <p className="text-muted-foreground">Du är läsare. Du kan se matplanen och ange dina egna kostbehov. Ägare och redigerare ändrar resten.</p>}
 
-      <Matsummering summering={matsummering(summor)} totaltG={totaltG} perPerson={perPerson} />
+      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-8">
+        <NastaAttPlanera
+          status={status}
+          datum={forstaDatum}
+          kanAndra={kanAndra}
+          onValj={(plats) => {
+            setBesked(null)
+            setValjer({ dag: plats.dag, maltid: plats.maltid })
+          }}
+        />
+        <VemTarMedVad rader={vemTar} deltagare={deltagare} mittDeltagareId={mittDeltagareId} kanAndra={kanAndra} onTa={taAnsvar} />
+      </div>
 
       <Kostbehov
         deltagare={deltagare}
@@ -143,11 +210,12 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
         {besked}
       </p>
 
-      <div className="grid grid-cols-1 gap-5 lg:grid-cols-2">
+      <div className="space-y-8">
         {summor.map((summa) => (
           <Matdag
             key={summa.dag.dag}
             summa={summa}
+            datum={summa.dag.reserv ? null : dagensDatum(tur.avresa, summa.dag.dag)}
             maltider={plan.maltider.filter((m) => m.dag === summa.dag.dag)}
             ratter={ratter}
             behov={behov}
@@ -161,7 +229,10 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
         ))}
       </div>
 
-      <Inkopslista
+      <Matsummering summering={matsummering(summor)} totaltG={totaltG} perPerson={perPerson} />
+
+      <div id="inkopslista" tabIndex={-1} className="scroll-mt-6 focus:outline-none">
+        <Inkopslista
         rader={inkop}
         deltagare={deltagare}
         kanAndra={kanAndra}
@@ -173,6 +244,7 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
           return ok
         }}
       />
+      </div>
 
       {valjer && (
         <ValjRatt
@@ -195,8 +267,7 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
             else ok = !!(await sparaEgenRatt(tur.id, null, val.namn, rader, { dag: valjer.dag.dag, maltid: valjer.maltid, sortering: plats }))
             if (ok) {
               setBesked(receptbesked(val, r.namn))
-              setValjer(null)
-              await laddaOm()
+              await lagdTill(valjer.dag.dag, valjer.maltid)
             }
             return ok
           }}
@@ -210,18 +281,12 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
           onValjPase={async (pase) => {
             const befintlig = plan.ratter.find((r) => r.matprodukt_id === pase.id)
             const ok = await laggTillPase(tur.id, pase, befintlig, valjer.dag.dag, valjer.maltid, sortering(valjer.dag.dag, valjer.maltid))
-            if (ok) {
-              setValjer(null)
-              await laddaOm()
-            }
+            if (ok) await lagdTill(valjer.dag.dag, valjer.maltid)
             return ok
           }}
           onValjRatt={async (rattId) => {
             const ok = await laggIMaltid(tur.id, rattId, valjer.dag.dag, valjer.maltid, sortering(valjer.dag.dag, valjer.maltid))
-            if (ok) {
-              setValjer(null)
-              await laddaOm()
-            }
+            if (ok) await lagdTill(valjer.dag.dag, valjer.maltid)
             return ok
           }}
           onTaBortRatt={async (rattId) => {
@@ -234,8 +299,8 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
             const maltid = rattId ? undefined : { dag: valjer.dag.dag, maltid: valjer.maltid, sortering: sortering(valjer.dag.dag, valjer.maltid) }
             const id = await sparaEgenRatt(tur.id, rattId, namn, rader, maltid)
             if (!id) return false
-            if (!rattId) setValjer(null)
-            await laddaOm()
+            if (rattId) await laddaOm()
+            else await lagdTill(valjer.dag.dag, valjer.maltid)
             return true
           }}
         />

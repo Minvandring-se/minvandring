@@ -59,6 +59,7 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Kcal, protein och matvikt per person och dag | Finns |
 | Kostbehov och allergier per deltagare, med samtycke | Finns |
 | Varning när en påse inte passar någon i gruppen | Finns |
+| Fliken Mat: kompakt turhuvud, en ruta per måltid, Nästa att planera och Vem tar med vad | Finns |
 | Kostinformation för egna rätter | Senare |
 | Skafferi: påsar hemma med antal och bäst före, och favoriter | Finns (`/matplanering/skafferi`), personligt |
 | Favoriter och det man har hemma först i Välj rätt, och "Köp 2 (du har 1 hemma)" i inköpslistan | Finns |
