@@ -99,8 +99,8 @@ describe('bokning från skafferiet', () => {
 
   it('säger hur många påsar som går till en tidigare tur', () => {
     expect(bokadText(0)).toBeNull()
-    expect(bokadText(1)).toBe('En påse hemma går till en tur som börjar före den här.')
-    expect(bokadText(3)).toBe('3 påsar hemma går till en tur som börjar före den här.')
+    expect(bokadText(1)).toBe('En påse hemma är bokad till en tur som börjar före den här.')
+    expect(bokadText(3)).toBe('3 påsar hemma är bokade till en tur som börjar före den här.')
   })
 })
 

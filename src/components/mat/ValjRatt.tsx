@@ -169,14 +169,21 @@ export function ValjRatt({
       fot={
         fraga && (
           <div className="space-y-2">
-            <p role="status" className="text-sm font-medium">
+            <p id={`${id}-fraga`} role="status" className="text-sm font-medium">
               {fraga.text}
             </p>
             <div className="flex flex-wrap gap-2">
-              <Button autoFocus disabled={valjer} onClick={() => laggTill(fraga.gor)}>
+              <Button autoFocus aria-describedby={`${id}-fraga`} disabled={valjer} onClick={() => laggTill(fraga.gor)}>
                 Lägg till ändå
               </Button>
-              <Button variant="outline" onClick={() => setFraga(null)}>
+              <Button
+                variant="outline"
+                onClick={() => {
+                  setFraga(null)
+                  // Knapparna försvinner, så fokus går tillbaka till den valda fliken.
+                  document.getElementById(`${id}-flik-${flik}`)?.focus()
+                }}
+              >
                 Avbryt
               </Button>
             </div>
@@ -337,7 +344,7 @@ function Pasar({
         </div>
       </div>
 
-      <div className="flex flex-wrap items-center justify-between gap-x-4">
+      <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <button
           type="button"
           aria-expanded={visaFilter}
@@ -345,7 +352,7 @@ function Pasar({
           onClick={() => setVisaFilter((v) => !v)}
           className={cn('inline-flex min-h-11 min-w-0 items-center gap-1.5 text-left text-sm font-medium text-primary', fokus)}
         >
-          <span className="min-w-0 break-words">Filter: {filtrerat ?? 'inga'}</span>
+          <span className="min-w-0 break-words">Filter: {filtrerat ?? 'Inga'}</span>
           <ChevronDown className={cn('size-4 shrink-0 transition-transform', visaFilter && 'rotate-180')} aria-hidden />
         </button>
         <Link to="/matplanering/katalog" className={cn('inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4', fokus)}>
@@ -372,9 +379,9 @@ function Pasar({
       ) : egna.length === 0 ? (
         <p className="text-sm text-muted-foreground">Sök på märke eller namn. Påsar du har hemma, dina favoriter och påsar du använt i dina turer visas här.</p>
       ) : (
-        egna.map((lista) => (
-          <section key={lista.rubrik} aria-labelledby={`${id}-${lista.rubrik}`} className="space-y-1">
-            <h3 id={`${id}-${lista.rubrik}`} className="font-sans text-sm font-semibold">
+        egna.map((lista, i) => (
+          <section key={lista.rubrik} aria-labelledby={`${id}-lista-${i}`} className="space-y-1">
+            <h3 id={`${id}-lista-${i}`} className="font-sans text-sm font-semibold">
               {lista.rubrik}
             </h3>
             <ul className="divide-y divide-border">{lista.pasar.map(rad)}</ul>

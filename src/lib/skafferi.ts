@@ -123,7 +123,7 @@ export function ledigaHemma(iSkafferiet: ReadonlyMap<string, number>, bokat: Rea
 /** Texten när påsar hemma går till en tur före den här. null när inga gör det. */
 export function bokadText(antal: number): string | null {
   if (antal <= 0) return null
-  return antal === 1 ? 'En påse hemma går till en tur som börjar före den här.' : `${antal} påsar hemma går till en tur som börjar före den här.`
+  return antal === 1 ? 'En påse hemma är bokad till en tur som börjar före den här.' : `${antal} påsar hemma är bokade till en tur som börjar före den här.`
 }
 
 /**
