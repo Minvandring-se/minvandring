@@ -1,6 +1,7 @@
 import { Plus } from 'lucide-react'
 import { useId } from 'react'
 import { Button } from '@/components/ui/button'
+import { cn } from '@/lib/utils'
 import { maltidsord, platsText, type Matstatus, type Plats } from '@/lib/mat'
 
 /**
@@ -22,7 +23,7 @@ export function NastaAttPlanera({
   const id = useId()
   const forsta = status.forsta
   return (
-    <section aria-labelledby={id} className="flex flex-col gap-3 rounded-yta border border-border bg-card p-5 sm:p-7">
+    <section aria-labelledby={id} className={cn('flex flex-col rounded-yta border border-border bg-card', forsta ? 'gap-3 p-5 sm:p-7' : 'gap-1 px-5 py-4 sm:px-6')}>
       {forsta ? (
         <>
           <p className="text-sm font-semibold text-accent-strong">Nästa att planera</p>

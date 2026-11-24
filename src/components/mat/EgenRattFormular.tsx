@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button'
 import { IngrediensSok } from '@/components/mat/IngrediensSok'
 import { Input } from '@/components/ui/input'
 import { formateraVikt } from '@/lib/forrad'
-import { formateraKcal, MAX_RATTNAMN, naringForRader, tolkaRattformular, type Ingrediensfalt, type TolkadIngrediens } from '@/lib/mat'
+import { formateraKcal, MAX_RATTNAMN, naringForRader, orimligPortion, tolkaRattformular, type Ingrediensfalt, type TolkadIngrediens } from '@/lib/mat'
 import { faltFranLivsmedel } from '@/lib/livsmedel'
 import { raderTillFalt } from '@/lib/recept'
 import type { Vara } from '@/lib/typer'
@@ -202,6 +202,7 @@ export function EgenRattFormular({
           <>
             Per portion: {formateraKcal(portion.kcal)}, {Math.round(portion.proteinG)} g protein och {formateraVikt(portion.gram)}.
             {portion.ofullstandig && <span className="text-muted-foreground"> Några varor saknar kcal eller protein.</span>}
+            {orimligPortion(portion) && <span className="font-medium text-accent-strong"> Ovanligt stor portion. Kontrollera mängderna.</span>}
           </>
         )}
       </p>

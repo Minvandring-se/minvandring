@@ -4,6 +4,10 @@ import {
   borjaMed,
   dagssummor,
   formateraKcal,
+  grupperaMaltid,
+  orimligPortion,
+  ratterSomSaknar,
+  saknasMeningar,
   inkopsgrupper,
   inkopslista,
   kcalPer100g,
@@ -21,6 +25,8 @@ import {
   pasePerPortion,
   pasnamn,
   platsText,
+  platserMedAntal,
+  platserText,
   rattPerPortion,
   tolkaRattformular,
   tolkaTal,
@@ -470,5 +476,68 @@ describe('vemTarMedVad', () => {
 
   it('räknar bara måltider inom turens dagar', () => {
     expect(vemTarMedVad({ ...data, maltider: [maltid(9, 'lunch', 'p')] }, dagar)).toEqual([])
+  })
+})
+
+describe('platserMedAntal och platserText', () => {
+  const [dag1, , dag3] = matdagar(3, 0)
+  it('slår ihop samma måltid och skriver antalet', () => {
+    const platser = [
+      { dag: dag1, maltid: 'lunch' as const },
+      { dag: dag3, maltid: 'mellanmal' as const },
+      { dag: dag3, maltid: 'mellanmal' as const },
+      { dag: dag3, maltid: 'mellanmal' as const },
+    ]
+    expect(platserMedAntal(platser).map((p) => p.antal)).toEqual([1, 3])
+    expect(platserText(platser)).toBe('Lunch dag 1, mellanmål dag 3 (3 st)')
+  })
+})
+
+describe('grupperaMaltid', () => {
+  it('slår ihop samma rätt i en måltid och behåller ordningen och raderna', () => {
+    const rader = [maltid(1, 'mellanmal', 'pudding'), maltid(1, 'mellanmal', 'notter'), maltid(1, 'mellanmal', 'pudding')]
+    const grupper = grupperaMaltid(rader)
+    expect(grupper.map((g) => [g.rattId, g.rader.length])).toEqual([
+      ['pudding', 2],
+      ['notter', 1],
+    ])
+    expect(grupper[0].rader.map((r) => r.id)).toEqual([rader[0].id, rader[2].id])
+  })
+})
+
+describe('orimligPortion', () => {
+  it('varnar över 2 000 kcal eller 1,5 kg per portion', () => {
+    expect(orimligPortion({ kcal: 4296, gram: 1365 })).toBe(true)
+    expect(orimligPortion({ kcal: 900, gram: 1600 })).toBe(true)
+    expect(orimligPortion({ kcal: 2000, gram: 1500 })).toBe(false)
+  })
+})
+
+describe('ratterSomSaknar', () => {
+  const dagar = matdagar(1, 0)
+  it('säger vilka rätter som saknar energi, protein eller vikt, och bara de som ligger i en måltid', () => {
+    const data: Matdata = {
+      ratter: [ratt('Bullens pilsnerkorv'), ratt('Gryta'), ratt('Mormors smörgås'), ratt('Oanvänd'), ratt('Påse', { matprodukt_id: 'p1' })],
+      varor: [vara('korv', { kcal_per_100g: null, protein_per_100g: null }), vara('ris'), vara('ost', { protein_per_100g: null }), vara('x', { kcal_per_100g: null })],
+      ingredienser: [ing('Bullens pilsnerkorv', 'korv', 1), ing('Gryta', 'ris', 100), ing('Gryta', 'ost', 20), ing('Oanvänd', 'x', 10)],
+      pasar: new Map([['p1', { id: 'p1', vikt_torr_g: 100, portioner: 1, kcal: 400, protein_g: null }]]),
+      maltider: [maltid(1, 'lunch', 'Bullens pilsnerkorv'), maltid(1, 'middag', 'Gryta'), maltid(1, 'frukost', 'Mormors smörgås'), maltid(1, 'mellanmal', 'Påse')],
+    }
+    expect(ratterSomSaknar(data, dagar)).toEqual({
+      energi: ['Bullens pilsnerkorv', 'Mormors smörgås'],
+      protein: ['Bullens pilsnerkorv', 'Gryta', 'Påse'],
+      vikt: ['Mormors smörgås'],
+    })
+  })
+})
+
+describe('saknasMeningar', () => {
+  it('nämner varje rätt en gång och samlar rätter som saknar samma saker', () => {
+    expect(saknasMeningar({ energi: ['Bullens pilsnerkorv', 'Mormors smörgås'], protein: ['Bullens pilsnerkorv'], vikt: ['Test', 'Mormors smörgås'] })).toEqual([
+      'Test saknar vikt.',
+      'Mormors smörgås saknar vikt och energi.',
+      'Bullens pilsnerkorv saknar energi och protein.',
+    ])
+    expect(saknasMeningar({ energi: [], protein: [], vikt: [] })).toEqual([])
   })
 })

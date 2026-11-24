@@ -1,9 +1,10 @@
-import { Plus, X } from 'lucide-react'
+import { ChevronDown, Plus, X } from 'lucide-react'
 import { useId } from 'react'
+import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
 import { formateraVikt } from '@/lib/forrad'
 import { varningar, type Behov } from '@/lib/kost'
-import { formateraKcal, HUVUDMALTIDER, kcalPer100g, MALTIDER, maltidsord, maltidsrutaId, type Dagssumma, type Naring } from '@/lib/mat'
+import { formateraKcal, grupperaMaltid, HUVUDMALTIDER, kcalPer100g, MALTIDER, maltidsord, maltidsrutaId, orimligPortion, type Dagssumma, type Naring } from '@/lib/mat'
 import type { Maltid, Maltidsrad, Matprodukt, Ratt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
 
@@ -13,6 +14,8 @@ export interface Ratter {
   /** En portion av varje rätt. */
   perPortion: ReadonlyMap<string, Naring>
   pasar: ReadonlyMap<string, Matprodukt>
+  /** Namnen på varorna i varje egen rätt, i den ordning de skrevs in. */
+  ingredienser: ReadonlyMap<string, readonly string[]>
 }
 
 /**
@@ -126,8 +129,8 @@ function Maltidsruta({
       </h3>
       {!tom && (
         <ul className="space-y-1.5">
-          {synliga.map((rad) => (
-            <Rattrad key={rad.id} rad={rad} ratter={ratter} behov={behov} kanAndra={kanAndra} onTaBort={() => onTaBort(rad)} vad={vad} />
+          {grupperaMaltid(synliga).map((grupp) => (
+            <Rattrad key={grupp.rattId} grupp={grupp} ratter={ratter} behov={behov} kanAndra={kanAndra} onTaBort={onTaBort} vad={vad} />
           ))}
         </ul>
       )}
@@ -148,18 +151,45 @@ function Maltidsruta({
   )
 }
 
-function Rattrad({ rad, ratter, behov, kanAndra, onTaBort, vad }: { rad: Maltidsrad; ratter: Ratter; behov: readonly Behov[]; kanAndra: boolean; onTaBort: () => void; vad: string }) {
-  const ratt = ratter.ratter.get(rad.ratt_id)
-  const portion = ratter.perPortion.get(rad.ratt_id)
+/** Så många ingredienser visas innan resten fälls ihop. */
+const KORT_LISTA = 3
+
+/**
+ * En rätt i måltiden. Ligger samma rätt flera gånger visas den en gång med antal, och Ta bort tar bort en av dem.
+ * En egen rätt visar ingredienserna under namnet, och en orimlig portion får en varning.
+ */
+function Rattrad({
+  grupp,
+  ratter,
+  behov,
+  kanAndra,
+  onTaBort,
+  vad,
+}: {
+  grupp: { rattId: string; rader: readonly Maltidsrad[] }
+  ratter: Ratter
+  behov: readonly Behov[]
+  kanAndra: boolean
+  onTaBort: (rad: Maltidsrad) => void
+  vad: string
+}) {
+  const ratt = ratter.ratter.get(grupp.rattId)
+  const portion = ratter.perPortion.get(grupp.rattId)
   if (!ratt || !portion) return null
+  const antal = grupp.rader.length
   const pase = ratt.matprodukt_id ? ratter.pasar.get(ratt.matprodukt_id) : undefined
   // Varningar bara för påsar ur katalogen. Egna rätter har ingen kostinformation i första versionen.
   const lista = pase ? varningar(pase, behov) : []
   const per100 = kcalPer100g(portion.kcal, portion.gram)
+  const ingredienser = ratt.matprodukt_id ? [] : (ratter.ingredienser.get(ratt.id) ?? [])
   return (
     // Namnet får hela rutans bredd. Energin och Ta bort står på raden under, så att långa namn går att läsa i smala rutor.
     <li className="space-y-0.5 rounded-knapp bg-muted/60 pt-2 pl-3">
-      <p className="pr-3 text-[0.9375rem] leading-snug font-medium break-words hyphens-auto">{ratt.namn}</p>
+      <p className="flex flex-wrap items-baseline gap-x-2 pr-3 text-[0.9375rem] leading-snug font-medium">
+        <span className="min-w-0 break-words hyphens-auto">{ratt.namn}</span>
+        {antal > 1 && <Bricka className="tabular-nums">{antal} st</Bricka>}
+      </p>
+      {ingredienser.length > 0 && <Ingredienser namn={ingredienser} />}
       {lista.length > 0 && (
         <ul className="space-y-0.5 pr-3 text-xs">
           {lista.map((v) => (
@@ -169,17 +199,41 @@ function Rattrad({ rad, ratter, behov, kanAndra, onTaBort, vad }: { rad: Maltids
           ))}
         </ul>
       )}
+      {orimligPortion(portion) && <p className="pr-3 text-xs font-medium text-accent-strong">Ovanligt stor portion. Kontrollera mängderna.</p>}
       <div className="flex items-center justify-between gap-1">
         <p className="py-2 text-xs text-muted-foreground tabular-nums">
-          {formateraKcal(portion.kcal)} per portion
-          {per100 !== null && <span className="block">{per100} kcal per 100 g</span>}
+          {portion.kcal > 0 ? (
+            <>
+              {formateraKcal(portion.kcal)} per portion
+              {per100 !== null && <span className="block">{per100} kcal per 100 g</span>}
+            </>
+          ) : (
+            'Energi saknas'
+          )}
         </p>
         {kanAndra && (
-          <Button variant="ghost" size="ikon" onClick={onTaBort} aria-label={`Ta bort ${ratt.namn} från ${vad}`}>
+          <Button variant="ghost" size="ikon" onClick={() => onTaBort(grupp.rader.at(-1)!)} aria-label={antal > 1 ? `Ta bort en portion ${ratt.namn} från ${vad}` : `Ta bort ${ratt.namn} från ${vad}`}>
             <X className="size-4" aria-hidden />
           </Button>
         )}
       </div>
     </li>
+  )
+}
+
+/** Ingredienserna i en egen rätt: högst tre, och resten fälls ut. */
+function Ingredienser({ namn }: { namn: readonly string[] }) {
+  if (namn.length <= KORT_LISTA) return <p className="pr-3 text-xs break-words text-muted-foreground">{namn.join(', ')}</p>
+  return (
+    <details className="group pr-3 text-xs text-muted-foreground">
+      <summary className="flex min-h-11 cursor-pointer items-center gap-1 break-words rounded-knapp focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+        <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
+        <span className="group-open:hidden">
+          Ingredienser: {namn.slice(0, KORT_LISTA).join(', ')} och {namn.length - KORT_LISTA} till
+        </span>
+        <span className="hidden group-open:inline">Ingredienser</span>
+      </summary>
+      <p className="break-words">{namn.join(', ')}</p>
+    </details>
   )
 }

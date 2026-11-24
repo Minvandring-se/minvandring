@@ -118,6 +118,13 @@ describe('arAllergen', () => {
 })
 
 describe('behovstext', () => {
+  it('skriver inte gluten två gånger, men skriver både laktosfri och mjölk', () => {
+    expect(behovstext(behov('Oscar', { glutenfri: true, utan: ['gluten'] }))).toBe('Glutenfri')
+    expect(behovstext(behov('Oscar', { glutenfri: true, utan: ['gluten', 'sesam'] }))).toBe('Glutenfri, tål inte sesam')
+    expect(behovstext(behov('Lisa', { utan: ['gluten'] }))).toBe('Tål inte gluten')
+    expect(behovstext(behov('Erik', { laktosfri: true, utan: ['mjolk'] }))).toBe('Laktosfri, tål inte mjölk')
+  })
+
   it('räknar upp kostval och allergener', () => {
     expect(behovstext(behov('Lisa', { vegetarisk: true, glutenfri: true, utan: ['sesam', 'notter'] }))).toBe('Vegetarisk, glutenfri, tål inte nötter och sesam')
   })

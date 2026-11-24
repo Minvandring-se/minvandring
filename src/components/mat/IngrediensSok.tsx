@@ -134,7 +134,7 @@ function Rad({ namn, kcal, etikett }: { namn: string; kcal: number | null; etike
       </span>
       {kcal !== null && (
         <span className="shrink-0 text-muted-foreground tabular-nums">
-          {kcal} kcal<span className="sr-only"> per 100 g</span>
+          {kcal} kcal per 100 g
         </span>
       )}
     </>

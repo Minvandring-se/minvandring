@@ -1,6 +1,6 @@
 import { useId, useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { platsText, type Ansvarsratt } from '@/lib/mat'
+import { platserText, type Ansvarsratt } from '@/lib/mat'
 import type { DeltagareRad } from '@/lib/typer'
 
 /**
@@ -105,7 +105,7 @@ function Ratt({ ratt }: { ratt: Ansvarsratt }) {
   return (
     <span className="flex min-w-0 flex-col">
       <span className="font-medium wrap-anywhere">{ratt.namn}</span>
-      <span className="text-sm text-muted-foreground">{ratt.platser.map((p, i) => (i === 0 ? platsText(p) : platsText(p).toLowerCase())).join(', ')}</span>
+      <span className="text-sm text-muted-foreground">{platserText(ratt.platser)}</span>
     </span>
   )
 }

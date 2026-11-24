@@ -18,7 +18,7 @@ import { sparaRecept, useRecept } from '@/hooks/useRecept'
 import { useSkafferi } from '@/hooks/useSkafferi'
 import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
-import { dagssummor, inkopslista, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, matviktTotalt, rattPerPortion, vemTarMedVad, type Ansvarsratt, type Matdag as Dag, type Matstatus } from '@/lib/mat'
+import { dagssummor, inkopslista, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, matviktTotalt, rattPerPortion, ratterSomSaknar, vemTarMedVad, type Ansvarsratt, type Matdag as Dag, type Matstatus } from '@/lib/mat'
 import { dagensDatum } from '@/lib/datum'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import { receptbesked, receptMedNamn, receptTillRader, valForRecept } from '@/lib/recept'
@@ -26,6 +26,7 @@ import { hemma } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import { turdelAdress } from '@/lib/turdelar'
 import type { DeltagareRad, Maltid, Maltidsrad } from '@/lib/typer'
+import { cn } from '@/lib/utils'
 import { matvikter } from '@/lib/vikt'
 
 /**
@@ -118,7 +119,15 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
   const behov = useMemo(() => behovMedNamn(plan, deltagare), [plan, deltagare])
 
   const perPortion = useMemo(() => new Map(plan.ratter.map((r) => [r.id, rattPerPortion(r, plan)])), [plan])
-  const ratter = useMemo(() => ({ ratter: new Map(plan.ratter.map((r) => [r.id, r])), perPortion, pasar: plan.pasar }), [plan, perPortion])
+  const ratter = useMemo(() => {
+    const varunamn = new Map(plan.varor.map((v) => [v.id, v.namn]))
+    const ingredienser = new Map<string, string[]>()
+    for (const i of plan.ingredienser) {
+      const namn = varunamn.get(i.vara_id)
+      if (namn) ingredienser.set(i.ratt_id, [...(ingredienser.get(i.ratt_id) ?? []), namn])
+    }
+    return { ratter: new Map(plan.ratter.map((r) => [r.id, r])), perPortion, pasar: plan.pasar, ingredienser }
+  }, [plan, perPortion])
   const summor = dagssummor(plan, dagar)
   const inkop = inkopslista(plan, dagar, personer)
   const totaltG = matviktTotalt(inkop)
@@ -171,7 +180,8 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
     <div className="space-y-6 lg:space-y-8">
       {!kanAndra && <p className="text-muted-foreground">Du är läsare. Du kan se matplanen och ange dina egna kostbehov. Ägare och redigerare ändrar resten.</p>}
 
-      <div className="grid grid-cols-1 items-start gap-6 lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] lg:gap-8">
+      {/* När planen är klar är rutan till vänster bara en rad, så då ligger Vem tar med vad under i stället för bredvid. */}
+      <div className={cn('grid grid-cols-1 items-start gap-6 lg:gap-8', status.forsta && 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]')}>
         <NastaAttPlanera
           status={status}
           datum={forstaDatum}
@@ -229,7 +239,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
         ))}
       </div>
 
-      <Matsummering summering={matsummering(summor)} totaltG={totaltG} perPerson={perPerson} />
+      <Matsummering summering={matsummering(summor)} saknade={ratterSomSaknar(plan, dagar)} totaltG={totaltG} perPerson={perPerson} />
 
       <div id="inkopslista" tabIndex={-1} className="scroll-mt-6 focus:outline-none">
         <Inkopslista
