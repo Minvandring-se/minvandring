@@ -1834,7 +1834,6 @@ describe('matplanen', () => {
         const fel: [string, Rad[]][] = [
           ['  ', [{ vara: 'Mjöl', gram: 10 }]],
           ['x'.repeat(81), [{ vara: 'Mjöl', gram: 10 }]],
-          ['Utan ingredienser', []],
           ['Tom vara', [{ vara: ' ', gram: 10 }]],
           ['Noll gram', [{ vara: 'Mjöl', gram: 0 }]],
           ['För mycket', [{ vara: 'Mjöl', gram: 5001 }]],
@@ -1850,6 +1849,67 @@ describe('matplanen', () => {
         expect((await db.query(`select 1 from public.ratter where namn in ('Dubbel', 'Inte en lista')`)).rows).toHaveLength(0)
         const id = await spara(AGARE, null, 'y'.repeat(80), [{ vara: 'z'.repeat(80), gram: 5000, kcal: 900, protein: 100 }, { vara: 'Minst', gram: 1, kcal: 0, protein: 0 }])
         expect(await ingredienserI(id)).toHaveLength(2)
+      })
+
+      // Handlingslistan: mängd och enhet, frivilligt gram och rätter utan ingredienser.
+      const mangderI = async (ratt: string) =>
+        (
+          await db.query<{ namn: string; mangd: string | null; enhet: string | null; gram_per_portion: number | null }>(
+            'select v.namn, i.mangd, i.enhet, i.gram_per_portion from public.ingredienser i join public.varor v on v.id = i.vara_id where i.ratt_id = $1 order by v.namn',
+            [ratt],
+          )
+        ).rows
+      const sparaMed = async (namn: string, rader: object[]) =>
+        (
+          await som(REDIGERARE, (tx) =>
+            tx.query<{ id: string }>('select public.spara_egen_ratt($1::uuid, null, $2::text, $3::jsonb) as id', [tur, namn, JSON.stringify(rader)]),
+          )
+        ).rows[0].id
+
+      it('sparar mängd och enhet, räknar ut gram för g och kg, och låter gram vara frivilligt för andra enheter', async () => {
+        const id = await sparaMed('Pannkakor', [
+          { vara: 'Vetemjöl', mangd: 0.1, enhet: 'kg' },
+          { vara: 'Mjölk till pannkakor', mangd: 3, enhet: 'dl', gram: 300 },
+          { vara: 'Ägg', mangd: 1, enhet: 'st' },
+          { vara: 'Salt till pannkakor' },
+          { vara: 'Smör till pannkakor', mangd: 12.5, enhet: 'g' },
+        ])
+        expect(await mangderI(id)).toEqual([
+          { namn: 'Mjölk till pannkakor', mangd: '3.00', enhet: 'dl', gram_per_portion: 300 },
+          { namn: 'Salt till pannkakor', mangd: null, enhet: null, gram_per_portion: null },
+          { namn: 'Smör till pannkakor', mangd: '12.50', enhet: 'g', gram_per_portion: 13 },
+          { namn: 'Vetemjöl', mangd: '0.10', enhet: 'kg', gram_per_portion: 100 },
+          { namn: 'Ägg', mangd: '1.00', enhet: 'st', gram_per_portion: null },
+        ])
+      })
+
+      it('sparar en rätt utan ingredienser, och tar bort ingredienserna när en rätt sparas utan dem', async () => {
+        const id = await sparaMed('Fika hos mormor', [])
+        expect(await rattnamn(id)).toBe('Fika hos mormor')
+        expect(await mangderI(id)).toEqual([])
+        const annan = await sparaMed('Blir tom', [{ vara: 'Russin till tom', mangd: 1, enhet: 'dl' }])
+        await som(REDIGERARE, (tx) => tx.query(`select public.spara_egen_ratt($1::uuid, $2::uuid, 'Blir tom', '[]'::jsonb)`, [tur, annan]))
+        expect(await mangderI(annan)).toEqual([])
+      })
+
+      it('stoppar okända enheter, mängd utan enhet och för mycket i kg', async () => {
+        for (const rad of [
+          { vara: 'Fel enhet', mangd: 1, enhet: 'kopp' },
+          { vara: 'Utan enhet', mangd: 1 },
+          { vara: 'Utan mängd', enhet: 'dl' },
+          { vara: 'För tungt', mangd: 6, enhet: 'kg' },
+          { vara: 'Noll', mangd: 0, enhet: 'st' },
+        ])
+          await forvantaFel(sparaMed('Stoppas', [rad]))
+        expect((await db.query(`select 1 from public.ratter where namn = 'Stoppas'`)).rows).toHaveLength(0)
+      })
+
+      it('redigeraren väljer butiksavdelning för en vara, men läsaren kan inte, och en okänd avdelning stoppas', async () => {
+        const ok = await som(REDIGERARE, (tx) => tx.query(`update public.varor set avdelning = 'mejeri' where id = $1`, [vara]))
+        expect(ok.affectedRows).toBe(1)
+        const nej = await som(LASARE, (tx) => tx.query(`update public.varor set avdelning = 'fryst' where id = $1`, [vara]))
+        expect(nej.affectedRows).toBe(0)
+        await forvantaFel(som(REDIGERARE, (tx) => tx.query(`update public.varor set avdelning = 'apotek' where id = $1`, [vara])))
       })
 
       it('nekar läsaren, den som inte är med, påsar ur katalogen och en rätt i en annan tur', async () => {
@@ -2262,6 +2322,33 @@ describe('migreringen för vem som bär, mot befintliga rader', () => {
   })
 })
 
+describe('handlingslistans migrering mot befintliga rader', () => {
+  const fil = fs.readdirSync(path.join(import.meta.dirname, 'migrations')).find((f) => f.endsWith('_handlingslista.sql'))!
+  let gammal: PGlite
+  const T = '00000000-0000-0000-0000-0000000000e1'
+
+  beforeAll(async () => {
+    gammal = await nyDatabas((f) => f < fil)
+    await gammal.exec(`
+      insert into auth.users (id, email) values ('${A}', 'anna@exempel.se');
+      insert into public.turer (id, namn, skapad_av) values ('${T}', 'Gammal tur', '${A}');
+      insert into public.ratter (id, tur_id, namn) values ('00000000-0000-0000-0000-0000000000e2', '${T}', 'Gröt');
+      insert into public.varor (id, tur_id, namn) values ('00000000-0000-0000-0000-0000000000e3', '${T}', 'Havregryn');
+      insert into public.ingredienser (tur_id, ratt_id, vara_id, gram_per_portion)
+        values ('${T}', '00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000e3', 90);
+      insert into public.recept (id, user_id, namn) values ('00000000-0000-0000-0000-0000000000e4', '${A}', 'Gammalt recept');
+      insert into public.receptrader (recept_id, user_id, vara, gram_per_portion)
+        values ('00000000-0000-0000-0000-0000000000e4', '${A}', 'Bulgur', 80);
+    `)
+    await korMigreringar(gammal, (f) => f >= fil)
+  })
+
+  it('ger befintliga ingredienser och receptrader mängden i gram, och tar inte bort något', async () => {
+    expect((await gammal.query('select mangd, enhet, gram_per_portion from public.ingredienser')).rows).toEqual([{ mangd: '90.00', enhet: 'g', gram_per_portion: 90 }])
+    expect((await gammal.query('select mangd, enhet, gram_per_portion from public.receptrader')).rows).toEqual([{ mangd: '80.00', enhet: 'g', gram_per_portion: 80 }])
+  })
+})
+
 describe('skafferiet', () => {
   // Egna användare: Sara och Tor delar en tur, Ulla tas bort på slutet.
   const SARA = '00000000-0000-0000-0000-000000000031'
@@ -2598,7 +2685,6 @@ describe('egna recept', () => {
       const id = await spara(VERA, null, 'Orört recept', [{ vara: 'Linser', gram: 70 }])
       await forvantaFel(spara(VERA, id, 'Nytt namn', [{ vara: 'Nudlar', gram: 60 }, { vara: 'Fel', gram: 0 }]))
       await forvantaFel(spara(VERA, id, 'Nytt namn', [{ vara: 'Nudlar', gram: 60 }, { vara: 'NUDLAR', gram: 10 }]))
-      await forvantaFel(spara(VERA, id, 'Nytt namn', []))
       for (const rader of ['{"vara": "Ris", "gram": 10}', '"Ris"'])
         await forvantaFel(som(VERA, (tx) => tx.query(`select public.spara_recept($1, 'Nytt namn', $2::jsonb)`, [id, rader])))
       expect(await receptnamn(id)).toBe('Orört recept')
@@ -2607,6 +2693,26 @@ describe('egna recept', () => {
       await forvantaFel(spara(VERA, null, 'Aldrig sparat', [{ vara: 'Kikärtor', gram: 50 }, { vara: 'x'.repeat(81), gram: 10 }]))
       await forvantaFel(spara(VERA, null, 'orört RECEPT', [{ vara: 'Kikärtor', gram: 50 }]))
       expect((await db.query(`select 1 from public.recept where namn = 'Aldrig sparat'`)).rows).toHaveLength(0)
+    })
+
+    it('sparar ett recept utan rader, och rader med mängd och enhet', async () => {
+      const tomt = await spara(VERA, null, 'Tomt recept', [])
+      expect(await raderI(tomt)).toEqual([])
+      const r = (
+        await som(VERA, (tx) =>
+          tx.query<{ id: string }>('select public.spara_recept(null, $1::text, $2::jsonb) as id', [
+            'Recept med mängder',
+            JSON.stringify([{ vara: 'Mjöl', mangd: 1.5, enhet: 'dl', gram: 90 }, { vara: 'Pasta', mangd: 0.12, enhet: 'kg' }, { vara: 'Salt' }]),
+          ]),
+        )
+      ).rows[0].id
+      const rader = await db.query('select vara, mangd, enhet, gram_per_portion from public.receptrader where recept_id = $1 order by sortering', [r])
+      expect(rader.rows).toEqual([
+        { vara: 'Mjöl', mangd: '1.50', enhet: 'dl', gram_per_portion: 90 },
+        { vara: 'Pasta', mangd: '0.12', enhet: 'kg', gram_per_portion: 120 },
+        { vara: 'Salt', mangd: null, enhet: null, gram_per_portion: null },
+      ])
+      await forvantaFel(som(VERA, (tx) => tx.query(`select public.spara_recept(null, 'Fel enhet', '[{"vara": "Ris", "mangd": 1, "enhet": "kopp"}]'::jsonb)`)))
     })
 
     it('kan inte ändra någon annans recept, och inte skapa ett utan inloggning', async () => {
