@@ -30,16 +30,15 @@ import { useProfilbilder } from '@/hooks/useProfilbilder'
 import { arAgare, kanAndra } from '@/lib/roller'
 import { supabase } from '@/lib/supabase'
 
-// Från lg tre kolumner med de breda delarna över två. Från 1920 px (3xl) två kolumner för huvudsektionerna.
-// På 2xl (1536 px) vore de kolumnerna för smala, eftersom sektionerna anpassar sig efter skärmen och inte kolumnen.
-const BRED = 'lg:col-span-2 3xl:col-span-1'
-const HEL = 'lg:col-span-3 3xl:col-span-2'
+// Från lg tre kolumner med de breda delarna över två. Innehållet är högst 1200 px brett (AppSkal), så samma
+// rutnät räcker även på stora skärmar.
+const BRED = 'lg:col-span-2'
+const HEL = 'lg:col-span-3'
 
 /**
  * Turens översikt, enligt skissen Dator-v3 och Mobil-v2. Riktiga delar: turens uppgifter och deltagarna med inbjudan.
  * Resten visar hur delarna kommer att se ut, med etiketten "Kommer snart" (se Exempelsektioner.tsx).
- * I mobil en kolumn, på dator tre. Från 1920 px (3xl) ligger huvudsektionerna i två kolumner och Deltagare,
- * Turens uppgifter och Kom ihåg i en högerkolumn som ligger kvar när man scrollar.
+ * I mobil en kolumn, på dator tre.
  */
 export function TurOversikt() {
   const navigate = useNavigate()
@@ -60,32 +59,24 @@ export function TurOversikt() {
 
   return (
     <div className="space-y-8">
-      <div className="relative grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start 3xl:grid-cols-2 3xl:gap-6 3xl:pr-[calc(25rem+1.5rem)]">
-        {/*
-          Högerkolumnen. Under 3xl är omslaget display: contents, så att delarna ligger i rutnätet som vanligt.
-          Från 3xl ligger det i luften till höger om rutnätet, och innehållet ligger kvar när man scrollar.
-        */}
-        <div className="contents 3xl:absolute 3xl:top-0 3xl:right-0 3xl:bottom-0 3xl:block 3xl:w-[25rem]">
-          <div className="contents 3xl:sticky 3xl:top-6 3xl:flex 3xl:max-h-[calc(100dvh-3rem)] 3xl:flex-col 3xl:gap-5 3xl:-m-2 3xl:overflow-y-auto 3xl:p-2">
-            {/* Deltagarna får två kolumner på lg, så att namn och roller ryms. Uppgifterna är korta och får en. */}
-            <div id="deltagare" className={`scroll-mt-4 ${BRED}`}>
-              <Deltagarlista
-                tur={tur}
-                deltagare={deltagare}
-                bilder={bilder}
-                minRoll={minRoll}
-                mittUserId={mittUserId}
-                onAndrad={uppdateraDeltagare}
-                onLamnat={() => {
-                  glomTurlistan()
-                  navigate('/turer', { replace: true })
-                }}
-              />
-            </div>
-            <TurUppgifter key={tur.id} tur={tur} kanAndra={kanAndra(minRoll)} onSparad={setTur} />
-            <KomIhag />
-          </div>
+      <div className="grid grid-cols-1 gap-5 lg:grid-cols-3 lg:items-start">
+        {/* Deltagarna får två kolumner på lg, så att namn och roller ryms. Uppgifterna är korta och får en. */}
+        <div id="deltagare" className={`scroll-mt-4 ${BRED}`}>
+          <Deltagarlista
+            tur={tur}
+            deltagare={deltagare}
+            bilder={bilder}
+            minRoll={minRoll}
+            mittUserId={mittUserId}
+            onAndrad={uppdateraDeltagare}
+            onLamnat={() => {
+              glomTurlistan()
+              navigate('/turer', { replace: true })
+            }}
+          />
         </div>
+        <TurUppgifter key={tur.id} tur={tur} kanAndra={kanAndra(minRoll)} onSparad={setTur} />
+        <KomIhag />
 
         <RedoForAvfard className={BRED} />
         <AttGora className={BRED} />

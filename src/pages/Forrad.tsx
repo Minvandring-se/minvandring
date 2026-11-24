@@ -449,7 +449,7 @@ function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; 
         className={cn(
           radhjalp.vy === 'lista'
             ? 'divide-y divide-border overflow-hidden rounded-lg border border-border bg-card'
-            : 'grid gap-3 sm:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4',
+            : 'grid gap-3 sm:grid-cols-2 2xl:grid-cols-3',
         )}
       >
         {lista.map((sak) => {

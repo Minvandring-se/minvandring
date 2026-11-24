@@ -5,10 +5,10 @@ import { Skelett } from '@/components/app/Laddar'
 import { knappStil } from '@/components/ui/knappStil'
 import { Turbild } from '@/components/ui/turbild'
 import { dagensDatum } from '@/lib/datum'
-import { borjaMed, maltidsAdress, saknasText, type Matstatus } from '@/lib/mat'
+import { borjaMed, maltidsAdress, matplanstext, saknasText, type Matstatus } from '@/lib/mat'
 import { turdelAdress } from '@/lib/turdelar'
 import type { DinTur } from '@/hooks/useDinaTurer'
-import { datumIntervall } from '@/lib/turlista'
+import { datumIntervall, lage, lokaltDatum } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
 
 /**
@@ -18,8 +18,10 @@ import { cn } from '@/lib/utils'
  */
 export function NastaTurMat({ tur, status }: { tur: DinTur; status: Matstatus | null | 'fel' }) {
   const id = useId()
+  // Delas än så länge bara ut till pågående och kommande turer, men en avslutad tur följer samma regel som i listan.
+  const avslutad = lage(tur, lokaltDatum()) === 'tidigare'
   const klar = status !== null && status !== 'fel' && status.totalt > 0 && status.saknas === 0
-  const forsta = status !== null && status !== 'fel' ? status.forsta : null
+  const forsta = status !== null && status !== 'fel' && !avslutad ? status.forsta : null
   const till = forsta ? maltidsAdress(tur.id, forsta.dag.dag, forsta.maltid) : turdelAdress(tur.id, 'mat')
 
   return (
@@ -38,9 +40,9 @@ export function NastaTurMat({ tur, status }: { tur: DinTur; status: Matstatus | 
             </li>
           )}
         </ul>
-        <Status tur={tur} status={status} />
+        <Status tur={tur} status={status} avslutad={avslutad} />
         <Link to={till} className={cn(knappStil({ variant: 'ljus', size: 'lg' }), 'mt-1 w-full sm:w-auto sm:self-start')}>
-          {klar ? 'Öppna matplanen' : 'Planera maten'}
+          {klar || avslutad ? 'Öppna matplanen' : 'Planera maten'}
           <ArrowRight className="size-[1.125rem]" aria-hidden />
         </Link>
       </div>
@@ -49,7 +51,7 @@ export function NastaTurMat({ tur, status }: { tur: DinTur; status: Matstatus | 
   )
 }
 
-function Status({ tur, status }: { tur: DinTur; status: Matstatus | null | 'fel' }) {
+function Status({ tur, status, avslutad }: { tur: DinTur; status: Matstatus | null | 'fel'; avslutad: boolean }) {
   // Felet visas en gång ovanför listorna, inte här.
   if (status === 'fel') return null
   if (status === null)
@@ -59,8 +61,10 @@ function Status({ tur, status }: { tur: DinTur; status: Matstatus | null | 'fel'
         <Skelett className="h-4 w-64 bg-yta-stark-linje" />
       </div>
     )
-  if (status.totalt === 0) return <p className="text-yta-stark-muted">Ange antalet vandringsdagar i turens översikt, så delas matplanen upp dag för dag.</p>
-  if (status.saknas === 0) return <p className="font-heading text-2xl font-semibold text-hjortron lg:text-[1.75rem]">Matplanen är klar</p>
+  const text = matplanstext(status, avslutad)
+  if (text === null) return null
+  if (text === 'inga-dagar') return <p className="text-yta-stark-muted">Ange antalet vandringsdagar i turens översikt, så delas matplanen upp dag för dag.</p>
+  if (text === 'klar') return <p className="font-heading text-2xl font-semibold text-hjortron lg:text-[1.75rem]">Matplanen är klar</p>
   return (
     <div className="space-y-1">
       <p className="font-heading text-2xl font-semibold text-hjortron lg:text-[1.75rem]">{saknasText(status.saknas)}</p>
