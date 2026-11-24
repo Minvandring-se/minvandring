@@ -160,7 +160,7 @@ export const KOKKARLSTYPER = ['kastrull', 'kittel', 'stekpanna', 'kokset', 'anna
 export const KOKKARLSMATERIAL = ['aluminium', 'hardanodiserad_aluminium', 'titan', 'rostfritt_stal', 'annat'] as const
 
 /**
- * Kök och brännare. packvikt_g är hela förpackningen utan bränsle. Koktiden gäller 1 liter: anger tillverkaren
+ * Brännare och kompletta kök. packvikt_g är hela förpackningen utan bränsle. Koktiden gäller 1 liter: anger tillverkaren
  * bara 0,5 liter står den tiden i kommentaren, eftersom den inte går att räkna om rakt av.
  */
 const BRANNARE: Egenskap[] = [
@@ -298,6 +298,20 @@ function brannarregler(e: Record<string, unknown>): string[] {
   return fel
 }
 
+/** En brännare säljs utan kokkärl. Med kokkärl hör köket till komplett_kok. */
+function brannarregler_utanKokkarl(e: Record<string, unknown>): string[] {
+  const fel = brannarregler(e)
+  if (!saknas(e.kokkarl_l)) fel.push('kokkarl_l: en brännare säljs utan kokkärl, lägg köket i komplett_kok')
+  return fel
+}
+
+/** Ett komplett kök har alltid kokkärl. */
+function kompletta_kokregler(e: Record<string, unknown>): string[] {
+  const fel = brannarregler(e)
+  if (saknas(e.kokkarl_l) && !fel.some((f) => f.startsWith('kokkarl_l'))) fel.push('kokkarl_l: ska anges för ett komplett kök')
+  return fel
+}
+
 /** Den minsta rygglängden kan inte vara större än den största. */
 function ryggsacksregler(e: Record<string, unknown>): string[] {
   return typeof e.torso_min_cm === 'number' && typeof e.torso_max_cm === 'number' && e.torso_min_cm > e.torso_max_cm
@@ -337,6 +351,7 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   ryggsack: RYGGSACK,
   dagsryggsack: RYGGSACK,
   brannare: BRANNARE,
+  komplett_kok: BRANNARE,
   kastrull: KASTRULL,
   filter: VATTENRENING,
   rening: VATTENRENING,
@@ -350,7 +365,8 @@ const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, un
   liggunderlag: liggunderlagsregler,
   ryggsack: ryggsacksregler,
   dagsryggsack: ryggsacksregler,
-  brannare: brannarregler,
+  brannare: brannarregler_utanKokkarl,
+  komplett_kok: kompletta_kokregler,
   kastrull: kastrullregler,
   stavar: stavregler,
   pannlampa: lampregler,

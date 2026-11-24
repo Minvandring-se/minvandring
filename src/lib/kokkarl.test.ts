@@ -1,40 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { arKokgrupp, filtreraKokgrupp, kokEtikettFor, kokgrupp, kokkarlEtikett, passarIhop } from './kokkarl'
-
-describe('kök med och utan kokkärl', () => {
-  it('räknar ett kök med kokkärlets volym som kit', () => {
-    expect(kokgrupp({ typ: 'systemkok', kokkarl_l: 1 })).toBe('med_kokkarl')
-    expect(kokkarlEtikett({ kokkarl_l: 1.3 })).toBe('Med kokkärl 1,3 l')
-    expect(kokkarlEtikett({ kokkarl_l: 0.65 })).toBe('Med kokkärl 0,65 l')
-  })
-
-  it('räknar ett kök utan volym som bara brännare', () => {
-    expect(kokgrupp({ typ: 'toppmonterat' })).toBe('bara_brannare')
-    expect(kokgrupp(null)).toBe('bara_brannare')
-    expect(kokkarlEtikett({ kokkarl_l: '' })).toBe('Bara brännare')
-    expect(kokkarlEtikett(undefined)).toBe('Bara brännare')
-  })
-
-  it('ger etikett bara för kök', () => {
-    expect(kokEtikettFor({ underkategori: 'brannare', egenskaper: { kokkarl_l: 1 } })).toBe('Med kokkärl 1 l')
-    expect(kokEtikettFor({ underkategori: 'talt', egenskaper: {} })).toBeNull()
-  })
-
-  it('filtrerar köken på grupp och lämnar annat i fred', () => {
-    const brannare = { id: 'a', underkategori: 'brannare', egenskaper: {} }
-    const kit = { id: 'b', underkategori: 'brannare', egenskaper: { kokkarl_l: 1.2 } }
-    const talt = { id: 'c', underkategori: 'talt', egenskaper: {} }
-    const alla = [brannare, kit, talt]
-    expect(filtreraKokgrupp(alla, '').map((p) => p.id)).toEqual(['a', 'b', 'c'])
-    expect(filtreraKokgrupp(alla, 'bara_brannare').map((p) => p.id)).toEqual(['a', 'c'])
-    expect(filtreraKokgrupp(alla, 'med_kokkarl').map((p) => p.id)).toEqual(['b', 'c'])
-  })
-
-  it('känner igen giltiga grupper', () => {
-    expect(arKokgrupp('med_kokkarl')).toBe(true)
-    expect(arKokgrupp('gasol')).toBe(false)
-  })
-})
+import { gemensamtSystem, kokvikt, passarIhop, passarMed, passarMedRubrik, sakerForKok } from './kokkarl'
+import type { Produkt } from './typer'
 
 describe('vilka kokkärl som passar vilka brännare', () => {
   const jetboil = { typ: 'systemkok', system: 'jetboil_fluxring' }
@@ -69,5 +35,63 @@ describe('vilka kokkärl som passar vilka brännare', () => {
   it('säger nej när uppgifter saknas', () => {
     expect(passarIhop(null, vanlig)).toBe(false)
     expect(passarIhop(undefined, undefined)).toBe(false)
+  })
+})
+
+describe('listan över det som passar', () => {
+  const crux = { id: 'crux', underkategori: 'brannare', egenskaper: { typ: 'toppmonterat' }, packvikt_g: 72 }
+  const trangia27 = { id: 't27', underkategori: 'komplett_kok', egenskaper: { typ: 'stormkok', system: 'trangia_27' }, packvikt_g: 690 }
+  const jetboil = { id: 'jb', underkategori: 'komplett_kok', egenskaper: { typ: 'systemkok' }, packvikt_g: 371 }
+  const billy27 = { id: 'b27', underkategori: 'kastrull', egenskaper: { typ: 'kastrull', system: 'trangia_27' }, packvikt_g: 320 }
+  const billy25 = { id: 'b25', underkategori: 'kastrull', egenskaper: { typ: 'kastrull', system: 'trangia_25' }, packvikt_g: 506 }
+  const panna = { id: 'p', underkategori: 'kastrull', egenskaper: { typ: 'stekpanna' }, packvikt_g: 359 }
+  const talt = { id: 'x', underkategori: 'talt', egenskaper: {}, packvikt_g: 1 }
+  const alla = [crux, trangia27, jetboil, billy27, billy25, panna, talt]
+
+  it('ger en brännare alla kokkärl som passar, lättast först', () => {
+    expect(passarMed(crux, alla).map((p) => p.id)).toEqual(['b27', 'p', 'b25'])
+  })
+
+  it('ger ett komplett kök bara kokkärl i samma system', () => {
+    expect(passarMed(trangia27, alla).map((p) => p.id)).toEqual(['b27'])
+    expect(passarMed(jetboil, alla)).toEqual([])
+  })
+
+  it('ger ett kokkärl brännarna och köken det passar på, med köken i samma system först', () => {
+    expect(passarMed(billy27, alla).map((p) => p.id)).toEqual(['t27', 'crux'])
+    expect(gemensamtSystem(billy27.egenskaper, trangia27.egenskaper)).toBe('trangia_27')
+    expect(gemensamtSystem(billy27.egenskaper, crux.egenskaper)).toBeNull()
+    expect(passarMed(panna, alla).map((p) => p.id)).toEqual(['crux'])
+  })
+
+  it('ger inget för det som inte hör till köket', () => {
+    expect(passarMed(talt, alla)).toEqual([])
+    expect(passarMedRubrik('talt')).toBeNull()
+    expect(passarMedRubrik('brannare')).toBe('Kokkärl och stekpannor som passar')
+    expect(passarMedRubrik('kastrull')).toBe('Brännare och kök det passar på')
+  })
+})
+
+describe('ditt kök', () => {
+  const produkt = (id: string, underkategori: string, packvikt_g: number) =>
+    ({ id, marke: 'Trangia', modell: id, version: null, kategori: 'kok', underkategori, packvikt_g, kontrollerad: null, granskad: null, kalla_typ: 'tillverkare' }) as Produkt
+  const crux = produkt('Crux', 'brannare', 72)
+  const billy = produkt('Billy', 'kastrull', 320)
+  const panna = produkt('Panna', 'kastrull', 359)
+
+  it('lägger ihop vikten', () => {
+    expect(kokvikt([crux, billy, panna])).toBe(751)
+    expect(kokvikt([])).toBe(0)
+  })
+
+  it('lägger brännaren och kokkärlen i förrådet var för sig, med koppling till katalogen', () => {
+    const saker = sakerForKok(crux, [billy, panna, billy], false)
+    expect(saker.map((s) => s.produkt_id)).toEqual(['Crux', 'Billy', 'Panna'])
+    expect(saker.map((s) => s.underkategori)).toEqual(['brannare', 'kastrull', 'kastrull'])
+    expect(saker.every((s) => s.antal === 1)).toBe(true)
+  })
+
+  it('tar inte med brännaren när den redan finns i förrådet', () => {
+    expect(sakerForKok(crux, [billy], true).map((s) => s.produkt_id)).toEqual(['Billy'])
   })
 })

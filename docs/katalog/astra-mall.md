@@ -129,7 +129,7 @@ marke;modell;version;underkategori;packvikt_g;minvikt_g;typ;bransle;personer;eff
 ```
 
 - `version`: varianten (`1,0 l`, `Duo`, `UL`, `HA`). En rad per variant, eftersom vikt och kokkärl skiljer sig.
-- `underkategori`: alltid `brannare`
+- `underkategori`: `komplett_kok` när kokkärl ingår (systemkök, stormkök och kit med kastrull), annars `brannare`. Ett komplett kök har alltid `kokkarl_l`, en brännare aldrig
 - `packvikt_g`: hela förpackningen utan bränsle, i gram: brännare, kokkärl, vindskydd och det som följer med. Skriv i `kommentar` vad som ingår. `minvikt_g`: bara om tillverkaren anger en separat lägre vikt, till exempel bara brännaren, och då tillsammans med packvikten
 - `typ`: `toppmonterat` (skruvas på patronen), `slangkok` (brännaren står på marken med slang till patron eller flaska), `systemkok` (brännare och kokkärl sitter ihop, till exempel Jetboil), `stormkok` (vindskydd och kastruller i ett set, till exempel Trangia) eller `annat`
 - `bransle`: `gas`, `sprit`, `multibransle`, `ved`, `fast_bransle` eller `annat`
