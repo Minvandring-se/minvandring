@@ -11,3 +11,6 @@ dev-dist
 hero-original/
 .claude/settings.local.json
 Claude outputs/
+
+# Sparade svar från Livsmedelsverkets API (npm run livsmedel). Bara CSV:n committas.
+supabase/katalog/livsmedel/.api-svar/

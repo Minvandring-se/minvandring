@@ -1,0 +1,80 @@
+# Baslivsmedlen: källa, format och import
+
+Baslivsmedlen ger förslag med näringsvärden när man skriver ingredienser i egna rätter och recept, till exempel "Pasta okokt" med 357 kcal och 12 g protein per 100 g. De kommer från Livsmedelsverkets livsmedelsdatabas.
+
+## Källan
+
+- **API:** Livsmedelsverkets öppna API, version 1. Dokumentation: https://dataportal.livsmedelsverket.se/livsmedel/swagger/index.html
+- **Licens:** CC BY 4.0, enligt `info.license` i API:ets swagger ("Tillhandahålls enligt CC BY"). Vi ska ange Livsmedelsverket som källa, länka till licensen och säga vad vi har ändrat. Det står vid förslagen i appen ("Näringsvärden från Livsmedelsverket") och under Källor på integritetssidan.
+- **Omfång:** alla livsmedel i databasen, både analyserade och beräknade. Vid den första hämtningen 2026-11-24 fanns 2 606, och 2 605 kom med (se nedan).
+- **Ändringar vi gör:** värdena avrundas (se tabellen nedan), och tillståndet (torr, rå eller tillagad) läses ut ur namnet.
+
+Appen anropar aldrig API:t. Värdena hämtas av skriptet, sparas i CSV:n och läggs in i tabellen `livsmedel` med en seed-migrering, precis som matkatalogen.
+
+## Så hämtas och läggs livsmedlen in
+
+1. Kör `npm run livsmedel`. Skriptet:
+   - hämtar listan med alla livsmedel, och sedan näringsvärden och klassificeringar för varje livsmedel
+   - skriver `supabase/katalog/livsmedel/livsmedel.csv`
+   - visar en rapport: antal, rader med fel, tillstånd och hur många som saknar varje värde
+2. Läs rapporten och diffen i CSV:n.
+3. Kör `npm run livsmedel -- --skriv livsmedel_<namn>`. Det läser CSV:n, kontrollerar den och skapar en seed-migrering i `supabase/migrations/` med en tidsstämpel efter den senaste. Ingenting hämtas i det här steget.
+4. Visa migreringen och vänta på ok innan den körs, som alla migreringar.
+
+Skriptet är snällt mot API:t: fyra anrop åt gången, en kort paus efter varje anrop och nya försök med längre väntan vid fel. Svaren sparas i `supabase/katalog/livsmedel/.api-svar/`, som inte committas, så att en ny körning inte behöver hämta allt igen. `npm run livsmedel -- --ny` hämtar om allt, till exempel när Livsmedelsverket har släppt en ny version.
+
+En rad med fel kommer inte med i seeden, som i matkatalogen, och syns i rapporten. Fel i själva filen (rubrikraden, samma nummer två gånger) stoppar seeden. Vid den första hämtningen 2026-11-24 utelämnades en rad: Matolja (nummer 3418), som har 902 kcal och 102 g fett per 100 g hos Livsmedelsverket. Det är mer än 100 g fett per 100 g och över gränsen 900 kcal som recepten har, så ett förslag med de värdena skulle inte gå att spara. Övriga oljor har 884 kcal och 100 g fett och finns med.
+
+Ett livsmedel som redan finns (samma nummer) uppdateras när seeden körs igen. Ett livsmedel som tas bort ur CSV:n försvinner inte ur tabellen av sig själv. Det kräver en egen migrering.
+
+Ändra aldrig tabellen `livsmedel` eller CSV:n för hand. Hämta om och skapa en ny migrering.
+
+## Formatet
+
+Semikolon mellan fälten, decimalkomma och UTF-8. Ett fält som innehåller semikolon sätts inom citattecken. Rubrikraden:
+
+```
+nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerarter_g;salt_g;vatten_g;version
+```
+
+| Kolumn i CSV:n | Kolumn i tabellen | Från API:t | Innehåll |
+|---|---|---|---|
+| `nummer` | `nummer` | `nummer` i listan | Livsmedelsverkets livsmedelsnummer, unikt. |
+| `namn` | `namn` | `namn` i listan | Livsmedelsverkets namn, till exempel "Pasta kokt u. salt". |
+| `grupp` | `grupp` | klassificeringen med `typ` LanguaL och fasett "A Gruppindelning EuroFIR", fältet `namn` | Till exempel "Pasta". Tom när den saknas. |
+| `tillstand` | `tillstand` | räknas ut av oss | `torr`, `ra`, `tillagad` eller tom. Se nedan. |
+| `kcal` | `kcal_per_100g` | näringsvärdet "Energi (kcal)", enhet kcal | Heltal. |
+| `protein_g` | `protein_per_100g` | "Protein", enhet g | En decimal. |
+| `fett_g` | `fett_per_100g` | "Fett, totalt", enhet g | En decimal. |
+| `kolhydrater_g` | `kolhydrater_per_100g` | "Kolhydrater, tillgängliga", enhet g | En decimal. |
+| `fiber_g` | `fiber_per_100g` | "Fiber", enhet g | En decimal. |
+| `sockerarter_g` | `sockerarter_per_100g` | "Sockerarter, totalt", enhet g | En decimal. |
+| `salt_g` | `salt_per_100g` | "Salt, NaCl", enhet g | Två decimaler. |
+| `vatten_g` | `vatten_per_100g` | "Vatten", enhet g | En decimal. |
+| `version` | `version` | `version` i listan, de tio första tecknen | Datumet för livsmedlets version hos Livsmedelsverket. |
+
+Alla näringsvärden gäller 100 g ätlig del, som hos Livsmedelsverket (`matrisenhet` "100 g ätlig del"). Namnet och enheten måste stämma exakt, så att till exempel kJ aldrig hamnar som kcal.
+
+**Tomt eller 0:** ett värde som saknas hos Livsmedelsverket blir tomt i CSV:n och null i tabellen, aldrig 0. En 0 betyder att Livsmedelsverket anger 0, till exempel en logisk nolla (vatten i talg) eller "Inget fynd".
+
+**Används i appen i dag:** `kcal` och `protein_g`, som fylls i när man väljer ett förslag. Resten sparas för senare (se `docs/att-ta-senare.md`).
+
+## Tillståndet
+
+Vandrare packar torr vikt, så förslagen visar om livsmedlet är torrt, rått eller tillagat. Funktionen `tillstandFranNamn` i `src/lib/livsmedel.ts` läser namnet i den här ordningen:
+
+1. **Torr:** ord som okokt, torkad, torkade, torr, frystorkad, och ord som slutar på pulver eller mjöl (mjölkpulver, vetemjöl). Går först, så att "okokt" inte räknas som kokt.
+2. **Tillagad:** ord som slutar på kokt eller stekt, och grillad, tillagad, friterad, ugnsbakad, gräddad, ångad med flera.
+3. **Rå:** ordet rå, råa eller rått, men inte rå mitt i ett ord (råris, råg).
+4. **Reserv:** säger namnet inget används tillagningen i klassificeringen (LanguaL G), om den säger att livsmedlet är kokt, stekt och så vidare.
+5. Annars tomt, eftersom en gissning kan ge fel vikt.
+
+## Förslagen i appen
+
+När man skriver en ingrediens söker databasen på det längsta ordet, och `rangordnaLivsmedel` i `src/lib/livsmedel.ts` väljer högst fem förslag:
+
+- Alla ord man har skrivit måste finnas i namnet.
+- Först namn som börjar med det man har skrivit, sedan namn där ett ord börjar med det första sökordet, sedan övriga.
+- Vid lika träff kommer torrt före rått före okänt före tillagat, och kortare namn först.
+
+Varor som redan finns i turen eller i ens recept föreslås före livsmedlen. Väljer man ett livsmedel kopieras namnet, kcal och protein in i raden. Värdena går att ändra, och raden pekar inte på livsmedlet efteråt.
