@@ -164,7 +164,9 @@ export function behovstext(b: Omit<Behov, 'namn'>): string {
   // Vegansk innebär vegetarisk, så det räcker att skriva vegansk.
   const visade = b.vegansk ? val.filter((v) => v !== 'vegetarisk') : val
   const delar = [...visade]
-  const utan = ALLERGENER.filter((a) => b.utan.includes(a.nyckel)).map((a) => a.etikett.toLowerCase())
+  // Glutenfri säger redan att personen inte tål gluten, så det skrivs inte två gånger. Laktosfri och mjölk är olika
+  // saker (laktos och mjölkprotein) och skrivs båda.
+  const utan = ALLERGENER.filter((a) => b.utan.includes(a.nyckel) && !(a.nyckel === 'gluten' && b.glutenfri)).map((a) => a.etikett.toLowerCase())
   if (utan.length) delar.push(`tål inte ${uppraknade(utan)}`)
   const text = delar.join(', ')
   return text.charAt(0).toUpperCase() + text.slice(1)

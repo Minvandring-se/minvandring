@@ -341,6 +341,102 @@ export function platsText(p: Plats): string {
   return `${MALTIDER.find((m) => m.nyckel === p.maltid)!.etikett} ${p.dag.namn.toLowerCase()}`
 }
 
+/** Samma måltid flera gånger blir en med antal: lunch dag 1 två gånger blir { lunch dag 1, antal: 2 }. Ordningen behålls. */
+export function platserMedAntal(platser: readonly Plats[]): { plats: Plats; antal: number }[] {
+  const ut: { plats: Plats; antal: number }[] = []
+  for (const p of platser) {
+    const finns = ut.find((x) => x.plats.dag.dag === p.dag.dag && x.plats.maltid === p.maltid)
+    if (finns) finns.antal++
+    else ut.push({ plats: p, antal: 1 })
+  }
+  return ut
+}
+
+/** "Lunch dag 1, mellanmål dag 3 (6 st)": måltiderna med antal när samma rätt ligger flera gånger i samma måltid. */
+export function platserText(platser: readonly Plats[]): string {
+  return platserMedAntal(platser)
+    .map(({ plats, antal }, i) => {
+      const text = i === 0 ? platsText(plats) : platsText(plats).toLowerCase()
+      return antal > 1 ? `${text} (${antal} st)` : text
+    })
+    .join(', ')
+}
+
+/**
+ * Raderna i en måltid med samma rätt flera gånger ihopslagna till en rad med antal, i den ordning rätten kom in
+ * första gången. Raderna finns kvar, så att Ta bort kan ta bort en av dem.
+ */
+export function grupperaMaltid<T extends Pick<Maltidsrad, 'ratt_id'>>(rader: readonly T[]): { rattId: string; rader: T[] }[] {
+  const ut: { rattId: string; rader: T[] }[] = []
+  for (const r of rader) {
+    const finns = ut.find((g) => g.rattId === r.ratt_id)
+    if (finns) finns.rader.push(r)
+    else ut.push({ rattId: r.ratt_id, rader: [r] })
+  }
+  return ut
+}
+
+/** Gränserna för när en portion verkar orimlig, så att man kontrollerar mängderna. Ingen portion på tur är så stor. */
+export const ORIMLIG_PORTION = { kcal: 2000, gram: 1500 } as const
+
+/** Sant när en portion verkar orimlig: mer än 2 000 kcal eller 1,5 kg. Ofta ett skrivfel i gram eller kcal. */
+export function orimligPortion(n: Pick<Naring, 'kcal' | 'gram'>): boolean {
+  return n.kcal > ORIMLIG_PORTION.kcal || n.gram > ORIMLIG_PORTION.gram
+}
+
+export interface Saknade {
+  /** Rätter där energin saknas: en vara utan kcal, eller noll kcal. */
+  energi: string[]
+  /** Rätter där proteinet saknas för någon vara eller påse. */
+  protein: string[]
+  /** Rätter utan vikt: inga ingredienser med gram. */
+  vikt: string[]
+}
+
+/**
+ * Meningarna om det som saknas, med varje rätt en gång: "Bullens pilsnerkorv saknar energi och protein.
+ * Mormors smörgås och Test saknar vikt." Rätter som saknar samma saker står i samma mening.
+ */
+export function saknasMeningar(s: Saknade): string[] {
+  const vad = new Map<string, string[]>()
+  for (const [nyckel, ord] of [
+    ['vikt', 'vikt'],
+    ['energi', 'energi'],
+    ['protein', 'protein'],
+  ] as const) {
+    for (const namn of s[nyckel]) vad.set(namn, [...(vad.get(namn) ?? []), ord])
+  }
+  const perText = new Map<string, string[]>()
+  for (const [namn, saker] of vad) {
+    const text = uppraknade(saker)
+    perText.set(text, [...(perText.get(text) ?? []), namn])
+  }
+  return [...perText].map(([text, namn]) => `${uppraknade([...namn].sort((a, b) => a.localeCompare(b, 'sv')))} saknar ${text}.`)
+}
+
+/** Vilka rätter i planen (inom turens dagar) som saknar energi, protein eller vikt, i bokstavsordning. */
+export function ratterSomSaknar(data: Matdata, dagar: readonly Matdag[]): Saknade {
+  const anvanda = new Set(inomTuren(data, dagar).map((m) => m.ratt_id))
+  const varor = new Map(data.varor.map((v) => [v.id, v]))
+  const ut: Saknade = { energi: [], protein: [], vikt: [] }
+  for (const ratt of data.ratter) {
+    if (!anvanda.has(ratt.id)) continue
+    const portion = rattPerPortion(ratt, data)
+    if (ratt.matprodukt_id) {
+      const pase = data.pasar.get(ratt.matprodukt_id)
+      if (!pase) ut.energi.push(ratt.namn)
+      else if (pase.protein_g === null) ut.protein.push(ratt.namn)
+      continue
+    }
+    const rattensVaror = data.ingredienser.filter((i) => i.ratt_id === ratt.id).map((i) => varor.get(i.vara_id))
+    if (portion.gram <= 0) ut.vikt.push(ratt.namn)
+    if (portion.kcal <= 0 || rattensVaror.some((v) => v?.kcal_per_100g == null)) ut.energi.push(ratt.namn)
+    if (rattensVaror.some((v) => v?.protein_per_100g == null)) ut.protein.push(ratt.namn)
+  }
+  const ordning = (a: string, b: string) => a.localeCompare(b, 'sv')
+  return { energi: ut.energi.sort(ordning), protein: ut.protein.sort(ordning), vikt: ut.vikt.sort(ordning) }
+}
+
 /** All mat till personerna i gram, för vikten per person i vikt.ts (matvikter). */
 export function matviktTotalt(rader: readonly Inkopsrad[]): number {
   return rader.reduce((s, r) => s + r.gram, 0)
