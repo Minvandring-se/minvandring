@@ -38,9 +38,16 @@ export function passarMedRubrik(underkategori: string): string | null {
   return null
 }
 
+/** Kokkärlssystemet två produkter delar, till exempel trangia_27, eller null när de inte delar något. */
+export function gemensamtSystem(a: Egenskaper, b: Egenskaper): string | null {
+  const s = a?.system
+  return typeof s === 'string' && s && b?.system === s ? s : null
+}
+
 /**
- * Det bland kandidaterna som passar ihop med produkten, lättast först: kokkärl till en brännare eller ett komplett
- * kök, och brännare och kompletta kök till ett kokkärl. Produkten själv tas aldrig med.
+ * Det bland kandidaterna som passar ihop med produkten: kokkärl till en brännare eller ett komplett kök, och brännare
+ * och kompletta kök till ett kokkärl. Det som är gjort för samma kokkärlssystem kommer först, sedan resten, och inom
+ * varje grupp det lättaste först. Produkten själv tas aldrig med.
  */
 export function passarMed<P extends Koksak>(produkt: Koksak, kandidater: P[]): P[] {
   let traffar: P[] = []
@@ -49,5 +56,8 @@ export function passarMed<P extends Koksak>(produkt: Koksak, kandidater: P[]): P
   } else if (produkt.underkategori === KOKKARL) {
     traffar = kandidater.filter((k) => arVarmare(k.underkategori) && passarIhop(k.egenskaper, produkt.egenskaper))
   }
-  return traffar.filter((k) => k.id !== produkt.id).sort((a, b) => (a.packvikt_g ?? Infinity) - (b.packvikt_g ?? Infinity))
+  const forst = (k: P) => (gemensamtSystem(produkt.egenskaper, k.egenskaper) ? 0 : 1)
+  return traffar
+    .filter((k) => k.id !== produkt.id)
+    .sort((a, b) => forst(a) - forst(b) || (a.packvikt_g ?? Infinity) - (b.packvikt_g ?? Infinity))
 }

@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ExternalLink, Search } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ExternalLink, Search } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { SidRubrik } from '@/components/app/SidRubrik'
@@ -15,7 +15,8 @@ import { Specrutor } from '@/components/ui/specrutor'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, underkategoriFor, underkategorierFor, type KategoriNyckel } from '@/lib/forrad'
 import { forradsadress } from '@/lib/forradslista'
-import { KOKKARL, KOKVARMARE, passarMed, passarMedRubrik } from '@/lib/kokkarl'
+import { gemensamtSystem, KOKKARL, KOKVARMARE, passarMed, passarMedRubrik } from '@/lib/kokkarl'
+import { visaEgenskaper } from '@/lib/produktegenskaper'
 import {
   antalText,
   forvalFranProdukt,
@@ -37,6 +38,9 @@ import { cn } from '@/lib/utils'
 const MAX = 200
 const FORDROJNING_MS = 250
 // Allt som visas i detaljpanelen hämtas i samma fråga, så att det inte blir en fråga per kort.
+/** Så många visas under Passar med innan man fäller ut resten. */
+const FORST_PASSAR = 5
+
 const KOLUMNER = 'id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad, granskad, kalla_typ, minvikt_g, pris_sek_ca, kalla, egenskaper'
 
 type Lage = { nyckel: string; modeller: Modell<Katalogprodukt>[]; avkortad: boolean } | { nyckel: string; fel: true } | null
@@ -149,10 +153,10 @@ export function Utrustningskatalog() {
   }, [produktId, behoverHamtas])
 
   /** Öppnar panelen. Ett nytt steg i historiken, så att bakåtknappen stänger den. */
-  function oppna(produkt: string) {
+  function oppna(produkt: string, fran?: string) {
     const p = new URLSearchParams(parametrar)
     p.set('produkt', produkt)
-    setParametrar(p, { state: { panel: true } })
+    setParametrar(p, { state: { panel: true, fran } })
   }
 
   /** Byter storlek i panelen utan ett nytt steg i historiken. */
@@ -246,7 +250,9 @@ export function Utrustningskatalog() {
           iForradet={oppenIForradet}
           onValj={valjStorlek}
           onLaggTill={setLaggTill}
-          onOppna={oppna}
+          onOppna={(id) => oppna(id, produktnamn(oppen.modell))}
+          tillbaka={(location.state as { fran?: string } | null)?.fran}
+          onTillbaka={() => navigate(-1)}
           onStang={stang}
         />
       )}
@@ -341,6 +347,8 @@ function Produktpanel({
   onValj,
   onLaggTill,
   onOppna,
+  tillbaka,
+  onTillbaka,
   onStang,
 }: {
   modell: Modell<Katalogprodukt>
@@ -349,6 +357,9 @@ function Produktpanel({
   onValj: (id: string) => void
   onLaggTill: (p: Katalogprodukt) => void
   onOppna: (id: string) => void
+  /** Namnet på produkten man kom från via "Passar med", för knappen tillbaka dit. */
+  tillbaka?: string
+  onTillbaka: () => void
   onStang: () => void
 }) {
   const id = useId()
@@ -364,6 +375,12 @@ function Produktpanel({
       onStang={onStang}
       rubrik={
         <div className="space-y-1">
+          {tillbaka && (
+            <button type="button" onClick={onTillbaka} className={cn('-ml-1 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary', fokus)}>
+              <ChevronLeft className="size-4 shrink-0" aria-hidden />
+              Tillbaka till {tillbaka}
+            </button>
+          )}
           <h2 className="text-2xl break-words text-primary">{produktnamn(modell)}</h2>
           <p className="font-heading text-3xl font-semibold tabular-nums">{formateraVikt(vald.packvikt_g)}</p>
           {vald.version && <p className="text-sm text-muted-foreground">{vald.version}</p>}
@@ -459,6 +476,7 @@ function IForradet({ finns }: { finns: { produkt: Katalogprodukt; text: string }
 function PassarMed({ produkt, onOppna }: { produkt: Katalogprodukt; onOppna: (id: string) => void }) {
   const rubrik = passarMedRubrik(produkt.underkategori)
   const [kandidater, setKandidater] = useState<{ for: string; produkter: Katalogprodukt[] } | null>(null)
+  const [visaAlla, setVisaAlla] = useState(false)
 
   useEffect(() => {
     if (!supabase || !rubrik) return
@@ -479,6 +497,12 @@ function PassarMed({ produkt, onOppna }: { produkt: Katalogprodukt; onOppna: (id
 
   if (!rubrik) return null
   const lista = kandidater?.for === produkt.id ? passarMed(produkt, kandidater.produkter) : null
+  const synliga = lista && !visaAlla ? lista.slice(0, FORST_PASSAR) : lista
+  // "Gjord för Trangia 27" på det som delar kokkärlssystem med produkten.
+  const gjordFor = (p: Katalogprodukt) => {
+    const system = gemensamtSystem(produkt.egenskaper, p.egenskaper)
+    return system ? visaEgenskaper(KOKKARL, { system })[0]?.varde : null
+  }
   return (
     <section aria-labelledby={`passar-${produkt.id}`} className="space-y-2">
       <h3 id={`passar-${produkt.id}`} className="font-heading text-lg font-semibold">
@@ -488,7 +512,7 @@ function PassarMed({ produkt, onOppna }: { produkt: Katalogprodukt; onOppna: (id
       {lista?.length === 0 && <p className="text-sm text-muted-foreground">Inget i katalogen än.</p>}
       {lista && lista.length > 0 && (
         <ul className="divide-y divide-border rounded-lg border border-border">
-          {lista.map((p) => (
+          {synliga?.map((p) => (
             <li key={p.id}>
               <button
                 type="button"
@@ -497,13 +521,21 @@ function PassarMed({ produkt, onOppna }: { produkt: Katalogprodukt; onOppna: (id
               >
                 <span className="min-w-0 break-words">
                   {[p.marke, p.modell, p.version].filter(Boolean).join(' ')}
-                  <span className="block text-muted-foreground">{underkategoriFor(p.kategori, p.underkategori)?.etikett}</span>
+                  <span className="block text-muted-foreground">
+                    {[underkategoriFor(p.kategori, p.underkategori)?.etikett, gjordFor(p) && `Gjord för ${gjordFor(p)}`].filter(Boolean).join(', ')}
+                  </span>
                 </span>
                 <span className="shrink-0 tabular-nums">{formateraVikt(p.packvikt_g)}</span>
               </button>
             </li>
           ))}
         </ul>
+      )}
+      {lista && lista.length > FORST_PASSAR && (
+        <button type="button" aria-expanded={visaAlla} onClick={() => setVisaAlla((v) => !v)} className={cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary', fokus)}>
+          {visaAlla ? 'Visa färre' : `Visa alla (${lista.length})`}
+          <ChevronDown className={cn('size-4 transition-transform', visaAlla && 'rotate-180')} aria-hidden />
+        </button>
       )}
     </section>
   )

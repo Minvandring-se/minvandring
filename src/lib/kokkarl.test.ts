@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { passarIhop, passarMed, passarMedRubrik } from './kokkarl'
+import { gemensamtSystem, passarIhop, passarMed, passarMedRubrik } from './kokkarl'
 
 describe('vilka kokkärl som passar vilka brännare', () => {
   const jetboil = { typ: 'systemkok', system: 'jetboil_fluxring' }
@@ -56,8 +56,10 @@ describe('listan över det som passar', () => {
     expect(passarMed(jetboil, alla)).toEqual([])
   })
 
-  it('ger ett kokkärl brännarna och köken det passar på', () => {
-    expect(passarMed(billy27, alla).map((p) => p.id)).toEqual(['crux', 't27'])
+  it('ger ett kokkärl brännarna och köken det passar på, med köken i samma system först', () => {
+    expect(passarMed(billy27, alla).map((p) => p.id)).toEqual(['t27', 'crux'])
+    expect(gemensamtSystem(billy27.egenskaper, trangia27.egenskaper)).toBe('trangia_27')
+    expect(gemensamtSystem(billy27.egenskaper, crux.egenskaper)).toBeNull()
     expect(passarMed(panna, alla).map((p) => p.id)).toEqual(['crux'])
   })
 
