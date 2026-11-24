@@ -71,7 +71,7 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
           .select('id')
     setArbetar(false)
     if (error) {
-      setFel('Det gick inte att spara. Försök igen.')
+      setFel('Det gick inte att spara. Kontrollera uppkopplingen och försök igen.')
       return
     }
     onKlar(sak ? undefined : (data?.[0]?.id as string | undefined))
@@ -85,7 +85,7 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
     const { error } = await supabase.from('forradssaker').delete().eq('id', sak.id)
     setArbetar(false)
     if (error) {
-      setFel('Det gick inte att ta bort. Försök igen.')
+      setFel('Det gick inte att ta bort. Kontrollera uppkopplingen och försök igen.')
       return
     }
     onKlar()

@@ -1,10 +1,14 @@
 import { Check, ChevronDown, ExternalLink, Search } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
+import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
 import { SidRubrik } from '@/components/app/SidRubrik'
+import { TomtLage } from '@/components/app/TomtLage'
 import { Granskad } from '@/components/forrad/Granskad'
 import { Kategorifilter } from '@/components/forrad/Kategorifilter'
 import { SakFormular } from '@/components/forrad/SakFormular'
+import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
@@ -82,6 +86,8 @@ export function Utrustningskatalog() {
   const [lage, setLage] = useState<Lage>(null)
   // Hur många kort som visas, för sökningen i nyckel. En ny sökning börjar om från en sida.
   const [visas, setVisas] = useState<{ nyckel: string; antal: number }>({ nyckel: '', antal: SIDA })
+  // Räknas upp av Försök igen, så att sökningen görs igen.
+  const [forsok, setForsok] = useState(0)
   // Produkterna i träfflistan som finns i ens förråd, med produktens version (storlek). Hämtas med en fråga per träfflista.
   const [iForradet, setIForradet] = useState<IForradetKarta>(new Map())
   // Produkten som läggs i förrådet just nu, i formuläret.
@@ -137,7 +143,7 @@ export function Utrustningskatalog() {
       avbruten = true
       window.clearTimeout(timer)
     }
-  }, [text, kategori, underkategori, kokval, harText, sokbar, nyckel])
+  }, [text, kategori, underkategori, kokval, harText, sokbar, nyckel, forsok])
 
   const aktuellt = sokbar && lage?.nyckel === nyckel ? lage : null
   // Förra träfflistan ligger kvar, dämpad, tills nästa kommer. Då hoppar inte sidan medan man skriver.
@@ -257,11 +263,16 @@ export function Utrustningskatalog() {
       )}
 
       {!sokbar && <p className="text-sm text-muted-foreground">Skriv minst två tecken eller välj en kategori.</p>}
-      {sokbar && !aktuellt && !modeller && <p className="text-sm text-muted-foreground">Söker …</p>}
-      <div aria-live="polite" className="text-sm text-muted-foreground">
-        {aktuellt && 'fel' in aktuellt && <p className="text-destructive">Det gick inte att söka. Kontrollera uppkopplingen och försök igen.</p>}
-        {!gammal && modeller?.length === 0 && <p>{ingaTraffarText({ harText, kategori, underkategori })}</p>}
-        {!gammal && modeller && modeller.length > 0 && <p className="font-medium text-foreground">{visasText(Math.min(antalVisas, modeller.length), modeller.length)}</p>}
+      {sokbar && !aktuellt && !modeller && (
+        <Laddar text="Hämtar produkter" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <Skelett className="h-28 rounded-lg" />
+          <Skelett className="h-28 rounded-lg" />
+        </Laddar>
+      )}
+      {aktuellt && 'fel' in aktuellt && <Laddfel vad="produkterna" onForsokIgen={() => setForsok((n) => n + 1)} />}
+      {!gammal && modeller?.length === 0 && <TomtLage kompakt text={ingaTraffarText({ harText, kategori, underkategori })} />}
+      <div aria-live="polite" className="text-sm">
+        {!gammal && modeller && modeller.length > 0 && <p className="font-medium">{visasText(Math.min(antalVisas, modeller.length), modeller.length)}</p>}
       </div>
 
       {synliga && synliga.length > 0 && (
@@ -401,7 +412,7 @@ function Produktpanel({
       onStang={onStang}
       rubrik={
         <div className="space-y-1">
-          <h2 className="text-2xl break-words text-primary">{produktnamn(modell)}</h2>
+          <h2 className="text-2xl break-words">{produktnamn(modell)}</h2>
           <p className="font-heading text-3xl font-semibold tabular-nums">{formateraVikt(vald.packvikt_g)}</p>
           {(vald.version || kokEtikettFor(vald)) && <p className="text-sm text-muted-foreground">{[vald.version, kokEtikettFor(vald)].filter(Boolean).join(', ')}</p>}
           {finns && <IForradet finns={finns} />}
@@ -472,10 +483,10 @@ function Produktpanel({
 function IForradet({ finns }: { finns: { produkt: Katalogprodukt; text: string } }) {
   return (
     <p className="flex flex-wrap items-center gap-x-3 text-sm">
-      <span className="inline-flex items-center gap-1.5 rounded-full bg-hjortron-soft px-2.5 py-0.5 font-medium text-hjortron-strong">
+      <Bricka ton="hjortron" className="text-sm">
         <Check className="size-4 shrink-0" aria-hidden />
         {finns.text}
-      </span>
+      </Bricka>
       <Link
         to={forradsadress(finns.produkt.kategori, finns.produkt.underkategori)}
         className={cn('inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4', fokus)}

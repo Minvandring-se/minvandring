@@ -33,7 +33,7 @@ export class Felgrans extends Component<Props, { fel: boolean; aterstall: string
       <div role="alert" className="mx-auto max-w-xl space-y-4 rounded-lg border border-border bg-card p-6 shadow-soft sm:p-8">
         <h1 className="text-2xl">Något gick fel</h1>
         <p className="text-muted-foreground">
-          Sidan gick inte att visa. Ladda om och försök igen.
+          Sidan gick inte att visa. Ladda om sidan och försök igen.
           {KONTAKT_MEJL && (
             <>
               {' '}
@@ -41,7 +41,7 @@ export class Felgrans extends Component<Props, { fel: boolean; aterstall: string
             </>
           )}
         </p>
-        <Button onClick={() => window.location.reload()}>Ladda om</Button>
+        <Button onClick={() => window.location.reload()}>Ladda om sidan</Button>
       </div>
     )
   }

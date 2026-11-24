@@ -1,7 +1,7 @@
-import { RefreshCw } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Inkopslista } from '@/components/mat/Inkopslista'
 import { Kostbehov } from '@/components/mat/Kostbehov'
@@ -9,7 +9,6 @@ import { Matdag } from '@/components/mat/Matdag'
 import { Matsummering } from '@/components/mat/Matsummering'
 import { ValjRatt } from '@/components/mat/ValjRatt'
 import { useTur } from '@/components/tur/turKontext'
-import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
 import { sparaRecept, useRecept } from '@/hooks/useRecept'
 import { useSkafferi } from '@/hooks/useSkafferi'
@@ -51,16 +50,7 @@ export function TurMat() {
       </Laddar>
     )
 
-  if (lage.lage === 'fel')
-    return (
-      <div role="alert" className="space-y-3">
-        <p className="text-destructive">Det gick inte att hämta matplanen. Kontrollera uppkopplingen och försök igen.</p>
-        <Button variant="outline" onClick={laddaOm}>
-          <RefreshCw className="size-4" aria-hidden />
-          Försök igen
-        </Button>
-      </div>
-    )
+  if (lage.lage === 'fel') return <Laddfel vad="matplanen" onForsokIgen={laddaOm} />
 
   return <Matplanvy plan={lage.plan} dagar={dagar} laddaOm={laddaOm} />
 }

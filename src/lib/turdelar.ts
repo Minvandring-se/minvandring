@@ -29,7 +29,7 @@ export const TURDELAR: readonly TurdelInfo[] = [
   { del: 'gruppen', namn: 'Gruppen', sokvag: 'gruppen', byggd: false, blir: 'Att göra i gruppen, omröstningar och det senaste som hänt i turen.' },
   { del: 'kostnader', namn: 'Kostnader', sokvag: 'kostnader', byggd: false, blir: 'Delade kostnader och vem som ska betala vem när turen är slut.' },
   { del: 'sakerhet', namn: 'Säkerhet', sokvag: 'sakerhet', byggd: false, blir: 'En färdplan till någon hemma med kontaktperson, hemkomst och nödinformation.' },
-  { del: 'anteckningar', namn: 'Anteckningar', sokvag: 'anteckningar', byggd: false, blir: 'Anteckningar under och efter turen, och det ni vill komma ihåg till nästa vandring.' },
+  { del: 'anteckningar', namn: 'Anteckningar', sokvag: 'anteckningar', byggd: false, blir: 'Anteckningar under och efter turen, och det ni vill komma ihåg till nästa tur.' },
 ]
 
 /** Informationen om en del. */

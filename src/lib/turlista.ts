@@ -66,9 +66,9 @@ function delar(iso: string) {
   return { ar, manad: MANADER[manad - 1], dag }
 }
 
-/** "12–16 augusti 2027", "30 juli till 3 augusti 2027", "Från 12 augusti 2027" eller "Datum ej bestämt". */
+/** "12–16 augusti 2027", "30 juli till 3 augusti 2027", "Från 12 augusti 2027" eller "Inget datum". */
 export function datumIntervall(avresa: string | null, hemkomst: string | null): string {
-  if (!avresa) return 'Datum ej bestämt'
+  if (!avresa) return 'Inget datum'
   const a = delar(avresa)
   if (!hemkomst || hemkomst < avresa) return `Från ${a.dag} ${a.manad} ${a.ar}`
   const h = delar(hemkomst)
@@ -116,12 +116,13 @@ export function bildForTur(id: string): (typeof TURBILDER)[number] {
 }
 
 /**
- * Raden med datum under turens namn: "12–16 augusti 2027, 5 dagar".
- * Utan avresa står "Datum ej bestämt", med längden efter om någon har angett den: "Datum ej bestämt, 3 dagar".
+ * Raden med datum under turens namn: "12–16 augusti 2027, 5 vandringsdagar".
+ * Utan avresa står "Inget datum", med längden efter om någon har angett den: "Inget datum, 3 vandringsdagar".
+ * Vandringsdagar, inte dagar: samma tal som Vandringsdagar i turens huvud, och reservdagarna räknas inte in.
  */
 export function datumrad(tur: Pick<TurIListan, 'avresa' | 'hemkomst' | 'dagar'>): string {
   const datum = datumIntervall(tur.avresa, tur.hemkomst)
-  return tur.dagar === null ? datum : `${datum}, ${dagarText(tur.dagar)}`
+  return tur.dagar === null ? datum : `${datum}, ${tur.dagar} ${tur.dagar === 1 ? 'vandringsdag' : 'vandringsdagar'}`
 }
 
 /** Texten som visas när en uppgift om turen inte är ifylld. */
@@ -140,7 +141,7 @@ export function antalFranFalt(text: string): number | null {
 }
 
 /**
- * Avsnittet under nästa vandring. Visas bara när det finns fler turer än den som redan syns i det stora kortet.
+ * Avsnittet under nästa tur. Visas bara när det finns fler turer än den som redan syns i det stora kortet.
  * Fliken Tidigare är förvald när det inte finns några kommande turer.
  */
 export function flerTurer(kommande: number, tidigare: number): { visa: boolean; forvald: 'kommande' | 'tidigare' } {
@@ -205,7 +206,7 @@ export function deltagarNamn(deltagare: readonly { namn: string }[], max = 4): s
 }
 
 /**
- * Hälsningen under rubriken Mina turer. När kortet för nästa vandring visas räcker "Hej Oscar!",
+ * Hälsningen under rubriken Mina turer. När kortet för nästa tur visas räcker "Hej Oscar!",
  * eftersom kortets etikett redan säger vad det är. Utan namn visas då ingen hälsning alls.
  * I övriga lägen säger hälsningen vad sidan är till för.
  */
@@ -213,7 +214,7 @@ export function halsning(namn: string, lage: 'laddar' | 'inga-turer' | 'nasta-vi
   const tilltal = namn.trim()
   if (lage === 'nasta-visas') return tilltal ? `Hej ${tilltal}!` : null
   const hej = tilltal ? `Hej ${tilltal}.` : 'Hej.'
-  if (lage === 'inga-turer') return `${hej} Här samlar du vandringarna du planerar.`
-  if (lage === 'bara-tidigare') return `${hej} Dags att planera nästa vandring?`
+  if (lage === 'inga-turer') return `${hej} Här samlar du turerna du planerar.`
+  if (lage === 'bara-tidigare') return `${hej} Dags att planera nästa tur?`
   return hej
 }

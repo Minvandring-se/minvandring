@@ -3,11 +3,12 @@ import { Link, useLocation } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { Namnbrickor } from '@/components/app/Namnbricka'
 import { TillbakaLank } from '@/components/tur/Tillbaka'
+import { Bricka } from '@/components/ui/bricka'
+import { Flikrad } from '@/components/ui/flikrad'
 import { KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { knappStil } from '@/components/ui/knappStil'
 import { Nyckeltal } from '@/components/ui/nyckeltal'
 import { Turbild } from '@/components/ui/turbild'
-import { useAktivFlikSynlig } from '@/hooks/useAktivFlikSynlig'
 import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
 import { ROLLNAMN, kanAndra, type Roll } from '@/lib/roller'
 import { aktivTurdel, TURDELAR, turdelAdress } from '@/lib/turdelar'
@@ -25,7 +26,6 @@ const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 export function TurHuvud({ tur, deltagare, minRoll }: { tur: Tur; deltagare: DeltagareRad[]; minRoll: Roll | null }) {
   const { pathname, state } = useLocation()
   const aktiv = aktivTurdel(pathname)
-  const flikrad = useAktivFlikSynlig<HTMLElement>(aktiv)
   const { bildUppdaterad } = useApp()
   const bilder = useProfilbilder(deltagare.map((d) => d.user_id), bildUppdaterad)
   const personer = deltagare
@@ -83,8 +83,12 @@ export function TurHuvud({ tur, deltagare, minRoll }: { tur: Tur; deltagare: Del
         <div className="relative mx-2 -mt-8 flex flex-col gap-3 rounded-[1.375rem] border border-border bg-card p-5 md:order-1 md:m-0 md:justify-center md:gap-3.5 md:rounded-none md:border-0 md:p-8 lg:p-9">
           {(etikett || minRoll) && (
             <div className="flex flex-wrap gap-2">
-              {etikett && <span className="rounded-full bg-accent-soft px-3 py-1 text-sm font-semibold text-accent-strong">{etikett}</span>}
-              {minRoll && <span className="rounded-full bg-muted px-3 py-1 text-sm font-medium text-muted-foreground">Du är {ROLLNAMN[minRoll].toLowerCase()}</span>}
+              {etikett && (
+                <Bricka ton="rost" stor>
+                  {etikett}
+                </Bricka>
+              )}
+              {minRoll && <Bricka stor>Du är {ROLLNAMN[minRoll].toLowerCase()}</Bricka>}
             </div>
           )}
           {/* Långa ord avstavas på svenska (lang="sv") i stället för att brytas mitt i. */}
@@ -117,34 +121,13 @@ export function TurHuvud({ tur, deltagare, minRoll }: { tur: Tur; deltagare: Del
       {/*
         Flikarna. Översikt och Mat är byggda, de andra visar vad de blir med "Kommer snart".
         Flikarna byter del utan att lägga till ett steg i historiken, så att bakåt alltid leder ut ur turen.
-        I mobil är de runda knappar i en rad som går att svepa, skrollad fram till den aktiva, på dator flikar med en rostfärgad linje under den aktiva.
       */}
-      {/* relative: de dolda texterna för skärmläsare är absolut placerade och ska klippas av raden, inte göra sidan bredare. */}
-      <nav ref={flikrad} aria-label="Turens delar" className="relative -mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:overflow-visible md:border-b md:border-border md:px-0">
-        <ul className="flex gap-2 py-1 md:-mb-px md:flex-wrap md:gap-1 md:py-0">
-          {TURDELAR.map(({ del, namn, byggd }) => (
-            <li key={del} className="shrink-0">
-              <Link
-                to={turdelAdress(tur.id, del)}
-                replace
-                state={state}
-                aria-current={aktiv === del ? 'page' : undefined}
-                className={cn(
-                  // Fokusringen ligger utanför knappen i mobil, så att den syns även på den mörka aktiva fliken.
-                  'flex min-h-11 items-center rounded-full border px-4 text-sm whitespace-nowrap transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:focus-visible:-outline-offset-2',
-                  'md:rounded-none md:border-0 md:border-b-[3px] md:px-3.5 md:text-[0.9375rem]',
-                  aktiv === del
-                    ? 'border-primary bg-primary font-semibold text-primary-foreground md:border-accent md:bg-transparent md:text-foreground'
-                    : 'border-border bg-card text-muted-foreground hover:text-foreground md:border-transparent md:bg-transparent',
-                )}
-              >
-                {namn}
-                {!byggd && <span className="sr-only"> (kommer snart)</span>}
-              </Link>
-            </li>
-          ))}
-        </ul>
-      </nav>
+      <Flikrad
+        etikett="Turens delar"
+        aktiv={aktiv}
+        lank={{ replace: true, state }}
+        flikar={TURDELAR.map(({ del, namn, byggd }) => ({ nyckel: del, namn, till: turdelAdress(tur.id, del), kommerSnart: !byggd }))}
+      />
     </div>
   )
 }

@@ -1,5 +1,5 @@
 import { Plus, X } from 'lucide-react'
-import { useId, useState, type FormEvent } from 'react'
+import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { formateraVikt } from '@/lib/forrad'
@@ -18,20 +18,20 @@ const TEXTER = {
     namn: 'Rättens namn',
     nySpara: 'Spara och lägg till i måltiden',
     sparaFel: 'Det gick inte att spara rätten. Kontrollera uppkopplingen och att ingen annan rätt i turen heter likadant.',
-    raderaFel: 'Det gick inte att radera rätten. Kontrollera uppkopplingen och försök igen.',
-    raderaFraga: 'Rätten raderas och tas bort ur alla måltider i turen. Varor som bara den använde raderas också. Det går inte att få tillbaka.',
-    radera: 'Radera rätten',
-    raderaJa: 'Ja, radera rätten',
+    raderaFel: 'Det gick inte att ta bort rätten. Kontrollera uppkopplingen och försök igen.',
+    raderaFraga: 'Rätten tas bort ur turen och ur alla måltider. Varor som bara den använde tas också bort. Det går inte att få tillbaka.',
+    radera: 'Ta bort rätten',
+    raderaJa: 'Ja, ta bort rätten',
     raderaNej: 'Nej, behåll rätten',
   },
   recept: {
     namn: 'Receptets namn',
     nySpara: 'Spara receptet',
     sparaFel: 'Det gick inte att spara receptet. Kontrollera uppkopplingen och att du inte redan har ett recept som heter likadant.',
-    raderaFel: 'Det gick inte att radera receptet. Kontrollera uppkopplingen och försök igen.',
-    raderaFraga: 'Receptet raderas. Turer där det redan ligger påverkas inte. Det går inte att få tillbaka.',
-    radera: 'Radera receptet',
-    raderaJa: 'Ja, radera receptet',
+    raderaFel: 'Det gick inte att ta bort receptet. Kontrollera uppkopplingen och försök igen.',
+    raderaFraga: 'Receptet tas bort. Turer där det redan ligger påverkas inte. Det går inte att få tillbaka.',
+    radera: 'Ta bort receptet',
+    raderaJa: 'Ja, ta bort receptet',
     raderaNej: 'Nej, behåll receptet',
   },
 } as const
@@ -49,6 +49,7 @@ function faltForVara(vara: Forslag, gram = ''): Ingrediensfalt {
 /**
  * Formuläret för en egen rätt eller ett eget recept: namn och ingredienser med gram per portion, kcal och protein
  * per 100 g. Visar energin och vikten per portion medan man skriver. Varor som redan finns föreslås.
+ * Formuläret ligger i en Panel: ram får fälten och knapparna, och knapparna läggs i panelens fot.
  */
 export function EgenRattFormular({
   typ = 'ratt',
@@ -58,7 +59,10 @@ export function EgenRattFormular({
   onSpara,
   onAvbryt,
   onTaBort,
+  ram,
 }: {
+  /** Lägger fälten i en panel och knapparna Spara och Avbryt i dess fot. */
+  ram: (falt: ReactNode, knappar: ReactNode) => ReactNode
   typ?: 'ratt' | 'recept'
   /** En ny rätt läggs i måltiden när den sparas. Ett nytt recept sparas bara. */
   ny: boolean
@@ -121,8 +125,20 @@ export function EgenRattFormular({
     if (!ok) setFel(t.sparaFel)
   }
 
-  return (
-    <form onSubmit={spara} noValidate className="space-y-5">
+  // Knapparna står i panelens fot, utanför formuläret, och hör till det med form-attributet.
+  const knappar = (
+    <div className="flex flex-wrap gap-2">
+      <Button type="submit" form={`${id}-formular`} disabled={sparar}>
+        {sparar ? 'Sparar …' : ny ? t.nySpara : 'Spara ändringarna'}
+      </Button>
+      <Button type="button" variant="outline" onClick={onAvbryt}>
+        Avbryt
+      </Button>
+    </div>
+  )
+
+  return ram(
+    <form id={`${id}-formular`} onSubmit={spara} noValidate className="space-y-5">
       <div className="space-y-1.5">
         <label htmlFor={`${id}-namn`} className="text-sm font-medium">
           {t.namn}
@@ -191,15 +207,6 @@ export function EgenRattFormular({
         </p>
       )}
 
-      <div className="flex flex-wrap gap-2">
-        <Button type="submit" disabled={sparar}>
-          {sparar ? 'Sparar …' : ny ? t.nySpara : 'Spara ändringarna'}
-        </Button>
-        <Button type="button" variant="outline" onClick={onAvbryt}>
-          Avbryt
-        </Button>
-      </div>
-
       {onTaBort && (
         <div className="space-y-2 border-t border-border pt-4">
           {sakerPa && (
@@ -217,6 +224,7 @@ export function EgenRattFormular({
           </div>
         </div>
       )}
-    </form>
+    </form>,
+    knappar,
   )
 }
