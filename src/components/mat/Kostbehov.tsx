@@ -44,6 +44,8 @@ export function Kostbehov({
       <h2 id={`${id}-rubrik`} className="font-sans text-base">
         <button
           type="button"
+          aria-label="Kostbehov"
+          aria-describedby={`${id}-sammanfattning`}
           aria-expanded={oppen}
           aria-controls={`${id}-detaljer`}
           onClick={() => setOppen((o) => !o)}
@@ -51,7 +53,7 @@ export function Kostbehov({
         >
           <span className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
             <span className="shrink-0 pt-0.5 font-semibold">Kostbehov</span>
-            <span className="flex min-w-0 flex-col gap-1.5 font-normal">
+            <span id={`${id}-sammanfattning`} className="flex min-w-0 flex-col gap-1.5 font-normal">
               {medBehov.length > 0 && (
                 <span className="flex flex-wrap gap-1.5">
                   {medBehov.map((p) => (
@@ -63,7 +65,6 @@ export function Kostbehov({
               )}
               <span className="text-sm text-muted-foreground">
                 {[
-                  medBehov.length === 0 && 'Inga kostbehov angivna i gruppen.',
                   inga.length > 0 && `Inga kostbehov: ${uppraknade(inga)}.`,
                   inteSvarat.length > 0 && `Har inte angett något: ${uppraknade(inteSvarat)}.`,
                 ]
@@ -73,7 +74,6 @@ export function Kostbehov({
             </span>
           </span>
           <ChevronDown className={cn('mt-0.5 size-5 shrink-0 text-muted-foreground transition-transform', oppen && 'rotate-180')} aria-hidden />
-          <span className="sr-only">{oppen ? ', dölj detaljer' : ', visa detaljer och ändra dina'}</span>
         </button>
       </h2>
       <div id={`${id}-detaljer`} hidden={!oppen} className="space-y-3 border-t border-border px-4 py-4 sm:px-5">
@@ -163,7 +163,7 @@ function Behovspanel({
   function spara(e: FormEvent) {
     e.preventDefault()
     // Allt urbockat sparas som att man inte har några kostbehov. Det kräver också samtycke.
-    if (!samtycke) return setFel('Kryssa i att du samtycker för att kunna spara.')
+    if (!samtycke) return setFel('Bocka i att du samtycker för att kunna spara.')
     void gor(() => onSpara(behov))
   }
 
@@ -188,7 +188,7 @@ function Behovspanel({
       <form id={formId} onSubmit={spara} noValidate className="space-y-5">
         <p className="text-sm text-muted-foreground">
           Uppgifterna sparas bara för den här turen och syns för alla som är med i den, så att ni kan välja mat som passar. Det är
-          frivilligt. Sparar du utan att bocka i något står det att du inte har några kostbehov. Tar du bort dem tas uppgifterna bort och samtycket är återkallat.
+          frivilligt. Sparar du utan att bocka i något noteras det att du inte har några kostbehov. Ta bort dina kostbehov om du vill ta tillbaka samtycket.
         </p>
         <fieldset className="space-y-1">
           <legend className="mb-1 text-sm font-medium">Kost</legend>

@@ -157,28 +157,29 @@ function Rattrad({ rad, ratter, behov, kanAndra, onTaBort, vad }: { rad: Maltids
   const lista = pase ? varningar(pase, behov) : []
   const per100 = kcalPer100g(portion.kcal, portion.gram)
   return (
-    <li className="flex items-start gap-1 rounded-knapp bg-muted/60 py-1 pl-3">
-      <div className="min-w-0 flex-1 space-y-0.5 py-1.5">
-        <p className="text-[0.9375rem] leading-snug font-medium wrap-anywhere">{ratt.namn}</p>
-        <p className="text-xs text-muted-foreground tabular-nums">
+    // Namnet får hela rutans bredd. Energin och Ta bort står på raden under, så att långa namn går att läsa i smala rutor.
+    <li className="space-y-0.5 rounded-knapp bg-muted/60 pt-2 pl-3">
+      <p className="pr-3 text-[0.9375rem] leading-snug font-medium break-words hyphens-auto">{ratt.namn}</p>
+      {lista.length > 0 && (
+        <ul className="space-y-0.5 pr-3 text-xs">
+          {lista.map((v) => (
+            <li key={v.text} className={cn(v.okand ? 'text-muted-foreground' : 'font-medium text-accent-strong')}>
+              {v.text}
+            </li>
+          ))}
+        </ul>
+      )}
+      <div className="flex items-center justify-between gap-1">
+        <p className="py-2 text-xs text-muted-foreground tabular-nums">
           {formateraKcal(portion.kcal)} per portion
           {per100 !== null && <span className="block">{per100} kcal per 100 g</span>}
         </p>
-        {lista.length > 0 && (
-          <ul className="space-y-0.5 text-xs">
-            {lista.map((v) => (
-              <li key={v.text} className={cn(v.okand ? 'text-muted-foreground' : 'font-medium text-accent-strong')}>
-                {v.text}
-              </li>
-            ))}
-          </ul>
+        {kanAndra && (
+          <Button variant="ghost" size="ikon" onClick={onTaBort} aria-label={`Ta bort ${ratt.namn} från ${vad}`}>
+            <X className="size-4" aria-hidden />
+          </Button>
         )}
       </div>
-      {kanAndra && (
-        <Button variant="ghost" size="ikon" onClick={onTaBort} aria-label={`Ta bort ${ratt.namn} från ${vad}`}>
-          <X className="size-4" aria-hidden />
-        </Button>
-      )}
     </li>
   )
 }

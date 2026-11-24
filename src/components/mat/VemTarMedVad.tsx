@@ -57,7 +57,7 @@ export function VemTarMedVad({
                   <li key={r.rattId} className="flex items-center justify-between gap-3 py-2">
                     <Ratt ratt={r} />
                     {kanAndra && mittDeltagareId && (
-                      <Button variant="outline" className="shrink-0" disabled={tar !== null} onClick={() => ta(r)} aria-label={`Jag tar ${r.namn}`}>
+                      <Button variant="outline" className="shrink-0" disabled={tar !== null} onClick={() => ta(r)} aria-label={`Jag tar den, ${r.namn}`}>
                         {tar === r.rattId ? 'Sparar …' : 'Jag tar den'}
                       </Button>
                     )}

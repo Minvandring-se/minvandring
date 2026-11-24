@@ -231,7 +231,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
 
       <Matsummering summering={matsummering(summor)} totaltG={totaltG} perPerson={perPerson} />
 
-      <div id="inkopslista" className="scroll-mt-6">
+      <div id="inkopslista" tabIndex={-1} className="scroll-mt-6 focus:outline-none">
         <Inkopslista
         rader={inkop}
         deltagare={deltagare}
