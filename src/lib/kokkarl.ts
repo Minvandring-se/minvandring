@@ -32,6 +32,40 @@ export function passarIhop(brannare: Egenskaper, kokkarl: Egenskaper): boolean {
   return typeof brannare?.typ === 'string' && OPPNA_TYPER.has(brannare.typ)
 }
 
+/** Underkategorin för bränsle: gaspatroner, sprit och annat som brinner. */
+export const BRANSLE = 'bransle'
+
+function harEn417(brannare: Egenskaper): boolean {
+  return typeof brannare?.patronfaste === 'string' && brannare.patronfaste.toUpperCase().includes('EN 417')
+}
+
+/**
+ * Passar bränslet till brännaren? En skruvpatron passar en gasbrännare, utom när patronfästet är angivet och inte är
+ * EN 417, och en multibränslebrännare bara när patronfästet är EN 417. Bensin och fotogen passar multibränsle, sprit
+ * passar sprit och fast bränsle passar fast bränsle. Ved och "annat" kopplas inte till något.
+ */
+export function passarBransle(brannare: Egenskaper, bransle: Egenskaper): boolean {
+  const kok = brannare?.bransle
+  switch (bransle?.typ) {
+    case 'skruvpatron':
+      if (kok === 'gas') return saknasText(brannare?.patronfaste) || harEn417(brannare)
+      return kok === 'multibransle' && harEn417(brannare)
+    case 'bensin':
+    case 'fotogen':
+      return kok === 'multibransle'
+    case 'sprit':
+      return kok === 'sprit'
+    case 'fast_bransle':
+      return kok === 'fast_bransle'
+    default:
+      return false
+  }
+}
+
+function saknasText(varde: unknown): boolean {
+  return typeof varde !== 'string' || varde.trim() === ''
+}
+
 type Koksak = { id: string; underkategori: string; egenskaper?: Egenskaper; packvikt_g?: number | null }
 
 /** Rubriken för listan över det som passar, eller null när produkten inte hör till köket. */
@@ -39,6 +73,24 @@ export function passarMedRubrik(underkategori: string): string | null {
   if (arVarmare(underkategori)) return 'Kokkärl och stekpannor som passar'
   if (underkategori === KOKKARL) return 'Brännare och kök det passar på'
   return null
+}
+
+/** Rubriken för listan över bränsle eller brännare, eller null när produkten inte har med bränsle att göra. */
+export function bransleRubrik(underkategori: string): string | null {
+  if (arVarmare(underkategori)) return 'Bränsle som passar'
+  if (underkategori === BRANSLE) return 'Brännare och kök det passar till'
+  return null
+}
+
+/** Bränslet som passar en brännare eller ett komplett kök, eller brännarna och köken som passar ett bränsle. Lättast först. */
+export function bransleMed<P extends Koksak>(produkt: Koksak, kandidater: P[]): P[] {
+  let traffar: P[] = []
+  if (arVarmare(produkt.underkategori)) {
+    traffar = kandidater.filter((k) => k.underkategori === BRANSLE && passarBransle(produkt.egenskaper, k.egenskaper))
+  } else if (produkt.underkategori === BRANSLE) {
+    traffar = kandidater.filter((k) => arVarmare(k.underkategori) && passarBransle(k.egenskaper, produkt.egenskaper))
+  }
+  return traffar.filter((k) => k.id !== produkt.id).sort((a, b) => (a.packvikt_g ?? Infinity) - (b.packvikt_g ?? Infinity))
 }
 
 /** Kokkärlssystemet två produkter delar, till exempel trangia_27, eller null när de inte delar något. */
@@ -71,7 +123,7 @@ export function kokvikt(delar: readonly { packvikt_g: number }[]): number {
 }
 
 /**
- * Sakerna som läggs i förrådet när man sparar sitt kök: brännaren och de valda kokkärlen, var för sig och med
+ * Sakerna som läggs i förrådet när man sparar sitt kök: brännaren och de valda kokkärlen och bränslet, var för sig och med
  * koppling till katalogen. Brännaren tas inte med om den redan finns i förrådet, och samma kokkärl bara en gång.
  */
 export function sakerForKok(brannare: Produkt, valda: readonly Produkt[], brannarenFinns: boolean) {

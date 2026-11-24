@@ -196,6 +196,36 @@ const KASTRULL: Egenskap[] = [
   { nyckel: 'bara_system', etikett: 'Bara för sitt kök', sort: 'janej' },
 ]
 
+/**
+ * Bränslet i grova drag. En skruvpatron har gängan EN 417 och passar brännare för gas och multibränsle med det
+ * patronfästet. "annat" är det som inte passar in, till exempel stickpatroner, och kopplas inte till någon brännare.
+ */
+export const BRANSLETYPER = ['skruvpatron', 'sprit', 'bensin', 'fotogen', 'fast_bransle', 'annat'] as const
+
+/** Flytande bränslen säljs efter volym. */
+const FLYTANDE = new Set(['sprit', 'bensin', 'fotogen'])
+
+/**
+ * Bränsle: gaspatroner, sprit, flytande bränsle och fast bränsle. packvikt_g är förpackningen full, bransle_g mängden
+ * bränsle och tomvikt_g det som är kvar att bära hem när bränslet är slut.
+ */
+const BRANSLE: Egenskap[] = [
+  { nyckel: 'typ', etikett: 'Typ', sort: 'val', val: BRANSLETYPER, forJamforelse: true, viktig: true },
+  { nyckel: 'bransle_g', etikett: 'Bränsle', sort: 'heltal', min: 10, max: 5000, enhet: 'g', forJamforelse: true, viktig: true },
+  { nyckel: 'tomvikt_g', etikett: 'Tom förpackning', sort: 'heltal', min: 5, max: 2000, enhet: 'g', viktig: true },
+  { nyckel: 'volym_l', etikett: 'Volym', sort: 'decimal', min: 0.05, max: 5, enhet: 'l', viktig: true },
+  // Fri text, till exempel "propan, butan och isobutan".
+  { nyckel: 'gasblandning', etikett: 'Gasblandning', sort: 'text' },
+]
+
+/** Volym finns bara för flytande bränsle och gasblandning bara för patroner. */
+function bransleregler(e: Record<string, unknown>): string[] {
+  const fel: string[] = []
+  if (!saknas(e.volym_l) && typeof e.typ === 'string' && !FLYTANDE.has(e.typ)) fel.push('volym_l: anges bara för sprit, bensin och fotogen')
+  if (!saknas(e.gasblandning) && e.typ !== 'skruvpatron') fel.push('gasblandning: anges bara när typ är skruvpatron')
+  return fel
+}
+
 /** Så renar produkten vattnet. Tabletterna ligger i underkategorin rening, övriga i filter. */
 export const RENINGSTYPER = ['tabletter', 'flaskfilter', 'filter', 'pump', 'gravitationsfilter'] as const
 
@@ -353,6 +383,7 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   brannare: BRANNARE,
   komplett_kok: BRANNARE,
   kastrull: KASTRULL,
+  bransle: BRANSLE,
   filter: VATTENRENING,
   rening: VATTENRENING,
   stavar: STAVAR,
@@ -368,6 +399,7 @@ const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, un
   brannare: brannarregler_utanKokkarl,
   komplett_kok: kompletta_kokregler,
   kastrull: kastrullregler,
+  bransle: bransleregler,
   stavar: stavregler,
   pannlampa: lampregler,
 }
@@ -482,6 +514,7 @@ const VALNAMN: Record<string, string> = {
   stormkok: 'Stormkök',
   multibransle: 'Multibränsle',
   fast_bransle: 'Fast bränsle',
+  skruvpatron: 'Skruvpatron (EN 417)',
   jetboil_fluxring: 'Jetboil FluxRing',
   msr_windburner: 'MSR WindBurner',
   msr_reactor: 'MSR Reactor',
