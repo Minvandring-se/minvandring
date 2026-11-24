@@ -33,7 +33,11 @@ import {
   rattPerPortion,
   tolkaRattformular,
   tolkaTal,
-  vemTarMedVad,
+  vemBarVad,
+  atareFor,
+  saknasPerPerson,
+  barsAvPerson,
+  fordela,
   type Ingrediensfalt,
   type Matdata,
   type Pase,
@@ -444,41 +448,88 @@ describe('borjaMed', () => {
   })
 })
 
-describe('vemTarMedVad', () => {
+describe('vemBarVad', () => {
   const dagar = matdagar(2, 1)
-  const pase = ratt('p', { matprodukt_id: 'mp', ansvarig: 'anna' })
+  const pase = ratt('p', { matprodukt_id: 'mp' })
   const soppa = ratt('soppa')
+  const bar = (dag: number, m: Maltid, ratt_id: string, bars_av: string | null = null): Maltidsrad => ({ ...maltid(dag, m, ratt_id), bars_av })
   const data = {
     ratter: [soppa, pase, ratt('tom'), ratt('oanvand', { matprodukt_id: 'mp2' })],
-    varor: [vara('linser', { ansvarig: 'erik' }), vara('buljong')],
-    ingredienser: [ing('soppa', 'linser', 100), ing('soppa', 'buljong', 10)],
-    maltider: [maltid(2, 'middag', 'p'), maltid(1, 'middag', 'soppa'), maltid(1, 'lunch', 'tom'), maltid(3, 'frukost', 'soppa')],
+    ingredienser: [ing('soppa', 'linser', 100)],
+    maltider: [bar(2, 'middag', 'p', 'anna'), bar(1, 'middag', 'soppa', 'erik'), bar(1, 'lunch', 'tom'), bar(3, 'frukost', 'soppa', 'erik'), bar(1, 'frukost', 'p')],
   }
 
-  it('visar rätterna i den ordning de äts första gången, med sina måltider', () => {
-    const rader = vemTarMedVad(data, dagar)
-    expect(rader.map((r) => r.namn)).toEqual(['soppa', 'p'])
-    expect(rader[0].platser.map(platsText)).toEqual(['Middag dag 1', 'Frukost reservdag 1'])
+  it('slår ihop raderna per rätt och bärare, i den ordning de äts första gången', () => {
+    const rader = vemBarVad(data, dagar)
+    expect(rader.map((r) => [r.namn, r.barsAv])).toEqual([
+      ['p', null],
+      ['soppa', 'erik'],
+      ['p', 'anna'],
+    ])
+    expect(rader[1].platser.map(platsText)).toEqual(['Middag dag 1', 'Frukost reservdag 1'])
+    expect(rader[1].maltidIds).toHaveLength(2)
+    expect(rader[0].typ).toBe('pase')
   })
 
-  it('tar ansvarig för en påse från rätten', () => {
-    const p = vemTarMedVad(data, dagar).find((r) => r.rattId === 'p')!
-    expect(p).toMatchObject({ typ: 'pase', ansvariga: ['anna'], saknarAnsvarig: false, varorUtanAnsvarig: [] })
+  it('hoppar över egna rätter utan ingredienser och rader utanför turens dagar', () => {
+    expect(vemBarVad(data, dagar).map((r) => r.rattId)).not.toContain('tom')
+    expect(vemBarVad({ ...data, maltider: [bar(9, 'lunch', 'p')] }, dagar)).toEqual([])
+  })
+})
+
+describe('vem som äter', () => {
+  const dagar = matdagar(1, 0)
+  const personer = ['anna', 'erik', 'lisa']
+  const rad = (id: string, m: Maltid, ratt_id = 'Gröt', bars_av: string | null = null): Maltidsrad => ({ id, dag: 1, maltid: m, ratt_id, sortering: 0, bars_av })
+
+  it('alla äter en rad utan ätare', () => {
+    expect(atareFor('x', [], personer)).toEqual(personer)
+    expect(atareFor('x', [{ maltid_id: 'x', deltagare_id: 'lisa' }, { maltid_id: 'y', deltagare_id: 'erik' }], personer)).toEqual(['lisa'])
   })
 
-  it('tar ansvariga för en egen rätt från varorna, och listar varorna som saknar ansvarig', () => {
-    const s = vemTarMedVad(data, dagar).find((r) => r.rattId === 'soppa')!
-    expect(s).toMatchObject({ typ: 'egen', ansvariga: ['erik'], saknarAnsvarig: true, varorUtanAnsvarig: ['buljong'] })
+  it('räknar vilka huvudmåltider varje person saknar', () => {
+    const maltider = [rad('f', 'frukost'), rad('l', 'lunch'), rad('m', 'middag')]
+    const atare = [{ maltid_id: 'l', deltagare_id: 'anna' }, { maltid_id: 'm', deltagare_id: 'anna' }, { maltid_id: 'm', deltagare_id: 'erik' }]
+    const saknas = saknasPerPerson({ maltider, atare }, dagar, personer)
+    expect([...saknas.keys()]).toEqual(['erik', 'lisa'])
+    expect(saknas.get('erik')!.map(platsText)).toEqual(['Lunch dag 1'])
+    expect(saknas.get('lisa')!.map(platsText)).toEqual(['Lunch dag 1', 'Middag dag 1'])
+    expect(saknasPerPerson({ maltider }, dagar, personer).size).toBe(0)
   })
 
-  it('hoppar över rätter som inte ligger i någon måltid och egna rätter utan ingredienser', () => {
-    const ids = vemTarMedVad(data, dagar).map((r) => r.rattId)
-    expect(ids).not.toContain('oanvand')
-    expect(ids).not.toContain('tom')
+  it('räknar portionerna i inköpslistan efter dem som äter', () => {
+    const data = plan([rad('f', 'frukost'), rad('m', 'middag', 'Gryta')], { atare: [{ maltid_id: 'f', deltagare_id: 'lisa' }] })
+    const lista = inkopslista(data, dagar, 3)
+    // Gröten äts av en person: 90 g havregryn. Grytan av alla tre: 3 portioner, två per påse, blir 2 påsar.
+    expect(lista.find((r) => r.namn === 'Havregryn')?.gram).toBe(90)
+    expect(lista.find((r) => r.typ === 'pase')?.pasar).toBe(2)
   })
 
-  it('räknar bara måltider inom turens dagar', () => {
-    expect(vemTarMedVad({ ...data, maltider: [maltid(9, 'lunch', 'p')] }, dagar)).toEqual([])
+  it('räknar vikten varje deltagare bär', () => {
+    const maltider = [rad('f', 'frukost', 'Gröt', 'anna'), rad('l', 'lunch', 'Gröt', 'anna'), rad('m', 'middag', 'Gryta', 'erik'), rad('x', 'mellanmal', 'Gryta')]
+    const perPortion = new Map([['Gröt', { gram: 120 }], ['Gryta', { gram: 150 }]])
+    const vikt = barsAvPerson({ maltider, atare: [{ maltid_id: 'l', deltagare_id: 'anna' }] }, dagar, perPortion, personer)
+    expect(vikt).toEqual(new Map([['anna', 120 * 3 + 120], ['erik', 450]]))
+  })
+})
+
+describe('fordela', () => {
+  it('ger den tyngsta raden till den som bär minst, så att vikten blir jämn', () => {
+    const rader = [{ id: 'a', gram: 100 }, { id: 'b', gram: 400 }, { id: 'c', gram: 300 }, { id: 'd', gram: 200 }]
+    const ut = fordela(rader, ['anna', 'erik'], new Map([['anna', 100]]))
+    expect(Object.fromEntries(ut)).toEqual({ b: 'erik', c: 'anna', d: 'anna', a: 'erik' })
+  })
+
+  it('gör ingenting utan personer', () => {
+    expect(fordela([{ id: 'a', gram: 1 }], [], new Map()).size).toBe(0)
+  })
+})
+
+describe('grupperaMaltid med bärare', () => {
+  it('håller isär samma rätt med olika bärare eller ätare', () => {
+    const r = (id: string, bars_av: string | null) => ({ id, ratt_id: 'gryta', bars_av })
+    expect(grupperaMaltid([r('1', 'anna'), r('2', 'anna'), r('3', null)]).map((g) => g.rader.length)).toEqual([2, 1])
+    expect(grupperaMaltid([r('1', null), r('2', null)], (x) => (x.id === '1' ? 'lisa' : '')).map((g) => g.rader.length)).toEqual([1, 1])
   })
 })
 

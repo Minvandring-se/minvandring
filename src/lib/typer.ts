@@ -188,6 +188,14 @@ export interface Maltidsrad {
   maltid: Maltid
   ratt_id: string
   sortering: number
+  /** Deltagaren som bär raden. Tomt när ingen gör det. */
+  bars_av?: string | null
+}
+
+/** En som äter en rad i matplanen, som raden ser ut i maltid_atare. Inga rader för en måltid betyder att alla äter. */
+export interface Matatare {
+  maltid_id: string
+  deltagare_id: string
 }
 
 /** En deltagares kostbehov, som raden ser ut i kostbehov. */

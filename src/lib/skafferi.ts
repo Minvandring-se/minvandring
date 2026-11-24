@@ -2,6 +2,7 @@
 //
 // En påse vars bäst-före-datum har passerat räknas inte som att man har den hemma, men visas märkt.
 // En påse vars datum passerar inom en månad räknas, och märks.
+import { antalPasar } from './mat'
 import { lage } from './turlista'
 import type { Skafferirad } from './typer'
 
@@ -140,4 +141,25 @@ export function senastAnvanda(
   const vikt = (id: string) => (id === turId ? '￿' : (skapad.get(id) ?? ''))
   const sorterade = [...ratter].sort((a, b) => (vikt(a.turId) < vikt(b.turId) ? 1 : vikt(a.turId) > vikt(b.turId) ? -1 : 0))
   return [...new Set(sorterade.map((r) => r.matproduktId))].slice(0, max)
+}
+
+/** En rad i en annan tur som man själv bär: påsen och hur många portioner raden är (de som äter den). */
+export interface BurenRad {
+  turId: string
+  matproduktId: string
+  portioner: number
+}
+
+/**
+ * Påsarna man bär i andra turer, per tur och påse: portionerna i alla rader man bär, delat med portioner per påse
+ * och avrundat uppåt till hela påsar. Bygger på maltider.bars_av, så det är den som bär påsen som har den hemma.
+ */
+export function bokningarFranRader(rader: readonly BurenRad[], portionerPerPase: ReadonlyMap<string, number>): Bokning[] {
+  const summa = new Map<string, BurenRad>()
+  for (const r of rader) {
+    const nyckel = `${r.turId}:${r.matproduktId}`
+    const finns = summa.get(nyckel)
+    summa.set(nyckel, { ...r, portioner: (finns?.portioner ?? 0) + r.portioner })
+  }
+  return [...summa.values()].map((r) => ({ turId: r.turId, matproduktId: r.matproduktId, pasar: antalPasar(r.portioner, 1, portionerPerPase.get(r.matproduktId) ?? 1) }))
 }

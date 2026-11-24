@@ -132,6 +132,8 @@ describe('funktionerna i public', () => {
     'public.ny_inbjudan()',
     'public.tur_for_kod(text)',
     'public.skydda_kostbehov()',
+    'public.bara_personer_ater()',
+    'public.hund_ater_inte()',
   ]
   const forInloggade = [
     'public.ar_medlem(uuid)',
@@ -144,6 +146,8 @@ describe('funktionerna i public', () => {
     'public.ta_bort_egen_ratt(uuid)',
     'public.spara_egen_ratt(uuid, uuid, text, jsonb, integer, text, integer)',
     'public.spara_recept(uuid, text, jsonb)',
+    'public.ta_ratt(uuid)',
+    'public.slapp_ratt(uuid)',
   ]
 
   it('går inte att anropa utan inloggning', async () => {
@@ -1875,6 +1879,137 @@ describe('matplanen', () => {
     })
   })
 
+  describe('vem bär och vem äter', () => {
+    let ratt: string
+    const nyRad = async (vem: string, t: string, dag: number, r: string) =>
+      (
+        await som(vem, (tx) =>
+          tx.query<{ id: string }>(`insert into public.maltider (tur_id, dag, maltid, ratt_id) values ($1, $2, 'middag', $3) returning id`, [t, dag, r]),
+        )
+      ).rows[0].id
+    const barsAv = async (rad: string) => (await db.query<{ bars_av: string | null }>('select bars_av from public.maltider where id = $1', [rad])).rows[0]?.bars_av
+    const taRatt = async (vem: string, rad: string) =>
+      (await som(vem, (tx) => tx.query<{ ok: boolean }>('select public.ta_ratt($1) as ok', [rad]))).rows[0].ok
+    const nyAtare = (vem: string, t: string, rad: string, deltagare: string) =>
+      som(vem, (tx) => tx.query('insert into public.maltid_atare (tur_id, maltid_id, deltagare_id) values ($1, $2, $3)', [t, rad, deltagare]))
+
+    beforeAll(async () => {
+      ratt = await nyRatt(REDIGERARE, tur, 'Bärgryta')
+    })
+
+    it('redigeraren väljer vem som bär en rad, men läsaren kan inte ändra den direkt', async () => {
+      const rad = await nyRad(REDIGERARE, tur, 4, ratt)
+      const ok = await som(REDIGERARE, (tx) => tx.query('update public.maltider set bars_av = $1 where id = $2', [lisa, rad]))
+      expect(ok.affectedRows).toBe(1)
+      const nej = await som(LASARE, (tx) => tx.query('update public.maltider set bars_av = $1 where id = $2', [lasarensDeltagare, rad]))
+      expect(nej.affectedRows).toBe(0)
+      expect(await barsAv(rad)).toBe(lisa)
+    })
+
+    it('den som bär måste vara med i samma tur', async () => {
+      const rad = await nyRad(AGARE, tur, 4, ratt)
+      const iAnnanTur = await deltagareFor(annanTur, AGARE)
+      await forvantaFel(som(AGARE, (tx) => tx.query('update public.maltider set bars_av = $1 where id = $2', [iAnnanTur, rad])))
+    })
+
+    it('läsaren tar en rad som ingen bär, men inte en som någon annan bär', async () => {
+      const ledig = await nyRad(AGARE, tur, 5, ratt)
+      const upptagen = await nyRad(AGARE, tur, 5, ratt)
+      await som(AGARE, (tx) => tx.query('update public.maltider set bars_av = $1 where id = $2', [redigerarensDeltagare, upptagen]))
+      expect(await taRatt(LASARE, ledig)).toBe(true)
+      expect(await barsAv(ledig)).toBe(lasarensDeltagare)
+      // Att ta en rad man redan bär går också bra.
+      expect(await taRatt(LASARE, ledig)).toBe(true)
+      expect(await taRatt(LASARE, upptagen)).toBe(false)
+      expect(await barsAv(upptagen)).toBe(redigerarensDeltagare)
+    })
+
+    it('läsaren släpper en rad hen bär, men inte någon annans', async () => {
+      const slapp = async (vem: string, rad: string) =>
+        (await som(vem, (tx) => tx.query<{ ok: boolean }>('select public.slapp_ratt($1) as ok', [rad]))).rows[0].ok
+      const egen = await nyRad(AGARE, tur, 5, ratt)
+      const annans = await nyRad(AGARE, tur, 5, ratt)
+      await som(AGARE, (tx) => tx.query('update public.maltider set bars_av = $1 where id = $2', [redigerarensDeltagare, annans]))
+      expect(await taRatt(LASARE, egen)).toBe(true)
+      expect(await slapp(LASARE, egen)).toBe(true)
+      expect(await barsAv(egen)).toBeNull()
+      expect(await slapp(LASARE, annans)).toBe(false)
+      expect(await barsAv(annans)).toBe(redigerarensDeltagare)
+      await forvantaFel(slapp(UTOMSTAENDE, annans))
+      await forvantaFel(somAnon((tx) => tx.query('select public.slapp_ratt($1)', [annans])))
+    })
+
+    it('maltid_atare: inget för anon, ingen update, och RLS är påslaget', async () => {
+      const har = async (roll: string, r: string) =>
+        (await db.query<{ ok: boolean }>("select has_table_privilege($1, 'public.maltid_atare', $2) as ok", [roll, r])).rows[0].ok
+      for (const r of ['select', 'insert', 'update', 'delete', 'truncate']) expect(await har('anon', r), r).toBe(false)
+      expect(await har('authenticated', 'update')).toBe(false)
+      expect(await har('authenticated', 'truncate')).toBe(false)
+      const rls = await db.query("select relrowsecurity from pg_class where oid = 'public.maltid_atare'::regclass")
+      expect(rls.rows).toEqual([{ relrowsecurity: true }])
+    })
+
+    it('en person som blir en hund slutar äta rätterna', async () => {
+      const rad = await nyRad(AGARE, tur, 8, ratt)
+      const p = await som(AGARE, (tx) => tx.query<{ id: string }>("insert into public.deltagare (tur_id, namn) values ($1, 'Blir hund') returning id", [tur]))
+      await nyAtare(AGARE, tur, rad, p.rows[0].id)
+      await som(AGARE, (tx) => tx.query("update public.deltagare set typ = 'hund' where id = $1", [p.rows[0].id]))
+      expect((await db.query('select 1 from public.maltid_atare where deltagare_id = $1', [p.rows[0].id])).rows).toHaveLength(0)
+    })
+
+    it('den som inte är med i turen kan inte ta en rad, och anon kan inte anropa ta_ratt', async () => {
+      const rad = await nyRad(AGARE, tur, 5, ratt)
+      await forvantaFel(taRatt(UTOMSTAENDE, rad))
+      await forvantaFel(somAnon((tx) => tx.query('select public.ta_ratt($1)', [rad])))
+      expect(await barsAv(rad)).toBeNull()
+    })
+
+    it('när den som bär tas bort ur turen blir raden utan bärare och ligger kvar', async () => {
+      const p = await som(AGARE, (tx) => tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn) values ($1, 'Tillfällig bärare') returning id`, [tur]))
+      const rad = await nyRad(AGARE, tur, 6, ratt)
+      await som(AGARE, (tx) => tx.query('update public.maltider set bars_av = $1 where id = $2', [p.rows[0].id, rad]))
+      await som(AGARE, (tx) => tx.query('delete from public.deltagare where id = $1', [p.rows[0].id]))
+      expect(await barsAv(rad)).toBeNull()
+    })
+
+    it('redigeraren väljer vem som äter, läsaren ser det men kan inte ändra, och den som inte är med ser ingenting', async () => {
+      const rad = await nyRad(REDIGERARE, tur, 7, ratt)
+      await nyAtare(REDIGERARE, tur, rad, lisa)
+      await nyAtare(REDIGERARE, tur, rad, agarensDeltagare)
+      const ser = await som(LASARE, (tx) => tx.query('select deltagare_id from public.maltid_atare where maltid_id = $1', [rad]))
+      expect(ser.rows).toHaveLength(2)
+      await forvantaFel(nyAtare(LASARE, tur, rad, lasarensDeltagare))
+      const borta = await som(LASARE, (tx) => tx.query('delete from public.maltid_atare where maltid_id = $1', [rad]))
+      expect(borta.affectedRows).toBe(0)
+      const inget = await som(UTOMSTAENDE, (tx) => tx.query('select 1 from public.maltid_atare where tur_id = $1', [tur]))
+      expect(inget.rows).toHaveLength(0)
+      await forvantaFel(nyAtare(UTOMSTAENDE, tur, rad, lisa))
+      const bort = await som(REDIGERARE, (tx) => tx.query('delete from public.maltid_atare where maltid_id = $1 and deltagare_id = $2', [rad, lisa]))
+      expect(bort.affectedRows).toBe(1)
+    })
+
+    it('bara personer i samma tur kan äta en rad, och raden måste höra till turen', async () => {
+      const rad = await nyRad(AGARE, tur, 7, ratt)
+      await forvantaFel(nyAtare(AGARE, tur, rad, hund))
+      await forvantaFel(nyAtare(AGARE, tur, rad, await deltagareFor(annanTur, AGARE)))
+      const annanRatt = await nyRatt(AGARE, annanTur, 'Annan bärgryta')
+      const annanRad = await nyRad(AGARE, annanTur, 1, annanRatt)
+      await forvantaFel(nyAtare(AGARE, tur, annanRad, lisa))
+      await forvantaFel(nyAtare(AGARE, annanTur, annanRad, lisa))
+    })
+
+    it('ätarna försvinner med måltidsraden och med deltagaren', async () => {
+      const rad = await nyRad(AGARE, tur, 8, ratt)
+      const p = await som(AGARE, (tx) => tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn) values ($1, 'Tillfällig ätare') returning id`, [tur]))
+      await nyAtare(AGARE, tur, rad, p.rows[0].id)
+      await nyAtare(AGARE, tur, rad, lisa)
+      await som(AGARE, (tx) => tx.query('delete from public.deltagare where id = $1', [p.rows[0].id]))
+      expect((await db.query('select 1 from public.maltid_atare where maltid_id = $1', [rad])).rows).toHaveLength(1)
+      await som(AGARE, (tx) => tx.query('delete from public.maltider where id = $1', [rad]))
+      expect((await db.query('select 1 from public.maltid_atare where maltid_id = $1', [rad])).rows).toHaveLength(0)
+    })
+  })
+
   describe('kostbehov', () => {
     // Samtycket sparas som en tidpunkt när personen själv sparar sina kostbehov.
     const satt = (vem: string, deltagare: string, utan = `array['gluten']`) =>
@@ -2009,10 +2144,12 @@ describe('matplanen', () => {
       await som(AGARE, (tx) => tx.query('delete from public.deltagare where id = $1', [lasarensDeltagare]))
       const kvar = await db.query('select 1 from public.kostbehov where deltagare_id = $1', [lasarensDeltagare])
       expect(kvar.rows).toHaveLength(0)
-      for (const tabell of ['kostbehov', 'maltider', 'ratter']) {
+      for (const tabell of ['kostbehov', 'maltider', 'ratter', 'maltid_atare']) {
         const r = await som(LASARE, (tx) => tx.query(`select 1 from public.${tabell}`))
         expect(r.rows, tabell).toHaveLength(0)
       }
+      const rad = (await db.query<{ id: string }>('select id from public.maltider where tur_id = $1 and bars_av is null limit 1', [tur])).rows[0].id
+      await forvantaFel(som(LASARE, (tx) => tx.query('select public.ta_ratt($1)', [rad])))
     })
   })
 })
@@ -2063,6 +2200,64 @@ describe('matplanens migrering mot befintliga rader', () => {
     expect(await antal('public.maltider')).toBe(1)
     expect(await antal('public.ingredienser')).toBe(1)
     expect(await antal(`public.varor where id = '00000000-0000-0000-0000-0000000000c2' and ansvarig is null`)).toBe(1)
+  })
+})
+
+describe('migreringen för vem som bär, mot befintliga rader', () => {
+  const fil = fs.readdirSync(path.join(import.meta.dirname, 'migrations')).find((f) => f.endsWith('_vem_ater_och_bar.sql'))!
+  let gammal: PGlite
+  const T = '00000000-0000-0000-0000-0000000000d1'
+  const id = (n: string) => `00000000-0000-0000-0000-0000000000${n}`
+  const barsAv = async (rad: string) => (await gammal.query<{ bars_av: string | null }>('select bars_av from public.maltider where id = $1', [rad])).rows[0].bars_av
+
+  beforeAll(async () => {
+    gammal = await nyDatabas((f) => f < fil)
+    // Ägaren och Lisa i samma tur. En påse med ansvarig, en egen rätt där alla varor har samma ansvariga och en där
+    // varorna har olika eller saknar ansvarig.
+    await gammal.exec(`
+      insert into auth.users (id, email) values ('${A}', 'anna@exempel.se');
+      insert into public.turer (id, namn, skapad_av) values ('${T}', 'Gammal tur', '${A}');
+      insert into public.deltagare (id, tur_id, namn) values ('${id('e1')}', '${T}', 'Lisa');
+      insert into public.matprodukter (id, marke, namn, maltid, vikt_torr_g, kcal, kalla)
+        values ('${id('f1')}', 'Test', 'Påse', 'lunch_middag', 150, 600, 'https://exempel.se'),
+          ('${id('f2')}', 'Test', 'Påse två', 'lunch_middag', 150, 600, 'https://exempel.se');
+      insert into public.ratter (id, tur_id, namn, matprodukt_id, ansvarig) values
+        ('${id('b1')}', '${T}', 'Test Påse', '${id('f1')}', '${id('e1')}'),
+        ('${id('b2')}', '${T}', 'Gröt', null, null),
+        ('${id('b3')}', '${T}', 'Soppa', null, null),
+        ('${id('b4')}', '${T}', 'Test Påse två', '${id('f2')}', null);
+      insert into public.varor (id, tur_id, namn, ansvarig) values
+        ('${id('c1')}', '${T}', 'Havre', '${id('e1')}'),
+        ('${id('c2')}', '${T}', 'Russin', '${id('e1')}'),
+        ('${id('c3')}', '${T}', 'Buljong', '${id('e1')}'),
+        ('${id('c4')}', '${T}', 'Nudlar', null);
+      insert into public.ingredienser (tur_id, ratt_id, vara_id, gram_per_portion) values
+        ('${T}', '${id('b2')}', '${id('c1')}', 90), ('${T}', '${id('b2')}', '${id('c2')}', 10),
+        ('${T}', '${id('b3')}', '${id('c3')}', 10), ('${T}', '${id('b3')}', '${id('c4')}', 80);
+      insert into public.maltider (id, tur_id, dag, maltid, ratt_id) values
+        ('${id('a1')}', '${T}', 1, 'lunch', '${id('b1')}'),
+        ('${id('a2')}', '${T}', 1, 'frukost', '${id('b2')}'),
+        ('${id('a3')}', '${T}', 1, 'middag', '${id('b3')}'),
+        ('${id('a4')}', '${T}', 2, 'lunch', '${id('b4')}'),
+        ('${id('a5')}', '${T}', 2, 'frukost', '${id('b2')}');
+    `)
+    await korMigreringar(gammal, (f) => f >= fil)
+  })
+
+  it('påsens ansvariga bär påsen, och en påse utan ansvarig bärs av ingen', async () => {
+    expect(await barsAv(id('a1'))).toBe(id('e1'))
+    expect(await barsAv(id('a4'))).toBeNull()
+  })
+
+  it('en egen rätt bärs av den ansvariga när alla varor har samma, annars av ingen', async () => {
+    expect(await barsAv(id('a2'))).toBe(id('e1'))
+    // Samma rätt i en måltid till får samma bärare.
+    expect(await barsAv(id('a5'))).toBe(id('e1'))
+    expect(await barsAv(id('a3'))).toBeNull()
+  })
+
+  it('ingen rad får ätare, så alla äter som förut', async () => {
+    expect((await gammal.query('select 1 from public.maltid_atare')).rows).toHaveLength(0)
   })
 })
 

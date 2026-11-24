@@ -68,6 +68,31 @@ describe('Matdag', () => {
     expect(html).toContain('Älgfärs, Potatis, Grädde, Morot, Lök')
   })
 
+  it('visar vem som bär en rätt och vilka som äter den när det inte är alla', () => {
+    const folk = {
+      personer: [{ id: 'o', namn: 'Oscar' }, { id: 'l', namn: 'Lisa' }],
+      farger: new Map([['o', 'var(--color-person-a)'], ['l', 'var(--color-person-b)']]),
+      atare: [{ maltid_id: 'm2', deltagare_id: 'l' }],
+    }
+    const html = renderToStaticMarkup(
+      <Matdag
+        summa={{ dag: dag1, naring: portion(0, 0), saknas: [] }}
+        datum={null}
+        maltider={[{ ...rad('m1', 'gryta'), bars_av: 'o' }, { ...rad('m2', 'gryta'), bars_av: 'o' }]}
+        ratter={ratter}
+        folk={folk}
+        behov={[]}
+        kanAndra
+        onLaggTill={() => {}}
+        onTaBort={() => {}}
+        onVem={() => {}}
+      />,
+    )
+    // Olika ätare blir två rader. Den ena äts bara av Lisa.
+    expect(html.match(/Bärs av Oscar. Ändra vem som bär och äter Gryta/g)?.length).toBe(2)
+    expect(html).toContain('Äts av Lisa')
+  })
+
   it('ber en att kontrollera mängderna när portionen verkar orimlig', () => {
     expect(rita([rad('m1', 'jatte')])).toContain('Kontrollera mängderna')
     expect(rita([rad('m1', 'gryta')])).not.toContain('Kontrollera mängderna')
