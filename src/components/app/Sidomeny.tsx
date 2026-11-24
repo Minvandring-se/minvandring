@@ -29,7 +29,8 @@ function Menyrad({ sida, aktiv }: { sida: Sida; aktiv: boolean }) {
     >
       {aktiv && <span aria-hidden className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent" />}
       <Ikon className="size-5 shrink-0" aria-hidden strokeWidth={aktiv ? 2.25 : 1.75} />
-      <span className="min-w-0 flex-1">{namn}</span>
+      {/* Långa namn som Vandringskompisar avstavas, så att de inte går in under "Snart". */}
+      <span className="min-w-0 flex-1 hyphens-auto wrap-break-word">{namn}</span>
       {!byggd && <Snart />}
     </Link>
   )

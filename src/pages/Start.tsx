@@ -150,7 +150,7 @@ const panelLuft = 'px-4 pt-8 pb-7 sm:px-6 sm:pt-11 sm:pb-9 lg:pt-13 lg:pb-11'
 
 /** Kort streck i hjortronorange under rubrikerna. Dekorativt. I en space-y-behållare räknas dess avstånd in. */
 function Rubrikstreck({ className = 'mt-4' }: { className?: string }) {
-  return <span aria-hidden className={`block h-[3px] w-7 rounded-full bg-accent ${className}`} />
+  return <span aria-hidden className={`block h-[3px] w-7 rounded-full bg-hjortron ${className}`} />
 }
 
 /** Huvudknappen i hero och i sista sektionen. Ljus knapp, för mörka ytor. */
