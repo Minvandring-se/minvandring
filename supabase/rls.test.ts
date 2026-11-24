@@ -7,6 +7,7 @@ import { PGlite, type Transaction } from '@electric-sql/pglite'
 import { pgcrypto } from '@electric-sql/pglite/contrib/pgcrypto'
 import { beforeAll, describe, expect, it } from 'vitest'
 import { KATEGORIER } from '../src/lib/forrad'
+import { AVDELNINGAR, ENHETER } from '../src/lib/handla'
 import { ALLERGENER } from '../src/lib/kost'
 import { godkanda, importera } from '../src/lib/katalogimport'
 import { godkandaLivsmedel, importeraLivsmedel, LIVSMEDELSKOLUMNER, livsmedelSeedSql } from '../src/lib/livsmedelimport'
@@ -1898,10 +1899,39 @@ describe('matplanen', () => {
           { vara: 'Utan enhet', mangd: 1 },
           { vara: 'Utan mängd', enhet: 'dl' },
           { vara: 'För tungt', mangd: 6, enhet: 'kg' },
+          { vara: 'För tungt i gram', mangd: 5001, enhet: 'g' },
           { vara: 'Noll', mangd: 0, enhet: 'st' },
+          { vara: 'Avrundas till noll', mangd: 0.004, enhet: 'kg' },
         ])
           await forvantaFel(sparaMed('Stoppas', [rad]))
         expect((await db.query(`select 1 from public.ratter where namn = 'Stoppas'`)).rows).toHaveLength(0)
+        const id = await sparaMed('Gränser', [{ vara: 'Precis 5000 g', mangd: 5000, enhet: 'g' }, { vara: 'Avrundas', mangd: 0.125, enhet: 'kg' }])
+        // Mängden sparas med två decimaler, och gram räknas från den avrundade mängden.
+        expect(await mangderI(id)).toEqual([
+          { namn: 'Avrundas', mangd: '0.13', enhet: 'kg', gram_per_portion: 130 },
+          { namn: 'Precis 5000 g', mangd: '5000.00', enhet: 'g', gram_per_portion: 5000 },
+        ])
+      })
+
+      it('nekar läsaren, den som inte är med och en rätt i en annan tur även med en tom lista, och ingredienserna ligger kvar', async () => {
+        const id = await sparaMed('Ska ligga kvar', [{ vara: 'Kvar', mangd: 1, enhet: 'dl' }])
+        for (const [vem, t] of [[LASARE, tur], [UTOMSTAENDE, tur], [AGARE, annanTur]] as const)
+          await forvantaFel(som(vem, (tx) => tx.query(`select public.spara_egen_ratt($1::uuid, $2::uuid, 'Kapad', '[]'::jsonb)`, [t, id])))
+        await forvantaFel(som(LASARE, (tx) => tx.query(`select public.spara_egen_ratt($1::uuid, null, 'Läsarens', '[{"vara": "Ris", "mangd": 1, "enhet": "dl"}]'::jsonb)`, [tur])))
+        expect(await rattnamn(id)).toBe('Ska ligga kvar')
+        expect(await mangderI(id)).toHaveLength(1)
+      })
+
+      it('tabellerna kräver att gram stämmer med mängden för g och kg, även utan spara_egen_ratt', async () => {
+        const r = await nyRatt(REDIGERARE, tur, 'Direkt i tabellen')
+        const v = await nyVara(REDIGERARE, tur, 'Direktvara')
+        await forvantaFel(
+          som(REDIGERARE, (tx) => tx.query(`insert into public.ingredienser (tur_id, ratt_id, vara_id, mangd, enhet, gram_per_portion) values ($1, $2, $3, 100, 'g', 9999)`, [tur, r, v])),
+        )
+        const ok = await som(REDIGERARE, (tx) =>
+          tx.query(`insert into public.ingredienser (tur_id, ratt_id, vara_id, mangd, enhet, gram_per_portion) values ($1, $2, $3, 2, 'dl', 180)`, [tur, r, v]),
+        )
+        expect(ok.affectedRows).toBe(1)
       })
 
       it('redigeraren väljer butiksavdelning för en vara, men läsaren kan inte, och en okänd avdelning stoppas', async () => {
@@ -2322,6 +2352,26 @@ describe('migreringen för vem som bär, mot befintliga rader', () => {
   })
 })
 
+describe('handlingslistans nycklar i databasen', () => {
+  const tillatna = async (tabell: string, kolumn: string) => {
+    const r = await db.query<{ def: string }>(
+      `select pg_get_constraintdef(c.oid) as def from pg_constraint c
+        where c.conrelid = $1::regclass and c.contype = 'c' and pg_get_constraintdef(c.oid) like '%' || $2 || '%ANY%'`,
+      [`public.${tabell}`, kolumn],
+    )
+    return [...(r.rows[0]?.def ?? '').matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1])
+  }
+
+  it('enheterna i ingredienser och receptrader är desamma som i src/lib/handla.ts', async () => {
+    expect(await tillatna('ingredienser', 'enhet')).toEqual([...ENHETER])
+    expect(await tillatna('receptrader', 'enhet')).toEqual([...ENHETER])
+  })
+
+  it('avdelningarna i varor är desamma som i src/lib/handla.ts', async () => {
+    expect(await tillatna('varor', 'avdelning')).toEqual(AVDELNINGAR.map((a) => a.nyckel))
+  })
+})
+
 describe('handlingslistans migrering mot befintliga rader', () => {
   const fil = fs.readdirSync(path.join(import.meta.dirname, 'migrations')).find((f) => f.endsWith('_handlingslista.sql'))!
   let gammal: PGlite
@@ -2334,8 +2384,10 @@ describe('handlingslistans migrering mot befintliga rader', () => {
       insert into public.turer (id, namn, skapad_av) values ('${T}', 'Gammal tur', '${A}');
       insert into public.ratter (id, tur_id, namn) values ('00000000-0000-0000-0000-0000000000e2', '${T}', 'Gröt');
       insert into public.varor (id, tur_id, namn) values ('00000000-0000-0000-0000-0000000000e3', '${T}', 'Havregryn');
-      insert into public.ingredienser (tur_id, ratt_id, vara_id, gram_per_portion)
-        values ('${T}', '00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000e3', 90);
+      insert into public.varor (id, tur_id, namn) values ('00000000-0000-0000-0000-0000000000e5', '${T}', 'Salt');
+      insert into public.ingredienser (tur_id, ratt_id, vara_id, gram_per_portion) values
+        ('${T}', '00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000e3', 90),
+        ('${T}', '00000000-0000-0000-0000-0000000000e2', '00000000-0000-0000-0000-0000000000e5', 0);
       insert into public.recept (id, user_id, namn) values ('00000000-0000-0000-0000-0000000000e4', '${A}', 'Gammalt recept');
       insert into public.receptrader (recept_id, user_id, vara, gram_per_portion)
         values ('00000000-0000-0000-0000-0000000000e4', '${A}', 'Bulgur', 80);
@@ -2344,7 +2396,10 @@ describe('handlingslistans migrering mot befintliga rader', () => {
   })
 
   it('ger befintliga ingredienser och receptrader mängden i gram, och tar inte bort något', async () => {
-    expect((await gammal.query('select mangd, enhet, gram_per_portion from public.ingredienser')).rows).toEqual([{ mangd: '90.00', enhet: 'g', gram_per_portion: 90 }])
+    expect((await gammal.query('select mangd, enhet, gram_per_portion from public.ingredienser order by gram_per_portion')).rows).toEqual([
+      { mangd: null, enhet: null, gram_per_portion: 0 },
+      { mangd: '90.00', enhet: 'g', gram_per_portion: 90 },
+    ])
     expect((await gammal.query('select mangd, enhet, gram_per_portion from public.receptrader')).rows).toEqual([{ mangd: '80.00', enhet: 'g', gram_per_portion: 80 }])
   })
 })
@@ -2712,7 +2767,18 @@ describe('egna recept', () => {
         { vara: 'Pasta', mangd: '0.12', enhet: 'kg', gram_per_portion: 120 },
         { vara: 'Salt', mangd: null, enhet: null, gram_per_portion: null },
       ])
-      await forvantaFel(som(VERA, (tx) => tx.query(`select public.spara_recept(null, 'Fel enhet', '[{"vara": "Ris", "mangd": 1, "enhet": "kopp"}]'::jsonb)`)))
+      for (const rad of [
+        { vara: 'Ris', mangd: 1, enhet: 'kopp' },
+        { vara: 'Ris', mangd: 1 },
+        { vara: 'Ris', mangd: 6, enhet: 'kg' },
+        { vara: 'Ris', mangd: 0, enhet: 'st' },
+      ])
+        await forvantaFel(som(VERA, (tx) => tx.query(`select public.spara_recept(null, 'Stoppas recept', $1::jsonb)`, [JSON.stringify([rad])])))
+      expect((await db.query(`select 1 from public.recept where namn = 'Stoppas recept'`)).rows).toHaveLength(0)
+      const avrundat = (
+        await som(VERA, (tx) => tx.query<{ id: string }>(`select public.spara_recept(null, 'Avrundat recept', '[{"vara": "Pasta", "mangd": 0.125, "enhet": "kg"}]'::jsonb) as id`))
+      ).rows[0].id
+      expect((await db.query('select mangd, gram_per_portion from public.receptrader where recept_id = $1', [avrundat])).rows).toEqual([{ mangd: '0.13', gram_per_portion: 130 }])
     })
 
     it('kan inte ändra någon annans recept, och inte skapa ett utan inloggning', async () => {
@@ -2721,6 +2787,8 @@ describe('egna recept', () => {
       expect(await receptnamn(verasRecept)).toBe('Veras gryta')
       expect(await raderI(verasRecept)).toEqual(fore)
       await forvantaFel(somAnon((tx) => tx.query(`select public.spara_recept(null, 'Anonymt', '[{"vara": "Ris", "gram": 10}]'::jsonb)`)))
+      await forvantaFel(spara(WILMA, verasRecept, 'Wilmas nu', []))
+      expect(await raderI(verasRecept)).toEqual(fore)
     })
   })
 

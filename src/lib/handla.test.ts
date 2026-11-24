@@ -1,7 +1,7 @@
-import fs from 'node:fs'
-import path from 'node:path'
 import { describe, expect, it } from 'vitest'
-import { AVDELNINGAR, avdelningFor, ENHETER } from './handla'
+import { avdelningFor } from './handla'
+
+// Att nycklarna stämmer med databasen testas i supabase/rls.test.ts.
 
 describe('avdelningFor', () => {
   it('använder den valda avdelningen', () => {
@@ -27,15 +27,3 @@ describe('avdelningFor', () => {
   })
 })
 
-describe('nycklarna i databasen', () => {
-  const sql = fs.readFileSync(path.join(import.meta.dirname, '..', '..', 'supabase', 'migrations', '20261124230000_handlingslista.sql'), 'utf8')
-  const lista = (efter: string) => [...(sql.slice(sql.indexOf(efter)).match(/in \(([^)]*)\)/)?.[1].matchAll(/'([a-z_]+)'/g) ?? [])].map((m) => m[1])
-
-  it('har samma enheter som src/lib/handla.ts', () => {
-    expect(lista('add column enhet')).toEqual([...ENHETER])
-  })
-
-  it('har samma avdelningar som src/lib/handla.ts', () => {
-    expect(lista('add column avdelning')).toEqual(AVDELNINGAR.map((a) => a.nyckel))
-  })
-})

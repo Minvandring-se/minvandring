@@ -20,8 +20,16 @@ alter table public.receptrader
   add column enhet text check (enhet in ('g', 'kg', 'dl', 'ml', 'st', 'msk', 'tsk')),
   add constraint receptrader_mangd_och_enhet check ((mangd is null) = (enhet is null));
 
-update public.ingredienser set mangd = gram_per_portion, enhet = 'g' where gram_per_portion > 0;
-update public.receptrader set mangd = gram_per_portion, enhet = 'g' where gram_per_portion > 0;
+update public.ingredienser set mangd = gram_per_portion, enhet = 'g' where gram_per_portion between 1 and 10000;
+update public.receptrader set mangd = gram_per_portion, enhet = 'g' where gram_per_portion between 1 and 10000;
+
+-- För g och kg är gram samma sak som mängden, så de två kan inte visa olika vikt.
+alter table public.ingredienser add constraint ingredienser_gram_av_mangd check (
+  enhet is null or enhet not in ('g', 'kg') or gram_per_portion = round(mangd * case enhet when 'kg' then 1000 else 1 end)
+);
+alter table public.receptrader add constraint receptrader_gram_av_mangd check (
+  enhet is null or enhet not in ('g', 'kg') or gram_per_portion = round(mangd * case enhet when 'kg' then 1000 else 1 end)
+);
 
 -- ─── Butiksavdelning ─────────────────────────────────────────────────────────
 -- Var varan finns i butiken, så att handlingslistan kan sorteras som en runda i butiken. Tom: appen gissar utifrån
@@ -53,6 +61,7 @@ declare
   rad record;
   varan uuid;
   gram int;
+  mangd numeric;
 begin
   if nytt_namn is null or nytt_namn = '' or char_length(nytt_namn) > 80 then
     raise exception 'Rätten behöver ett namn på högst 80 tecken';
@@ -84,7 +93,12 @@ begin
     if (rad.mangd is null) <> (rad.enhet is null) then
       raise exception 'Ingrediens %: mängd och enhet anges tillsammans', rad.nr;
     end if;
-    gram := case rad.enhet when 'g' then round(rad.mangd) when 'kg' then round(rad.mangd * 1000) else rad.gram end;
+    -- Mängden sparas med två decimaler, så gram räknas från den avrundade mängden.
+    mangd := round(rad.mangd, 2);
+    if mangd is not null and mangd not between 0.01 and 10000 then
+      raise exception 'Ingrediens %: mängden ska vara mellan 0,01 och 10000', rad.nr;
+    end if;
+    gram := case rad.enhet when 'g' then round(mangd) when 'kg' then round(mangd * 1000) else rad.gram end;
     if gram is not null and gram not between 1 and 5000 then
       raise exception 'Ingrediens %: gram per portion ska vara mellan 1 och 5000', rad.nr;
     end if;
@@ -115,7 +129,7 @@ begin
     end if;
     -- Enhetens check stoppar okända enheter.
     insert into public.ingredienser (tur_id, ratt_id, vara_id, gram_per_portion, mangd, enhet)
-      values (t, ratten, varan, gram, rad.mangd, rad.enhet);
+      values (t, ratten, varan, gram, mangd, rad.enhet);
   end loop;
 
   if dag_nr is not null or maltid_typ is not null then
@@ -150,14 +164,15 @@ begin
   end if;
 
   insert into public.receptrader (recept_id, vara, mangd, enhet, gram_per_portion, kcal_per_100g, protein_per_100g, sortering)
-    select receptet, btrim(e.el ->> 'vara'), (e.el ->> 'mangd')::numeric, e.el ->> 'enhet',
-           case e.el ->> 'enhet'
-             when 'g' then round((e.el ->> 'mangd')::numeric)::int
-             when 'kg' then round((e.el ->> 'mangd')::numeric * 1000)::int
-             else (e.el ->> 'gram')::int
-           end,
-           (e.el ->> 'kcal')::int, (e.el ->> 'protein')::numeric, e.nr - 1
-    from jsonb_array_elements(rader) with ordinality as e(el, nr);
+    select receptet, x.vara, x.mangd, x.enhet,
+           case x.enhet when 'g' then round(x.mangd)::int when 'kg' then round(x.mangd * 1000)::int else x.gram end,
+           x.kcal, x.protein, x.nr - 1
+    from jsonb_array_elements(rader) with ordinality as e(el, nr)
+    -- Mängden sparas med två decimaler, så gram räknas från den avrundade mängden.
+    cross join lateral (
+      select btrim(e.el ->> 'vara') as vara, round((e.el ->> 'mangd')::numeric, 2) as mangd, e.el ->> 'enhet' as enhet,
+             (e.el ->> 'gram')::int as gram, (e.el ->> 'kcal')::int as kcal, (e.el ->> 'protein')::numeric as protein, e.nr
+    ) x;
 
   return receptet;
 end;
