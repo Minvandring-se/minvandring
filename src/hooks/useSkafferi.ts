@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { bokningarFranRader, MAX_ANTAL, type Bokning, type Bokningstur } from '@/lib/skafferi'
+import { bokningarFranRader, nyttAntal, tidigasteDatum, type Bokning, type Bokningstur } from '@/lib/skafferi'
 import { lage, lokaltDatum } from '@/lib/turlista'
 import { supabase } from '@/lib/supabase'
 import type { Skafferirad } from '@/lib/typer'
@@ -129,12 +129,24 @@ export function useAndraTurer(turId: string, userId: string | null): AndraTurer 
 // Funktionerna svarar true när det gick. En ändring som RLS stoppar ger inget fel, bara noll rader,
 // så de läser tillbaka raden och räknar.
 
-/** Lägger en påse i skafferiet, eller en till om den redan finns där. */
-export async function laggISkafferi(matproduktId: string, befintlig: Skafferirad | undefined): Promise<boolean> {
-  if (!supabase) return false
-  if (befintlig) return andraSkafferirad(befintlig.id, { antal: Math.min(MAX_ANTAL, befintlig.antal + 1) })
-  const { error } = await supabase.from('skafferi').insert({ matprodukt_id: matproduktId })
-  return !error
+/**
+ * Lägger påsar i skafferiet. Finns påsen redan hemma läggs antalet till (högst 999) och det tidigaste bäst före
+ * behålls. Svarar med raden som den blev, eller null när det inte gick.
+ */
+export async function laggISkafferi(
+  matproduktId: string,
+  befintlig: Skafferirad | undefined,
+  antal = 1,
+  bastFore: string | null = null,
+): Promise<{ antal: number; bast_fore: string | null } | null> {
+  if (!supabase) return null
+  if (befintlig) {
+    const rad = { antal: nyttAntal(befintlig.antal, antal), bast_fore: tidigasteDatum(befintlig.bast_fore, bastFore) }
+    return (await andraSkafferirad(befintlig.id, rad)) ? rad : null
+  }
+  const rad = { antal: nyttAntal(0, antal), bast_fore: bastFore }
+  const { error } = await supabase.from('skafferi').insert({ matprodukt_id: matproduktId, ...rad })
+  return error ? null : rad
 }
 
 /** Ändrar antalet eller bäst-före-datumet. null tar bort datumet. */

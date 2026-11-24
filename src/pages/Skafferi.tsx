@@ -1,20 +1,24 @@
 import { Minus, Plus, Star, Trash2 } from 'lucide-react'
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
 import { SidRubrik } from '@/components/app/SidRubrik'
+import { BastForeVal } from '@/components/mat/BastForeVal'
+import { LaggISkafferi } from '@/components/mat/LaggISkafferi'
 import { Matflikar } from '@/components/mat/Matflikar'
+import { PasNamn } from '@/components/mat/PasNamn'
+import { Pasar } from '@/components/mat/ValjRatt'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { knappStil } from '@/components/ui/knappStil'
+import { Panel } from '@/components/ui/panel'
 import { Sektion } from '@/components/ui/sektion'
 import { useMatkatalog } from '@/hooks/useMatplan'
-import { andraSkafferirad, sattFavorit, taBortUrSkafferi, useSkafferi } from '@/hooks/useSkafferi'
+import { andraSkafferirad, laggISkafferi, sattFavorit, taBortUrSkafferi, useSkafferi } from '@/hooks/useSkafferi'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { pasnamn } from '@/lib/mat'
-import { bastForeStatus, BASTFORE_TEXT, formateraDatum, MAX_ANTAL, sorteraSkafferi } from '@/lib/skafferi'
+import { MAX_ANTAL, SKAFFERISTATUS_TEXT, skafferistatus, sorteraSkafferi, tolkaBastFore, valFranDatum } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import type { Matprodukt, Skafferirad } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -26,8 +30,8 @@ const KATALOG = '/matplanering/katalog'
 const pasadress = (id: string) => `${KATALOG}?pase=${encodeURIComponent(id)}`
 
 /**
- * Skafferiet: påsarna man har hemma, med antal och bäst-före, och ens favoriter. Personligt: bara man själv ser det.
- * Påsar läggs till från Matkatalogen.
+ * Skafferiet: påsarna man har hemma, med antal och bäst före, och ens favoriter. Personligt: bara man själv ser det.
+ * Påsar läggs till här med Lägg till påse, eller från Matkatalogen.
  */
 export function Skafferi() {
   useSidtitel('Skafferi')
@@ -63,7 +67,7 @@ export function Skafferi() {
           <Skelett className="h-24 rounded-lg" />
         </Laddar>
       ) : (
-        <Innehall katalog={katalog} rader={skafferi.rader} favoriter={skafferi.favoriter} fel={fel} gor={gor} />
+        <Innehall katalog={katalog} rader={skafferi.rader} favoriter={skafferi.favoriter} fel={fel} gor={gor} laddaOm={laddaOm} />
       )}
     </div>
   )
@@ -75,15 +79,19 @@ function Innehall({
   favoriter,
   fel,
   gor,
+  laddaOm,
 }: {
   katalog: Matprodukt[]
   rader: Skafferirad[]
   favoriter: Set<string>
   fel: boolean
   gor: (handling: () => Promise<boolean>) => Promise<void>
+  laddaOm: () => Promise<void>
 }) {
+  const [laggTill, setLaggTill] = useState(false)
   const pasar = new Map(katalog.map((p) => [p.id, p]))
   const idag = lokaltDatum()
+  // Det som går ut först överst, påsar utan datum sist.
   const hemma = sorteraSkafferi(
     rader.filter((r) => pasar.has(r.matprodukt_id)),
     (r) => pasnamn(pasar.get(r.matprodukt_id)!),
@@ -91,23 +99,24 @@ function Innehall({
   const favoritpasar = [...favoriter]
     .flatMap((id) => pasar.get(id) ?? [])
     .sort((a, b) => pasnamn(a).localeCompare(pasnamn(b), 'sv'))
-  const tillKatalogen = (
-    <Link to={KATALOG} className={knappStil({ variant: 'outline' })}>
-      Till Matkatalogen
-    </Link>
+  const laggTillKnapp = (
+    <Button variant="outline" onClick={() => setLaggTill(true)}>
+      <Plus className="size-4" aria-hidden />
+      Lägg till påse
+    </Button>
   )
 
   return (
     <div className="space-y-5">
       {fel && (
         <p role="alert" className="text-destructive">
-          Det gick inte att spara ändringen. Kontrollera uppkopplingen och försök igen.
+          Det gick inte att spara. Kontrollera uppkopplingen och försök igen.
         </p>
       )}
 
-      <Sektion rubrik="Har hemma" atgard={hemma.length > 0 && tillKatalogen}>
+      <Sektion rubrik="Har hemma" atgard={hemma.length > 0 && laggTillKnapp}>
         {hemma.length === 0 ? (
-          <TomtLage kompakt text="Du har inga påsar hemma än. Lägg till dem från Matkatalogen." knapp={tillKatalogen} />
+          <TomtLage kompakt text="Du har inga påsar hemma än. Lägg till dem här eller från Matkatalogen." knapp={laggTillKnapp} />
         ) : (
           <ul className="divide-y divide-border">
             {hemma.map((r) => (
@@ -119,13 +128,21 @@ function Innehall({
 
       <Sektion rubrik="Favoriter">
         {favoritpasar.length === 0 ? (
-          <TomtLage kompakt text="Du har inga favoriter än. Tryck på stjärnan på en påse i Matkatalogen." />
+          <TomtLage
+            kompakt
+            text="Du har inga favoriter än. Tryck på stjärnan på en påse i Matkatalogen."
+            knapp={
+              <Link to={KATALOG} className={knappStil({ variant: 'outline' })}>
+                Till Matkatalogen
+              </Link>
+            }
+          />
         ) : (
           <ul className="divide-y divide-border">
             {favoritpasar.map((p) => (
               <li key={p.id} className="flex items-center gap-2 py-1">
-                <Link to={pasadress(p.id)} className={cn('min-h-11 min-w-0 flex-1 rounded-md px-2 py-2.5 font-medium break-words hover:bg-muted', fokus)}>
-                  {pasnamn(p)}
+                <Link to={pasadress(p.id)} className={cn('min-h-11 min-w-0 flex-1 rounded-md px-2 py-2 hover:bg-muted', fokus)}>
+                  <PasNamn marke={p.marke} namn={p.namn} namnKlass="font-medium" />
                 </Link>
                 <Button variant="ghost" size="ikon" aria-label={`Ta bort ${pasnamn(p)} från favoriterna`} onClick={() => gor(() => sattFavorit(p.id, false))}>
                   <Star className="size-5 fill-primary text-primary" aria-hidden />
@@ -135,53 +152,123 @@ function Innehall({
           </ul>
         )}
       </Sektion>
+
+      {laggTill && (
+        <LaggTillPase
+          rader={rader}
+          favoriter={favoriter}
+          onStang={() => setLaggTill(false)}
+          onSparad={laddaOm}
+        />
+      )}
     </div>
   )
 }
 
-/** En påse man har hemma: namnet, märkningen för bäst före, antalet med minus och plus, datumet och Ta bort. */
+/**
+ * Lägg till påse: samma sökning som i Välj rätt, med sökfältet först. När en påse är vald visas antal och bäst före.
+ * Mitt på skärmen på dator och som ett blad nerifrån i mobil. Bara påsar ur matkatalogen.
+ */
+function LaggTillPase({
+  rader,
+  favoriter,
+  onStang,
+  onSparad,
+}: {
+  rader: readonly Skafferirad[]
+  favoriter: ReadonlySet<string>
+  onStang: () => void
+  onSparad: () => Promise<void>
+}) {
+  const [vald, setVald] = useState<Matprodukt | null>(null)
+  const hemma = new Map(rader.map((r) => [r.matprodukt_id, r.antal]))
+  const befintlig = vald ? rader.find((r) => r.matprodukt_id === vald.id) : undefined
+  return (
+    <Panel
+      mitten
+      etikett="Lägg till påse i skafferiet"
+      onStang={onStang}
+      rubrik={
+        <div className="space-y-1">
+          <h2 className="text-2xl">Lägg till påse</h2>
+          {vald && <PasNamn marke={vald.marke} namn={vald.namn} className="text-sm" />}
+        </div>
+      }
+    >
+      {vald ? (
+        <LaggISkafferi
+          namn={pasnamn(vald)}
+          hemma={befintlig?.antal ?? 0}
+          onSpara={async (antal, bastFore) => {
+            const ny = await laggISkafferi(vald.id, befintlig, antal, bastFore)
+            if (ny) await onSparad()
+            return ny
+          }}
+          onKlar={onStang}
+        />
+      ) : (
+        <Pasar
+          behov={[]}
+          skafferi={{ favoriter, hemma, bokade: new Map(), senast: [] }}
+          valjer={false}
+          onValj={setVald}
+        />
+      )}
+    </Panel>
+  )
+}
+
+/** En påse man har hemma: namnet, bäst före och om det har gått ut, antalet med minus och plus, och Ta bort. */
 function Hemmarad({ rad, pase, idag, gor }: { rad: Skafferirad; pase: Matprodukt; idag: string; gor: (handling: () => Promise<boolean>) => Promise<void> }) {
-  const id = useId()
-  const [datum, setDatum] = useState(rad.bast_fore ?? '')
-  const status = bastForeStatus(rad.bast_fore, idag)
+  const sparat = valFranDatum(rad.bast_fore)
+  const [manad, setManad] = useState(sparat.manad)
+  const [ar, setAr] = useState(sparat.ar)
+  const [datumfel, setDatumfel] = useState<string | null>(null)
+  const status = skafferistatus(rad.bast_fore, idag)
   const namn = pasnamn(pase)
 
-  function sparaDatum(varde: string) {
-    setDatum(varde)
-    // Ett ofullständigt datum sparas inte. Ett tomt fält tar bort datumet.
-    if (varde !== '' && !/^\d{4}-\d{2}-\d{2}$/.test(varde)) return
-    if ((varde || null) === rad.bast_fore) return
-    void gor(() => andraSkafferirad(rad.id, { bast_fore: varde || null }))
+  function andraDatum(m: string, a: string) {
+    setManad(m)
+    setAr(a)
+    // Halva val sparas inte. Felet står vid fältet tills båda är valda eller båda är tomma.
+    const tolkat = tolkaBastFore(m, a, idag)
+    if (!tolkat.ok) {
+      setDatumfel(tolkat.fel)
+      return
+    }
+    setDatumfel(null)
+    if (tolkat.datum === rad.bast_fore) return
+    void gor(() => andraSkafferirad(rad.id, { bast_fore: tolkat.datum }))
   }
 
   return (
     <li className="space-y-2 py-3">
-      <div className="space-y-0.5">
-        <Link to={pasadress(pase.id)} className={cn('inline-flex min-h-11 items-center rounded-md font-medium break-words underline-offset-4 hover:underline', fokus)}>
-          {namn}
+      <div className="flex flex-wrap items-start justify-between gap-x-3 gap-y-1">
+        <Link to={pasadress(pase.id)} className={cn('min-h-11 min-w-0 flex-1 rounded-md py-1 underline-offset-4 hover:underline', fokus)}>
+          <PasNamn marke={pase.marke} namn={pase.namn} namnKlass="font-medium" />
         </Link>
-        {rad.bast_fore && <p className="text-sm text-muted-foreground">Bäst före {formateraDatum(rad.bast_fore)}</p>}
-        {status === 'passerat' && <p className="text-sm font-medium text-accent-strong">{BASTFORE_TEXT.passerat}. Räknas inte som hemma i inköpslistan.</p>}
-        {status === 'snart' && <p className="text-sm font-medium text-accent-strong">{BASTFORE_TEXT.snart}</p>}
+        {status && (
+          <span className={cn('pt-1 text-sm', status === 'gatt_ut' ? 'font-medium text-accent-strong' : 'text-muted-foreground')}>{SKAFFERISTATUS_TEXT[status]}</span>
+        )}
       </div>
-      <div className="flex flex-wrap items-end gap-x-4 gap-y-2">
-        <div role="group" aria-label={`Antal ${namn}`} className="flex items-center gap-1">
-          <Button variant="outline" size="ikon" aria-label={`Minska antalet ${namn}`} disabled={rad.antal <= 1} onClick={() => gor(() => andraSkafferirad(rad.id, { antal: rad.antal - 1 }))}>
-            <Minus className="size-4" aria-hidden />
-          </Button>
-          <span aria-live="polite" className="min-w-10 text-center font-semibold tabular-nums">
-            {rad.antal}
-            <span className="sr-only"> hemma</span>
-          </span>
-          <Button variant="outline" size="ikon" aria-label={`Öka antalet ${namn}`} disabled={rad.antal >= MAX_ANTAL} onClick={() => gor(() => andraSkafferirad(rad.id, { antal: rad.antal + 1 }))}>
-            <Plus className="size-4" aria-hidden />
-          </Button>
-        </div>
+      <div className="flex flex-wrap items-end gap-x-4 gap-y-3">
         <div className="space-y-1">
-          <label htmlFor={`${id}-datum`} className="block text-xs text-muted-foreground">
-            Bäst före (frivilligt)
-          </label>
-          <Input id={`${id}-datum`} type="date" className="w-auto" value={datum} onChange={(e) => sparaDatum(e.target.value)} />
+          <p className="text-sm font-medium">Antal</p>
+          <div role="group" aria-label={`Antal ${namn}`} className="flex items-center gap-1">
+            <Button variant="outline" size="ikon" aria-label={`Minska antalet ${namn}`} disabled={rad.antal <= 1} onClick={() => gor(() => andraSkafferirad(rad.id, { antal: rad.antal - 1 }))}>
+              <Minus className="size-4" aria-hidden />
+            </Button>
+            <span aria-live="polite" className="min-w-10 text-center font-semibold tabular-nums">
+              {rad.antal}
+              <span className="sr-only"> hemma</span>
+            </span>
+            <Button variant="outline" size="ikon" aria-label={`Öka antalet ${namn}`} disabled={rad.antal >= MAX_ANTAL} onClick={() => gor(() => andraSkafferirad(rad.id, { antal: rad.antal + 1 }))}>
+              <Plus className="size-4" aria-hidden />
+            </Button>
+          </div>
+        </div>
+        <div className="min-w-56 max-w-sm flex-1">
+          <BastForeVal manad={manad} ar={ar} idag={idag} fel={datumfel} onAndra={andraDatum} />
         </div>
         <Button variant="ghost" onClick={() => gor(() => taBortUrSkafferi(rad.id))}>
           <Trash2 className="size-4" aria-hidden />

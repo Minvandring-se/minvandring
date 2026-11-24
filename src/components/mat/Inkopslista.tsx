@@ -3,13 +3,14 @@ import { useId, useState } from 'react'
 import { Link } from 'react-router'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Initial } from '@/components/mat/Initial'
+import { PasNamn } from '@/components/mat/PasNamn'
 import type { Person } from '@/components/mat/RadPanel'
 import { knappStil } from '@/components/ui/knappStil'
 import { Sektion } from '@/components/ui/sektion'
 import { Select } from '@/components/ui/select'
 import { AVDELNINGAR } from '@/lib/handla'
 import { handlagrupper, type Handlarad } from '@/lib/handlingslista'
-import { bastForeStatus, BASTFORE_TEXT, bokadText, hemma, kopText, ledigaHemma } from '@/lib/skafferi'
+import { bokadText, garUtFore, hemma, jamforDatum, kopText, ledigaHemma, manadOchAr } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import type { Skafferirad } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -30,6 +31,7 @@ export function Inkopslista({
   mittDeltagareId,
   skafferi,
   bokade = new Map(),
+  avresa = null,
   utskrift,
   onBocka,
   onAvdelning,
@@ -44,6 +46,8 @@ export function Inkopslista({
   skafferi: readonly Skafferirad[]
   /** Påsar hemma som går till turer före den här. */
   bokade?: ReadonlyMap<string, number>
+  /** Turens första dag. Bäst före jämförs med den, eller med i dag när turen saknar datum. */
+  avresa?: string | null
   /** Adressen till utskriften. */
   utskrift: string
   onBocka: (rad: Handlarad, klart: boolean) => Promise<boolean>
@@ -61,14 +65,14 @@ export function Inkopslista({
   const klara = attKopa.filter((r) => r.klart).length
 
   const idag = lokaltDatum()
-  const iSkafferiet = ledigaHemma(hemma(skafferi, idag), bokade)
+  // En påse räknas som hemma om bäst före är på eller efter turens första dag, eller saknas.
+  const iSkafferiet = ledigaHemma(hemma(skafferi, jamforDatum(avresa, idag)), bokade)
   /** Det ens eget skafferi säger om en påse man själv köper. */
   const skafferiFor = (r: Handlarad): { text: string | null; bastFore: string | null } | null => {
     if (r.typ !== 'pase' || !r.matproduktId || !mittDeltagareId || r.kopare !== mittDeltagareId) return null
     const rad = skafferi.find((s) => s.matprodukt_id === r.matproduktId)
-    const status = rad ? bastForeStatus(rad.bast_fore, idag) : null
     const text = [kopText(r.pasar ?? 0, iSkafferiet.get(r.matproduktId) ?? 0), bokadText(bokade.get(r.matproduktId) ?? 0)].filter(Boolean).join(' ') || null
-    const bastFore = status === 'passerat' || status === 'snart' ? BASTFORE_TEXT[status] : null
+    const bastFore = rad && garUtFore(rad.bast_fore, jamforDatum(avresa, idag)) ? `Går ut före turen (bäst före ${manadOchAr(rad.bast_fore!)})` : null
     return text || bastFore ? { text, bastFore } : null
   }
 
@@ -181,7 +185,7 @@ function Rad({
   const innehall = (
     <>
       <span className={cn('min-w-0 flex-1 break-words', rad.klart && 'text-muted-foreground line-through')}>
-        {rad.namn}
+        {rad.pase ? <PasNamn marke={rad.pase.marke} namn={rad.pase.namn} /> : rad.namn}
         {rad.hemifran && <span className="text-sm text-muted-foreground"> (hemifrån)</span>}
       </span>
       {rad.mangd && <span className="shrink-0 text-sm tabular-nums">{rad.mangd}</span>}
@@ -200,7 +204,7 @@ function Rad({
       {skafferi && (
         <p className="pb-2 pl-8 text-sm">
           {skafferi.text && <span className="block font-medium text-primary">{skafferi.text}</span>}
-          {skafferi.bastFore && <span className="block font-medium text-accent-strong">{skafferi.bastFore}, se Skafferi</span>}
+          {skafferi.bastFore && <span className="block font-medium text-accent-strong">{skafferi.bastFore}</span>}
         </p>
       )}
       {andraAvdelning && (

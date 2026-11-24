@@ -24,11 +24,6 @@ export function bastForeStatus(bastFore: string | null, idag: string): Bastfore 
   return 'ok'
 }
 
-export const BASTFORE_TEXT: Record<Exclude<Bastfore, 'ok'>, string> = {
-  passerat: 'Bäst före har passerat',
-  snart: 'Bäst före inom en månad',
-}
-
 /** Datumet som det visas: "12 mars 2027". */
 export function formateraDatum(datum: string): string {
   const [ar, manad, dag] = datum.split('-').map(Number)
@@ -163,3 +158,96 @@ export function bokningarFranRader(rader: readonly BurenRad[], portionerPerPase:
   }
   return [...summa.values()].map((r) => ({ turId: r.turId, matproduktId: r.matproduktId, pasar: antalPasar(r.portioner, 1, portionerPerPase.get(r.matproduktId) ?? 1) }))
 }
+
+// ─── Lägga i skafferiet och bäst före som månad och år ─────────────────────────
+
+export const MANADER = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december'] as const
+
+/** Så många år framåt man kan välja för bäst före, räknat från i år. */
+export const AR_FRAMAT = 15
+
+/** Åren man kan välja för bäst före: från i år till och med 15 år framåt. */
+export function tillatnaAr(idag: string): number[] {
+  const ar = Number(idag.slice(0, 4))
+  return Array.from({ length: AR_FRAMAT + 1 }, (_, i) => ar + i)
+}
+
+/** Sista dagen i en månad som ÅÅÅÅ-MM-DD. Månaden räknas från 1. */
+export function sistaDagIManaden(ar: number, manad: number): string {
+  const dag = new Date(Date.UTC(ar, manad, 0)).getUTCDate()
+  return `${ar}-${String(manad).padStart(2, '0')}-${String(dag).padStart(2, '0')}`
+}
+
+/** Bäst före som det visas: "mars 2027". */
+export function manadOchAr(datum: string): string {
+  const [ar, manad] = datum.split('-').map(Number)
+  return `${MANADER[manad - 1]} ${ar}`
+}
+
+/** Månad och år ur ett datum, för väljarna. Tomma strängar när datumet saknas. */
+export function valFranDatum(datum: string | null): { manad: string; ar: string } {
+  if (!datum) return { manad: '', ar: '' }
+  const [ar, manad] = datum.split('-')
+  return { manad: String(Number(manad)), ar }
+}
+
+export type Bastforeval = { ok: true; datum: string | null } | { ok: false; fel: string }
+
+/**
+ * Bäst före ur väljarna för månad och år. Båda tomma: inget datum. Dagen blir den sista i månaden. Bara år från i år
+ * till och med 15 år framåt går att spara.
+ */
+export function tolkaBastFore(manad: string, ar: string, idag: string): Bastforeval {
+  if (manad === '' && ar === '') return { ok: true, datum: null }
+  if (manad === '' || ar === '') return { ok: false, fel: 'Välj både månad och år, eller ingen av dem.' }
+  const m = Number(manad)
+  const a = Number(ar)
+  const ar0 = tillatnaAr(idag)
+  if (!/^\d{1,2}$/.test(manad) || m < 1 || m > 12) return { ok: false, fel: 'Välj en månad.' }
+  if (!/^\d{4}$/.test(ar) || !ar0.includes(a)) return { ok: false, fel: `Välj ett år mellan ${ar0[0]} och ${ar0.at(-1)}.` }
+  return { ok: true, datum: sistaDagIManaden(a, m) }
+}
+
+/** Antalet efter att några påsar lagts till: minst 1 och högst MAX_ANTAL. */
+export function nyttAntal(hemma: number, tillagt: number): number {
+  return Math.min(MAX_ANTAL, Math.max(1, hemma + tillagt))
+}
+
+/** Det tidigaste av två bäst före-datum. Saknas det ena gäller det andra. */
+export function tidigasteDatum(a: string | null, b: string | null): string | null {
+  if (!a) return b
+  if (!b) return a
+  return a < b ? a : b
+}
+
+/** Den korta bekräftelsen efter att påsar lagts i skafferiet: "Nu har du 3 hemma, bäst före mars 2027." */
+export function skafferibesked(antal: number, bastFore: string | null): string {
+  return `Nu har du ${antal} hemma${bastFore ? `, bäst före ${manadOchAr(bastFore)}` : ''}.`
+}
+
+/** Datumet som bäst före jämförs med för en tur: turens första dag, eller i dag när turen saknar datum. */
+export function jamforDatum(avresa: string | null, idag: string): string {
+  return avresa ?? idag
+}
+
+/** Går påsen ut före turen? Aldrig för en påse utan bäst före. */
+export function garUtFore(bastFore: string | null, datum: string): boolean {
+  return bastFore !== null && bastFore < datum
+}
+
+export type Skafferistatus = 'gatt_ut' | 'snart'
+
+/** Månaderna innan bäst före som räknas som snart. */
+export const SNART_MANADER = 3
+
+/** Har bäst före passerat, eller går det ut inom tre månader? null annars och utan datum. */
+export function skafferistatus(bastFore: string | null, idag: string): Skafferistatus | null {
+  if (!bastFore) return null
+  if (bastFore < idag) return 'gatt_ut'
+  const [ar, manad, dag] = idag.split('-').map(Number)
+  const sista = new Date(Date.UTC(ar, manad - 1 + SNART_MANADER + 1, 0)).getUTCDate()
+  const grans = new Date(Date.UTC(ar, manad - 1 + SNART_MANADER, Math.min(dag, sista))).toISOString().slice(0, 10)
+  return bastFore <= grans ? 'snart' : null
+}
+
+export const SKAFFERISTATUS_TEXT: Record<Skafferistatus, string> = { gatt_ut: 'Gått ut', snart: 'Går ut snart' }

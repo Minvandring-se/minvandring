@@ -57,7 +57,9 @@ describe('Matdag', () => {
 
   it('visar samma rätt flera gånger i en måltid som en rad med antal', () => {
     const html = rita(['a', 'b', 'c', 'd', 'e', 'f'].map((id) => rad(id, 'pase')))
-    expect(html.match(/>Test Pasta med vete</g)?.length).toBe(1)
+    // Märket står ovanför namnet, och namnet visas en gång.
+    expect(html.match(/>Pasta med vete</g)?.length).toBe(1)
+    expect(html.indexOf('>Test<')).toBeLessThan(html.indexOf('>Pasta med vete<'))
     expect(html).toContain('6 st')
     expect(html).toContain('aria-label="Ta bort en portion Test Pasta med vete från lunch dag 1"')
   })

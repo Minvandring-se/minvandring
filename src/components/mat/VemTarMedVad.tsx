@@ -1,5 +1,6 @@
 import { useId, useState } from 'react'
 import { Initial } from '@/components/mat/Initial'
+import { PasNamn } from '@/components/mat/PasNamn'
 import type { Person } from '@/components/mat/RadPanel'
 import { Button } from '@/components/ui/button'
 import { formateraVikt } from '@/lib/forrad'
@@ -20,6 +21,7 @@ export function VemTarMedVad({
   onTa,
   onSlapp,
   onFordela,
+  pasFor = () => undefined,
 }: {
   rader: readonly Barrad[]
   personer: readonly Person[]
@@ -32,6 +34,8 @@ export function VemTarMedVad({
   onSlapp: (rad: Barrad) => Promise<boolean>
   /** Delar ut det som ingen bär så att vikten blir jämn. */
   onFordela: () => Promise<boolean>
+  /** Märke och namn för en rätt som är en påse ur matkatalogen. */
+  pasFor?: (rattId: string) => { marke: string; namn: string } | undefined
 }) {
   const id = useId()
   const [sparar, setSparar] = useState<string | null>(null)
@@ -73,7 +77,7 @@ export function VemTarMedVad({
               <ul className="divide-y divide-accent/20">
                 {saknar.map((r) => (
                   <li key={r.nyckel} className="flex items-center justify-between gap-3 py-1">
-                    <Rad rad={r} />
+                    <Rad rad={r} pase={pasFor(r.rattId)} />
                     {mittDeltagareId && (
                       <Button
                         variant="ghost"
@@ -107,7 +111,7 @@ export function VemTarMedVad({
                     <ul className="space-y-2">
                       {egna.map((r) => (
                         <li key={r.nyckel} className="flex items-center justify-between gap-3">
-                          <Rad rad={r} />
+                          <Rad rad={r} pase={pasFor(r.rattId)} />
                           {b === mittDeltagareId && (
                             <Button
                               variant="ghost"
@@ -138,11 +142,11 @@ export function VemTarMedVad({
   )
 }
 
-/** En rätt med måltiderna på raden under: "Pudding" och "Mellanmål dag 3 (6 st)". */
-function Rad({ rad }: { rad: Barrad }) {
+/** En rätt med måltiderna på raden under: "Pudding" och "Mellanmål dag 3 (6 st)". En påse visar märket ovanför. */
+function Rad({ rad, pase }: { rad: Barrad; pase?: { marke: string; namn: string } }) {
   return (
     <span className="flex min-w-0 flex-col text-sm">
-      <span className="font-medium wrap-anywhere">{rad.namn}</span>
+      {pase ? <PasNamn marke={pase.marke} namn={pase.namn} namnKlass="font-medium" /> : <span className="font-medium wrap-anywhere">{rad.namn}</span>}
       <span className="text-muted-foreground">{platserText(rad.platser)}</span>
     </span>
   )

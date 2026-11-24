@@ -64,6 +64,8 @@ export interface Handlarad {
   pasar?: number
   /** Påsens id i matkatalogen. Bara för påsar, för det man har hemma. */
   matproduktId?: string
+  /** Påsens märke och namn, så att listan kan visa dem på två rader. Bara för påsar. */
+  pase?: { marke: string; namn: string }
   /** Varan tas hemifrån i stället för att köpas. */
   hemifran: boolean
   /** Köparen har bockat av den. Aldrig för det som ingen köper. */
@@ -141,6 +143,7 @@ export function handlingslista(data: Matdata & { klart: readonly InkopKlart[] },
         gram: pasar * pase.vikt_torr_g,
         pasar,
         matproduktId: pase.id,
+        pase: pase.marke && pase.namn ? { marke: pase.marke, namn: pase.namn } : undefined,
         hemifran: false,
         klart: avbockad,
       })

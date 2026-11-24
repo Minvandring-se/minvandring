@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bastForeStatus, bokade, bokadText, bokningarFranRader, enManadEfter, formateraDatum, hemma, kopText, ledigaHemma, senastAnvanda, skafferietForst, sorteraSkafferi, turerFore, type Bokningstur } from './skafferi'
+import { garUtFore, jamforDatum, manadOchAr, nyttAntal, skafferibesked, skafferistatus, tidigasteDatum, tillatnaAr, tolkaBastFore, valFranDatum, bastForeStatus, bokade, bokadText, bokningarFranRader, enManadEfter, formateraDatum, hemma, kopText, ledigaHemma, senastAnvanda, skafferietForst, sorteraSkafferi, turerFore, type Bokningstur } from './skafferi'
 import type { Skafferirad } from './typer'
 
 const rad = (matprodukt_id: string, antal: number, bast_fore: string | null = null): Skafferirad => ({ id: `r-${matprodukt_id}`, matprodukt_id, antal, bast_fore })
@@ -135,5 +135,86 @@ describe('bokningarFranRader', () => {
       { turId: 'juni', matproduktId: 'p1', pasar: 1 },
       { turId: 'mars', matproduktId: 'p2', pasar: 3 },
     ])
+  })
+})
+
+describe('bäst före som månad och år', () => {
+  const idag = '2026-11-24'
+  it('tillåter år från i år till och med 15 år framåt', () => {
+    expect(tillatnaAr(idag)[0]).toBe(2026)
+    expect(tillatnaAr(idag).at(-1)).toBe(2041)
+    expect(tillatnaAr(idag)).toHaveLength(16)
+  })
+
+  it('sparar den sista dagen i månaden, också i februari ett skottår', () => {
+    expect(tolkaBastFore('3', '2027', idag)).toEqual({ ok: true, datum: '2027-03-31' })
+    expect(tolkaBastFore('2', '2028', idag)).toEqual({ ok: true, datum: '2028-02-29' })
+    expect(tolkaBastFore('', '', idag)).toEqual({ ok: true, datum: null })
+  })
+
+  it('stoppar halva val och år utanför gränsen, också sexsiffriga år', () => {
+    expect(tolkaBastFore('3', '', idag).ok).toBe(false)
+    expect(tolkaBastFore('', '2027', idag).ok).toBe(false)
+    expect(tolkaBastFore('3', '2042', idag)).toEqual({ ok: false, fel: 'Välj ett år mellan 2026 och 2041.' })
+    expect(tolkaBastFore('3', '202611', idag).ok).toBe(false)
+    expect(tolkaBastFore('13', '2027', idag).ok).toBe(false)
+  })
+
+  it('visar datumet som månad och år, och läser tillbaka det till väljarna', () => {
+    expect(manadOchAr('2027-03-31')).toBe('mars 2027')
+    expect(valFranDatum('2027-03-31')).toEqual({ manad: '3', ar: '2027' })
+    expect(valFranDatum(null)).toEqual({ manad: '', ar: '' })
+  })
+})
+
+describe('lägga påsar i skafferiet', () => {
+  it('lägger till det nya antalet, högst 999', () => {
+    expect(nyttAntal(2, 1)).toBe(3)
+    expect(nyttAntal(998, 5)).toBe(999)
+  })
+
+  it('behåller det tidigaste bäst före', () => {
+    expect(tidigasteDatum('2027-03-31', '2027-01-31')).toBe('2027-01-31')
+    expect(tidigasteDatum(null, '2027-01-31')).toBe('2027-01-31')
+    expect(tidigasteDatum('2027-03-31', null)).toBe('2027-03-31')
+    expect(tidigasteDatum(null, null)).toBeNull()
+  })
+
+  it('bekräftar kort hur många man har hemma', () => {
+    expect(skafferibesked(3, '2027-03-31')).toBe('Nu har du 3 hemma, bäst före mars 2027.')
+    expect(skafferibesked(1, null)).toBe('Nu har du 1 hemma.')
+  })
+})
+
+describe('bäst före jämfört med turen', () => {
+  it('jämför med turens första dag, eller med i dag när turen saknar datum', () => {
+    expect(jamforDatum('2026-12-04', '2026-11-24')).toBe('2026-12-04')
+    expect(jamforDatum(null, '2026-11-24')).toBe('2026-11-24')
+  })
+
+  it('räknar en påse som hemma om bäst före är på eller efter turens första dag, och alltid utan bäst före', () => {
+    const rader = [
+      { id: 'a', matprodukt_id: 'p1', antal: 2, bast_fore: '2026-12-03' },
+      { id: 'b', matprodukt_id: 'p2', antal: 1, bast_fore: '2026-12-04' },
+      { id: 'c', matprodukt_id: 'p3', antal: 4, bast_fore: null },
+    ]
+    expect(hemma(rader, jamforDatum('2026-12-04', '2026-11-24'))).toEqual(
+      new Map([
+        ['p2', 1],
+        ['p3', 4],
+      ]),
+    )
+    expect(garUtFore('2026-12-03', '2026-12-04')).toBe(true)
+    expect(garUtFore('2026-12-04', '2026-12-04')).toBe(false)
+    expect(garUtFore(null, '2026-12-04')).toBe(false)
+  })
+
+  it('säger Gått ut när datumet har passerat och Går ut snart inom tre månader', () => {
+    const idag = '2026-11-24'
+    expect(skafferistatus('2026-11-23', idag)).toBe('gatt_ut')
+    expect(skafferistatus('2026-11-24', idag)).toBe('snart')
+    expect(skafferistatus('2027-02-24', idag)).toBe('snart')
+    expect(skafferistatus('2027-02-28', idag)).toBeNull()
+    expect(skafferistatus(null, idag)).toBeNull()
   })
 })

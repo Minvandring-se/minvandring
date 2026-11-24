@@ -1,6 +1,7 @@
 import { ChevronDown, Plus, X } from 'lucide-react'
 import { useId } from 'react'
 import { Initial } from '@/components/mat/Initial'
+import { PasNamn } from '@/components/mat/PasNamn'
 import type { Person } from '@/components/mat/RadPanel'
 import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
@@ -225,7 +226,7 @@ function Rattrad({
     // Namnet får hela rutans bredd. Energin och Ta bort står på raden under, så att långa namn går att läsa i smala rutor.
     <li className="space-y-0.5 rounded-knapp bg-muted/60 pt-2 pl-3">
       <p className="flex flex-wrap items-baseline gap-x-2 pr-3 text-[0.9375rem] leading-snug font-medium">
-        <span className="min-w-0 break-words hyphens-auto">{ratt.namn}</span>
+        {pase ? <PasNamn marke={pase.marke} namn={pase.namn} /> : <span className="min-w-0 break-words hyphens-auto">{ratt.namn}</span>}
         {antal > 1 && <Bricka className="tabular-nums">{antal} st</Bricka>}
       </p>
       {ingredienser.length > 0 && <Ingredienser namn={ingredienser} />}
