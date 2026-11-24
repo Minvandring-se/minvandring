@@ -1,5 +1,5 @@
 import { Check, ChevronDown, ChevronLeft, ExternalLink, Plus, Search, X } from 'lucide-react'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
@@ -161,11 +161,16 @@ export function Utrustningskatalog() {
   // Den öppna produkten: ur träfflistan, annars den som hämtades för sig.
   const iListan = produktId && modeller ? modellMedProdukt(modeller, produktId) : null
   const fraanLank = produktId && !iListan && direkt?.for === produktId ? modellMedProdukt(direkt.modeller, produktId) : null
-  const oppen = iListan ?? fraanLank
+  // Medan en produkt som inte finns i träfflistan hämtas visas den förra, så att panelen inte försvinner och kommer tillbaka.
+  const behoverHamtasNu = !!produktId && !iListan && direkt?.for !== produktId
+  const hittad = iListan ?? fraanLank
+  const [senast, setSenast] = useState<typeof hittad>(null)
+  if (hittad && hittad.produkt.id !== senast?.produkt.id) setSenast(hittad)
+  const oppen = hittad ?? (behoverHamtasNu ? senast : null)
   const oppenIForradet = iListan ? iForradet : (direkt?.iForradet ?? iForradet)
 
   // En länk till en produkt som inte finns i träfflistan: hämta produkten och sedan modellens alla storlekar.
-  const behoverHamtas = !!produktId && !iListan && direkt?.for !== produktId
+  const behoverHamtas = behoverHamtasNu
   useEffect(() => {
     if (!supabase || !produktId || !behoverHamtas) return
     const klient = supabase
@@ -194,7 +199,9 @@ export function Utrustningskatalog() {
   function oppna(produkt: string, fran?: string) {
     const p = new URLSearchParams(parametrar)
     p.set('produkt', produkt)
-    setParametrar(p, { state: { panel: true, fran } })
+    // Hur många steg panelen har öppnats i följd, så att Stäng går tillbaka förbi alla.
+    const djup = ((location.state as { djup?: number } | null)?.djup ?? 0) + 1
+    setParametrar(p, { state: { panel: true, fran, djup } })
   }
 
   /** Byter storlek i panelen utan ett nytt steg i historiken. */
@@ -206,8 +213,9 @@ export function Utrustningskatalog() {
 
   /** Stänger panelen: ett steg bakåt om panelen öppnades här, annars tas produkten bort ur adressen. */
   function stang() {
-    if ((location.state as { panel?: boolean } | null)?.panel) {
-      navigate(-1)
+    const state = location.state as { panel?: boolean; djup?: number } | null
+    if (state?.panel) {
+      navigate(-(state.djup ?? 1))
       return
     }
     const p = new URLSearchParams(parametrar)
@@ -373,7 +381,7 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
           </span>
         )}
       </button>
-      <div className="space-y-1 px-4 pb-4">
+      <div className="space-y-2 px-4 pt-2 pb-4">
         <Granskad produkt={forsta} />
         {finns && <IForradet finns={finns} />}
       </div>
@@ -488,7 +496,7 @@ function Produktpanel({
 
         <PassarMed produkt={vald} brannarenFinns={iForradet.has(vald.id)} kok={kok} onKok={onKok} onOppna={onOppna} onSparat={onSparat} />
 
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-2">
           <Granskad produkt={vald} />
           <a href={vald.kalla} target="_blank" rel="noopener noreferrer" className={lankKlass}>
             Tillverkarens sida
@@ -548,6 +556,10 @@ function PassarMed({
   const setValda = (f: (v: Katalogprodukt[]) => Katalogprodukt[]) => onKok({ for: produkt.id, valda: f(valda) })
   const [sparar, setSparar] = useState(false)
   const [besked, setBesked] = useState<{ fel: boolean; text: string } | null>(null)
+  // Vad som just hände, för skärmläsare. Finns hela tiden, så att det läses upp.
+  const [status, setStatus] = useState('')
+  const beskedRef = useRef<HTMLParagraphElement>(null)
+  const kokRubrik = useRef<HTMLHeadingElement>(null)
   const kanValja = (KOKVARMARE as readonly string[]).includes(produkt.underkategori)
 
   useEffect(() => {
@@ -582,7 +594,9 @@ function PassarMed({
   }
   const arVald = (p: Katalogprodukt) => valda.some((v) => v.id === p.id)
   const vaxla = (p: Katalogprodukt) => {
+    const namn = [p.marke, p.modell, p.version].filter(Boolean).join(' ')
     setBesked(null)
+    setStatus(arVald(p) ? `Borttagen ur ditt kök: ${namn}` : `Tillagd i ditt kök: ${namn}`)
     setValda((v) => (v.some((x) => x.id === p.id) ? v.filter((x) => x.id !== p.id) : [...v, p]))
   }
 
@@ -600,48 +614,12 @@ function PassarMed({
     onSparat(brannarenFinns ? valda : [produkt, ...valda])
     setBesked({ fel: false, text: saker.length === 1 ? 'En sak ligger nu i förrådet.' : `${saker.length} saker ligger nu i förrådet.` })
     setValda(() => [])
+    // Knappen försvinner, så fokus flyttas till beskedet.
+    requestAnimationFrame(() => beskedRef.current?.focus())
   }
 
   return (
     <section aria-label="Passar ihop i köket" className="space-y-5">
-      {kanValja && (valda.length > 0 || besked) && (
-        <div className="space-y-2 rounded-lg border border-primary bg-primary-soft p-3" aria-live="polite">
-          {valda.length > 0 && (
-            <>
-              <p className="font-heading text-lg font-semibold">Ditt kök</p>
-              <ul className="space-y-1 text-sm">
-                <li className="flex justify-between gap-3">
-                  <span className="min-w-0 break-words">
-                    {produktnamn(produkt)} {produkt.version}
-                    {brannarenFinns && <span className="text-muted-foreground"> (finns redan i förrådet)</span>}
-                  </span>
-                  <span className="shrink-0 tabular-nums">{formateraVikt(produkt.packvikt_g)}</span>
-                </li>
-                {valda.map((v) => (
-                  <li key={v.id} className="flex items-center justify-between gap-2">
-                    <span className="min-w-0 break-words">{[v.marke, v.modell, v.version].filter(Boolean).join(' ')}</span>
-                    <span className="flex shrink-0 items-center gap-1">
-                      <span className="tabular-nums">{formateraVikt(v.packvikt_g)}</span>
-                      <button type="button" onClick={() => vaxla(v)} aria-label={`Ta bort ${v.modell} ur ditt kök`} className={cn('flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground', fokus)}>
-                        <X className="size-4" aria-hidden />
-                      </button>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-              <p className="flex justify-between gap-3 border-t border-border pt-2 font-semibold">
-                <span>Tillsammans</span>
-                <span className="tabular-nums">{formateraVikt(kokvikt([produkt, ...valda]))}</span>
-              </p>
-              <Button onClick={spara} disabled={sparar}>
-                {sparar ? 'Sparar …' : 'Lägg köket i förrådet'}
-              </Button>
-            </>
-          )}
-          {besked && <p className={cn('text-sm', besked.fel ? 'text-destructive' : 'font-medium')}>{besked.text}</p>}
-        </div>
-      )}
-
       {grupper.map(({ id, rubrik, lista }) => {
         const synliga = lista && !visaAlla[id] ? lista.slice(0, FORST_PASSAR) : lista
         return (
@@ -649,16 +627,21 @@ function PassarMed({
             <h3 id={`passar-${id}-${produkt.id}`} className="font-heading text-lg font-semibold">
               {rubrik}
             </h3>
-            {!lista && <p className="text-sm text-muted-foreground">Hämtar …</p>}
+            {!lista && (
+              <Laddar text="Hämtar det som passar" className="space-y-2">
+                <Skelett className="h-11 rounded-lg" />
+                <Skelett className="h-11 rounded-lg" />
+              </Laddar>
+            )}
             {lista?.length === 0 && <TomtLage kompakt text="Inget i katalogen än." />}
             {lista && lista.length > 0 && (
-              <ul aria-labelledby={`passar-${id}-${produkt.id}`} className="divide-y divide-border rounded-lg border border-border">
+              <ul aria-labelledby={`passar-${id}-${produkt.id}`} className="divide-y divide-border overflow-hidden rounded-lg border border-border">
                 {synliga?.map((p) => (
                   <li key={p.id} className="flex items-stretch">
                     <button
                       type="button"
                       onClick={() => onOppna(p.id)}
-                      className={cn('flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted', fokus)}
+                      className={cn('flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted', fokus, 'focus-visible:-outline-offset-2')}
                     >
                       <span className="min-w-0 break-words">
                         {[p.marke, p.modell, p.version].filter(Boolean).join(' ')}
@@ -671,16 +654,17 @@ function PassarMed({
                     {kanValja && (
                       <button
                         type="button"
-                        aria-pressed={arVald(p)}
                         onClick={() => vaxla(p)}
                         className={cn(
                           'flex min-h-11 w-24 shrink-0 items-center justify-center gap-1 border-l border-border px-2 text-sm font-medium',
                           fokus,
+                          'focus-visible:-outline-offset-2',
                           arVald(p) ? 'bg-primary-soft text-primary' : 'text-primary hover:bg-muted',
                         )}
                       >
                         {arVald(p) ? <Check className="size-4" aria-hidden /> : <Plus className="size-4" aria-hidden />}
                         {arVald(p) ? 'Tillagd' : 'Lägg till'}
+                        <span className="sr-only"> {[p.marke, p.modell, p.version].filter(Boolean).join(' ')}</span>
                       </button>
                     )}
                   </li>
@@ -701,6 +685,60 @@ function PassarMed({
           </div>
         )
       })}
+
+      {kanValja && (valda.length > 0 || besked) && (
+        <div className="space-y-2 rounded-lg border border-primary bg-primary-soft p-3">
+          {valda.length > 0 && (
+            <>
+              <h3 ref={kokRubrik} tabIndex={-1} className="font-heading text-lg font-semibold focus:outline-none">
+                Ditt kök
+              </h3>
+              <ul className="space-y-2 text-sm">
+                <li className="flex justify-between gap-3">
+                  <span className="min-w-0 break-words">
+                    {produktnamn(produkt)} {produkt.version}
+                    {brannarenFinns && <span className="text-muted-foreground"> (finns redan i förrådet)</span>}
+                  </span>
+                  <span className="shrink-0 tabular-nums">{formateraVikt(produkt.packvikt_g)}</span>
+                </li>
+                {valda.map((v) => (
+                  <li key={v.id} className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 break-words">{[v.marke, v.modell, v.version].filter(Boolean).join(' ')}</span>
+                    <span className="flex shrink-0 items-center gap-1">
+                      <span className="tabular-nums">{formateraVikt(v.packvikt_g)}</span>
+                      <button
+                        type="button"
+                        onClick={() => {
+                          vaxla(v)
+                          kokRubrik.current?.focus()
+                        }}
+                        aria-label={`Ta bort ${v.modell} ur ditt kök`} className={cn('flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground', fokus)}>
+                        <X className="size-4" aria-hidden />
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="flex justify-between gap-3 border-t border-border pt-2 font-semibold">
+                <span>Tillsammans</span>
+                <span className="tabular-nums">{formateraVikt(kokvikt([produkt, ...valda]))}</span>
+              </p>
+              <Button variant="outline" onClick={spara} disabled={sparar}>
+                {sparar ? 'Sparar …' : 'Lägg köket i förrådet'}
+              </Button>
+            </>
+          )}
+          {besked && (
+            <p ref={beskedRef} tabIndex={-1} className={cn('text-sm focus:outline-none', besked.fel ? 'text-destructive' : 'font-medium')}>
+              {besked.text}
+            </p>
+          )}
+        </div>
+      )}
+
+      <p role="status" className="sr-only">
+        {status}
+      </p>
     </section>
   )
 }
