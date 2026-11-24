@@ -1,4 +1,5 @@
 import { useId, useState } from 'react'
+import { TomtLage } from '@/components/app/TomtLage'
 import { Select } from '@/components/ui/select'
 import { Sektion } from '@/components/ui/sektion'
 import { formateraVikt } from '@/lib/forrad'
@@ -73,7 +74,7 @@ export function Inkopslista({
       atgard={rader.length > 0 && <span className="text-sm text-muted-foreground tabular-nums">{klara} av {rader.length} klara</span>}
     >
       {rader.length === 0 ? (
-        <p className="text-muted-foreground">Listan fylls på när ni lägger rätter i matplanen.</p>
+        <TomtLage kompakt text="Listan fylls på när ni lägger rätter i matplanen." />
       ) : (
         <div className="space-y-5">
           {fel && (

@@ -18,7 +18,7 @@ export function NyttLosenord() {
   const [fel, setFel] = useState<string | null>(null)
   const [sparar, setSparar] = useState(false)
 
-  if (session === undefined) return <p role="status" className="text-muted-foreground">Laddar …</p>
+  if (session === undefined) return <p role="status" className="text-muted-foreground">Hämtar …</p>
 
   if (session === null) {
     return (

@@ -5,8 +5,10 @@ import {
   forradsadress,
   antalPerKategori,
   antalPerUnderkategori,
+  doljsAvFiltret,
   filtrera,
   harFilter,
+  utanFilter,
   kategorierIForradet,
   kategorivalIForradet,
   matcharSok,
@@ -282,5 +284,28 @@ describe('alternativen i kategorifiltret', () => {
       { nyckel: 'liggunderlag', etikett: 'Liggunderlag', antal: 0 },
     ])
     expect(underkategorivalIForradet([], 'kok', 'brannare')).toEqual([{ nyckel: 'brannare', etikett: 'Brännare', antal: 0 }])
+  })
+})
+
+describe('doljsAvFiltret', () => {
+  const talt = sak({ id: 't', namn: 'Tält', kategori: 'talt' })
+  const sovsack = sak({ id: 's', namn: 'Sovsäck', kategori: 'sova' })
+
+  it('är sant när saken finns i förrådet men inte syns med filtret', () => {
+    const alla = [talt, sovsack]
+    expect(doljsAvFiltret('t', alla, filtrera(alla, { ...FORVALDA_VAL, kategori: 'sova' }))).toBe(true)
+    expect(doljsAvFiltret('s', alla, filtrera(alla, { ...FORVALDA_VAL, kategori: 'sova' }))).toBe(false)
+  })
+
+  it('är falskt medan listan ännu inte har hämtats om, så att rutan inte blinkar till', () => {
+    expect(doljsAvFiltret('ny', [talt], [])).toBe(false)
+  })
+})
+
+describe('utanFilter', () => {
+  it('tar bort sök, kategori och underkategori men behåller sortering och vy', () => {
+    const val = { sok: 'akto', sortering: 'lattast' as const, kategori: 'sova' as const, underkategori: 'sovsack', vy: 'rutnat' as const }
+    expect(utanFilter(val)).toEqual({ ...FORVALDA_VAL, sortering: 'lattast', vy: 'rutnat' })
+    expect(harFilter(utanFilter(val))).toBe(false)
   })
 })

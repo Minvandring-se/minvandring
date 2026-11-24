@@ -29,6 +29,12 @@ describe('kanTaBort', () => {
     expect(kanTaBort('editor', lasare, 'b', alla)).toBe(false)
   })
 
+  it('låter inte redigerare ta bort en person utan konto som är ägare', () => {
+    const agareUtanKonto = { id: '5', roll: 'owner' as const, userId: null }
+    expect(kanTaBort('editor', agareUtanKonto, 'b', [...alla, agareUtanKonto])).toBe(false)
+    expect(kanTaBort('owner', agareUtanKonto, 'a', [...alla, agareUtanKonto])).toBe(true)
+  })
+
   it('låter vem som helst lämna turen', () => {
     expect(kanTaBort('viewer', lasare, 'c', alla)).toBe(true)
   })

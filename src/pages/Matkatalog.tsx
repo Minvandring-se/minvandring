@@ -1,9 +1,13 @@
 import { ExternalLink, Search, Star } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
+import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
 import { SidRubrik } from '@/components/app/SidRubrik'
+import { TomtLage } from '@/components/app/TomtLage'
 import { Kostfilterval } from '@/components/mat/Kostfilterval'
 import { Matflikar } from '@/components/mat/Matflikar'
+import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Panel } from '@/components/ui/panel'
@@ -31,6 +35,7 @@ import {
 } from '@/lib/matkatalog'
 import { bastForeStatus, BASTFORE_TEXT } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
+import { laddfelText } from '@/lib/texter'
 import type { Matprodukt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
 
@@ -45,7 +50,7 @@ const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-med
 export function Matkatalog() {
   useSidtitel('Matkatalog')
   const id = useId()
-  const katalog = useMatkatalog()
+  const { katalog, forsokIgen } = useMatkatalog()
   const { skafferi, laddaOm } = useSkafferi()
   const [sok, setSok] = useState('')
   const [parametrar, setParametrar] = useSearchParams()
@@ -96,13 +101,14 @@ export function Matkatalog() {
         }
       />
 
-      {katalog === null && <p role="status" className="text-muted-foreground">Hämtar katalogen …</p>}
-      {katalog === 'fel' && (
-        <p role="alert" className="text-destructive">
-          Det gick inte att hämta katalogen. Kontrollera uppkopplingen och försök igen.
-        </p>
+      {katalog === null && (
+        <Laddar text="Hämtar katalogen" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <Skelett className="h-32 rounded-lg" />
+          <Skelett className="h-32 rounded-lg" />
+        </Laddar>
       )}
-      {Array.isArray(katalog) && katalog.length === 0 && <p className="text-muted-foreground">Det finns inga påsar i katalogen än.</p>}
+      {katalog === 'fel' && <Laddfel vad="katalogen" onForsokIgen={forsokIgen} />}
+      {Array.isArray(katalog) && katalog.length === 0 && <TomtLage kompakt text="Det finns inga påsar i katalogen än." />}
 
       {lista.length > 0 && (
         <>
@@ -163,8 +169,9 @@ export function Matkatalog() {
           </div>
 
           <p aria-live="polite" className="text-sm font-medium">
-            {traffar.length === 0 ? 'Inga påsar passar sökningen och filtret.' : traffar.length === 1 ? 'En påse' : `${traffar.length} påsar`}
+            {traffar.length === 0 ? '' : traffar.length === 1 ? 'En påse' : `${traffar.length} påsar`}
           </p>
+          {traffar.length === 0 && <TomtLage kompakt text="Inga påsar passar sökningen och filtret." />}
 
           {traffar.length > 0 && (
             <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
@@ -193,7 +200,11 @@ function Paskort({ pase, mestEnergi, favorit, onOppna }: { pase: Matprodukt; mes
         onClick={onOppna}
         className="flex w-full flex-1 flex-col gap-2 rounded-lg p-4 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
-        {mestEnergi && <span className="rounded-full bg-hjortron-soft px-2.5 py-0.5 text-sm font-semibold text-hjortron-strong">Mest energi</span>}
+        {mestEnergi && (
+          <Bricka ton="hjortron" className="text-sm font-semibold">
+            Mest energi
+          </Bricka>
+        )}
         <span className="flex w-full items-start gap-3">
           <span className="min-w-0 flex-1">
             <span className="block font-semibold break-words">{pase.namn}</span>
@@ -209,9 +220,7 @@ function Paskort({ pase, mestEnergi, favorit, onOppna }: { pase: Matprodukt; mes
         {etiketter.length > 0 && (
           <span className="flex flex-wrap gap-1.5">
             {etiketter.map((e) => (
-              <span key={e} className="rounded-full bg-primary-soft px-2.5 py-0.5 text-xs font-medium text-primary">
-                {e}
-              </span>
+              <Bricka key={e}>{e}</Bricka>
             ))}
           </span>
         )}
@@ -266,7 +275,7 @@ function Paspanel({ pase, skafferi, laddaOm, onStang }: { pase: Matprodukt; skaf
           </p>
           {rad && (
             <p className="flex flex-wrap items-center gap-x-3 text-sm">
-              <span className="rounded-full bg-hjortron-soft px-2.5 py-0.5 font-medium text-hjortron-strong">Du har {rad.antal} hemma</span>
+              <Bricka ton="hjortron" className="text-sm">Du har {rad.antal} hemma</Bricka>
               <Link to="/matplanering/skafferi" className={lankKlass}>
                 Visa i skafferiet
               </Link>
@@ -282,7 +291,7 @@ function Paspanel({ pase, skafferi, laddaOm, onStang }: { pase: Matprodukt; skaf
               Det gick inte att spara. Kontrollera uppkopplingen och försök igen.
             </p>
           )}
-          {skafferi === 'fel' && <p className="text-sm text-muted-foreground">Det gick inte att hämta ditt skafferi.</p>}
+          {skafferi === 'fel' && <p className="text-sm text-destructive">{laddfelText('ditt skafferi')}</p>}
           <div className="flex flex-wrap items-center gap-2">
             <Button disabled={sparar || !egna} onClick={() => gor(() => laggISkafferi(pase.id, rad))}>
               {rad ? 'Lägg en till i skafferiet' : 'Lägg i skafferiet'}

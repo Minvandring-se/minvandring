@@ -4,7 +4,9 @@ import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { SidRubrik } from '@/components/app/SidRubrik'
+import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
+import { FlikAntal } from '@/components/ui/bricka'
 import { TurBild } from '@/components/app/TurBild'
 import { NastaTurKort, TurRadKort, type TurMedDeltagare } from '@/components/app/TurKort'
 import { glomTurlistan, mindTurlista, minnsTurlistan } from '@/components/app/turlistaMinne'
@@ -19,6 +21,8 @@ export function MinaTurer() {
   const { namn: mittNamn, anvandarId, profilHamtad } = useApp()
   const [turer, setTurer] = useState<TurMedDeltagare[] | null>(() => mindTurlista(anvandarId))
   const [laddfel, setLaddfel] = useState(false)
+  // Räknas upp av Försök igen, så att listan hämtas igen.
+  const [omgang, setOmgang] = useState(0)
   const [sok, setSok] = useSearchParams()
   const formularOppet = sok.get('ny') === '1'
   // Fliken man själv har valt. Innan dess gäller den förvalda (Tidigare när inga kommande turer finns).
@@ -40,7 +44,7 @@ export function MinaTurer() {
         setTurer(hamtade)
         if (!error && anvandarId) minnsTurlistan(anvandarId, hamtade)
       })
-  }, [anvandarId])
+  }, [anvandarId, omgang])
 
   function visaFormular(oppet: boolean) {
     setSok(oppet ? { ny: '1' } : {}, { replace: true })
@@ -92,16 +96,16 @@ export function MinaTurer() {
           </div>
         </Laddar>
       ) : laddfel ? (
-        <p className="text-destructive">Det gick inte att hämta dina turer. Ladda om sidan och försök igen.</p>
+        <Laddfel vad="dina turer" onForsokIgen={() => setOmgang((n) => n + 1)} />
       ) : turer.length === 0 ? (
         !formularOppet && (
           <TomtLage
             bild={<TurBild turId="forsta-turen" sizes="(min-width: 1024px) 900px, 100vw" prioritet className="aspect-[16/9] w-full sm:aspect-[21/9] lg:aspect-[3/1]" />}
-            rubrik="Planera din första vandring"
+            rubrik="Planera din första tur"
             text="Skapa en tur, bjud in de som ska med och samla datum, startpunkt och deltagare på ett ställe."
             knapp={
               <Button size="lg" onClick={() => visaFormular(true)}>
-                <Plus className="size-5" aria-hidden />
+                <Plus className="size-5 text-hjortron-ikon" aria-hidden />
                 Ny tur
               </Button>
             }
@@ -112,7 +116,7 @@ export function MinaTurer() {
           {nasta && <NastaTurKort tur={nasta} idag={idag} />}
 
           {!nasta && (
-            <TomtLage kompakt text="Du har ingen kommande vandring. Skapa en ny tur när det är dags att planera nästa." />
+            <TomtLage kompakt text="Du har ingen kommande tur. Skapa en ny tur när det är dags att planera nästa." />
           )}
 
           {fler.visa && (
@@ -145,11 +149,12 @@ export function MinaTurer() {
                     document.getElementById(`flik-${annan}`)?.focus()
                   }}
                   className={cn(
-                    'h-11 rounded-full border px-5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                    'inline-flex h-11 items-center gap-2 rounded-full border px-5 text-sm font-medium transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     flik === varde ? 'border-primary bg-primary text-primary-foreground' : 'border-border bg-card hover:bg-muted',
                   )}
                 >
-                  {text} ({antal})
+                  {text}
+                  <FlikAntal antal={antal} />
                 </button>
               ))}
             </div>
@@ -197,7 +202,7 @@ function NyTurFormular({ onStang }: { onStang: () => void }) {
     const { error } = await supabase.from('turer').insert({ id, namn: namn.trim() })
     setSkapar(false)
     if (error) {
-      setFel('Det gick inte att skapa turen. Försök igen.')
+      setFel('Det gick inte att skapa turen. Kontrollera uppkopplingen och försök igen.')
       return
     }
     glomTurlistan()
@@ -218,7 +223,7 @@ function NyTurFormular({ onStang }: { onStang: () => void }) {
       <div className="flex flex-col gap-3 sm:flex-row">
         <Input id={id} ref={falt} placeholder="T.ex. Sarek 2027" maxLength={80} value={namn} onChange={(e) => setNamn(e.target.value)} />
         <Button type="submit" disabled={!namn.trim() || skapar} className="shrink-0">
-          {skapar ? 'Skapar …' : 'Skapa tur'}
+          {skapar ? 'Skapar …' : 'Skapa turen'}
         </Button>
       </div>
       <p className="text-sm text-muted-foreground">Datum, startpunkt och deltagare lägger du till inne i turen.</p>

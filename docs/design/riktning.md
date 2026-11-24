@@ -65,3 +65,66 @@ Skandinavisk, lugn och naturnära, som en välgjord fjällkarta. Allt ska gå at
 
 - Meningsstart med versal, inga versaler i etiketter och inga tankstreck som paus.
 - Knappar säger vad som händer: ”Bjud in”, ”Spara namn”.
+
+## Mönster: en variant var
+
+Från designinventeringen i november 2026 (`Claude outputs/design-inventering/inventering.md`). Utseendet på komponenterna bestäms i resten av det här dokumentet. Här står vilken komponent som används var.
+
+### Sidhuvud
+
+- Varje sida med en lista eller en vy har `SidRubrik`, med sidans knappar i `knappar`. Det gäller också Mitt förråd.
+- Turen har sitt eget huvud (`TurHuvud`), eftersom den visar en sak och inte en lista.
+
+### Avsnitt
+
+- En del av en sida är en `Sektion` med en h2. Rubrikens storlek ändras inte per sida.
+- Det korta strecket under en rubrik finns bara på startsidan och är hjortron.
+
+### Flikar
+
+- **Byta del av en sida:** `Flikrad`. Det gäller turens delar, Matplaneringens delar och förrådets delar. I mobil är flikarna runda knappar som skrollas fram till den aktiva, på dator har den aktiva en rostfärgad linje. En del som inte finns än står med ”Snart” och går inte att öppna.
+- **Filtrera en lista:** runda knappar med `role="tab"`, som Kommande och Tidigare i Mina turer och Påsar, Egna rätter och Recept i Välj rätt.
+- **Välja ett värde:** en segmentväljare, som Utseende och året i Statistik.
+- **Antal i en flik:** `FlikAntal`, en liten prick i hjortron. Aldrig ”(2)”.
+- **Sidomenyn:** en sidas delar står som flikar på sidan och inte i sidomenyn, så att de inte syns två gånger på dator.
+
+### Knappar
+
+- **Fylld knapp:** en per vy, för det viktigaste man gör där. Lägger den till något har den ett plus i hjortron (`text-hjortron-ikon`).
+- **Knapp med kant (`outline`):** övriga åtgärder.
+- **Textknapp med plus (`ghost` i primärfärg):** för att lägga till något inne i en lista, som ”+ Lägg till” i dagkorten och kategorierna under Fyll på fler kategorier.
+- **Röd text:** bara för att ta bort något som inte går att få tillbaka.
+
+### Brickor
+
+- `Bricka`, alltid rund: grå (`gra`) för fakta (storlek, typ, kost, roll), rost (`rost`) för det man ska lägga märke till (avfärd, det som saknas), hjortron (`hjortron`) för det positiva (det man har, mest energi).
+- Den stora storleken (`stor`) finns bara i turens huvud och på turkortet.
+- ”Kommer snart” (`KommerSnartEtikett`) och ”Snart” (`Snart`) är egna, med streckad kant. ”Snart” används där det är trångt: menyer och flikar.
+- Granskningsmärket (`Granskad`) är eget, eftersom det går att trycka på.
+
+### Tomt läge, laddning och fel
+
+- **Tomt läge:**
+  - `TomtLage` kompakt för en del av en sida och stor för en hel sida utan innehåll.
+  - Förrådets streckade rutor med plus är för de tunga sakerna som saknas.
+- **Laddning:** `Laddar` med `Skelett` i samma form som innehållet. Texten för skärmläsare börjar med ”Hämtar”. En rad text räcker bara för något som tar ett ögonblick.
+- **Fel när något inte gick att hämta:** `Laddfel` med texten ”Det gick inte att hämta … Kontrollera uppkopplingen och försök igen.” och knappen ”Försök igen”. Knappen saknas bara där man kan stänga och öppna igen, som i en panel.
+
+### Formulär och paneler
+
+- `Panel` för allt som öppnas från en lista, för att läsa eller fylla i, till exempel en produkt, en påse, Lägg till utrustning och en egen rätt. Knapparna står fast i panelens fot.
+- `Dialog` mitt på skärmen bara för korta val och frågor.
+- Formulär i sidan där man ändrar något som redan syns: en sak i förrådet, turens uppgifter, sitt namn.
+- Rubriken i en panel har samma färg som övriga rubriker.
+
+### Ord
+
+- **”Tur” i appen.** ”Vandring” bara i marknadsföringen (startsidan) och om själva vandrandet (”Allt du äger för vandring”).
+- **”Inget datum”** när en tur saknar datum. ”Inte angett” bara i formuläret med turens uppgifter.
+- **”Vandringsdagar”** i raderna med datum, eftersom det är samma tal som i turens huvud.
+- **”Ta bort”** överallt, utom ”Radera turen”, där allt försvinner för alla.
+- **”Ny …” skapar något** (Ny tur, Nytt recept, Ny egen rätt, Ny egen sak). **”Lägg till …” väljer något som finns** (Lägg till utrustning, Lägg till i måltiden).
+- **”Hämtar …”** när något laddas.
+- **Fel när något inte gick att göra** säger vad och samma råd: ”Det gick inte att spara. Kontrollera uppkopplingen och försök igen.”
+- **”Skafferi” och ”förråd” med ”ditt”** i felmeddelanden och laddtexter, som ”dina turer” och ”dina recept”.
+- **”Kom ihåg till nästa tur”** i menyn och på sidan.

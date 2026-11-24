@@ -90,7 +90,7 @@ describe('texter', () => {
     expect(datumIntervall('2027-12-30', '2028-01-02')).toBe('30 december 2027 till 2 januari 2028')
     expect(datumIntervall('2027-08-12', '2027-08-12')).toBe('12 augusti 2027')
     expect(datumIntervall('2027-08-12', null)).toBe('Från 12 augusti 2027')
-    expect(datumIntervall(null, null)).toBe('Datum ej bestämt')
+    expect(datumIntervall(null, null)).toBe('Inget datum')
   })
 
   it('räknar dagar, deltagare och hundar', () => {
@@ -130,17 +130,17 @@ describe('bildForTur', () => {
 
 describe('datumrad', () => {
   it('visar datum och dagar när turen har datum', () => {
-    expect(datumrad({ avresa: '2027-08-12', hemkomst: '2027-08-16', dagar: 5 })).toBe('12–16 augusti 2027, 5 dagar')
+    expect(datumrad({ avresa: '2027-08-12', hemkomst: '2027-08-16', dagar: 5 })).toBe('12–16 augusti 2027, 5 vandringsdagar')
   })
 
-  it('visar bara "Datum ej bestämt" på en ny tur, där dagarna inte är angivna', () => {
-    expect(datumrad({ avresa: null, hemkomst: null, dagar: null })).toBe('Datum ej bestämt')
+  it('visar bara "Inget datum" på en ny tur, där dagarna inte är angivna', () => {
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: null })).toBe('Inget datum')
   })
 
   it('visar dagarna när någon har angett dem, även utan datum', () => {
-    expect(datumrad({ avresa: null, hemkomst: null, dagar: 4 })).toBe('Datum ej bestämt, 4 dagar')
-    expect(datumrad({ avresa: null, hemkomst: null, dagar: 3 })).toBe('Datum ej bestämt, 3 dagar')
-    expect(datumrad({ avresa: null, hemkomst: null, dagar: 1 })).toBe('Datum ej bestämt, 1 dag')
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: 4 })).toBe('Inget datum, 4 vandringsdagar')
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: 3 })).toBe('Inget datum, 3 vandringsdagar')
+    expect(datumrad({ avresa: null, hemkomst: null, dagar: 1 })).toBe('Inget datum, 1 vandringsdag')
   })
 
   it('visar bara avresan när varken hemkomst eller dagar är angivna', () => {
@@ -308,12 +308,12 @@ describe('antalen i Kommande och Tidigare', () => {
 })
 
 describe('halsning', () => {
-  it('är kort när kortet för nästa vandring visas', () => {
+  it('är kort när kortet för nästa tur visas', () => {
     expect(halsning('Oscar', 'nasta-visas')).toBe('Hej Oscar!')
     expect(halsning('  Anna Karin ', 'nasta-visas')).toBe('Hej Anna Karin!')
   })
 
-  it('visas inte alls utan namn när kortet för nästa vandring visas', () => {
+  it('visas inte alls utan namn när kortet för nästa tur visas', () => {
     expect(halsning('', 'nasta-visas')).toBeNull()
     expect(halsning('   ', 'nasta-visas')).toBeNull()
   })
@@ -321,9 +321,9 @@ describe('halsning', () => {
   it('är som förut i övriga lägen, med och utan namn', () => {
     expect(halsning('Oscar', 'laddar')).toBe('Hej Oscar.')
     expect(halsning('', 'laddar')).toBe('Hej.')
-    expect(halsning('Oscar', 'inga-turer')).toBe('Hej Oscar. Här samlar du vandringarna du planerar.')
-    expect(halsning('', 'inga-turer')).toBe('Hej. Här samlar du vandringarna du planerar.')
-    expect(halsning('Oscar', 'bara-tidigare')).toBe('Hej Oscar. Dags att planera nästa vandring?')
-    expect(halsning('', 'bara-tidigare')).toBe('Hej. Dags att planera nästa vandring?')
+    expect(halsning('Oscar', 'inga-turer')).toBe('Hej Oscar. Här samlar du turerna du planerar.')
+    expect(halsning('', 'inga-turer')).toBe('Hej. Här samlar du turerna du planerar.')
+    expect(halsning('Oscar', 'bara-tidigare')).toBe('Hej Oscar. Dags att planera nästa tur?')
+    expect(halsning('', 'bara-tidigare')).toBe('Hej. Dags att planera nästa tur?')
   })
 })

@@ -34,7 +34,7 @@ const PlaneradSida = lazy(() => import('@/pages/PlaneradSida').then((m) => ({ de
 const PLANERADE = ['packlistor', 'dagbok', 'kom-ihag', 'statistik', 'kompisar'] as const
 const Utrustningskatalog = lazy(() => import('@/pages/Utrustningskatalog').then((m) => ({ default: m.Utrustningskatalog })))
 
-function Laddar({ text = 'Laddar …' }: { text?: string }) {
+function Laddar({ text = 'Hämtar …' }: { text?: string }) {
   return (
     <p role="status" className="text-muted-foreground">
       {text}

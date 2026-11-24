@@ -122,7 +122,7 @@ export const DELA_OCH_SPARA = ['Dela packlistan med en länk', 'Spara som mall t
 export const EFTER_TUREN = [
   { rubrik: 'Dagbok och bilder', text: 'Några rader och bilder per dag.', accent: false },
   { rubrik: 'Vad användes?', text: 'Bocka av det ni inte använde. Det blir lättare nästa gång.', accent: false },
-  { rubrik: 'Kom ihåg till nästa vandring', text: 'Lärdomarna följer med till nästa vandring.', accent: true },
+  { rubrik: 'Kom ihåg till nästa tur', text: 'Lärdomarna följer med till nästa tur.', accent: true },
   { rubrik: 'Statistik', text: 'Kilometer, nätter och turer genom åren.', accent: false },
 ]
 

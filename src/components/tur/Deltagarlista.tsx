@@ -54,7 +54,7 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
     if (!supabase) return
     setFel('')
     const { error } = await supabase.from('deltagare').update({ roll }).eq('id', id)
-    if (error) setFel(error.message.includes('minst en ägare') ? 'Turen måste ha minst en ägare.' : 'Det gick inte att ändra rollen. Försök igen.')
+    if (error) setFel(error.message.includes('minst en ägare') ? 'Turen måste ha minst en ägare.' : 'Det gick inte att ändra rollen. Kontrollera uppkopplingen och försök igen.')
     onAndrad()
   }
 
@@ -66,7 +66,7 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
     setFel('')
     const { error } = await supabase.from('deltagare').delete().eq('id', d.id)
     if (error) {
-      setFel('Det gick inte att ta bort deltagaren. Försök igen.')
+      setFel('Det gick inte att ta bort deltagaren. Kontrollera uppkopplingen och försök igen.')
       return
     }
     if (lamnar) onLamnat()
@@ -84,7 +84,7 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
       sortering: deltagare.length,
     })
     if (error) {
-      setFel('Det gick inte att lägga till deltagaren. Försök igen.')
+      setFel('Det gick inte att lägga till deltagaren. Kontrollera uppkopplingen och försök igen.')
       return
     }
     setNyttNamn('')

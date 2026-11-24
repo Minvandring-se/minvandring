@@ -2,6 +2,7 @@ import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Matflikar } from '@/components/mat/Matflikar'
@@ -16,13 +17,15 @@ export function Matplanering() {
   const rubrik = 'Mina matplaner'
   useSidtitel(rubrik)
   const { anvandarId } = useApp()
-  const turer = useDinaTurer(anvandarId, 'matplanering')
+  const { turer, fel, forsokIgen } = useDinaTurer(anvandarId, 'matplanering')
 
   return (
     <div className="space-y-6">
       <Matflikar />
       <SidRubrik rubrik={rubrik} text="Välj en tur för att planera maten dag för dag." />
-      {turer === null ? (
+      {turer === null && fel ? (
+        <Laddfel vad="dina turer" onForsokIgen={forsokIgen} />
+      ) : turer === null ? (
         <Laddar text="Hämtar dina turer" className="space-y-3">
           <Skelett className="h-16 rounded-lg" />
           <Skelett className="h-16 rounded-lg" />

@@ -86,6 +86,6 @@ describe('authFel', () => {
 
 describe('authFel när servern inte nås', () => {
   it('säger att servern inte gick att nå', () => {
-    expect(authFel({ name: 'AuthRetryableFetchError', status: 0 })).toMatch(/^Kunde inte nå servern/)
+    expect(authFel({ name: 'AuthRetryableFetchError', status: 0 })).toMatch(/^Det gick inte att nå servern/)
   })
 })

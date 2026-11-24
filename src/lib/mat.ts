@@ -307,6 +307,8 @@ export interface TolkadIngrediens {
 export type Rattformular = { ok: true; namn: string; rader: TolkadIngrediens[] } | { ok: false; fel: string }
 
 export const MAX_RATTNAMN = 80
+/** Samma gräns som receptrader.vara i databasen, så att en egen rätt alltid går att spara som recept. */
+export const MAX_VARUNAMN = 80
 
 /** Kontrollerar formuläret för en egen rätt. Helt tomma rader hoppas över. */
 export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[]): Rattformular {
@@ -320,6 +322,7 @@ export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[])
     const rad = `Ingrediens ${i + 1}`
     const vara = f.vara.trim()
     if (!vara) return { ok: false, fel: `${rad}: skriv vad ingrediensen heter.` }
+    if (vara.length > MAX_VARUNAMN) return { ok: false, fel: `${rad}: namnet får vara högst ${MAX_VARUNAMN} tecken.` }
     if (varor.has(vara.toLowerCase())) return { ok: false, fel: `${vara} står två gånger. Lägg ihop mängden på en rad.` }
     varor.add(vara.toLowerCase())
     const gram = tolkaTal(f.gram)
@@ -333,6 +336,11 @@ export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[])
   }
   if (rader.length === 0) return { ok: false, fel: 'Lägg till minst en ingrediens.' }
   return { ok: true, namn: n, rader }
+}
+
+/** Ingredienserna som de skickas till spara_egen_ratt och spara_recept i databasen. */
+export function ingredienserTillDatabasen(rader: readonly TolkadIngrediens[]): { vara: string; gram: number; kcal: number | null; protein: number | null }[] {
+  return rader.map((r) => ({ vara: r.vara.trim(), gram: r.gram, kcal: r.kcalPer100g, protein: r.proteinPer100g }))
 }
 
 /** En portion av rätten i formuläret, för att visa medan man skriver. */

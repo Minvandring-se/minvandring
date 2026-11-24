@@ -27,7 +27,8 @@ interface Props {
   sak?: Forradssak
   /** Förvalt namn, kategori och underkategori för en ny sak. */
   forval?: Forval
-  onKlar: () => void
+  /** Efter att saken sparats eller tagits bort. En ny sak skickar med sitt id. */
+  onKlar: (nySakId?: string) => void
   onAvbryt: () => void
 }
 
@@ -60,16 +61,20 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
     }
     setArbetar(true)
     setFel('')
-    const { error } = sak
-      ? await supabase.from('forradssaker').update(tolkad.varden).eq('id', sak.id)
+    // Id:t läses tillbaka, så att förrådet kan säga till om ett filter döljer en ny sak.
+    const { data, error } = sak
+      ? await supabase.from('forradssaker').update(tolkad.varden).eq('id', sak.id).select('id')
       : // En sak från katalogen sparas med sin produkt, som när man väljer produkten i Lägg till utrustning.
-        await supabase.from('forradssaker').insert({ ...tolkad.varden, produkt_id: forval?.produkt_id ?? null })
+        await supabase
+          .from('forradssaker')
+          .insert({ ...tolkad.varden, produkt_id: forval?.produkt_id ?? null })
+          .select('id')
     setArbetar(false)
     if (error) {
-      setFel('Det gick inte att spara. Försök igen.')
+      setFel('Det gick inte att spara. Kontrollera uppkopplingen och försök igen.')
       return
     }
-    onKlar()
+    onKlar(sak ? undefined : (data?.[0]?.id as string | undefined))
   }
 
   async function taBort() {
@@ -80,7 +85,7 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
     const { error } = await supabase.from('forradssaker').delete().eq('id', sak.id)
     setArbetar(false)
     if (error) {
-      setFel('Det gick inte att ta bort. Försök igen.')
+      setFel('Det gick inte att ta bort. Kontrollera uppkopplingen och försök igen.')
       return
     }
     onKlar()

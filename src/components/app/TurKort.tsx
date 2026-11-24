@@ -1,6 +1,7 @@
 import { CalendarDays, ChevronRight, MapPin } from 'lucide-react'
 import { Link } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
+import { Bricka } from '@/components/ui/bricka'
 import { Namnbrickor } from '@/components/app/Namnbricka'
 import { knappStil } from '@/components/ui/knappStil'
 import { Nyckeltal } from '@/components/ui/nyckeltal'
@@ -25,7 +26,7 @@ export interface TurMedDeltagare {
 const FRAN_LISTA = { franLista: true }
 
 /**
- * Det stora kortet för nästa (eller pågående) vandring, som turens huvud: text till vänster och den tecknade bildrutan
+ * Det stora kortet för nästa (eller pågående) tur, som turens huvud: text till vänster och den tecknade bildrutan
  * till höger på dator, bilden överst i mobil. Den rostfärgade etiketten säger hur långt det är kvar.
  */
 export function NastaTurKort({ tur, idag }: { tur: TurMedDeltagare; idag: string }) {
@@ -46,8 +47,12 @@ export function NastaTurKort({ tur, idag }: { tur: TurMedDeltagare; idag: string
       <Turbild turId={tur.id} className="h-44 w-full sm:h-56 md:order-2 md:h-full md:min-h-80" />
       <div className="flex min-w-0 flex-col gap-3 p-5 sm:p-7 md:order-1">
         <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-muted-foreground">Nästa vandring</span>
-          {etikett && <span className="rounded-full bg-accent-soft px-3 py-1 text-sm font-semibold text-accent-strong">{etikett}</span>}
+          <span className="text-sm font-semibold text-muted-foreground">Nästa tur</span>
+          {etikett && (
+            <Bricka ton="rost" stor>
+              {etikett}
+            </Bricka>
+          )}
         </div>
         <h2 id={`nasta-${tur.id}`} className="text-2xl leading-tight font-bold break-words hyphens-auto lg:text-3xl">
           {tur.namn}

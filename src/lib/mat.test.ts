@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ingredienserTillDatabasen,
   dagssummor,
   formateraKcal,
   inkopsgrupper,
@@ -235,6 +236,20 @@ describe('tolkaTal', () => {
   })
 })
 
+describe('ingredienserTillDatabasen', () => {
+  it('ger namnen som databasfunktionerna tar emot, med tomma värden som null', () => {
+    expect(
+      ingredienserTillDatabasen([
+        { vara: ' Havregryn ', gram: 90, kcalPer100g: 380, proteinPer100g: 12.5 },
+        { vara: 'Salt', gram: 1, kcalPer100g: null, proteinPer100g: null },
+      ]),
+    ).toEqual([
+      { vara: 'Havregryn', gram: 90, kcal: 380, protein: 12.5 },
+      { vara: 'Salt', gram: 1, kcal: null, protein: null },
+    ])
+  })
+})
+
 describe('tolkaRattformular', () => {
   const rad = (vara: string, gram: string, kcal = '', protein = ''): Ingrediensfalt => ({ vara, gram, kcal, protein })
 
@@ -253,6 +268,14 @@ describe('tolkaRattformular', () => {
     expect(tolkaRattformular('', [rad('Havregryn', '90')])).toEqual({ ok: false, fel: 'Skriv vad rätten heter.' })
     expect(tolkaRattformular('Gröt', [rad('', '')])).toEqual({ ok: false, fel: 'Lägg till minst en ingrediens.' })
     expect(tolkaRattformular('x'.repeat(81), [rad('Havregryn', '90')]).ok).toBe(false)
+  })
+
+  it('stoppar en ingrediens med längre namn än receptraderna i databasen tillåter', () => {
+    expect(tolkaRattformular('Gröt', [rad('x'.repeat(80), '90')]).ok).toBe(true)
+    expect(tolkaRattformular('Gröt', [rad('Havregryn', '90'), rad('x'.repeat(81), '30')])).toEqual({
+      ok: false,
+      fel: 'Ingrediens 2: namnet får vara högst 80 tecken.',
+    })
   })
 
   it('säger vilken rad som är fel', () => {

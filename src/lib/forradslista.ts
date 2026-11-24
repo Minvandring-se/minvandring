@@ -80,6 +80,19 @@ export function harFilter(val: Filter): boolean {
   return val.sok.trim() !== '' || val.kategori !== '' || !!val.underkategori
 }
 
+/** Valen utan sök, kategori och underkategori, för knappen Visa alla. Sortering och vy är kvar. */
+export function utanFilter(val: Listval): Listval {
+  return { ...val, sok: '', kategori: '', underkategori: '' }
+}
+
+/**
+ * Finns saken i förrådet men döljs av sök eller filter? Falskt så länge saken inte finns i listan än, till exempel
+ * medan förrådet hämtas om efter att den sparades.
+ */
+export function doljsAvFiltret(sakId: string, alla: readonly Forradssak[], visade: readonly Forradssak[]): boolean {
+  return alla.some((s) => s.id === sakId) && !visade.some((s) => s.id === sakId)
+}
+
 /** Texten som söks igenom för en sak: namn, märke, version och anteckning. */
 function soktext(sak: Forradssak): string {
   return [sak.namn, sak.produkter?.marke, sak.produkter?.version, sak.notering].filter(Boolean).join(' ').toLowerCase()

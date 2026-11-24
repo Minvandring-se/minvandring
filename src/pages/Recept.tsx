@@ -1,6 +1,7 @@
 import { ChevronRight, Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { EgenRattFormular } from '@/components/mat/EgenRattFormular'
@@ -45,7 +46,7 @@ export function Recept() {
           Array.isArray(recept) &&
           recept.length > 0 && (
             <Button onClick={() => setVy({ typ: 'ny' })}>
-              <Plus className="size-4" aria-hidden />
+              <Plus className="size-4 text-hjortron-ikon" aria-hidden />
               Nytt recept
             </Button>
           )
@@ -58,9 +59,7 @@ export function Recept() {
           <Skelett className="h-16 rounded-lg" />
         </Laddar>
       ) : recept === 'fel' ? (
-        <p role="alert" className="text-destructive">
-          Det gick inte att hämta dina recept. Kontrollera uppkopplingen och försök igen.
-        </p>
+        <Laddfel vad="dina recept" onForsokIgen={laddaOm} />
       ) : recept.length === 0 ? (
         <TomtLage
           kompakt
@@ -68,7 +67,7 @@ export function Recept() {
           text="Skapa ett recept här. Du kan också spara en egen rätt från en tur: öppna Välj rätt, Egna rätter, ändra rätten och tryck på Spara som recept."
           knapp={
             <Button onClick={() => setVy({ typ: 'ny' })}>
-              <Plus className="size-4" aria-hidden />
+              <Plus className="size-4 text-hjortron-ikon" aria-hidden />
               Nytt recept
             </Button>
           }
@@ -103,13 +102,18 @@ export function Recept() {
       )}
 
       {vy && Array.isArray(recept) && (
-        <Panel
-          etikett={vy.typ === 'ny' ? 'Nytt recept' : `Ändra ${vy.recept.namn}`}
-          onStang={() => setVy(null)}
-          rubrik={<h2 className="text-2xl">{vy.typ === 'ny' ? 'Nytt recept' : 'Ändra receptet'}</h2>}
-        >
           <EgenRattFormular
             key={vy.typ === 'ny' ? 'ny' : vy.recept.id}
+            ram={(falt, knappar) => (
+              <Panel
+                etikett={vy.typ === 'ny' ? 'Nytt recept' : `Ändra ${vy.recept.namn}`}
+                onStang={() => setVy(null)}
+                rubrik={<h2 className="text-2xl">{vy.typ === 'ny' ? 'Nytt recept' : 'Ändra receptet'}</h2>}
+                fot={knappar}
+              >
+                {falt}
+              </Panel>
+            )}
             typ="recept"
             ny={vy.typ === 'ny'}
             forsta={vy.typ === 'andra' ? { namn: vy.recept.namn, rader: receptTillRader(vy.recept) } : undefined}
@@ -135,7 +139,6 @@ export function Recept() {
               return true
             }}
           />
-        </Panel>
       )}
     </div>
   )

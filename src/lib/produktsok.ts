@@ -29,11 +29,11 @@ function underkategorierFor(ord: string): string[] {
 }
 
 /**
- * Filtret för ett sökord, i PostgREST:s or-format: ordet ska finnas i märket eller modellen,
+ * Filtret för ett sökord, i PostgREST:s or-format: ordet ska finnas i märket, modellen eller versionen,
  * eller vara namnet på produktens kategori. Varje ord i söktexten ger ett eget filter, och alla ska stämma.
  */
 export function sokfilter(ord: string): string {
-  const delar = [`marke.ilike.%${ord}%`, `modell.ilike.%${ord}%`]
+  const delar = [`marke.ilike.%${ord}%`, `modell.ilike.%${ord}%`, `version.ilike.%${ord}%`]
   const under = underkategorierFor(ord)
   if (under.length) delar.push(`underkategori.in.(${under.join(',')})`)
   return delar.join(',')
@@ -174,4 +174,9 @@ export function iForradetText(versioner: readonly (string | null)[]): string {
 /** "1 produkt" eller "42 produkter", för raden ovanför träfflistan. */
 export function antalText(antal: number): string {
   return antal === 1 ? '1 produkt' : `${antal} produkter`
+}
+
+/** "Visar 100 av 214 produkter" när bara en del av träffarna visas, annars bara antalet. */
+export function visasText(visas: number, totalt: number): string {
+  return visas < totalt ? `Visar ${visas} av ${antalText(totalt)}` : antalText(totalt)
 }
