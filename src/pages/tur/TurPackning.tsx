@@ -1,4 +1,4 @@
-import { Plus } from 'lucide-react'
+import { Plus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
@@ -52,6 +52,7 @@ const FILTER: readonly { varde: Packfilter; text: string }[] = [
 ]
 
 const FELTEXT = 'Det gick inte att spara. Kontrollera uppkopplingen och försök igen.'
+const TAMED_FEL = 'Det gick inte att ta med saken. Kanske har någon annan redan tagit den. Kontrollera uppkopplingen och försök igen.'
 
 /** Turens packlista: startvikt per person, det gruppen behöver och raderna per kategori med bockar. */
 export function TurPackning() {
@@ -92,7 +93,9 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
       deltagare.map((d) => ({ id: d.id, typ: d.typ, matandel: null })),
       matvikt,
     )
-    return deltagare
+    // Den egna raden först, sedan gruppen i deltagarlistans ordning.
+    return [...deltagare]
+      .sort((a, b) => Number(b.id === mittId) - Number(a.id === mittId))
       .filter((d) => d.typ === 'person' || (vikter.get(d.id)?.start ?? 0) > 0)
       .map((d) => ({ id: d.id, namn: d.id === mittId ? `${d.namn} (du)` : d.namn, vikt: vikter.get(d.id)!, packat: packat(rader, statusMap, d) }))
   }, [rader, status, statusMap, deltagare, mat.lage, tur.dagar, tur.reservdagar, mittId])
@@ -113,10 +116,10 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
   return (
     <div className="space-y-5">
       {!kanAndra && (
-        <p className="text-muted-foreground">Du är läsare. Du kan bocka av det du packar, välja din egen modell och ta på dig gemensamma saker. Ägare och redigerare ändrar listan.</p>
+        <p className="text-muted-foreground">Du är läsare. Du kan bocka av det du packar, välja din egen modell och ta med gemensamma saker. Ägare och redigerare ändrar listan.</p>
       )}
 
-      {rader.length > 0 && <Packsummering personer={personvikter} />}
+      {rader.length > 0 && <Packsummering personer={personvikter} mat={mat.lage.lage} />}
 
       <Gruppbehov
         dubbletter={dubbletter(rader)}
@@ -126,16 +129,11 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
         kanAndra={kanAndra}
         kanTaMed={mittId !== null}
         sparar={sparar}
-        onTaMed={(r) => gor(() => taMedGemensam(r.id, true), 'Det gick inte. Någon annan kanske redan tar med den.')}
+        onTaMed={(r) => gor(() => taMedGemensam(r.id, true), TAMED_FEL)}
         onBehovs={(d) => gor(() => dubbletterBehovs(d.rader.map((r) => r.id)))}
         onLaggTillForslag={(valda) => gor(() => laggTillPackrader(valda.map((f) => packradFranForslag(f, tur.id))))}
       />
 
-      {fel && (
-        <p role="alert" className="text-destructive">
-          {fel}
-        </p>
-      )}
 
       <Sektion
         rubrik="Packlistan"
@@ -172,7 +170,7 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
         {rader.length === 0 ? (
           <TomtLage
             kompakt
-            text={kanAndra ? 'Packlistan är tom. Lägg till utrustning ur ditt förråd, eller välj det gruppen behöver ovanför.' : 'Packlistan är tom än så länge.'}
+            text={kanAndra && mittId ? 'Packlistan är tom. Lägg till utrustning ur ditt förråd, eller välj det gruppen behöver ovanför.' : 'Packlistan är tom än så länge.'}
           />
         ) : synliga.length === 0 ? (
           <TomtLage kompakt text={filter === 'gemensamt' ? 'Inget gemensamt än.' : 'Du har inget i packlistan än.'} />
@@ -193,7 +191,7 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
                     sparar={sparar}
                     onBock={(packad) => mittId && gor(() => satPackad(r, mittId, packad))}
                     onValjEgen={() => setPanel({ typ: 'egen', rad: r })}
-                    onTaMed={(ta) => gor(() => taMedGemensam(r.id, ta), ta ? 'Det gick inte. Någon annan kanske redan tar med den.' : FELTEXT)}
+                    onTaMed={(ta) => gor(() => taMedGemensam(r.id, ta), ta ? TAMED_FEL : FELTEXT)}
                     onTaBort={() => gor(() => taBortPackrad(r.id), 'Det gick inte att ta bort. Kontrollera uppkopplingen och försök igen.')}
                   />
                 ))}
@@ -202,6 +200,16 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
           ))
         )}
       </Sektion>
+
+      {/* Felet syns längst ner på skärmen, nära det man just tryckte på, också långt ner i listan. */}
+      {fel && (
+        <div role="alert" className="fixed inset-x-4 bottom-4 z-40 mx-auto flex max-w-lg items-start gap-3 rounded-lg border border-border bg-card p-3 shadow-soft">
+          <p className="min-w-0 flex-1 text-sm text-destructive">{fel}</p>
+          <Button variant="ghost" size="ikon" aria-label="Stäng" onClick={() => setFel(null)}>
+            <X className="size-4" aria-hidden />
+          </Button>
+        </div>
+      )}
 
       {panel?.typ === 'lagg-till' && mittId && (
         <LaggTillUtrustning

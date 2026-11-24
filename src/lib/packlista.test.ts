@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { KATEGORIER } from './forrad'
 import {
   dubbletter,
+  dubblettSvar,
   dubblettText,
   egenModell,
   filtrera,
@@ -214,21 +215,30 @@ describe('nya rader', () => {
 
 describe('frågan om dubbletter', () => {
   const namn = new Map([['anna', 'Anna'], ['oscar', 'Oscar'], ['pichi', 'Pichi']])
-  const fraga = (rader: PackradRad[]) => dubblettText(dubbletter(rader)[0], namn)
+  const forsta = (rader: PackradRad[]) => dubbletter(rader)[0]
+  const fraga = (rader: PackradRad[]) => dubblettText(forsta(rader), namn)
 
-  it('säger vilka som tar med var sitt', () => {
+  it('säger vilka som tar med en var', () => {
     expect(fraga([rad({ underkategori: 'brannare', bars_av: 'anna' }), rad({ underkategori: 'komplett_kok', bars_av: 'oscar' })])).toBe(
-      'Kök: Anna och Oscar tar med var sitt. Behövs båda?',
+      'Kök: Anna och Oscar tar med en var. Behövs båda?',
     )
     expect(
-      fraga([rad({ underkategori: 'talt', bars_av: 'anna' }), rad({ underkategori: 'talt', bars_av: 'oscar' }), rad({ underkategori: 'talt', bars_av: 'pichi' })]),
-    ).toBe('Tält: Anna, Oscar och Pichi tar med var sitt. Behövs alla?')
+      fraga([rad({ underkategori: 'forband', bars_av: 'anna' }), rad({ underkategori: 'forband', bars_av: 'oscar' }), rad({ underkategori: 'forband', bars_av: 'pichi' })]),
+    ).toBe('Förbandslåda: Anna, Oscar och Pichi tar med en var. Behövs alla tre?')
   })
 
-  it('säger när samma person tar med flera, och när ingen tar med dem', () => {
-    expect(fraga([rad({ underkategori: 'talt', bars_av: 'anna', antal: 2 })])).toBe('Tält: 2 i listan, Anna tar med alla. Behövs båda?')
+  it('säger när samma person tar med flera, och när några inte har någon som tar med dem', () => {
+    expect(fraga([rad({ underkategori: 'talt', bars_av: 'anna', antal: 3 })])).toBe('Tält: 3 i listan, och Anna tar med dem. Behövs alla tre?')
+    expect(fraga([rad({ underkategori: 'brannare', bars_av: 'anna' }), rad({ underkategori: 'brannare', gemensam: true })])).toBe(
+      'Kök: Anna tar med en, och en till har ingen tagit på sig. Behövs båda?',
+    )
     expect(fraga([rad({ underkategori: 'karta', gemensam: true }), rad({ underkategori: 'karta', gemensam: true })])).toBe(
       'Karta och kompass: 2 i listan, som ingen tar med ännu. Behövs båda?',
     )
+  })
+
+  it('svarar med samma antal som frågan', () => {
+    expect(dubblettSvar(forsta([rad({ underkategori: 'talt', antal: 2 })]))).toBe('Ja, båda behövs')
+    expect(dubblettSvar(forsta([rad({ underkategori: 'talt', antal: 2 }), rad({ underkategori: 'talt' })]))).toBe('Ja, alla behövs')
   })
 })

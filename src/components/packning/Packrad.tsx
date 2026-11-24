@@ -1,13 +1,12 @@
 import { X } from 'lucide-react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { formateraVikt } from '@/lib/forrad'
 import { somPackar, statusnyckel } from '@/lib/packlista'
 import type { DeltagareRad, PackradRad, PackstatusRad } from '@/lib/typer'
 import { cn } from '@/lib/utils'
 
-const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
-
-/** Vem som bär raden, i ord. */
+/** Vem som tar med raden, i ord. */
 function barare(rad: PackradRad, namn: ReadonlyMap<string, string>, mittId: string | null): string | null {
   if (rad.alla) return 'Alla har var sin'
   const vem = rad.bars_av ? (rad.bars_av === mittId ? 'Du' : (namn.get(rad.bars_av) ?? 'Någon')) : null
@@ -16,8 +15,9 @@ function barare(rad: PackradRad, namn: ReadonlyMap<string, string>, mittId: stri
 }
 
 /**
- * En rad i packlistan: bocken för den inloggade när hen ska packa raden, namn, vikt och vem som bär. På en rad som
- * alla ska ha visas ens egen modell. Den som får ändra raderna kan ta bort den.
+ * En rad i packlistan: bocken för den inloggade när hen ska packa raden (hela raden går att trycka på), namn, vikt
+ * och vem som tar med den. På en rad som alla ska ha visas ens egen modell. Den som får ändra raderna kan ta bort
+ * den, efter en fråga.
  */
 export function Packrad({
   rad,
@@ -44,69 +44,90 @@ export function Packrad({
   onTaMed: (ta: boolean) => void
   onTaBort: () => void
 }) {
+  const [fragar, setFragar] = useState(false)
   const packare = somPackar(rad, deltagare)
   const minBock = mittId !== null && packare.includes(mittId)
   const min = mittId ? status.get(statusnyckel(rad.id, mittId)) : undefined
   const egen = rad.alla ? min : undefined
-  const vikt = (egen?.vikt_g ?? rad.vikt_g) === null ? null : (egen?.vikt_g ?? rad.vikt_g)! * Math.max(1, rad.antal)
+  const styckvikt = egen?.vikt_g ?? rad.vikt_g
+  const vikt = styckvikt === null ? null : styckvikt * Math.max(1, rad.antal)
   const vem = barare(rad, namn, mittId)
   const ingen = rad.gemensam && !rad.bars_av
   const packadeAv = packare.filter((id) => status.get(statusnyckel(rad.id, id))?.packad).length
-  const id = `packrad-${rad.id}`
+  const packad = minBock && !!min?.packad
+
+  const namnrad = (
+    <span className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
+      <span className={cn('min-w-0 break-words', packad && 'text-muted-foreground line-through')}>
+        {rad.antal > 1 && `${rad.antal} × `}
+        {rad.namn}
+      </span>
+      <span className="shrink-0 text-sm tabular-nums">{vikt === null ? 'Ingen vikt' : formateraVikt(vikt)}</span>
+    </span>
+  )
 
   return (
-    <li className={cn('flex items-start gap-3 py-2', !rad.med && 'opacity-60')}>
+    <li className="space-y-1 py-2">
       {minBock ? (
-        <input
-          id={id}
-          type="checkbox"
-          checked={!!min?.packad}
-          disabled={sparar}
-          onChange={(e) => onBock(e.target.checked)}
-          className="mt-3 size-5 shrink-0 accent-primary"
-        />
+        <label className="flex min-h-11 cursor-pointer items-center gap-3">
+          <input type="checkbox" checked={packad} disabled={sparar} onChange={(e) => onBock(e.target.checked)} className="size-5 shrink-0 accent-primary" />
+          {namnrad}
+        </label>
       ) : (
-        <span className="size-5 shrink-0" aria-hidden />
+        <div className="flex min-h-11 items-center gap-3">
+          <span className="size-5 shrink-0" aria-hidden />
+          {namnrad}
+        </div>
       )}
-      <div className="min-w-0 flex-1 space-y-1 py-2">
-        <div className="flex items-baseline justify-between gap-3">
-          <label htmlFor={minBock ? id : undefined} className={cn('min-w-0 break-words', min?.packad && minBock && 'text-muted-foreground line-through')}>
-            {rad.antal > 1 && `${rad.antal} × `}
-            {rad.namn}
-          </label>
-          <span className="shrink-0 text-sm tabular-nums">{vikt === null ? 'Ingen vikt' : formateraVikt(vikt)}</span>
+      <div className="flex items-start gap-2 pl-8">
+        <div className="min-w-0 flex-1 space-y-1">
+          {egen?.namn && <p className="text-sm break-words">Din modell: {egen.namn}</p>}
+          <p className={cn('text-sm', ingen ? 'font-medium text-accent-strong' : 'text-muted-foreground')}>
+            {ingen ? 'Ingen tar med ännu' : vem}
+            {rad.alla && packare.length > 0 && `. ${packadeAv} av ${packare.length} har packat`}
+            {!rad.med && '. Tas inte med'}
+          </p>
+          {(rad.alla || rad.gemensam) && mittId && (
+            <div className="-ml-3 flex flex-wrap gap-2">
+              {rad.alla && (
+                <Button variant="ghost" className="px-3 text-primary" onClick={onValjEgen}>
+                  {egen?.namn ? 'Byt din modell' : 'Välj din modell'}
+                  <span className="sr-only">: {rad.namn}</span>
+                </Button>
+              )}
+              {ingen && (
+                <Button variant="ghost" className="px-3 text-primary" disabled={sparar} onClick={() => onTaMed(true)}>
+                  Jag tar med den
+                  <span className="sr-only">: {rad.namn}</span>
+                </Button>
+              )}
+              {rad.gemensam && rad.bars_av !== null && rad.bars_av === mittId && (
+                <Button variant="ghost" className="px-3 text-primary" disabled={sparar} onClick={() => onTaMed(false)}>
+                  Jag tar inte med den
+                  <span className="sr-only">: {rad.namn}</span>
+                </Button>
+              )}
+            </div>
+          )}
+          {fragar && (
+            <div className="flex flex-wrap items-center gap-2 pt-1">
+              <span className="text-sm font-medium">Ta bort för alla i turen?</span>
+              <Button variant="outline" className="text-destructive" disabled={sparar} onClick={onTaBort}>
+                Ta bort
+                <span className="sr-only"> {rad.namn}</span>
+              </Button>
+              <Button variant="ghost" onClick={() => setFragar(false)}>
+                Avbryt
+              </Button>
+            </div>
+          )}
         </div>
-        {egen?.namn && <p className="text-sm break-words">Din: {egen.namn}</p>}
-        <p className={cn('text-sm', ingen ? 'font-medium text-accent-strong' : 'text-muted-foreground')}>
-          {ingen ? 'Ingen tar med ännu' : vem}
-          {rad.alla && packare.length > 0 && `. ${packadeAv} av ${packare.length} har packat`}
-        </p>
-        <div className="flex flex-wrap gap-x-4">
-          {rad.alla && mittId && (
-            <button type="button" onClick={onValjEgen} className={cn('inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4', fokus)}>
-              {egen?.namn ? 'Byt din' : 'Välj din'}
-              <span className="sr-only"> {rad.namn}</span>
-            </button>
-          )}
-          {ingen && mittId && (
-            <button type="button" disabled={sparar} onClick={() => onTaMed(true)} className={cn('inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4', fokus)}>
-              Jag tar med den
-              <span className="sr-only">: {rad.namn}</span>
-            </button>
-          )}
-          {rad.gemensam && rad.bars_av !== null && rad.bars_av === mittId && (
-            <button type="button" disabled={sparar} onClick={() => onTaMed(false)} className={cn('inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4', fokus)}>
-              Jag tar inte med den
-              <span className="sr-only">: {rad.namn}</span>
-            </button>
-          )}
-        </div>
+        {kanAndra && !fragar && (
+          <Button variant="ghost" size="ikon" aria-label={`Ta bort ${rad.namn}`} className="-mt-2 text-muted-foreground" onClick={() => setFragar(true)}>
+            <X className="size-4" aria-hidden />
+          </Button>
+        )}
       </div>
-      {kanAndra && (
-        <Button variant="ghost" size="ikon" aria-label={`Ta bort ${rad.namn}`} disabled={sparar} onClick={onTaBort} className="text-muted-foreground">
-          <X className="size-4" aria-hidden />
-        </Button>
-      )}
     </li>
   )
 }

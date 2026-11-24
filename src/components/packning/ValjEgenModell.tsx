@@ -3,6 +3,7 @@ import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Panel } from '@/components/ui/panel'
 import { useState } from 'react'
+import { Link } from 'react-router'
 import { formateraVikt } from '@/lib/forrad'
 import { passarRaden } from '@/lib/packlista'
 import type { Forradssak, PackradRad } from '@/lib/typer'
@@ -24,11 +25,11 @@ export function ValjEgenModell({
   onStang: () => void
 }) {
   const [fel, setFel] = useState(false)
-  const [sparar, setSparar] = useState(false)
+  const [sparar, setSparar] = useState<string | null>(null)
   const passar = Array.isArray(saker) ? passarRaden(saker, rad) : []
 
   return (
-    <Panel etikett={`Välj din ${rad.namn.toLowerCase()}`} onStang={onStang} rubrik={<h2 className="text-2xl break-words">Välj din: {rad.namn}</h2>}>
+    <Panel etikett={`Välj din modell, ${rad.namn.toLowerCase()}`} onStang={onStang} rubrik={<h2 className="text-2xl break-words">Välj din modell: {rad.namn}</h2>}>
       <div className="space-y-3">
         {saker === null && (
           <Laddar text="Hämtar ditt förråd" className="space-y-2">
@@ -38,7 +39,15 @@ export function ValjEgenModell({
         )}
         {saker === 'fel' && <Laddfel vad="ditt förråd" onForsokIgen={onForsokIgen} />}
         {Array.isArray(saker) && passar.length === 0 && (
-          <TomtLage kompakt text="Ditt förråd har inget i den här kategorin. Lägg till din sak i Mitt förråd först." />
+          <TomtLage
+            kompakt
+            text="Ditt förråd har inget i den här kategorin. Skapa saken i Mitt förråd först."
+            knapp={
+              <Link to="/forrad" className="inline-flex min-h-11 items-center font-medium text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+                Till Mitt förråd
+              </Link>
+            }
+          />
         )}
         {passar.length > 0 && (
           <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border">
@@ -46,18 +55,18 @@ export function ValjEgenModell({
               <li key={s.id}>
                 <button
                   type="button"
-                  disabled={sparar}
+                  disabled={sparar !== null}
                   onClick={async () => {
                     setFel(false)
-                    setSparar(true)
+                    setSparar(s.id)
                     const ok = await onValj(s)
-                    setSparar(false)
+                    setSparar(null)
                     if (!ok) setFel(true)
                   }}
                   className={`flex min-h-11 w-full items-center justify-between gap-3 px-3 py-2 text-left hover:bg-muted ${fokus}`}
                 >
                   <span className="min-w-0 break-words">{s.namn}</span>
-                  <span className="shrink-0 text-sm tabular-nums">{s.vikt_g === null ? 'Ingen vikt' : formateraVikt(s.vikt_g)}</span>
+                  <span className="shrink-0 text-sm tabular-nums">{sparar === s.id ? 'Sparar …' : s.vikt_g === null ? 'Ingen vikt' : formateraVikt(s.vikt_g)}</span>
                 </button>
               </li>
             ))}

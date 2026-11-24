@@ -58,7 +58,7 @@ export const FORSLAG_GEMENSAMT: readonly Forslag[] = [
   { namn: 'Tält', kategori: 'talt', underkategori: 'talt', typ: 'ryggsack' },
   { namn: 'Kök', kategori: 'kok', underkategori: 'brannare', typ: 'ryggsack' },
   { namn: 'Gas', kategori: 'kok', underkategori: 'bransle', typ: 'forbrukas' },
-  { namn: 'Vattenrening', kategori: 'vatten', underkategori: 'filter', typ: 'ryggsack' },
+  { namn: 'Vattenfilter', kategori: 'vatten', underkategori: 'filter', typ: 'ryggsack' },
   { namn: 'Förbandslåda', kategori: 'medicin', underkategori: 'forband', typ: 'ryggsack' },
   { namn: 'Karta och kompass', kategori: 'sakerhet', underkategori: 'karta', typ: 'ryggsack' },
   { namn: 'Lagningssats', kategori: 'verktyg', underkategori: 'lagning', typ: 'ryggsack' },
@@ -215,13 +215,35 @@ export function passarRaden(saker: readonly Forradssak[], rad: PackradRad): Forr
 }
 
 
-/** Frågan om en dubblett, till exempel "Kök: Anna och Oscar tar med var sitt. Behövs båda?" */
+const ANTALORD = ['noll', 'en', 'två', 'tre', 'fyra', 'fem', 'sex', 'sju', 'åtta', 'nio', 'tio']
+
+/** Hur många av sorten som finns i listan. */
+export function dubblettAntal(d: Dubblett): number {
+  return d.rader.reduce((n, r) => n + Math.max(1, r.antal), 0)
+}
+
+/** Svaret på frågan om en dubblett: "Ja, båda behövs" när de är två, annars "Ja, alla behövs". */
+export function dubblettSvar(d: Dubblett): string {
+  return dubblettAntal(d) === 2 ? 'Ja, båda behövs' : 'Ja, alla behövs'
+}
+
+/**
+ * Frågan om en dubblett, till exempel "Kök: Anna och Oscar tar med ett var. Behövs båda?". Rader som ingen tar med
+ * ännu sägs för sig.
+ */
 export function dubblettText(d: Dubblett, namn: ReadonlyMap<string, string>): string {
   const sort = d.etikett.charAt(0).toUpperCase() + d.etikett.slice(1)
-  const antal = d.rader.reduce((n, r) => n + Math.max(1, r.antal), 0)
-  const barare = [...new Set(d.rader.map((r) => (r.bars_av ? (namn.get(r.bars_av) ?? 'Någon') : 'Ingen ännu')))]
-  const fraga = antal === 2 ? 'Behövs båda?' : 'Behövs alla?'
-  if (barare.length === 1) return `${sort}: ${antal} i listan, ${barare[0] === 'Ingen ännu' ? 'som ingen tar med ännu' : `${barare[0]} tar med alla`}. ${fraga}`
-  const lista = barare.length === 2 ? `${barare[0]} och ${barare[1]}` : `${barare.slice(0, -1).join(', ')} och ${barare.at(-1)}`
-  return `${sort}: ${lista} tar med var sitt. ${fraga}`
+  const antal = dubblettAntal(d)
+  const fraga = antal === 2 ? 'Behövs båda?' : `Behövs alla ${ANTALORD[antal] ?? antal}?`
+  const barare = [...new Set(d.rader.flatMap((r) => (r.bars_av ? [namn.get(r.bars_av) ?? 'Någon'] : [])))]
+  const utan = d.rader.filter((r) => !r.bars_av).reduce((n, r) => n + Math.max(1, r.antal), 0)
+  const resten = utan === 0 ? '' : `, och ${utan === 1 ? 'en till' : `${ANTALORD[utan] ?? utan} till`} har ingen tagit på sig`
+
+  if (barare.length === 0) return `${sort}: ${antal} i listan, som ingen tar med ännu. ${fraga}`
+  if (barare.length === 1) {
+    if (utan === 0) return `${sort}: ${antal} i listan, och ${barare[0]} tar med dem. ${fraga}`
+    return `${sort}: ${barare[0]} tar med en${resten}. ${fraga}`
+  }
+  const lista = `${barare.slice(0, -1).join(', ')} och ${barare.at(-1)}`
+  return `${sort}: ${lista} tar med en var${resten}. ${fraga}`
 }

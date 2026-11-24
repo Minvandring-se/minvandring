@@ -13,8 +13,8 @@ import type { Forradssak } from '@/lib/typer'
 type Vem = 'jag' | 'gemensam' | 'alla'
 
 const VEM: readonly { varde: Vem; text: string; forklaring: string }[] = [
-  { varde: 'jag', text: 'Jag', forklaring: 'Din egen sak' },
-  { varde: 'gemensam', text: 'Jag, åt gruppen', forklaring: 'Till exempel tält eller kök' },
+  { varde: 'jag', text: 'Jag', forklaring: 'Din egen sak, som du tar med' },
+  { varde: 'gemensam', text: 'Gemensam, jag tar med den', forklaring: 'Till exempel tält eller kök. Du bär den åt gruppen.' },
   { varde: 'alla', text: 'Alla har var sin', forklaring: 'Var och en väljer sin egen, till exempel sovsäck' },
 ]
 
@@ -92,8 +92,8 @@ export function LaggTillUtrustning({
       }
     >
       <div className="space-y-5">
-        <fieldset className="space-y-1">
-          <legend className="mb-1 font-semibold">Vem bär?</legend>
+        <fieldset className="space-y-2">
+          <legend className="mb-1 font-semibold">Vem tar med den?</legend>
           {VEM.map((v) => (
             <label key={v.varde} className="flex min-h-11 cursor-pointer items-center gap-3">
               <input type="radio" name={`${id}-vem`} checked={vem === v.varde} onChange={() => setVem(v.varde)} className="size-5 shrink-0 accent-primary" />

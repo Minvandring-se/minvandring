@@ -2,7 +2,7 @@ import { Plus } from 'lucide-react'
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { Sektion } from '@/components/ui/sektion'
-import { dubblettText, type Dubblett, type Forslag } from '@/lib/packlista'
+import { dubblettSvar, dubblettText, type Dubblett, type Forslag } from '@/lib/packlista'
 import type { PackradRad } from '@/lib/typer'
 
 /**
@@ -40,16 +40,18 @@ export function Gruppbehov({
   return (
     <Sektion rubrik="Det gruppen behöver">
       {dubbletter.map((d) => (
-        <div key={d.sort} className="space-y-3 rounded-lg border border-accent bg-accent-soft p-3">
+        <div key={d.sort} className="space-y-3 rounded-lg border border-accent/25 bg-accent-soft p-3">
           <p className="font-medium text-accent-strong">{dubblettText(d, namn)}</p>
-          {kanAndra ? (
+          {kanAndra && (
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" disabled={sparar} onClick={() => onBehovs(d)}>
-                {d.rader.length === 2 ? 'Ja, båda behövs' : 'Ja, alla behövs'}
+                {dubblettSvar(d)}
               </Button>
             </div>
-          ) : null}
-          <p className="text-sm text-muted-foreground">Behövs bara en kan den som inte ska ta med sin ta bort raden.</p>
+          )}
+          <p className="text-sm text-muted-foreground">
+            {kanAndra ? 'Behövs bara en? Ta bort den andra raden.' : 'Behövs bara en? Be en ägare eller redigerare ta bort den andra raden.'}
+          </p>
         </div>
       ))}
 
@@ -61,7 +63,7 @@ export function Gruppbehov({
               <li key={r.id} className="flex min-h-11 items-center justify-between gap-3 py-2">
                 <span className="min-w-0 break-words">{r.namn}</span>
                 {kanTaMed && (
-                  <Button variant="outline" disabled={sparar} onClick={() => onTaMed(r)}>
+                  <Button variant="ghost" className="px-3 text-primary" disabled={sparar} onClick={() => onTaMed(r)}>
                     Jag tar med den
                     <span className="sr-only">: {r.namn}</span>
                   </Button>
@@ -75,7 +77,7 @@ export function Gruppbehov({
       {visaForslag && (
         <fieldset className="space-y-2">
           <legend className="text-base font-semibold">Det här brukar en grupp behöva</legend>
-          <ul className="grid gap-x-4 sm:grid-cols-2">
+          <ul className="grid gap-x-4 gap-y-2 sm:grid-cols-2">
             {forslag.map((f) => (
               <li key={f.namn}>
                 <label className="flex min-h-11 cursor-pointer items-center gap-3">
@@ -106,7 +108,7 @@ export function Gruppbehov({
               setValda(new Set())
             }}
           >
-            <Plus className="size-4 text-hjortron-ikon" aria-hidden />
+            <Plus className="size-4" aria-hidden />
             Lägg till i listan
           </Button>
         </fieldset>
