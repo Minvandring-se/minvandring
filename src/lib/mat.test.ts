@@ -57,7 +57,7 @@ const vara = (id: string, extra: Partial<Vara> = {}): Vara => ({
   klart: false,
   ...extra,
 })
-const ing = (ratt_id: string, vara_id: string, gram_per_portion: number): Ingrediens => ({ id: `${ratt_id}-${vara_id}`, ratt_id, vara_id, gram_per_portion })
+const ing = (ratt_id: string, vara_id: string, gram_per_portion: number): Ingrediens => ({ id: `${ratt_id}-${vara_id}`, ratt_id, vara_id, mangd: gram_per_portion, enhet: 'g', gram_per_portion })
 let nasta = 0
 const maltid = (dag: number, m: Maltid, ratt_id: string): Maltidsrad => ({ id: `m${nasta++}`, dag, maltid: m, ratt_id, sortering: 0 })
 
@@ -262,34 +262,57 @@ describe('ingredienserTillDatabasen', () => {
   it('ger namnen som databasfunktionerna tar emot, med tomma värden som null', () => {
     expect(
       ingredienserTillDatabasen([
-        { vara: ' Havregryn ', gram: 90, kcalPer100g: 380, proteinPer100g: 12.5 },
-        { vara: 'Salt', gram: 1, kcalPer100g: null, proteinPer100g: null },
+        { vara: ' Havregryn ', mangd: 90, enhet: 'g', gram: 90, kcalPer100g: 380, proteinPer100g: 12.5 },
+        { vara: 'Salt', mangd: null, enhet: null, gram: null, kcalPer100g: null, proteinPer100g: null },
       ]),
     ).toEqual([
-      { vara: 'Havregryn', gram: 90, kcal: 380, protein: 12.5 },
-      { vara: 'Salt', gram: 1, kcal: null, protein: null },
+      { vara: 'Havregryn', mangd: 90, enhet: 'g', gram: 90, kcal: 380, protein: 12.5 },
+      { vara: 'Salt', mangd: null, enhet: null, gram: null, kcal: null, protein: null },
     ])
   })
 })
 
 describe('tolkaRattformular', () => {
-  const rad = (vara: string, gram: string, kcal = '', protein = ''): Ingrediensfalt => ({ vara, gram, kcal, protein })
+  // Mängden i gram, som formuläret har förvalt.
+  const rad = (vara: string, mangd: string, kcal = '', protein = ''): Ingrediensfalt => ({ vara, mangd, enhet: 'g', gram: '', kcal, protein })
 
   it('tolkar raderna och hoppar över tomma', () => {
     expect(tolkaRattformular(' Gröt ', [rad('Havregryn', '90', '370', '13,5'), rad('', ''), rad('Russin', '30')])).toEqual({
       ok: true,
       namn: 'Gröt',
       rader: [
-        { vara: 'Havregryn', gram: 90, kcalPer100g: 370, proteinPer100g: 13.5 },
-        { vara: 'Russin', gram: 30, kcalPer100g: null, proteinPer100g: null },
+        { vara: 'Havregryn', mangd: 90, enhet: 'g', gram: 90, kcalPer100g: 370, proteinPer100g: 13.5 },
+        { vara: 'Russin', mangd: 30, enhet: 'g', gram: 30, kcalPer100g: null, proteinPer100g: null },
       ],
     })
   })
 
-  it('kräver ett namn och minst en ingrediens', () => {
+  it('kräver ett namn, men en rätt får sakna ingredienser', () => {
     expect(tolkaRattformular('', [rad('Havregryn', '90')])).toEqual({ ok: false, fel: 'Skriv vad rätten heter.' })
-    expect(tolkaRattformular('Gröt', [rad('', '')])).toEqual({ ok: false, fel: 'Lägg till minst en ingrediens.' })
+    expect(tolkaRattformular('Fika hos mormor', [rad('', '')])).toEqual({ ok: true, namn: 'Fika hos mormor', rader: [] })
     expect(tolkaRattformular('x'.repeat(81), [rad('Havregryn', '90')]).ok).toBe(false)
+  })
+
+  it('tar emot mängd och enhet, räknar vikten för g och kg, och låter vikten vara frivillig för andra enheter', () => {
+    const f = (vara: string, mangd: string, enhet: string, gram = ''): Ingrediensfalt => ({ vara, mangd, enhet, gram, kcal: '', protein: '' })
+    const svar = tolkaRattformular('Pannkakor', [f('Vetemjöl', '0,1', 'kg'), f('Mjölk', '3', 'dl', '300'), f('Ägg', '1', 'st'), f('Salt', '', 'g'), f('Kardemumma', '2', 'krm', '999')])
+    expect(svar).toEqual({
+      ok: true,
+      namn: 'Pannkakor',
+      rader: [
+        { vara: 'Vetemjöl', mangd: 0.1, enhet: 'kg', gram: 100, kcalPer100g: null, proteinPer100g: null },
+        { vara: 'Mjölk', mangd: 3, enhet: 'dl', gram: 300, kcalPer100g: null, proteinPer100g: null },
+        { vara: 'Ägg', mangd: 1, enhet: 'st', gram: null, kcalPer100g: null, proteinPer100g: null },
+        { vara: 'Salt', mangd: null, enhet: null, gram: null, kcalPer100g: null, proteinPer100g: null },
+        { vara: 'Kardemumma', mangd: 2, enhet: 'krm', gram: 999, kcalPer100g: null, proteinPer100g: null },
+      ],
+    })
+    // Mängden avrundas till två decimaler innan vikten räknas.
+    expect(tolkaRattformular('Gryta', [f('Pasta', '0,125', 'kg')])).toMatchObject({ ok: true, rader: [{ mangd: 0.13, gram: 130 }] })
+    expect(tolkaRattformular('Gryta', [f('Pasta', '0,001', 'kg')]).ok).toBe(false)
+    expect(tolkaRattformular('Gryta', [f('Pasta', '6', 'kg')]).ok).toBe(false)
+    expect(tolkaRattformular('Gryta', [f('Pasta', '1', 'kopp')]).ok).toBe(false)
+    expect(tolkaRattformular('Gryta', [f('Mjölk', '2', 'dl', '2,5')]).ok).toBe(false)
   })
 
   it('stoppar en ingrediens med längre namn än receptraderna i databasen tillåter', () => {
@@ -302,8 +325,8 @@ describe('tolkaRattformular', () => {
 
   it('säger vilken rad som är fel', () => {
     expect(tolkaRattformular('Gröt', [rad('Havregryn', '90'), rad('', '30')])).toEqual({ ok: false, fel: 'Ingrediens 2: skriv vad ingrediensen heter.' })
-    expect(tolkaRattformular('Gröt', [rad('Havregryn', '0')])).toMatchObject({ ok: false, fel: expect.stringContaining('Ingrediens 1: skriv gram') })
-    expect(tolkaRattformular('Gröt', [rad('Havregryn', '12,5')]).ok).toBe(false)
+    expect(tolkaRattformular('Gröt', [rad('Havregryn', '0')])).toMatchObject({ ok: false, fel: expect.stringContaining('Ingrediens 1: skriv mängden') })
+    expect(tolkaRattformular('Gröt', [rad('Havregryn', '0,4')]).ok).toBe(false)
     expect(tolkaRattformular('Gröt', [rad('Havregryn', '90', '1000')]).ok).toBe(false)
     expect(tolkaRattformular('Gröt', [rad('Havregryn', '90', '', 'mycket')]).ok).toBe(false)
   })
@@ -318,13 +341,15 @@ describe('tolkaRattformular', () => {
 
 describe('naringForRader', () => {
   it('summerar en portion och märker saknade uppgifter', () => {
-    expect(naringForRader([{ vara: 'Havregryn', gram: 100, kcalPer100g: 370, proteinPer100g: 13 }])).toEqual({
+    expect(naringForRader([{ vara: 'Havregryn', mangd: 100, enhet: 'g', gram: 100, kcalPer100g: 370, proteinPer100g: 13 }])).toEqual({
       kcal: 370,
       proteinG: 13,
       gram: 100,
       ofullstandig: false,
     })
-    expect(naringForRader([{ vara: 'Russin', gram: 50, kcalPer100g: 300, proteinPer100g: null }])).toMatchObject({ kcal: 150, ofullstandig: true })
+    expect(naringForRader([{ vara: 'Russin', mangd: 50, enhet: 'g', gram: 50, kcalPer100g: 300, proteinPer100g: null }])).toMatchObject({ kcal: 150, ofullstandig: true })
+    // Utan vikt går energin inte att räkna.
+    expect(naringForRader([{ vara: 'Ägg', mangd: 1, enhet: 'st', gram: null, kcalPer100g: 140, proteinPer100g: 13 }])).toEqual({ kcal: 0, proteinG: 0, gram: 0, ofullstandig: true })
   })
 })
 
@@ -480,16 +505,17 @@ describe('vemBarVad', () => {
     const rader = vemBarVad(data, dagar)
     expect(rader.map((r) => [r.namn, r.barsAv])).toEqual([
       ['p', null],
+      ['tom', null],
       ['soppa', 'erik'],
       ['p', 'anna'],
     ])
-    expect(rader[1].platser.map(platsText)).toEqual(['Middag dag 1', 'Frukost reservdag 1'])
-    expect(rader[1].maltidIds).toHaveLength(2)
+    expect(rader[2].platser.map(platsText)).toEqual(['Middag dag 1', 'Frukost reservdag 1'])
+    expect(rader[2].maltidIds).toHaveLength(2)
     expect(rader[0].typ).toBe('pase')
   })
 
-  it('hoppar över egna rätter utan ingredienser och rader utanför turens dagar', () => {
-    expect(vemBarVad(data, dagar).map((r) => r.rattId)).not.toContain('tom')
+  it('tar med egna rätter utan ingredienser, som också ska bäras, men inte rader utanför turens dagar', () => {
+    expect(vemBarVad(data, dagar).map((r) => r.rattId)).toContain('tom')
     expect(vemBarVad({ ...data, maltider: [bar(9, 'lunch', 'p')] }, dagar)).toEqual([])
   })
 })

@@ -5,7 +5,7 @@ export function Initial({ namn, farg, className }: { namn: string; farg: string 
   return (
     <span
       aria-hidden
-      className={cn('flex size-10 shrink-0 items-center justify-center rounded-full font-semibold text-person-foreground', !farg && 'bg-primary-soft text-primary', className)}
+      className={cn('flex size-10 shrink-0 items-center justify-center rounded-full font-sans font-semibold text-person-foreground', !farg && 'bg-primary-soft text-primary', className)}
       style={farg ? { backgroundColor: farg } : undefined}
     >
       {namn.charAt(0).toUpperCase()}

@@ -5,6 +5,8 @@ import type { Ingrediens, Ratt, Recept, Vara } from './typer'
 
 const rad = (vara: string, gram: number, kcal: number | null = null, protein: number | null = null): TolkadIngrediens => ({
   vara,
+  mangd: gram,
+  enhet: 'g',
   gram,
   kcalPer100g: kcal,
   proteinPer100g: protein,
@@ -21,7 +23,7 @@ const vara = (id: string, namn: string): Vara => ({
   ansvarig: null,
   klart: false,
 })
-const ingrediens = (ratt_id: string, vara_id: string, gram: number): Ingrediens => ({ id: `${ratt_id}-${vara_id}`, ratt_id, vara_id, gram_per_portion: gram })
+const ingrediens = (ratt_id: string, vara_id: string, gram: number): Ingrediens => ({ id: `${ratt_id}-${vara_id}`, ratt_id, vara_id, mangd: gram, enhet: 'g', gram_per_portion: gram })
 
 describe('raderna', () => {
   it('receptet i sin ordning', () => {
@@ -29,8 +31,8 @@ describe('raderna', () => {
       id: 'r',
       namn: 'Gröt',
       rader: [
-        { id: '2', recept_id: 'r', vara: 'Russin', gram_per_portion: 20, kcal_per_100g: 300, protein_per_100g: 3, sortering: 1 },
-        { id: '1', recept_id: 'r', vara: 'Havregryn', gram_per_portion: 90, kcal_per_100g: 380, protein_per_100g: 12.5, sortering: 0 },
+        { id: '2', recept_id: 'r', vara: 'Russin', mangd: 20, enhet: 'g', gram_per_portion: 20, kcal_per_100g: 300, protein_per_100g: 3, sortering: 1 },
+        { id: '1', recept_id: 'r', vara: 'Havregryn', mangd: 90, enhet: 'g', gram_per_portion: 90, kcal_per_100g: 380, protein_per_100g: 12.5, sortering: 0 },
       ],
     }
     expect(receptTillRader(r)).toEqual([rad('Havregryn', 90, 380, 12.5), rad('Russin', 20, 300, 3)])
@@ -42,11 +44,25 @@ describe('raderna', () => {
     expect(rattTillRader('a', ing, varor)).toEqual([rad('Couscous', 100, 380, 12.5)])
   })
 
-  it('som fält i formuläret, med komma i protein', () => {
+  it('som fält i formuläret, med komma i decimaler, och vikten bara för andra enheter än g och kg', () => {
     expect(raderTillFalt([rad('Havregryn', 90, 380, 12.5), rad('Salt', 2)])).toEqual([
-      { vara: 'Havregryn', gram: '90', kcal: '380', protein: '12,5' },
-      { vara: 'Salt', gram: '2', kcal: '', protein: '' },
+      { vara: 'Havregryn', mangd: '90', enhet: 'g', gram: '', kcal: '380', protein: '12,5' },
+      { vara: 'Salt', mangd: '2', enhet: 'g', gram: '', kcal: '', protein: '' },
     ])
+    const mjolk: TolkadIngrediens = { vara: 'Mjölk', mangd: 1.5, enhet: 'dl', gram: 150, kcalPer100g: null, proteinPer100g: null }
+    const salt: TolkadIngrediens = { vara: 'Salt', mangd: null, enhet: null, gram: null, kcalPer100g: null, proteinPer100g: null }
+    expect(raderTillFalt([mjolk, salt])).toEqual([
+      { vara: 'Mjölk', mangd: '1,5', enhet: 'dl', gram: '150', kcal: '', protein: '' },
+      { vara: 'Salt', mangd: '', enhet: 'g', gram: '', kcal: '', protein: '' },
+    ])
+  })
+})
+
+describe('samma ingredienser med mängd och enhet', () => {
+  it('skiljer på mängder i dl även när ingen av raderna har en vikt', () => {
+    const mjolk = (mangd: number): TolkadIngrediens => ({ vara: 'Mjölk', mangd, enhet: 'dl', gram: null, kcalPer100g: null, proteinPer100g: null })
+    expect(sammaIngredienser([mjolk(2)], [mjolk(2)])).toBe(true)
+    expect(sammaIngredienser([mjolk(2)], [mjolk(3)])).toBe(false)
   })
 })
 

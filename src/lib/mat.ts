@@ -3,6 +3,7 @@
 // I första versionen äter alla personer i turen en portion av varje rätt i en måltid. Hundar äter egen mat,
 // som räknas i vikt.ts (hundmat_per_dag_g).
 import { allergenetikett, uppraknade } from './kost'
+import { arEnhet, type Enhet } from './handla'
 import type { Ingrediens, Katalogmaltid, Maltid, Maltidsrad, Matatare, Matprodukt, Ratt, Vara } from './typer'
 
 export const MALTIDER: readonly { nyckel: Maltid; etikett: string }[] = [
@@ -97,12 +98,13 @@ export function rattPerPortion(ratt: Ratt, data: Matdata): Naring {
   for (const ing of data.ingredienser) {
     if (ing.ratt_id !== ratt.id) continue
     const vara = varor.get(ing.vara_id)
-    const g = ing.gram_per_portion
+    // Utan vikt går energin inte att räkna, och summan blir ofullständig.
+    const g = ing.gram_per_portion ?? 0
     summa = plus(summa, {
       kcal: ((vara?.kcal_per_100g ?? 0) * g) / 100,
       proteinG: ((vara?.protein_per_100g ?? 0) * g) / 100,
       gram: g,
-      ofullstandig: vara?.kcal_per_100g == null || vara?.protein_per_100g == null,
+      ofullstandig: ing.gram_per_portion === null || vara?.kcal_per_100g == null || vara?.protein_per_100g == null,
     })
   }
   return summa
@@ -242,7 +244,7 @@ export function inkopslista(data: Matdata, dagar: readonly Matdag[], personer: n
   for (const ing of data.ingredienser) {
     const n = portioner.get(ing.ratt_id) ?? 0
     if (n === 0) continue
-    gramPerVara.set(ing.vara_id, (gramPerVara.get(ing.vara_id) ?? 0) + ing.gram_per_portion * n)
+    gramPerVara.set(ing.vara_id, (gramPerVara.get(ing.vara_id) ?? 0) + (ing.gram_per_portion ?? 0) * n)
   }
 
   const varor: Inkopsrad[] = data.varor
@@ -329,14 +331,13 @@ export function vemBarVad(data: Pick<Matdata, 'ratter' | 'ingredienser' | 'malti
   const ordning = new Map(dagar.map((d, i) => [d.dag, i]))
   const malOrdning = (m: Maltid) => MALTIDER.findIndex((x) => x.nyckel === m)
   const ratter = new Map(data.ratter.map((r) => [r.id, r]))
-  const medIngredienser = new Set(data.ingredienser.map((i) => i.ratt_id))
   const rader = data.maltider
     .filter((m) => ordning.has(m.dag))
     .sort((a, b) => ordning.get(a.dag)! - ordning.get(b.dag)! || malOrdning(a.maltid) - malOrdning(b.maltid))
   const ut = new Map<string, Barrad>()
   for (const m of rader) {
     const ratt = ratter.get(m.ratt_id)
-    if (!ratt || (!ratt.matprodukt_id && !medIngredienser.has(ratt.id))) continue
+    if (!ratt) continue
     const barsAv = m.bars_av ?? null
     const nyckel = `${ratt.id}:${barsAv ?? ''}`
     const rad = ut.get(nyckel) ?? { nyckel, rattId: ratt.id, namn: ratt.namn, typ: ratt.matprodukt_id ? 'pase' : 'egen', barsAv, maltidIds: [], platser: [] }
@@ -501,8 +502,9 @@ export function ratterSomSaknar(data: Matdata, dagar: readonly Matdag[]): Saknad
       else if (pase.protein_g === null) ut.protein.push(ratt.namn)
       continue
     }
-    const rattensVaror = data.ingredienser.filter((i) => i.ratt_id === ratt.id).map((i) => varor.get(i.vara_id))
-    if (portion.gram <= 0) ut.vikt.push(ratt.namn)
+    const rattens = data.ingredienser.filter((i) => i.ratt_id === ratt.id)
+    const rattensVaror = rattens.map((i) => varor.get(i.vara_id))
+    if (portion.gram <= 0 || rattens.some((i) => i.gram_per_portion === null)) ut.vikt.push(ratt.namn)
     if (portion.kcal <= 0 || rattensVaror.some((v) => v?.kcal_per_100g == null)) ut.energi.push(ratt.namn)
     if (rattensVaror.some((v) => v?.protein_per_100g == null)) ut.protein.push(ratt.namn)
   }
@@ -585,6 +587,10 @@ export function tolkaTal(text: string): number | null {
 /** En rad i formuläret för en egen rätt, som den står i fälten. */
 export interface Ingrediensfalt {
   vara: string
+  mangd: string
+  /** En av ENHETER i handla.ts. */
+  enhet: string
+  /** Vikten per portion, för energin. Används inte för g och kg, där mängden är vikten. */
   gram: string
   kcal: string
   protein: string
@@ -592,9 +598,21 @@ export interface Ingrediensfalt {
 
 export interface TolkadIngrediens {
   vara: string
-  gram: number
+  /** Mängd och enhet per portion. Tomma för det som bara ska med, till exempel salt. */
+  mangd: number | null
+  enhet: Enhet | null
+  /** Vikten per portion. Räknas ut för g och kg, och är frivillig för övriga enheter. */
+  gram: number | null
   kcalPer100g: number | null
   proteinPer100g: number | null
+}
+
+/** Vikten för en mängd i g eller kg. null för övriga enheter, där vikten skrivs för sig. */
+export function gramFor(mangd: number | null, enhet: Enhet | null): number | null {
+  if (mangd === null || enhet === null) return null
+  if (enhet === 'g') return Math.round(mangd)
+  if (enhet === 'kg') return Math.round(mangd * 1000)
+  return null
 }
 
 export type Rattformular = { ok: true; namn: string; rader: TolkadIngrediens[] } | { ok: false; fel: string }
@@ -603,7 +621,7 @@ export const MAX_RATTNAMN = 80
 /** Samma gräns som receptrader.vara i databasen, så att en egen rätt alltid går att spara som recept. */
 export const MAX_VARUNAMN = 80
 
-/** Kontrollerar formuläret för en egen rätt. Helt tomma rader hoppas över. */
+/** Kontrollerar formuläret för en egen rätt. Helt tomma rader hoppas över, och en rätt får sakna ingredienser. */
 export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[]): Rattformular {
   const n = namn.trim()
   if (!n) return { ok: false, fel: 'Skriv vad rätten heter.' }
@@ -611,29 +629,39 @@ export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[])
   const rader: TolkadIngrediens[] = []
   const varor = new Set<string>()
   for (const [i, f] of falt.entries()) {
-    if (!f.vara.trim() && !f.gram.trim() && !f.kcal.trim() && !f.protein.trim()) continue
+    if (!f.vara.trim() && !f.mangd.trim() && !f.gram.trim() && !f.kcal.trim() && !f.protein.trim()) continue
     const rad = `Ingrediens ${i + 1}`
     const vara = f.vara.trim()
     if (!vara) return { ok: false, fel: `${rad}: skriv vad ingrediensen heter.` }
     if (vara.length > MAX_VARUNAMN) return { ok: false, fel: `${rad}: namnet får vara högst ${MAX_VARUNAMN} tecken.` }
     if (varor.has(vara.toLowerCase())) return { ok: false, fel: `${vara} står två gånger. Lägg ihop mängden på en rad.` }
     varor.add(vara.toLowerCase())
-    const gram = tolkaTal(f.gram)
-    if (gram === null || !Number.isInteger(gram) || gram < 1 || gram > 5000)
-      return { ok: false, fel: `${rad}: skriv gram per portion som ett heltal mellan 1 och 5000.` }
+    const tal = tolkaTal(f.mangd)
+    if (tal !== null && !(tal > 0 && tal <= 10000)) return { ok: false, fel: `${rad}: skriv mängden som ett tal större än 0.` }
+    // Mängden sparas med två decimaler, så vikten räknas från den avrundade mängden.
+    const mangd = tal === null ? null : Math.round(tal * 100) / 100
+    if (mangd === 0) return { ok: false, fel: `${rad}: mängden är för liten.` }
+    const enhet = mangd === null ? null : arEnhet(f.enhet) ? f.enhet : null
+    if (mangd !== null && enhet === null) return { ok: false, fel: `${rad}: välj en enhet.` }
+    const skriven = enhet === 'g' || enhet === 'kg' ? null : tolkaTal(f.gram)
+    if (skriven !== null && !(Number.isInteger(skriven) && skriven >= 1 && skriven <= 5000))
+      return { ok: false, fel: `${rad}: skriv vikten som ett heltal mellan 1 och 5000 gram.` }
+    const gram = gramFor(mangd, enhet) ?? skriven
+    if (gram !== null && (gram < 1 || gram > 5000)) return { ok: false, fel: `${rad}: mängden ska vara mellan 1 g och 5 kg per portion.` }
     const kcal = tolkaTal(f.kcal)
     if (kcal !== null && !(kcal <= 900)) return { ok: false, fel: `${rad}: skriv kcal per 100 g som ett tal mellan 0 och 900.` }
     const protein = tolkaTal(f.protein)
     if (protein !== null && !(protein <= 100)) return { ok: false, fel: `${rad}: skriv protein per 100 g som ett tal mellan 0 och 100.` }
-    rader.push({ vara, gram, kcalPer100g: kcal === null ? null : Math.round(kcal), proteinPer100g: protein })
+    rader.push({ vara, mangd, enhet, gram, kcalPer100g: kcal === null ? null : Math.round(kcal), proteinPer100g: protein })
   }
-  if (rader.length === 0) return { ok: false, fel: 'Lägg till minst en ingrediens.' }
   return { ok: true, namn: n, rader }
 }
 
 /** Ingredienserna som de skickas till spara_egen_ratt och spara_recept i databasen. */
-export function ingredienserTillDatabasen(rader: readonly TolkadIngrediens[]): { vara: string; gram: number; kcal: number | null; protein: number | null }[] {
-  return rader.map((r) => ({ vara: r.vara.trim(), gram: r.gram, kcal: r.kcalPer100g, protein: r.proteinPer100g }))
+export function ingredienserTillDatabasen(
+  rader: readonly TolkadIngrediens[],
+): { vara: string; mangd: number | null; enhet: Enhet | null; gram: number | null; kcal: number | null; protein: number | null }[] {
+  return rader.map((r) => ({ vara: r.vara.trim(), mangd: r.mangd, enhet: r.enhet, gram: r.gram, kcal: r.kcalPer100g, protein: r.proteinPer100g }))
 }
 
 /** En portion av rätten i formuläret, för att visa medan man skriver. */
@@ -641,10 +669,10 @@ export function naringForRader(rader: readonly TolkadIngrediens[]): Naring {
   return rader.reduce<Naring>(
     (s, r) =>
       plus(s, {
-        kcal: ((r.kcalPer100g ?? 0) * r.gram) / 100,
-        proteinG: ((r.proteinPer100g ?? 0) * r.gram) / 100,
-        gram: r.gram,
-        ofullstandig: r.kcalPer100g === null || r.proteinPer100g === null,
+        kcal: ((r.kcalPer100g ?? 0) * (r.gram ?? 0)) / 100,
+        proteinG: ((r.proteinPer100g ?? 0) * (r.gram ?? 0)) / 100,
+        gram: r.gram ?? 0,
+        ofullstandig: r.gram === null || r.kcalPer100g === null || r.proteinPer100g === null,
       }),
     NOLL,
   )

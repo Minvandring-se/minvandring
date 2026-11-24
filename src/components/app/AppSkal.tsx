@@ -52,7 +52,7 @@ export function AppSkal() {
   const kontext: AppKontext = { anvandarId, epost: session?.user.email ?? '', namn, profilHamtad, setNamn, bildUppdaterad, setBildUppdaterad }
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[17.5rem_1fr] 3xl:grid-cols-[19.5rem_1fr]">
+    <div className="min-h-dvh lg:grid lg:grid-cols-[17.5rem_1fr] 3xl:grid-cols-[19.5rem_1fr] print:block">
       {/* Hoppar förbi menyn med tangentbordet. Syns bara när den har fokus. */}
       <a
         href="#innehall"
@@ -60,6 +60,8 @@ export function AppSkal() {
       >
         Hoppa till innehållet
       </a>
+      {/* Menyerna och sidfoten skrivs inte ut, till exempel när inköpslistan skrivs ut. */}
+      <div className="contents print:hidden">
       <Sidomeny
         aktiv={aktiv}
         turer={dinaTurer}
@@ -70,10 +72,11 @@ export function AppSkal() {
         bildLaddar={bildLaddar}
         profilHamtad={profilHamtad}
       />
+      </div>
 
       <div className="flex min-h-dvh min-w-0 flex-col">
         {/* Kompakt sidhuvud i mobil */}
-        <header className="flex items-center justify-between border-b border-border bg-card/80 px-4 py-2 backdrop-blur lg:hidden">
+        <header className="flex items-center justify-between border-b border-border bg-card/80 px-4 py-2 backdrop-blur lg:hidden print:hidden">
           <Link to="/turer" className={cn('flex min-h-11 items-center rounded-md', fokus)}>
             <Logotyp />
           </Link>
@@ -112,10 +115,12 @@ export function AppSkal() {
           </div>
         </main>
 
-        <Sidfot className="mx-4 mb-[calc(5rem+env(safe-area-inset-bottom))] lg:hidden" />
+        <Sidfot className="mx-4 mb-[calc(5rem+env(safe-area-inset-bottom))] lg:hidden print:hidden" />
       </div>
 
-      <Bottenmeny aktiv={aktiv} />
+      <div className="contents print:hidden">
+        <Bottenmeny aktiv={aktiv} />
+      </div>
     </div>
   )
 }
