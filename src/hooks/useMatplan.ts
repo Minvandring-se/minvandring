@@ -187,12 +187,11 @@ export async function andraInkopsrad(
 
 /**
  * Sparar den inloggades kostbehov med tiden för samtycket. Anropas bara när kryssrutan för samtycke är ikryssad.
- * Utan några behov tas raden bort i stället, och då är samtycket återkallat.
+ * En rad utan några val sparas också: den betyder att personen har sagt att den inte har några kostbehov, till
+ * skillnad från ingen rad alls. Samtycket återkallas med taBortKostbehov.
  */
 export async function sparaKostbehov(behov: Omit<Kostbehov, 'samtycke_tid'>): Promise<boolean> {
   if (!supabase) return false
-  const tomt = !behov.vegetarisk && !behov.vegansk && !behov.glutenfri && !behov.laktosfri && behov.utan.length === 0
-  if (tomt) return taBortKostbehov(behov.deltagare_id)
   const { error } = await supabase.from('kostbehov').upsert({ ...behov, samtycke_tid: new Date().toISOString() })
   return !error
 }

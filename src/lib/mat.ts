@@ -150,6 +150,11 @@ export function maltidsAdress(turId: string, dag: number, maltid: Maltid): strin
   return `/tur/${turId}/mat?dag=${dag}&maltid=${maltid}`
 }
 
+/** Id:t på en måltidsruta på fliken Mat, så att sidan kan skrolla och flytta fokus dit. */
+export function maltidsrutaId(dag: number, maltid: Maltid): string {
+  return `maltid-${dag}-${maltid}`
+}
+
 /** "1 måltid saknas" eller "12 måltider saknas". */
 export function saknasText(antal: number): string {
   return `${antal} ${antal === 1 ? 'måltid' : 'måltider'} saknas`
@@ -274,6 +279,66 @@ export function inkopsgrupper(rader: readonly Inkopsrad[], ordning: readonly str
     .map((ansvarig) => ({ ansvarig, rader: kopa.filter((r) => r.ansvarig === ansvarig) }))
     .filter((g) => g.rader.length > 0)
   return { attKopa, hemifran: rader.filter((r) => r.varifran === 'hemifran') }
+}
+
+/** En rätt i planen och vem som tar med den. */
+export interface Ansvarsratt {
+  rattId: string
+  namn: string
+  typ: 'pase' | 'egen'
+  /** Måltiderna rätten ligger i, i ordning. */
+  platser: Plats[]
+  /** Deltagarna som har ansvar: påsens ansvarig, eller ansvariga för den egna rättens varor. */
+  ansvariga: string[]
+  /** Något saknar ansvarig: påsen, eller någon av den egna rättens varor. */
+  saknarAnsvarig: boolean
+  /** Den egna rättens varor utan ansvarig. Det är dem "Jag tar den" sätter. */
+  varorUtanAnsvarig: string[]
+}
+
+/**
+ * Vem som tar med vad: rätterna som ligger i en måltid inom turens dagar, med ansvariga. Samma uppgifter som
+ * inköpslistan, så att de två alltid visar samma: en påse har ansvarig på rätten, en egen rätt på varje vara.
+ * En egen rätt utan ingredienser har inget att ta med och kommer inte med.
+ */
+export function vemTarMedVad(data: Pick<Matdata, 'ratter' | 'ingredienser' | 'varor' | 'maltider'>, dagar: readonly Matdag[]): Ansvarsratt[] {
+  const ordning = new Map(dagar.map((d, i) => [d.dag, i]))
+  const malOrdning = (m: Maltid) => MALTIDER.findIndex((x) => x.nyckel === m)
+  const varor = new Map(data.varor.map((v) => [v.id, v]))
+  const ut: Ansvarsratt[] = []
+  for (const ratt of data.ratter) {
+    const platser = data.maltider
+      .filter((m) => m.ratt_id === ratt.id && ordning.has(m.dag))
+      .map((m) => ({ dag: dagar[ordning.get(m.dag)!], maltid: m.maltid }))
+      .sort((a, b) => ordning.get(a.dag.dag)! - ordning.get(b.dag.dag)! || malOrdning(a.maltid) - malOrdning(b.maltid))
+    if (platser.length === 0) continue
+    if (ratt.matprodukt_id) {
+      ut.push({ rattId: ratt.id, namn: ratt.namn, typ: 'pase', platser, ansvariga: ratt.ansvarig ? [ratt.ansvarig] : [], saknarAnsvarig: !ratt.ansvarig, varorUtanAnsvarig: [] })
+      continue
+    }
+    const rattensVaror = [...new Set(data.ingredienser.filter((i) => i.ratt_id === ratt.id).map((i) => i.vara_id))]
+      .map((id) => varor.get(id))
+      .filter((v): v is Vara => v !== undefined)
+    if (rattensVaror.length === 0) continue
+    const utan = rattensVaror.filter((v) => !v.ansvarig).map((v) => v.id)
+    ut.push({
+      rattId: ratt.id,
+      namn: ratt.namn,
+      typ: 'egen',
+      platser,
+      ansvariga: [...new Set(rattensVaror.map((v) => v.ansvarig).filter((a): a is string => !!a))],
+      saknarAnsvarig: utan.length > 0,
+      varorUtanAnsvarig: utan,
+    })
+  }
+  // I den ordning rätterna äts första gången.
+  const forst = (r: Ansvarsratt) => ordning.get(r.platser[0].dag.dag)! * 10 + malOrdning(r.platser[0].maltid)
+  return ut.sort((a, b) => forst(a) - forst(b) || a.namn.localeCompare(b.namn, 'sv'))
+}
+
+/** "Middag dag 1" eller "Lunch reservdag 1". */
+export function platsText(p: Plats): string {
+  return `${MALTIDER.find((m) => m.nyckel === p.maltid)!.etikett} ${p.dag.namn.toLowerCase()}`
 }
 
 /** All mat till personerna i gram, för vikten per person i vikt.ts (matvikter). */

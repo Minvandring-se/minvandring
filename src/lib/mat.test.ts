@@ -20,9 +20,11 @@ import {
   pasdetaljer,
   pasePerPortion,
   pasnamn,
+  platsText,
   rattPerPortion,
   tolkaRattformular,
   tolkaTal,
+  vemTarMedVad,
   type Ingrediensfalt,
   type Matdata,
   type Pase,
@@ -430,5 +432,43 @@ describe('borjaMed', () => {
   it('säger dagen när datumet saknas, och alltid för en reservdag', () => {
     expect(borjaMed({ dag: dag1, maltid: 'lunch' }, null)).toBe('Börja med lunchen dag 1.')
     expect(borjaMed({ dag: reserv, maltid: 'middag' }, 'söndag 6 december')).toBe('Börja med middagen reservdag 1.')
+  })
+})
+
+describe('vemTarMedVad', () => {
+  const dagar = matdagar(2, 1)
+  const pase = ratt('p', { matprodukt_id: 'mp', ansvarig: 'anna' })
+  const soppa = ratt('soppa')
+  const data = {
+    ratter: [soppa, pase, ratt('tom'), ratt('oanvand', { matprodukt_id: 'mp2' })],
+    varor: [vara('linser', { ansvarig: 'erik' }), vara('buljong')],
+    ingredienser: [ing('soppa', 'linser', 100), ing('soppa', 'buljong', 10)],
+    maltider: [maltid(2, 'middag', 'p'), maltid(1, 'middag', 'soppa'), maltid(1, 'lunch', 'tom'), maltid(3, 'frukost', 'soppa')],
+  }
+
+  it('visar rätterna i den ordning de äts första gången, med sina måltider', () => {
+    const rader = vemTarMedVad(data, dagar)
+    expect(rader.map((r) => r.namn)).toEqual(['soppa', 'p'])
+    expect(rader[0].platser.map(platsText)).toEqual(['Middag dag 1', 'Frukost reservdag 1'])
+  })
+
+  it('tar ansvarig för en påse från rätten', () => {
+    const p = vemTarMedVad(data, dagar).find((r) => r.rattId === 'p')!
+    expect(p).toMatchObject({ typ: 'pase', ansvariga: ['anna'], saknarAnsvarig: false, varorUtanAnsvarig: [] })
+  })
+
+  it('tar ansvariga för en egen rätt från varorna, och listar varorna som saknar ansvarig', () => {
+    const s = vemTarMedVad(data, dagar).find((r) => r.rattId === 'soppa')!
+    expect(s).toMatchObject({ typ: 'egen', ansvariga: ['erik'], saknarAnsvarig: true, varorUtanAnsvarig: ['buljong'] })
+  })
+
+  it('hoppar över rätter som inte ligger i någon måltid och egna rätter utan ingredienser', () => {
+    const ids = vemTarMedVad(data, dagar).map((r) => r.rattId)
+    expect(ids).not.toContain('oanvand')
+    expect(ids).not.toContain('tom')
+  })
+
+  it('räknar bara måltider inom turens dagar', () => {
+    expect(vemTarMedVad({ ...data, maltider: [maltid(9, 'lunch', 'p')] }, dagar)).toEqual([])
   })
 })
