@@ -4,6 +4,7 @@
 // som räknas i vikt.ts (hundmat_per_dag_g).
 import { allergenetikett, uppraknade } from './kost'
 import type { Ingrediens, Katalogmaltid, Maltid, Maltidsrad, Matprodukt, Ratt, Vara } from './typer'
+import { matvikter, type Deltagare } from './vikt'
 
 export const MALTIDER: readonly { nyckel: Maltid; etikett: string }[] = [
   { nyckel: 'frukost', etikett: 'Frukost' },
@@ -220,6 +221,12 @@ export function inkopsgrupper(rader: readonly Inkopsrad[], ordning: readonly str
 /** All mat till personerna i gram, för vikten per person i vikt.ts (matvikter). */
 export function matviktTotalt(rader: readonly Inkopsrad[]): number {
   return rader.reduce((s, r) => s + r.gram, 0)
+}
+
+/** Matvikten varje deltagare bär vid start, från matplanens inköpslista och deltagarnas matandelar. */
+export function matviktPerDeltagare(data: Matdata, matdeltagare: Deltagare[], dagar: readonly Matdag[]): Map<string, number> {
+  const personer = matdeltagare.filter((d) => d.typ === 'person').length
+  return matvikter(matviktTotalt(inkopslista(data, dagar, personer)), matdeltagare, dagar.length)
 }
 
 export interface Matsummering {

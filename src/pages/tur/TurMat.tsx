@@ -14,14 +14,13 @@ import { sparaRecept, useRecept } from '@/hooks/useRecept'
 import { useSkafferi } from '@/hooks/useSkafferi'
 import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
-import { dagssummor, inkopslista, MALTIDER, matdagar, matsummering, matviktTotalt, rattPerPortion, type Matdag as Dag } from '@/lib/mat'
+import { dagssummor, inkopslista, MALTIDER, matdagar, matsummering, matviktPerDeltagare, matviktTotalt, rattPerPortion, type Matdag as Dag } from '@/lib/mat'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import { receptbesked, receptMedNamn, receptTillRader, valForRecept } from '@/lib/recept'
 import { hemma } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import { turdelAdress } from '@/lib/turdelar'
 import type { DeltagareRad, Maltid, Maltidsrad } from '@/lib/typer'
-import { matvikter } from '@/lib/vikt'
 
 /** Turens flik Mat: summeringen och en sektion per dag med måltiderna. Ägare och redigerare ändrar, läsare ser. */
 export function TurMat() {
@@ -88,7 +87,7 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
   const summor = dagssummor(plan, dagar)
   const inkop = inkopslista(plan, dagar, personer)
   const totaltG = matviktTotalt(inkop)
-  const vikter = matvikter(totaltG, plan.matdeltagare, dagar.length)
+  const vikter = matviktPerDeltagare(plan, plan.matdeltagare, dagar)
   const perPerson = deltagare.filter((d) => (vikter.get(d.id) ?? 0) > 0).map((d) => ({ id: d.id, namn: d.namn, g: vikter.get(d.id)! }))
 
   /** Nästa plats i måltiden, så att en ny rätt hamnar sist. */
