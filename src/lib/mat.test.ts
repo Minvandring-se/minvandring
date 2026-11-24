@@ -1,22 +1,39 @@
 import { describe, expect, it } from 'vitest'
 import {
   ingredienserTillDatabasen,
+  borjaMed,
   dagssummor,
   formateraKcal,
+  grupperaMaltid,
+  orimligPortion,
+  ratterSomSaknar,
+  saknasMeningar,
   inkopsgrupper,
   inkopslista,
   kcalPer100g,
   matdagar,
+  maltidsAdress,
+  maltidsord,
+  matstatus,
   matsummering,
+  saknadeMaltider,
+  saknasText,
   matviktTotalt,
   naringForRader,
   PASAR_TILL,
   pasdetaljer,
   pasePerPortion,
   pasnamn,
+  platsText,
+  platserMedAntal,
+  platserText,
+  antalPasar,
+  dubblettText,
+  rattPlatser,
   rattPerPortion,
   tolkaRattformular,
   tolkaTal,
+  vemTarMedVad,
   type Ingrediensfalt,
   type Matdata,
   type Pase,
@@ -353,5 +370,202 @@ describe('pasnamn och PASAR_TILL', () => {
   it('visar efterrätter vid middag och mellanmål', () => {
     expect(PASAR_TILL.middag).toContain('dessert')
     expect(PASAR_TILL.frukost).toEqual(['frukost'])
+  })
+})
+
+describe('saknadeMaltider och matstatus', () => {
+  const dagar = matdagar(2, 1)
+  const rad = (dag: number, m: Maltid) => ({ dag, maltid: m })
+  const text = (p: { dag: { namn: string }; maltid: Maltid }) => `${p.dag.namn} ${p.maltid}`
+
+  it('räknar frukost, lunch och middag på alla dagar, reservdagar inräknade, men inte mellanmål', () => {
+    expect(saknadeMaltider(dagar, [])).toHaveLength(9)
+    expect(saknadeMaltider(dagar, [rad(1, 'mellanmal')])).toHaveLength(9)
+    expect(matstatus(dagar, [])).toMatchObject({ totalt: 9, planerade: 0, saknas: 9 })
+  })
+
+  it('ger de saknade i ordning, dag för dag med reservdagen sist', () => {
+    const saknas = saknadeMaltider(dagar, [rad(1, 'frukost'), rad(2, 'lunch'), rad(3, 'middag')])
+    expect(saknas.map(text)).toEqual(['Dag 1 lunch', 'Dag 1 middag', 'Dag 2 frukost', 'Dag 2 middag', 'Reservdag 1 frukost', 'Reservdag 1 lunch'])
+  })
+
+  it('räknar en måltid med flera rätter en gång', () => {
+    expect(matstatus(dagar, [rad(1, 'frukost'), rad(1, 'frukost')])).toMatchObject({ planerade: 1, saknas: 8 })
+  })
+
+  it('bortser från rader på dagar som inte finns i turen', () => {
+    expect(matstatus(dagar, [rad(7, 'frukost')]).saknas).toBe(9)
+  })
+
+  it('pekar på den första som saknas, och null när planen är klar', () => {
+    expect(matstatus(dagar, [rad(1, 'frukost')]).forsta).toMatchObject({ dag: { dag: 1 }, maltid: 'lunch' })
+    const allt = dagar.flatMap((d) => (['frukost', 'lunch', 'middag'] as const).map((m) => rad(d.dag, m)))
+    expect(matstatus(dagar, allt)).toMatchObject({ saknas: 0, planerade: 9, forsta: null })
+  })
+
+  it('är tom för en tur utan dagar', () => {
+    expect(matstatus([], [])).toEqual({ totalt: 0, planerade: 0, saknas: 0, forsta: null })
+  })
+
+  it('ger samma saknade som dagssummor', () => {
+    const data: Matdata = { ratter: [ratt('r1')], ingredienser: [], varor: [], pasar: new Map(), maltider: [maltid(1, 'lunch', 'r1')] }
+    const perDag = dagssummor(data, dagar).flatMap((s) => s.saknas.map((m) => `${s.dag.dag}:${m}`))
+    expect(saknadeMaltider(dagar, data.maltider).map((p) => `${p.dag.dag}:${p.maltid}`)).toEqual(perDag)
+  })
+})
+
+describe('saknasText och maltidsord', () => {
+  it('böjer måltid efter antalet', () => {
+    expect(saknasText(1)).toBe('1 måltid saknas')
+    expect(saknasText(12)).toBe('12 måltider saknas')
+  })
+
+  it('ger måltidens namn med liten bokstav', () => {
+    expect(maltidsord('mellanmal')).toBe('mellanmål')
+  })
+})
+
+describe('maltidsAdress', () => {
+  it('pekar på turens flik Mat med dag och måltid', () => {
+    expect(maltidsAdress('abc', 2, 'lunch')).toBe('/tur/abc/mat?dag=2&maltid=lunch')
+  })
+})
+
+describe('borjaMed', () => {
+  const [dag1, , reserv] = matdagar(2, 1)
+
+  it('säger måltiden i bestämd form och datumet', () => {
+    expect(borjaMed({ dag: dag1, maltid: 'frukost' }, 'fredag 4 december')).toBe('Börja med frukosten fredag 4 december.')
+  })
+
+  it('säger dagen när datumet saknas, och alltid för en reservdag', () => {
+    expect(borjaMed({ dag: dag1, maltid: 'lunch' }, null)).toBe('Börja med lunchen dag 1.')
+    expect(borjaMed({ dag: reserv, maltid: 'middag' }, 'söndag 6 december')).toBe('Börja med middagen reservdag 1.')
+  })
+})
+
+describe('vemTarMedVad', () => {
+  const dagar = matdagar(2, 1)
+  const pase = ratt('p', { matprodukt_id: 'mp', ansvarig: 'anna' })
+  const soppa = ratt('soppa')
+  const data = {
+    ratter: [soppa, pase, ratt('tom'), ratt('oanvand', { matprodukt_id: 'mp2' })],
+    varor: [vara('linser', { ansvarig: 'erik' }), vara('buljong')],
+    ingredienser: [ing('soppa', 'linser', 100), ing('soppa', 'buljong', 10)],
+    maltider: [maltid(2, 'middag', 'p'), maltid(1, 'middag', 'soppa'), maltid(1, 'lunch', 'tom'), maltid(3, 'frukost', 'soppa')],
+  }
+
+  it('visar rätterna i den ordning de äts första gången, med sina måltider', () => {
+    const rader = vemTarMedVad(data, dagar)
+    expect(rader.map((r) => r.namn)).toEqual(['soppa', 'p'])
+    expect(rader[0].platser.map(platsText)).toEqual(['Middag dag 1', 'Frukost reservdag 1'])
+  })
+
+  it('tar ansvarig för en påse från rätten', () => {
+    const p = vemTarMedVad(data, dagar).find((r) => r.rattId === 'p')!
+    expect(p).toMatchObject({ typ: 'pase', ansvariga: ['anna'], saknarAnsvarig: false, varorUtanAnsvarig: [] })
+  })
+
+  it('tar ansvariga för en egen rätt från varorna, och listar varorna som saknar ansvarig', () => {
+    const s = vemTarMedVad(data, dagar).find((r) => r.rattId === 'soppa')!
+    expect(s).toMatchObject({ typ: 'egen', ansvariga: ['erik'], saknarAnsvarig: true, varorUtanAnsvarig: ['buljong'] })
+  })
+
+  it('hoppar över rätter som inte ligger i någon måltid och egna rätter utan ingredienser', () => {
+    const ids = vemTarMedVad(data, dagar).map((r) => r.rattId)
+    expect(ids).not.toContain('oanvand')
+    expect(ids).not.toContain('tom')
+  })
+
+  it('räknar bara måltider inom turens dagar', () => {
+    expect(vemTarMedVad({ ...data, maltider: [maltid(9, 'lunch', 'p')] }, dagar)).toEqual([])
+  })
+})
+
+describe('platserMedAntal och platserText', () => {
+  const [dag1, , dag3] = matdagar(3, 0)
+  it('slår ihop samma måltid och skriver antalet', () => {
+    const platser = [
+      { dag: dag1, maltid: 'lunch' as const },
+      { dag: dag3, maltid: 'mellanmal' as const },
+      { dag: dag3, maltid: 'mellanmal' as const },
+      { dag: dag3, maltid: 'mellanmal' as const },
+    ]
+    expect(platserMedAntal(platser).map((p) => p.antal)).toEqual([1, 3])
+    expect(platserText(platser)).toBe('Lunch dag 1, mellanmål dag 3 (3 st)')
+  })
+})
+
+describe('grupperaMaltid', () => {
+  it('slår ihop samma rätt i en måltid och behåller ordningen och raderna', () => {
+    const rader = [maltid(1, 'mellanmal', 'pudding'), maltid(1, 'mellanmal', 'notter'), maltid(1, 'mellanmal', 'pudding')]
+    const grupper = grupperaMaltid(rader)
+    expect(grupper.map((g) => [g.rattId, g.rader.length])).toEqual([
+      ['pudding', 2],
+      ['notter', 1],
+    ])
+    expect(grupper[0].rader.map((r) => r.id)).toEqual([rader[0].id, rader[2].id])
+  })
+})
+
+describe('orimligPortion', () => {
+  it('varnar över 2 000 kcal eller 1,5 kg per portion', () => {
+    expect(orimligPortion({ kcal: 4296, gram: 1365 })).toBe(true)
+    expect(orimligPortion({ kcal: 900, gram: 1600 })).toBe(true)
+    expect(orimligPortion({ kcal: 2000, gram: 1500 })).toBe(false)
+  })
+})
+
+describe('ratterSomSaknar', () => {
+  const dagar = matdagar(1, 0)
+  it('säger vilka rätter som saknar energi, protein eller vikt, och bara de som ligger i en måltid', () => {
+    const data: Matdata = {
+      ratter: [ratt('Bullens pilsnerkorv'), ratt('Gryta'), ratt('Mormors smörgås'), ratt('Oanvänd'), ratt('Påse', { matprodukt_id: 'p1' })],
+      varor: [vara('korv', { kcal_per_100g: null, protein_per_100g: null }), vara('ris'), vara('ost', { protein_per_100g: null }), vara('x', { kcal_per_100g: null })],
+      ingredienser: [ing('Bullens pilsnerkorv', 'korv', 1), ing('Gryta', 'ris', 100), ing('Gryta', 'ost', 20), ing('Oanvänd', 'x', 10)],
+      pasar: new Map([['p1', { id: 'p1', vikt_torr_g: 100, portioner: 1, kcal: 400, protein_g: null }]]),
+      maltider: [maltid(1, 'lunch', 'Bullens pilsnerkorv'), maltid(1, 'middag', 'Gryta'), maltid(1, 'frukost', 'Mormors smörgås'), maltid(1, 'mellanmal', 'Påse')],
+    }
+    expect(ratterSomSaknar(data, dagar)).toEqual({
+      energi: ['Bullens pilsnerkorv', 'Mormors smörgås'],
+      protein: ['Bullens pilsnerkorv', 'Gryta', 'Påse'],
+      vikt: ['Mormors smörgås'],
+    })
+  })
+})
+
+describe('saknasMeningar', () => {
+  it('nämner varje rätt en gång och samlar rätter som saknar samma saker', () => {
+    expect(saknasMeningar({ energi: ['Bullens pilsnerkorv', 'Mormors smörgås'], protein: ['Bullens pilsnerkorv'], vikt: ['Test', 'Mormors smörgås'] })).toEqual([
+      'Test saknar vikt.',
+      'Mormors smörgås saknar vikt och energi.',
+      'Bullens pilsnerkorv saknar energi och protein.',
+    ])
+    expect(saknasMeningar({ energi: [], protein: [], vikt: [] })).toEqual([])
+  })
+})
+
+describe('rattPlatser och dubblettText', () => {
+  const dagar = matdagar(2, 1)
+  const rad = (dag: number, maltid: Maltid, ratt_id = 'r1') => ({ dag, maltid, ratt_id })
+  it('listar måltiderna rätten ligger i, i ordning och bara inom turen', () => {
+    const platser = rattPlatser([rad(2, 'lunch'), rad(1, 'middag'), rad(1, 'frukost'), rad(9, 'lunch'), rad(1, 'lunch', 'r2')], dagar, 'r1')
+    expect(platser.map((p) => `${p.dag.dag} ${p.maltid}`)).toEqual(['1 frukost', '1 middag', '2 lunch'])
+  })
+  it('frågar om rätten redan finns i planen', () => {
+    expect(dubblettText([])).toBeNull()
+    expect(dubblettText(rattPlatser([rad(1, 'lunch')], dagar, 'r1'))).toBe('Finns redan på lunch dag 1. Lägg till ändå?')
+    expect(dubblettText(rattPlatser([rad(1, 'lunch'), rad(2, 'mellanmal'), rad(2, 'mellanmal')], dagar, 'r1'))).toBe(
+      'Finns redan på lunch dag 1, mellanmål dag 2 (2 st). Lägg till ändå?',
+    )
+  })
+})
+
+describe('antalPasar', () => {
+  it('avrundar uppåt till hela påsar', () => {
+    expect(antalPasar(3, 2, 1)).toBe(6)
+    expect(antalPasar(3, 2, 2)).toBe(3)
+    expect(antalPasar(1, 3, 2)).toBe(2)
+    expect(antalPasar(2, 1, 0)).toBe(2)
   })
 })

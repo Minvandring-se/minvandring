@@ -4,11 +4,13 @@ import { cn } from '@/lib/utils'
 // Bildfokus (object-position) så att det viktiga syns när bilden beskärs.
 // fokusMobil: i stående format beskärs bilden från sidorna, så den första siffran styr.
 // fokus (dator): på breda skärmar beskärs bilden uppifrån och nerifrån, så den andra siffran styr.
-// Norrskenet är första bilden. Utsiktsbilden är mörkast och ligger därför sist.
+// Fjällängen är första bilden. Utsiktsbilden är mörkast och ligger därför sist.
+// Vandrarna på fjällängen går mitt i bilden. På dator visas den därför uppifrån, så att de hamnar under knapparna.
 // ljus: dämpar ljusa bilder så att den vita texten klarar WCAG AA (uppmätt bakom rubrik, undertext och meny).
 const bilder = [
+  { namn: '6-fjallang', alt: 'Två vandrare går över en fjällhed mot ett fjäll', fokusMobil: '50% 50%', fokus: '50% 0%', ljus: 0.7 },
+  { namn: '7-vinterfjall', alt: 'En person vilar på ett renskinn i snön framför ett snötäckt fjäll', fokusMobil: '50% 50%', fokus: '30% 75%', ljus: 0.6 },
   { namn: '5-norrsken', alt: 'Norrsken över fjäll och sjö', fokusMobil: '30% 50%', fokus: '50% 90%', ljus: 1 },
-  { namn: '2-sommarfjall', alt: 'En vandrare med packning på en stig i sommarfjällen', fokusMobil: '70% 50%', fokus: '70% 70%', ljus: 0.62 },
   { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokusMobil: '20% 50%', fokus: '25% 78%', ljus: 0.62 },
   { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokusMobil: '45% 50%', fokus: '40% 60%', ljus: 1 },
 ]

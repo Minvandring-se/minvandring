@@ -110,7 +110,8 @@ function Ram({ id }: { id: string | undefined }) {
 
   return (
     <div className="space-y-5 lg:space-y-6">
-      <TurHuvud tur={tur} deltagare={deltagare} minRoll={kontext.minRoll} />
+      {/* Fliken Mat har ett eget, kompakt huvud med matplanens läge, så att maten syns direkt i mobil. */}
+      {aktiv !== 'mat' && <TurHuvud tur={tur} deltagare={deltagare} minRoll={kontext.minRoll} />}
       <Outlet context={kontext} />
     </div>
   )

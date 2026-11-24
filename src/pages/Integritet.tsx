@@ -70,7 +70,7 @@ export function Integritet() {
         <p>
           Kostbehov och allergier är uppgifter om hälsa. Dem sparar vi bara med ditt samtycke, som du ger med en kryssruta när du
           sparar dem i en tur. Samtycket gäller den turen. Du återkallar det genom att ta bort dina kostbehov: tryck på Ta bort mina
-          kostbehov, eller bocka ur allt och spara. Då raderas uppgifterna direkt. De raderas också när du lämnar turen eller turen
+          kostbehov. Då raderas uppgifterna direkt. De raderas också när du lämnar turen eller turen
           raderas.
         </p>
       </Avsnitt>
@@ -120,6 +120,22 @@ export function Integritet() {
           <li>Du har rätt att få dina uppgifter raderade.</li>
           <li>Tycker du att vi hanterar dina uppgifter fel kan du klaga hos Integritetsskyddsmyndigheten (IMY).</li>
         </ul>
+      </Avsnitt>
+
+      <Avsnitt rubrik="Källor">
+        <p>
+          Näringsvärdena i förslagen när du skriver ingredienser kommer från{' '}
+          <a href="https://www.livsmedelsverket.se/om-oss/psidata/livsmedelsdatabasen" className={lank}>
+            Livsmedelsverkets livsmedelsdatabas
+          </a>{' '}
+          och används enligt licensen{' '}
+          <a href="https://creativecommons.org/licenses/by/4.0/deed.sv" className={lank}>
+            CC BY 4.0
+          </a>
+          . Vi har avrundat värdena, och om livsmedlet är torrt, rått eller tillagat bedömer vi utifrån namnet. Värdena är kopierade till
+          MinVandring, så appen hämtar ingenting från Livsmedelsverket när du använder den, och inga uppgifter om dig skickas dit.
+          Du kan ändra värdena när du har valt ett förslag.
+        </p>
       </Avsnitt>
     </article>
   )

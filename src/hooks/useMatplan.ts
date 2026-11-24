@@ -114,7 +114,11 @@ export async function laggIMaltid(turId: string, rattId: string, dag: number, ma
   return !error
 }
 
-/** Lägger en påse ur katalogen i en måltid. Rätten för påsen skapas första gången påsen används i turen. */
+/**
+ * Lägger en påse ur katalogen i en måltid. Rätten för påsen skapas första gången påsen används i turen.
+ * Med ansvarig (när man har påsen hemma) blir man ansvarig för påsen om ingen annan är det, och då är påsarna
+ * hemma bokade till turen.
+ */
 export async function laggTillPase(
   turId: string,
   pase: Matprodukt,
@@ -122,19 +126,23 @@ export async function laggTillPase(
   dag: number,
   maltid: Maltid,
   sortering: number,
+  ansvarig: string | null = null,
 ): Promise<boolean> {
   if (!supabase) return false
   let rattId = befintlig?.id
   if (!rattId) {
     const { data, error } = await supabase
       .from('ratter')
-      .insert({ tur_id: turId, namn: pasnamn(pase), matprodukt_id: pase.id })
+      .insert({ tur_id: turId, namn: pasnamn(pase), matprodukt_id: pase.id, ansvarig })
       .select('id')
       .single()
     if (error) return false
     rattId = data.id as string
   }
-  return laggIMaltid(turId, rattId, dag, maltid, sortering)
+  if (!(await laggIMaltid(turId, rattId, dag, maltid, sortering))) return false
+  // Att bli ansvarig behövs inte för att påsen ska ligga i måltiden, så ett fel här stoppar inte.
+  if (befintlig && !befintlig.ansvarig && ansvarig) await supabase.from('ratter').update({ ansvarig }).eq('id', rattId)
+  return true
 }
 
 export async function taBortUrMaltid(maltidId: string): Promise<boolean> {
@@ -187,12 +195,11 @@ export async function andraInkopsrad(
 
 /**
  * Sparar den inloggades kostbehov med tiden för samtycket. Anropas bara när kryssrutan för samtycke är ikryssad.
- * Utan några behov tas raden bort i stället, och då är samtycket återkallat.
+ * En rad utan några val sparas också: den betyder att personen har sagt att den inte har några kostbehov, till
+ * skillnad från ingen rad alls. Samtycket återkallas med taBortKostbehov.
  */
 export async function sparaKostbehov(behov: Omit<Kostbehov, 'samtycke_tid'>): Promise<boolean> {
   if (!supabase) return false
-  const tomt = !behov.vegetarisk && !behov.vegansk && !behov.glutenfri && !behov.laktosfri && behov.utan.length === 0
-  if (tomt) return taBortKostbehov(behov.deltagare_id)
   const { error } = await supabase.from('kostbehov').upsert({ ...behov, samtycke_tid: new Date().toISOString() })
   return !error
 }

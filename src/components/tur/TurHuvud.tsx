@@ -24,8 +24,7 @@ const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
  * och turens kort delvis ovanpå den.
  */
 export function TurHuvud({ tur, deltagare, minRoll }: { tur: Tur; deltagare: DeltagareRad[]; minRoll: Roll | null }) {
-  const { pathname, state } = useLocation()
-  const aktiv = aktivTurdel(pathname)
+  const { state } = useLocation()
   const { bildUppdaterad } = useApp()
   const bilder = useProfilbilder(deltagare.map((d) => d.user_id), bildUppdaterad)
   const personer = deltagare
@@ -118,16 +117,23 @@ export function TurHuvud({ tur, deltagare, minRoll }: { tur: Tur; deltagare: Del
         </div>
       </section>
 
-      {/*
-        Flikarna. Översikt och Mat är byggda, de andra visar vad de blir med "Kommer snart".
-        Flikarna byter del utan att lägga till ett steg i historiken, så att bakåt alltid leder ut ur turen.
-      */}
-      <Flikrad
-        etikett="Turens delar"
-        aktiv={aktiv}
-        lank={{ replace: true, state }}
-        flikar={TURDELAR.map(({ del, namn, byggd }) => ({ nyckel: del, namn, till: turdelAdress(tur.id, del), kommerSnart: !byggd }))}
-      />
+      <TurFlikar turId={tur.id} />
     </div>
+  )
+}
+
+/**
+ * Turens flikar. Översikt och Mat är byggda, de andra visar vad de blir med "Kommer snart".
+ * Flikarna byter del utan att lägga till ett steg i historiken, så att bakåt alltid leder ut ur turen.
+ */
+export function TurFlikar({ turId }: { turId: string }) {
+  const { pathname, state } = useLocation()
+  return (
+    <Flikrad
+      etikett="Turens delar"
+      aktiv={aktivTurdel(pathname)}
+      lank={{ replace: true, state }}
+      flikar={TURDELAR.map(({ del, namn, byggd }) => ({ nyckel: del, namn, till: turdelAdress(turId, del), kommerSnart: !byggd }))}
+    />
   )
 }
