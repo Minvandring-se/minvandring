@@ -208,18 +208,60 @@ create unique index inkop_klart_vara on public.inkop_klart (deltagare_id, vara_i
 create unique index inkop_klart_ratt on public.inkop_klart (deltagare_id, ratt_id) where ratt_id is not null;
 create index inkop_klart_tur on public.inkop_klart (tur_id);
 
--- Det som redan var avbockat flyttas till var och en som bär en rad med varan eller påsen.
+-- Bara personer köper. Hundens mat räknas för sig.
+create function public.bara_personer_koper() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if not exists (select 1 from public.deltagare d where d.id = new.deltagare_id and d.typ = 'person') then
+    raise exception 'Bara personer kan bocka av det de köper' using errcode = '23514';
+  end if;
+  return new;
+end;
+$$;
+
+create trigger bara_personer_koper before insert on public.inkop_klart
+  for each row execute function public.bara_personer_koper();
+
+revoke all on function public.bara_personer_koper() from public, anon, authenticated;
+
+-- Blir en person en hund slutar den både att äta rätterna och att köpa. Samma som förut, och nu också bockarna.
+create or replace function public.hund_ater_inte() returns trigger
+language plpgsql set search_path = '' as $$
+begin
+  if new.typ <> 'person' and old.typ = 'person' then
+    delete from public.maltid_atare where deltagare_id = new.id;
+    delete from public.inkop_klart where deltagare_id = new.id;
+  end if;
+  return new;
+end;
+$$;
+
+-- Det som redan var avbockat flyttas till var och en som bär en rad med varan eller påsen. Bär ingen en rad med
+-- den får den som var ansvarig bocken, så att inget som var avbockat blir oavbockat. Egna rätter har sin bock på
+-- varorna, så ratter.klart flyttas bara för påsar. Hundar hoppas över.
 insert into public.inkop_klart (tur_id, deltagare_id, vara_id)
   select distinct v.tur_id, m.bars_av, v.id
   from public.varor v
   join public.ingredienser i on i.vara_id = v.id
   join public.maltider m on m.ratt_id = i.ratt_id
-  where v.klart and m.bars_av is not null;
+  join public.deltagare d on d.id = m.bars_av and d.typ = 'person'
+  where v.klart;
+insert into public.inkop_klart (tur_id, deltagare_id, vara_id)
+  select v.tur_id, v.ansvarig, v.id
+  from public.varor v
+  join public.deltagare d on d.id = v.ansvarig and d.typ = 'person'
+  where v.klart and not exists (select 1 from public.inkop_klart k where k.vara_id = v.id);
 insert into public.inkop_klart (tur_id, deltagare_id, ratt_id)
   select distinct r.tur_id, m.bars_av, r.id
   from public.ratter r
   join public.maltider m on m.ratt_id = r.id
-  where r.klart and r.matprodukt_id is not null and m.bars_av is not null;
+  join public.deltagare d on d.id = m.bars_av and d.typ = 'person'
+  where r.klart and r.matprodukt_id is not null;
+insert into public.inkop_klart (tur_id, deltagare_id, ratt_id)
+  select r.tur_id, r.ansvarig, r.id
+  from public.ratter r
+  join public.deltagare d on d.id = r.ansvarig and d.typ = 'person'
+  where r.klart and r.matprodukt_id is not null and not exists (select 1 from public.inkop_klart k where k.ratt_id = r.id);
 
 -- Medlemmar ser. Ägare och redigerare bockar av och tar bort bockar för alla, och var och en, även en läsare, för
 -- sig själv. En bock ändras inte, den läggs till eller tas bort.
