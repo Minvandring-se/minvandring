@@ -143,6 +143,7 @@ describe('funktionerna i public', () => {
     'public.ta_bort_egen_ratt(uuid)',
     'public.spara_egen_ratt(uuid, uuid, text, jsonb, integer, text, integer)',
     'public.spara_recept(uuid, text, jsonb)',
+    'public.ta_med_gemensam(uuid, boolean)',
   ]
 
   it('går inte att anropa utan inloggning', async () => {
@@ -2375,6 +2376,7 @@ describe('packlistan', () => {
   let annanPerson: string
   let sovsack: string
   let talt: string
+  let gemensamKarta: string
 
   const status = (rad: string, deltagare: string) =>
     db.query<{ packad: boolean; namn: string | null; vikt_g: number | null }>(
@@ -2524,29 +2526,46 @@ describe('packlistan', () => {
       tx.query<{ id: string }>(`insert into public.packrader (tur_id, namn, kategori, gemensam) values ($1, 'Kök', 'kok', true) returning id`, [tur]),
     )
     const kok = k.rows[0].id
-    const barare = async () => (await db.query<{ bars_av: string | null }>('select bars_av from public.packrader where id = $1', [kok])).rows[0].bars_av
+    const rad = async () =>
+      (await db.query<{ bars_av: string | null; namn: string; gemensam: boolean; dubblett_ok: boolean }>(
+        'select bars_av, namn, gemensam, dubblett_ok from public.packrader where id = $1',
+        [kok],
+      )).rows[0]
 
     await som(PD, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [kok]))
-    expect(await barare()).toBe(david)
+    expect(await rad()).toEqual({ bars_av: david, namn: 'Kök', gemensam: true, dubblett_ok: false })
+    // Att trycka igen ger inget fel.
+    await som(PD, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [kok]))
     // Ingen kan ta en sak som någon annan redan tar med, eller släppa någon annans.
-    await forvantaFel(som(PC, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [kok])))
-    await forvantaFel(som(PC, (tx) => tx.query('select public.ta_med_gemensam($1, false)', [kok])))
-    expect(await barare()).toBe(david)
+    await expect(som(PC, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [kok]))).rejects.toThrow(/tar redan med/)
+    await expect(som(PC, (tx) => tx.query('select public.ta_med_gemensam($1, false)', [kok]))).rejects.toThrow(/tar inte med/)
+    expect((await rad()).bars_av).toBe(david)
 
     await som(PD, (tx) => tx.query('select public.ta_med_gemensam($1, false)', [kok]))
-    expect(await barare()).toBeNull()
+    expect((await rad()).bars_av).toBeNull()
+    // Att släppa något som ingen bär går inte.
+    await expect(som(PD, (tx) => tx.query('select public.ta_med_gemensam($1, false)', [kok]))).rejects.toThrow(/tar inte med/)
   })
 
-  it('funktionen tar inte en rad som inte är gemensam, och fungerar inte för den som står utanför', async () => {
+  it('funktionen rör inte rader som inte är gemensamma, och fungerar inte för den som står utanför', async () => {
     const r = await som(PA, (tx) => tx.query<{ id: string }>(`insert into public.packrader (tur_id, namn) values ($1, 'Annas pannlampa') returning id`, [tur]))
-    await forvantaFel(som(PD, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [r.rows[0].id])))
+    await expect(som(PD, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [r.rows[0].id]))).rejects.toThrow(/är inte gemensam/)
+    // En läsare som bär en rad som inte är gemensam kan inte släppa den.
+    await som(PA, (tx) => tx.query('update public.packrader set bars_av = $2 where id = $1', [r.rows[0].id, david]))
+    await expect(som(PD, (tx) => tx.query('select public.ta_med_gemensam($1, false)', [r.rows[0].id]))).rejects.toThrow(/är inte gemensam/)
+
     const g = await som(PA, (tx) =>
       tx.query<{ id: string }>(`insert into public.packrader (tur_id, namn, gemensam) values ($1, 'Karta', true) returning id`, [tur]),
     )
-    await forvantaFel(som(PB, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [g.rows[0].id])))
+    // Den som står utanför får samma svar för en rad som finns som för en som inte finns.
+    await expect(som(PB, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [g.rows[0].id]))).rejects.toThrow(/finns inte eller är inte gemensam/)
+    await expect(som(PB, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [crypto.randomUUID()]))).rejects.toThrow(
+      /finns inte eller är inte gemensam/,
+    )
     await forvantaFel(somAnon((tx) => tx.query('select public.ta_med_gemensam($1, true)', [g.rows[0].id])))
     const b = await db.query<{ bars_av: string | null }>('select bars_av from public.packrader where id = $1', [g.rows[0].id])
     expect(b.rows[0].bars_av).toBeNull()
+    gemensamKarta = g.rows[0].id
   })
 
   it('en läsare kan inte svara på frågan om dubbletter, men en redigerare kan', async () => {
@@ -2574,6 +2593,7 @@ describe('packlistan', () => {
     expect(rader.rows).toHaveLength(0)
     expect((await status(sovsack, david)).rows).toHaveLength(0)
     await forvantaFel(som(PD, (tx) => tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id) values ($1, $2, $3)', [sovsack, david, tur])))
+    await expect(som(PD, (tx) => tx.query('select public.ta_med_gemensam($1, true)', [gemensamKarta]))).rejects.toThrow(/finns inte eller är inte gemensam/)
   })
 
   it('när den som bär en rad tas bort finns raden kvar utan bärare', async () => {

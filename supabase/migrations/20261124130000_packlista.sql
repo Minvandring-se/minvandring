@@ -115,13 +115,15 @@ begin
   if jag is null then
     raise exception 'Raden finns inte eller är inte gemensam i en tur du är med i';
   end if;
+  -- Villkoren upprepas i ändringen, så att de gäller raden som den ser ut när den låses.
   if ta then
-    update public.packrader set bars_av = jag where id = rad and bars_av is null;
+    -- Går att upprepa: den som redan bär raden får inget fel.
+    update public.packrader set bars_av = jag where id = rad and gemensam and (bars_av is null or bars_av = jag);
     if not found then
       raise exception 'Någon annan tar redan med den';
     end if;
   else
-    update public.packrader set bars_av = null where id = rad and bars_av = jag;
+    update public.packrader set bars_av = null where id = rad and gemensam and bars_av = jag;
     if not found then
       raise exception 'Du tar inte med den';
     end if;
