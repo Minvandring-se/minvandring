@@ -29,7 +29,7 @@ describe('menyns sidor', () => {
     expect(MENYGRUPPER.map((g) => [g.rubrik, g.sidor.map((s) => SIDOR[s].namn)])).toEqual([
       ['Planera', ['Mina turer', 'Matplanering', 'Packlistor och mallar']],
       ['Utrustning', ['Mitt förråd', 'Utrustningskatalog']],
-      ['Minnen', ['Dagbok', 'Kom ihåg till nästa', 'Statistik']],
+      ['Minnen', ['Dagbok', 'Kom ihåg till nästa tur', 'Statistik']],
       ['Folk', ['Vandringskompisar']],
     ])
   })

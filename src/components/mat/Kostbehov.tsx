@@ -148,7 +148,7 @@ function Behovspanel({
       <form id={formId} onSubmit={spara} noValidate className="space-y-5">
         <p className="text-sm text-muted-foreground">
           Uppgifterna sparas bara för den här turen och syns för alla som är med i den, så att ni kan välja mat som passar. Det är
-          frivilligt. Bockar du ur allt och sparar, eller tar bort dem, raderas de och samtycket är återkallat.
+          frivilligt. Bockar du ur allt och sparar, eller tar bort dem, tas de bort och samtycket är återkallat.
         </p>
         <fieldset className="space-y-1">
           <legend className="mb-1 text-sm font-medium">Kost</legend>

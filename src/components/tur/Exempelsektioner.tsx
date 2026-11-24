@@ -476,7 +476,7 @@ export function Fardplan({ className }: Props) {
 export function EfterTuren({ className }: Props) {
   return (
     <Sektion rubrik="Efter turen" kommerSnart className={className}>
-      <KommerSnart text="Här kommer dagbok, bilder, vad ni använde och lärdomar till nästa vandring.">
+      <KommerSnart text="Här kommer dagbok, bilder, vad ni använde och lärdomar till nästa tur.">
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
           {EFTER_TUREN.map((e) => (
             <div key={e.rubrik} className={cn('rounded-md p-4', e.accent ? 'bg-accent-soft' : 'bg-muted')}>

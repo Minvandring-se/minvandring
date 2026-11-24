@@ -2,6 +2,8 @@ import { Minus, Plus, Star, Trash2 } from 'lucide-react'
 import { useId, useState } from 'react'
 import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
+import { TomtLage } from '@/components/app/TomtLage'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { Matflikar } from '@/components/mat/Matflikar'
 import { Button } from '@/components/ui/button'
@@ -29,7 +31,7 @@ const pasadress = (id: string) => `${KATALOG}?pase=${encodeURIComponent(id)}`
  */
 export function Skafferi() {
   useSidtitel('Skafferi')
-  const katalog = useMatkatalog()
+  const { katalog, forsokIgen } = useMatkatalog()
   const { skafferi, laddaOm } = useSkafferi()
   const [fel, setFel] = useState(false)
 
@@ -48,11 +50,15 @@ export function Skafferi() {
       <SidRubrik rubrik="Skafferi" text="Påsarna du har hemma och dina favoriter. Bara du ser ditt skafferi." />
 
       {gickInte ? (
-        <p role="alert" className="text-destructive">
-          Det gick inte att hämta skafferiet. Kontrollera uppkopplingen och försök igen.
-        </p>
+        <Laddfel
+          vad="ditt skafferi"
+          onForsokIgen={() => {
+            if (katalog === 'fel') forsokIgen()
+            if (skafferi === 'fel') laddaOm()
+          }}
+        />
       ) : laddar ? (
-        <Laddar text="Hämtar skafferiet" className="space-y-3">
+        <Laddar text="Hämtar ditt skafferi" className="space-y-3">
           <Skelett className="h-40 rounded-lg" />
           <Skelett className="h-24 rounded-lg" />
         </Laddar>
@@ -101,10 +107,7 @@ function Innehall({
 
       <Sektion rubrik="Har hemma" atgard={hemma.length > 0 && tillKatalogen}>
         {hemma.length === 0 ? (
-          <div className="space-y-3">
-            <p className="text-muted-foreground">Du har inga påsar hemma än. Lägg till dem från Matkatalogen.</p>
-            {tillKatalogen}
-          </div>
+          <TomtLage kompakt text="Du har inga påsar hemma än. Lägg till dem från Matkatalogen." knapp={tillKatalogen} />
         ) : (
           <ul className="divide-y divide-border">
             {hemma.map((r) => (
@@ -116,7 +119,7 @@ function Innehall({
 
       <Sektion rubrik="Favoriter">
         {favoritpasar.length === 0 ? (
-          <p className="text-muted-foreground">Du har inga favoriter än. Tryck på stjärnan på en påse i Matkatalogen.</p>
+          <TomtLage kompakt text="Du har inga favoriter än. Tryck på stjärnan på en påse i Matkatalogen." />
         ) : (
           <ul className="divide-y divide-border">
             {favoritpasar.map((p) => (

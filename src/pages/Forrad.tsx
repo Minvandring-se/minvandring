@@ -1,7 +1,9 @@
 import { ChevronDown, ExternalLink, LayoutGrid, List, NotebookPen, Pencil, Plus, RotateCcw, Search } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
-import { useSearchParams } from 'react-router'
+import { useLocation, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
+import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { HelaForradet, Onskelista, StorstaVinsten, ViktPerKategori } from '@/components/forrad/Forradsoversikt'
 import { Detaljlista } from '@/components/forrad/Detaljlista'
@@ -10,11 +12,13 @@ import { Kategorifilter } from '@/components/forrad/Kategorifilter'
 import { ProduktSok } from '@/components/forrad/ProduktSok'
 import { SakFormular } from '@/components/forrad/SakFormular'
 import { Button } from '@/components/ui/button'
-import { Dialog } from '@/components/ui/dialog'
+import { Bricka } from '@/components/ui/bricka'
+import { Flikrad } from '@/components/ui/flikrad'
 import { Input } from '@/components/ui/input'
 import { KommerSnart, KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { Select } from '@/components/ui/select'
-import { Snart } from '@/components/ui/snart'
+import { Panel } from '@/components/ui/panel'
+import { Sektion } from '@/components/ui/sektion'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { FORRAD_EXEMPEL } from '@/lib/exempeldata'
 import {
@@ -141,23 +145,15 @@ export function Forrad() {
 
   return (
     <div className="space-y-6">
-      <div className="space-y-2">
-        {/* På dator står knappen i höjd med rubriken. I mobil kommer den efter rutan Hela förrådet. */}
-        <div className="flex flex-wrap items-center justify-between gap-x-6 gap-y-3">
-          <h1 className="min-w-0 text-[44px] leading-[1.05] break-words text-primary lg:text-[64px]">Mitt förråd</h1>
-          <div className="hidden shrink-0 lg:flex">{laggTillKnapp}</div>
-        </div>
-        <p className="max-w-prose text-[17px] text-muted-foreground">Allt du äger för vandring, samlat på ett ställe.</p>
-      </div>
+      <SidRubrik rubrik="Mitt förråd" text="Allt du äger för vandring, samlat på ett ställe." knappar={laggTillKnapp} />
 
-      {/* I mobil ligger den mörka rutan direkt under rubriken, före knappen och filtren. På dator står den i översikten. */}
+      {/* I mobil ligger den mörka rutan direkt under rubriken, före filtren. På dator står den i översikten. */}
       {saker && saker.length > 0 && <HelaForradet summa={summa} granskade={antalGranskade(alla)} className="lg:hidden" />}
-      <div className="lg:hidden">{laggTillKnapp}</div>
 
       {saker && saker.length > 0 && <Forradsdelar antal={saker.length} />}
 
       {sok && (
-        <Dialog etikett="Lägg till utrustning" onStang={() => setOppet(null)}>
+        <Panel etikett="Lägg till utrustning" rubrik={<h2 className="text-2xl">Lägg till utrustning</h2>} onStang={() => setOppet(null)}>
           <ProduktSok
             // En tom ruta eller en knapp under Fyll på fler kategorier öppnar dialogen med rätt kategori vald.
             key={`${sok.kategori ?? 'alla'}|${sok.underkategori ?? ''}`}
@@ -173,9 +169,8 @@ export function Forrad() {
               setTillagd(null)
               setOppet({ ny: { namn: soktext, kategori, underkategori } })
             }}
-            onStang={() => setOppet(null)}
           />
-        </Dialog>
+        </Panel>
       )}
 
       {ny && (
@@ -215,9 +210,7 @@ export function Forrad() {
       )}
 
       {laddfel ? (
-        <p role="alert" className="text-destructive">
-          Det gick inte att hämta ditt förråd. Ladda om sidan och försök igen.
-        </p>
+        <Laddfel vad="ditt förråd" onForsokIgen={hamtaOm} />
       ) : saker === null ? (
         <Laddar text="Hämtar ditt förråd">
           <Skelett className="h-28 rounded-lg" />
@@ -279,30 +272,23 @@ function Lista({ delar, sortering, onSaknad, ...radhjalp }: { delar: Listdel[]; 
   )
 }
 
-/** Knappar för kategorier man inte har fyllt på än. Visas inte när alla har saker. */
+/** Länkar för kategorier man inte har fyllt på än, som textlänkar med plus. Visas inte när alla har saker. */
 function FyllPaFler({ kategorier, onValj }: { kategorier: { nyckel: KategoriNyckel; etikett: string }[]; onValj: (k: KategoriNyckel) => void }) {
   if (kategorier.length === 0) return null
   return (
-    <section aria-labelledby="fyll-pa-fler" className="space-y-3">
-      <h2 id="fyll-pa-fler" className="font-sans text-base font-semibold tracking-normal text-muted-foreground">
-        Fyll på fler kategorier
-      </h2>
-      <ul className="flex flex-wrap gap-2">
+    <Sektion rubrik="Fyll på fler kategorier">
+      <ul className="-mx-3 flex flex-wrap">
         {kategorier.map((k) => (
           <li key={k.nyckel}>
-            <button
-              type="button"
-              onClick={() => onValj(k.nyckel)}
-              className={cn('inline-flex min-h-11 items-center gap-1.5 rounded-full border border-border bg-card px-4 text-sm font-medium transition-colors hover:bg-muted', fokus)}
-            >
-              <Plus className="size-4 text-hjortron-strong" aria-hidden />
+            <Button variant="ghost" className="px-3 text-primary" onClick={() => onValj(k.nyckel)}>
+              <Plus className="size-4" aria-hidden />
               <span className="sr-only">Lägg till i </span>
               {k.etikett}
-            </button>
+            </Button>
           </li>
         ))}
       </ul>
-    </section>
+    </Sektion>
   )
 }
 
@@ -328,21 +314,18 @@ function SaknadRuta({ saknad, onValj }: { saknad: SaknadGrundsak; onValj: () => 
   )
 }
 
-/** Förrådets delar. Bara Mitt förråd finns. Önskelista, Utlånat och Pensionerat kräver en ändring i databasen. */
+/**
+ * Förrådets delar, som flikar. Bara Mitt förråd finns. Önskelista, Utlånat och Pensionerat kräver en ändring i
+ * databasen och visas med "Snart", utan länk. Mitt förråd behåller sök och filter i adressen.
+ */
 function Forradsdelar({ antal }: { antal: number }) {
+  const { search } = useLocation()
   return (
-    <div className="flex flex-wrap items-center gap-2">
-      <span className="inline-flex min-h-10 items-center gap-2 rounded-full bg-primary px-4 text-sm font-semibold text-primary-foreground">
-        Mitt förråd <span className="rounded-full bg-hjortron px-1.5 text-xs font-semibold text-yta-stark tabular-nums">{antal}</span>
-      </span>
-      {/* Exempel på kommande delar. Inte knappar, eftersom de inte går att öppna än. */}
-      {FORRAD_EXEMPEL.flikar.map((f) => (
-        <span key={f.namn} className="inline-flex min-h-10 items-center gap-2 rounded-full border border-border px-4 text-sm text-muted-foreground">
-          {f.namn}
-          <Snart />
-        </span>
-      ))}
-    </div>
+    <Flikrad
+      etikett="Förrådets delar"
+      aktiv="forrad"
+      flikar={[{ nyckel: 'forrad', namn: 'Mitt förråd', till: `/forrad${search}`, antal }, ...FORRAD_EXEMPEL.flikar.map((f) => ({ nyckel: f.namn, namn: f.namn }))]}
+    />
   )
 }
 
@@ -446,32 +429,26 @@ function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: List
  */
 function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; sortering: Listval['sortering']; onSaknad: (s: SaknadGrundsak) => void } & Radhjalp) {
   const { kategori, grupp, saknade } = del
-  const rubrikId = `kategori-${kategori.nyckel}`
   const lista = grupp ? sortera(grupp.saker, sortering) : []
   return (
-    <section aria-labelledby={rubrikId} className="min-w-0 space-y-3">
-      <div className="flex flex-wrap items-baseline justify-between gap-x-4 gap-y-1">
-        <div className="min-w-0">
-          <h2 id={rubrikId} className="text-2xl break-words text-primary sm:text-[28px]">
-            {kategori.etikett}
-          </h2>
-          {/* En kort markering i hjortron under rubriken. */}
-          <span aria-hidden className="mt-1.5 block h-[3px] w-10 rounded-full bg-hjortron" />
-        </div>
-        {grupp ? (
+    <Sektion
+      rubrik={kategori.etikett}
+      atgard={
+        grupp ? (
           <p className="flex gap-3 text-[13px] text-muted-foreground tabular-nums">
             <span>{antalText(grupp.antal)}</span>
             <span>{formateraVikt(grupp.viktG)}</span>
           </p>
         ) : (
           <p className="text-[13px] font-semibold text-accent-strong">{saknade.length} saknas</p>
-        )}
-      </div>
+        )
+      }
+    >
       {lista.length > 0 && (
       <ul
         className={cn(
           radhjalp.vy === 'lista'
-            ? 'divide-y divide-border overflow-hidden rounded-lg border border-border bg-card shadow-soft'
+            ? 'divide-y divide-border overflow-hidden rounded-lg border border-border bg-card'
             : 'grid gap-3 sm:grid-cols-2 2xl:grid-cols-3 3xl:grid-cols-4',
         )}
       >
@@ -506,7 +483,7 @@ function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; 
           ))}
         </ul>
       )}
-    </section>
+    </Sektion>
   )
 }
 
@@ -523,9 +500,7 @@ function Underrad({ sak }: { sak: Forradssak }) {
   return (
     <span className="mt-1 flex flex-wrap gap-1.5">
       {[sak.produkter?.version, under].filter(Boolean).map((text) => (
-        <span key={text} className="rounded bg-muted px-1.5 py-0.5 text-xs font-medium break-words text-muted-foreground">
-          {text}
-        </span>
+        <Bricka key={text}>{text}</Bricka>
       ))}
     </span>
   )
@@ -633,7 +608,7 @@ function Utfalld({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => v
     const { error } = await supabase.from('forradssaker').update({ vikt_g: katalogG }).eq('id', sak.id)
     setAterstaller(false)
     if (error) {
-      setFel('Det gick inte att återställa vikten. Försök igen.')
+      setFel('Det gick inte att återställa vikten. Kontrollera uppkopplingen och försök igen.')
       return
     }
     onAndrad()
@@ -743,9 +718,7 @@ function Kommande() {
         </div>
         <div className="mt-3 flex flex-wrap gap-2">
           {FORRAD_EXEMPEL.etiketter.map((e) => (
-            <span key={e} className="rounded-full bg-muted px-2.5 py-0.5 text-xs font-medium text-muted-foreground">
-              {e}
-            </span>
+            <Bricka key={e}>{e}</Bricka>
           ))}
         </div>
         <div className="mt-3 flex flex-wrap gap-2">

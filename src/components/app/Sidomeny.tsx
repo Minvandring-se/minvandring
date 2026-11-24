@@ -1,4 +1,4 @@
-import { Link, useLocation } from 'react-router'
+import { Link } from 'react-router'
 import { DinaTurer } from '@/components/app/DinaTurer'
 import { Skelett } from '@/components/app/Laddar'
 import { MENYIKON } from '@/components/app/menyIkoner'
@@ -6,7 +6,7 @@ import { Namnbricka } from '@/components/app/Namnbricka'
 import { Logotyp } from '@/components/Logotyp'
 import { Sidfot } from '@/components/Sidfot'
 import { Snart } from '@/components/ui/snart'
-import { aktivUndersida, MENYGRUPPER, SIDOR, UNDERSIDOR, type Sida } from '@/lib/meny'
+import { MENYGRUPPER, SIDOR, UNDERSIDOR, type Sida } from '@/lib/meny'
 import type { TurIListan } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
 
@@ -36,35 +36,9 @@ function Menyrad({ sida, aktiv }: { sida: Sida; aktiv: boolean }) {
   )
 }
 
-/** Delarna av en sida, indragna under den. Den öppna delen står i fetstil i primärfärgen. */
-function Underrader({ sida }: { sida: Sida }) {
-  const { pathname } = useLocation()
-  const delar = UNDERSIDOR[sida]
-  if (!delar) return null
-  const oppen = aktivUndersida(pathname)
-  return (
-    <ul className="mt-0.5 space-y-0.5">
-      {delar.map((u) => (
-        <li key={u.till}>
-          <Link
-            to={u.till}
-            aria-current={oppen === u.till ? 'page' : undefined}
-            className={cn(
-              'flex min-h-11 items-center rounded-md py-1.5 pr-3 pl-11 text-sm transition-colors',
-              fokus,
-              oppen === u.till ? 'font-semibold text-primary' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-            )}
-          >
-            {u.namn}
-          </Link>
-        </li>
-      ))}
-    </ul>
-  )
-}
-
 /**
- * Sidomenyn på dator, enligt skissen Sidomeny-dator: logotypen, grupperna Planera, Utrustning, Minnen och Folk,
+ * Sidomenyn på dator, enligt skissen Sidomeny-dator: logotypen, grupperna Planera, Utrustning, Minnen och Folk (en sidas
+ * delar, som Matplaneringens, står som flikar på sidan och inte här),
  * listan Dina turer, och längst ner användaren (Profil), Inställningar och sidfoten. Ligger kvar när man scrollar.
  */
 export function Sidomeny({
@@ -100,7 +74,6 @@ export function Sidomeny({
                 {g.sidor.map((s) => (
                   <li key={s}>
                     <Menyrad sida={s} aktiv={aktiv === s} />
-                    <Underrader sida={s} />
                   </li>
                 ))}
               </ul>

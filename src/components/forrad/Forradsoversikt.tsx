@@ -5,9 +5,6 @@ import { FORRAD_EXEMPEL } from '@/lib/exempeldata'
 import { formateraVikt, type Forradssumma } from '@/lib/forrad'
 import { cn } from '@/lib/utils'
 
-/** Rubrikerna i korten bredvid listan. */
-const kortrubrik = 'text-[22px] sm:text-[22px]'
-
 /** Hela förrådet i den mörkgröna rutan: vikten stort, antal saker, hur många som är granskade och hur många som är utan vikt. */
 export function HelaForradet({ summa, granskade, className }: { summa: Forradssumma; granskade: number; className?: string }) {
   return (
@@ -36,7 +33,7 @@ export function ViktPerKategori({ summa }: { summa: Forradssumma }) {
   if (grupper.length === 0) return null
   const max = grupper[0].viktG
   return (
-    <Sektion rubrik="Vikt per kategori" rubrikKlass={kortrubrik}>
+    <Sektion rubrik="Vikt per kategori">
       <ul className="space-y-3">
         {grupper.map((g) => (
           <li key={g.kategori.nyckel} className="space-y-1">
@@ -58,7 +55,7 @@ export function ViktPerKategori({ summa }: { summa: Forradssumma }) {
 export function StorstaVinsten({ vinst }: { vinst: { namn: string; viktG: number; kategori: string } | null }) {
   if (!vinst) return null
   return (
-    <Sektion rubrik="Största vinsten" variant="hjortron" rubrikKlass={kortrubrik}>
+    <Sektion rubrik="Största vinsten" variant="hjortron">
       <p className="text-sm">
         <span className="font-semibold">{vinst.namn}</span> är din tyngsta sak, {formateraVikt(vinst.viktG)}. Vill du gå lättare är det här det finns mest att vinna.
       </p>

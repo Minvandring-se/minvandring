@@ -59,7 +59,7 @@ export function TurUppgifter({ tur, kanAndra, onSparad }: Props) {
     const { data, error } = await supabase.from('turer').update(andringar).eq('id', tur.id).select().single()
     setSparar(false)
     if (error || !data) {
-      setFel('Det gick inte att spara. Försök igen.')
+      setFel('Det gick inte att spara. Kontrollera uppkopplingen och försök igen.')
       return
     }
     onSparad(data as Tur)

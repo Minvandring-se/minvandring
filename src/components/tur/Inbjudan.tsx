@@ -4,6 +4,7 @@ import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Button } from '@/components/ui/button'
 import { arAgare, type Roll } from '@/lib/roller'
 import { supabase } from '@/lib/supabase'
+import { laddfelText } from '@/lib/texter'
 
 /**
  * Inbjudningslänken. Visas bara för ägare och redigerare, och databasen släpper bara fram koden till dem.
@@ -66,7 +67,7 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
           <Skelett className="h-10 bg-card" />
         </Laddar>
       )}
-      {kod === null && <p className="text-sm text-destructive">Det gick inte att hämta länken. Kontrollera uppkopplingen och ladda om sidan.</p>}
+      {kod === null && <p className="text-sm text-destructive">{laddfelText('länken')}</p>}
       {kod && (
         <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
           <code className="flex-1 truncate rounded-md bg-card px-3 py-2 text-sm select-all">{lank}</code>

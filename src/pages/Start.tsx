@@ -260,7 +260,7 @@ export function Start() {
                     <AnteckningIllustration className="block aspect-[8/5] w-full" />
                   </Levande>
                   <div className="space-y-2 p-5">
-                    <h3 className="text-xl">Kom ihåg till nästa vandring</h3>
+                    <h3 className="text-xl">Kom ihåg till nästa tur</h3>
                     <p className="text-muted-foreground">
                       Skriv ner vad som fungerade och vad ni saknade. Lärdomarna finns kvar när ni planerar nästa tur.
                     </p>
@@ -366,7 +366,7 @@ export function Start() {
             <h2 id="cta-rubrik" className="text-3xl font-bold sm:text-4xl">
               Redo för nästa tur?
             </h2>
-            <p className="mt-3 max-w-xl text-lg text-yta-stark-muted">Skapa vandringen och bjud in resten av gänget med en länk.</p>
+            <p className="mt-3 max-w-xl text-lg text-yta-stark-muted">Skapa turen och bjud in resten av gänget med en länk.</p>
             <PlaneraKnapp className="mt-8" />
           </div>
         </section>

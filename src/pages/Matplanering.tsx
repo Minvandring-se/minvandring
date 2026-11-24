@@ -1,11 +1,11 @@
-import { ChevronRight, RefreshCw } from 'lucide-react'
+import { ChevronRight } from 'lucide-react'
 import { Link } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Matflikar } from '@/components/mat/Matflikar'
-import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
 import { useDinaTurer } from '@/hooks/useDinaTurer'
 import { useSidtitel } from '@/hooks/useSidtitel'
@@ -24,13 +24,7 @@ export function Matplanering() {
       <Matflikar />
       <SidRubrik rubrik={rubrik} text="Välj en tur för att planera maten dag för dag." />
       {turer === null && fel ? (
-        <div role="alert" className="space-y-3">
-          <p className="text-destructive">Det gick inte att hämta dina turer. Kontrollera uppkopplingen och försök igen.</p>
-          <Button variant="outline" onClick={forsokIgen}>
-            <RefreshCw className="size-4" aria-hidden />
-            Försök igen
-          </Button>
-        </div>
+        <Laddfel vad="dina turer" onForsokIgen={forsokIgen} />
       ) : turer === null ? (
         <Laddar text="Hämtar dina turer" className="space-y-3">
           <Skelett className="h-16 rounded-lg" />

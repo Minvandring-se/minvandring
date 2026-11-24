@@ -77,8 +77,10 @@ export function useMatplan(turId: string): { lage: Matlage; laddaOm: () => Promi
 }
 
 /** Hela matkatalogen, hämtad när man väljer en rätt. null medan den hämtas, 'fel' om det inte gick. */
-export function useMatkatalog(): Matprodukt[] | null | 'fel' {
+export function useMatkatalog(): { katalog: Matprodukt[] | null | 'fel'; forsokIgen: () => void } {
   const [katalog, setKatalog] = useState<Matprodukt[] | null | 'fel'>(null)
+  // Räknas upp av Försök igen, så att katalogen hämtas igen.
+  const [omgang, setOmgang] = useState(0)
   useEffect(() => {
     if (!supabase) return
     let aktuell = true
@@ -93,8 +95,12 @@ export function useMatkatalog(): Matprodukt[] | null | 'fel' {
     return () => {
       aktuell = false
     }
+  }, [omgang])
+  const forsokIgen = useCallback(() => {
+    setKatalog(null)
+    setOmgang((n) => n + 1)
   }, [])
-  return katalog
+  return { katalog, forsokIgen }
 }
 
 // ─── Spara ─────────────────────────────────────────────────────────────────
