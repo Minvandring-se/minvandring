@@ -7,6 +7,7 @@ import { KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { knappStil } from '@/components/ui/knappStil'
 import { Nyckeltal } from '@/components/ui/nyckeltal'
 import { Turbild } from '@/components/ui/turbild'
+import { useAktivFlikSynlig } from '@/hooks/useAktivFlikSynlig'
 import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
 import { ROLLNAMN, kanAndra, type Roll } from '@/lib/roller'
 import { aktivTurdel, TURDELAR, turdelAdress } from '@/lib/turdelar'
@@ -24,6 +25,7 @@ const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 export function TurHuvud({ tur, deltagare, minRoll }: { tur: Tur; deltagare: DeltagareRad[]; minRoll: Roll | null }) {
   const { pathname, state } = useLocation()
   const aktiv = aktivTurdel(pathname)
+  const flikrad = useAktivFlikSynlig<HTMLElement>(aktiv)
   const { bildUppdaterad } = useApp()
   const bilder = useProfilbilder(deltagare.map((d) => d.user_id), bildUppdaterad)
   const personer = deltagare
@@ -115,10 +117,10 @@ export function TurHuvud({ tur, deltagare, minRoll }: { tur: Tur; deltagare: Del
       {/*
         Flikarna. Översikt och Mat är byggda, de andra visar vad de blir med "Kommer snart".
         Flikarna byter del utan att lägga till ett steg i historiken, så att bakåt alltid leder ut ur turen.
-        I mobil är de runda knappar i en rad som går att svepa, på dator flikar med en rostfärgad linje under den aktiva.
+        I mobil är de runda knappar i en rad som går att svepa, skrollad fram till den aktiva, på dator flikar med en rostfärgad linje under den aktiva.
       */}
       {/* relative: de dolda texterna för skärmläsare är absolut placerade och ska klippas av raden, inte göra sidan bredare. */}
-      <nav aria-label="Turens delar" className="relative -mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:overflow-visible md:border-b md:border-border md:px-0">
+      <nav ref={flikrad} aria-label="Turens delar" className="relative -mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:overflow-visible md:border-b md:border-border md:px-0">
         <ul className="flex gap-2 py-1 md:-mb-px md:flex-wrap md:gap-1 md:py-0">
           {TURDELAR.map(({ del, namn, byggd }) => (
             <li key={del} className="shrink-0">
