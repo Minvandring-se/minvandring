@@ -217,3 +217,14 @@ När en egen rätt får nya ingredienser (`spara_egen_ratt` i `20261124120001_sp
 ## Matplanen: "Ris" och "ris" i samma tur
 
 `spara_egen_ratt` matchar varor i turen utan hänsyn till stora och små bokstäver, men den unika nyckeln på `varor (tur_id, namn)` skiljer på dem. Läggs "Ris" och "ris" in direkt, eller av två samtidiga anrop, finns båda, och funktionen väljer då den med lägst id. Inget läcker mellan turer. Rätta med en ny migrering: slå först ihop dubbletterna i varje tur (flytta ingredienserna till en av varorna och lägg ihop `extra_g`), och lägg sedan till ett unikt index på `public.varor (tur_id, lower(namn))`.
+
+## Matplanen: fett, kolhydrater och mer från livsmedlen
+
+Tabellen `livsmedel` (Livsmedelsverkets livsmedelsdatabas, se `docs/katalog/livsmedel.md`) har fett, kolhydrater (tillgängliga), fiber, sockerarter, salt och vatten per 100 g. Formuläret för egna rätter och recept fyller i dag bara i kcal och protein, eftersom det är de fälten som finns på `varor` och `receptrader`.
+
+Fett och kolhydrater kan läggas till i formuläret senare. Det kräver:
+- kolumnerna `fett_per_100g` och `kolhydrater_per_100g` på `varor` och `receptrader`, i en ny migrering
+- nya versioner av `spara_egen_ratt` och `spara_recept` som tar emot fälten
+- två fält till per ingrediensrad, och fett och kolhydrater i summan per portion
+
+Värdena finns redan i tabellen, så inget behöver hämtas om. Vattnet kan användas för att räkna om mellan torr och tillagad vikt.

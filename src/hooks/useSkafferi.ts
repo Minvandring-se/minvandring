@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import { MAX_ANTAL } from '@/lib/skafferi'
+import { antalPasar } from '@/lib/mat'
+import { MAX_ANTAL, type Bokning, type Bokningstur } from '@/lib/skafferi'
+import { lage, lokaltDatum } from '@/lib/turlista'
 import { supabase } from '@/lib/supabase'
 import type { Skafferirad } from '@/lib/typer'
 
@@ -44,6 +46,76 @@ export function useSkafferi(): { skafferi: Skafferilage; laddaOm: () => Promise<
   }, [])
 
   return { skafferi, laddaOm }
+}
+
+/** Påsarna i ens andra turer: för Senast använda och för det som redan går till andra turer ur skafferiet. */
+export interface AndraTurer {
+  turer: Bokningstur[]
+  /** Påsarna i de andra turerna. */
+  pasar: { turId: string; matproduktId: string }[]
+  /** Påsarna man själv ansvarar för i andra turer som inte är avslutade, med antal påsar som turen behöver. */
+  bokningar: Bokning[]
+}
+
+const INGA_ANDRA: AndraTurer = { turer: [], pasar: [], bokningar: [] }
+
+type Turrad = Bokningstur & { reservdagar: number }
+
+async function hamtaAndraTurer(turId: string, userId: string): Promise<AndraTurer> {
+  if (!supabase) return INGA_ANDRA
+  // RLS (ar_medlem) gör att bara turer man är med i kommer med.
+  const [turer, ratter, deltagare] = await Promise.all([
+    supabase.from('turer').select('id, avresa, hemkomst, dagar, reservdagar, skapad'),
+    supabase.from('ratter').select('id, tur_id, matprodukt_id, ansvarig').neq('tur_id', turId).not('matprodukt_id', 'is', null),
+    supabase.from('deltagare').select('id, tur_id, typ, user_id').neq('tur_id', turId),
+  ])
+  if (turer.error || ratter.error || deltagare.error) return INGA_ANDRA
+  const turrader = turer.data as Turrad[]
+  const rattrader = ratter.data as { id: string; tur_id: string; matprodukt_id: string; ansvarig: string | null }[]
+  const deltagarrader = deltagare.data as { id: string; tur_id: string; typ: string; user_id: string | null }[]
+
+  const idag = lokaltDatum()
+  const aktiva = new Map(turrader.filter((t) => t.id !== turId && lage(t, idag) !== 'tidigare').map((t) => [t.id, t]))
+  const mina = new Set(deltagarrader.filter((d) => d.user_id === userId).map((d) => d.id))
+  const ansvarar = rattrader.filter((r) => r.ansvarig && mina.has(r.ansvarig) && aktiva.has(r.tur_id))
+
+  let bokningar: Bokning[] = []
+  if (ansvarar.length > 0) {
+    const [maltider, pasar] = await Promise.all([
+      supabase.from('maltider').select('ratt_id, dag').in('ratt_id', ansvarar.map((r) => r.id)),
+      supabase.from('matprodukter').select('id, portioner').in('id', [...new Set(ansvarar.map((r) => r.matprodukt_id))]),
+    ])
+    if (!maltider.error && !pasar.error) {
+      const portioner = new Map((pasar.data as { id: string; portioner: number }[]).map((p) => [p.id, p.portioner]))
+      bokningar = ansvarar.map((r) => {
+        const tur = aktiva.get(r.tur_id)!
+        const sista = (tur.dagar ?? 0) + tur.reservdagar
+        const ganger = (maltider.data as { ratt_id: string; dag: number }[]).filter((m) => m.ratt_id === r.id && m.dag <= sista).length
+        const personer = deltagarrader.filter((d) => d.tur_id === r.tur_id && d.typ === 'person').length
+        return { turId: r.tur_id, matproduktId: r.matprodukt_id, pasar: antalPasar(ganger, personer, portioner.get(r.matprodukt_id) ?? 1) }
+      })
+    }
+  }
+  return { turer: turrader, pasar: rattrader.map((r) => ({ turId: r.tur_id, matproduktId: r.matprodukt_id })), bokningar }
+}
+
+/**
+ * Ens andra turer, för Senast använda och bokningen ur skafferiet. Går det inte att hämta visas matplanen ändå,
+ * utan de uppgifterna.
+ */
+export function useAndraTurer(turId: string, userId: string | null): AndraTurer {
+  const [andra, setAndra] = useState<AndraTurer>(INGA_ANDRA)
+  useEffect(() => {
+    if (!userId) return
+    let aktuell = true
+    hamtaAndraTurer(turId, userId).then((a) => {
+      if (aktuell) setAndra(a)
+    })
+    return () => {
+      aktuell = false
+    }
+  }, [turId, userId])
+  return andra
 }
 
 // ─── Spara ─────────────────────────────────────────────────────────────────

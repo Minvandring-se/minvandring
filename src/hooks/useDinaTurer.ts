@@ -2,9 +2,12 @@ import { useCallback, useEffect, useState } from 'react'
 import { supabase } from '@/lib/supabase'
 import type { TurIListan } from '@/lib/turlista'
 
+/** En tur i listan, med reservdagarna som matplanen behöver. */
+export type DinTur = TurIListan & { reservdagar: number }
+
 export interface DinaTurer {
   /** null medan listan hämtas första gången, eller när den inte gick att hämta. */
-  turer: TurIListan[] | null
+  turer: DinTur[] | null
   /** Sant när den senaste hämtningen misslyckades. En lista som redan hämtats står då kvar. */
   fel: boolean
   /** Hämtar listan igen. */
@@ -16,7 +19,7 @@ export interface DinaTurer {
  * så att en ny, ändrad eller raderad tur syns direkt.
  */
 export function useDinaTurer(anvandarId: string, sida: string): DinaTurer {
-  const [turer, setTurer] = useState<TurIListan[] | null>(null)
+  const [turer, setTurer] = useState<DinTur[] | null>(null)
   const [fel, setFel] = useState(false)
   const [omgang, setOmgang] = useState(0)
 
@@ -25,12 +28,12 @@ export function useDinaTurer(anvandarId: string, sida: string): DinaTurer {
     let aktuell = true
     supabase
       .from('turer')
-      .select('id, namn, avresa, hemkomst, dagar, skapad')
+      .select('id, namn, avresa, hemkomst, dagar, reservdagar, skapad')
       .then(({ data, error }) => {
         if (!aktuell) return
         setFel(!!error)
         // Går det inte att hämta står den förra listan kvar.
-        if (!error) setTurer((data as TurIListan[] | null) ?? [])
+        if (!error) setTurer((data as DinTur[] | null) ?? [])
       })
     return () => {
       aktuell = false
