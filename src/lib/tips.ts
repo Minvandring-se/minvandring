@@ -84,7 +84,7 @@ export const GUIDER: readonly Guide[] = [
       {
         rubrik: 'Bränsle',
         stycken: [
-          'Primus räknar med ungefär 100 g gas per person och dag på sommaren och 230 g per dag på vintern, då man också smälter snö. MSR mätte att ett av deras kök kokar ungefär 2 liter vatten på 28 g gas, och skriver att kyla, snö och vind kan kräva 3 till 4 gånger så mycket.',
+          'Primus riktlinje för en person med eget kök är en patron på 100 g för en dag, 230 g för en helg och 2 × 230 g för en vecka på sommaren. På vintern, då man också smälter snö, blir det 230 g, 450 g och 450 g + 230 g. Två personer med ett kök behöver enligt Primus omkring 50 % mer på vintern. MSR mätte att ett av deras kök kokar ungefär 2 liter vatten på 28 g gas, och skriver att kyla, snö och vind kan kräva 3 till 4 gånger så mycket.',
         ],
         punkter: ['Lock på kastrullen och lä för vinden gör att vattnet kokar fortare.', 'En kastrull med värmeväxlare sparar enligt Primus omkring hälften av bränslet.', 'Ta med en extra kartusch när det är kallt.'],
       },

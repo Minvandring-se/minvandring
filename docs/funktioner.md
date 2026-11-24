@@ -64,7 +64,7 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Egna recept på kontot, att lägga in i vilken tur som helst (kopieras till turen) | Finns (`/matplanering/recept`), personligt |
 | Spara en egen rätt i en tur som recept | Finns |
 | Tips om mat med källor: energi, vatten och bränsle, packning, kcal per 100 g | Finns (`/matplanering/tips`) |
-| Gas till köket: gram gas för turen (Primus 100 g per person och dag) och patroner som räcker | Finns, i turens matplan |
+| Gas till köket: patroner som räcker på sommaren och med snösmältning, enligt Primus veckosiffror | Finns, i turens matplan |
 | Dela recept med andra användare | Senare |
 | Proviantering i STF-stugor | Senare |
 

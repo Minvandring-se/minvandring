@@ -1,7 +1,17 @@
 // Hur mycket gas turen behöver och vilka patroner som räcker. Rena funktioner utan databas.
 
-/** Primus räknar med ungefär 100 g gas per person och dag på sommaren och 230 g när man smälter snö. Källan står i tipsen. */
-export const GAS_PER_PERSON_OCH_DAG_G = { sommar: 100, vinter: 230 } as const
+/**
+ * Primus riktlinje för en person med eget kök i en vecka: 2 × 230 g gas på sommaren och 450 g + 230 g på vintern,
+ * då man också smälter snö. Källan står i tipsen.
+ */
+export const PRIMUS_VECKA_G = { sommar: 460, vinter: 680 } as const
+
+export type Arstid = keyof typeof PRIMUS_VECKA_G
+
+/** Gas per person och dag enligt Primus veckosiffror, cirka 66 g på sommaren och 97 g på vintern. */
+export function gasPerPersonOchDag(arstid: Arstid): number {
+  return PRIMUS_VECKA_G[arstid] / 7
+}
 
 /** De vanliga storlekarna på skruvpatroner (EN 417), i gram gas. */
 export const PATRONSTORLEKAR_G = [100, 230, 450] as const
@@ -9,10 +19,14 @@ export const PATRONSTORLEKAR_G = [100, 230, 450] as const
 /** Fler patroner än så föreslås inte. */
 const MAX_PATRONER = 8
 
-/** Gasen turen behöver i gram: personer gånger dagar gånger gas per person och dag. 0 när något saknas. */
-export function gasbehov(personer: number, dagar: number, gPerPersonOchDag: number = GAS_PER_PERSON_OCH_DAG_G.sommar): number {
-  if (!(personer > 0) || !(dagar > 0) || !(gPerPersonOchDag > 0)) return 0
-  return Math.round(personer) * Math.round(dagar) * gPerPersonOchDag
+/**
+ * Gasen turen behöver i gram, avrundat uppåt till jämna 10 g: personer gånger dagar gånger gas per person och dag.
+ * Varje person räknas med eget kök, så ett delat kök drar mindre. 0 när något saknas.
+ */
+export function gasbehov(personer: number, dagar: number, arstid: Arstid = 'sommar'): number {
+  if (!(personer > 0) || !(dagar > 0)) return 0
+  const gram = Math.round(personer) * Math.round(dagar) * gasPerPersonOchDag(arstid)
+  return Math.ceil(gram / 10 - 1e-9) * 10
 }
 
 /**

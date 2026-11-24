@@ -1,26 +1,38 @@
 import { Link } from 'react-router'
 import { Nyckeltal } from '@/components/ui/nyckeltal'
 import { Sektion } from '@/components/ui/sektion'
-import { formateraPatroner, gasbehov, GAS_PER_PERSON_OCH_DAG_G, patronforslag } from '@/lib/bransle'
+import { type Arstid, formateraPatroner, gasbehov, patronforslag } from '@/lib/bransle'
 import { formateraVikt } from '@/lib/forrad'
 
-/** Gasen turen behöver till ett gaskök och patronerna som räcker, räknat på personer och dagar med reservdagarna. */
-export function Gasbehov({ personer, dagar }: { personer: number; dagar: number }) {
-  const behov = gasbehov(personer, dagar)
-  if (behov === 0) return null
+function Forslag({ personer, dagar, arstid }: { personer: number; dagar: number; arstid: Arstid }) {
+  const behov = gasbehov(personer, dagar, arstid)
   const patroner = patronforslag(behov)
+  return (
+    <>
+      <span className="block">{patroner ? formateraPatroner(patroner) : 'Fler än åtta patroner'}</span>
+      <span className="block text-sm font-normal text-muted-foreground">cirka {formateraVikt(behov)} gas</span>
+    </>
+  )
+}
+
+/**
+ * Patronerna som räcker till turen enligt Primus riktlinje för en person med eget kök, på sommaren och med
+ * snösmältning, räknat på personer och dagar med reservdagarna.
+ */
+export function Gasbehov({ personer, dagar }: { personer: number; dagar: number }) {
+  if (gasbehov(personer, dagar) === 0) return null
   return (
     <Sektion rubrik="Gas till köket">
       <Nyckeltal
         varden={[
-          { etikett: 'Gas för turen', varde: formateraVikt(behov) },
-          { etikett: 'Patroner som räcker', varde: patroner ? formateraPatroner(patroner) : 'Fler än åtta' },
+          { etikett: 'Sommar', varde: <Forslag personer={personer} dagar={dagar} arstid="sommar" /> },
+          { etikett: 'Med snösmältning', varde: <Forslag personer={personer} dagar={dagar} arstid="vinter" /> },
         ]}
       />
       <p className="text-sm text-muted-foreground">
-        {personer === 1 ? '1 person' : `${personer} personer`} i {dagar === 1 ? '1 dag' : `${dagar} dagar`} med reservdagarna, och{' '}
-        {GAS_PER_PERSON_OCH_DAG_G.sommar} g gas per person och dag som Primus räknar med på sommaren. När man smälter snö räknar
-        Primus med {GAS_PER_PERSON_OCH_DAG_G.vinter} g.
+        {personer === 1 ? '1 person' : `${personer} personer`} i {dagar === 1 ? '1 dag' : `${dagar} dagar`} med reservdagarna. Primus räknar
+        med 2 × 230 g gas för en person med eget kök i en vecka på sommaren och 450 g + 230 g när man smälter snö. Delar ni kök går
+        det åt mindre per person, och blåst och kyla kan kräva mer.
       </p>
       <Link
         to="/matplanering/tips"

@@ -2,13 +2,16 @@ import { describe, expect, it } from 'vitest'
 import { formateraPatroner, gasbehov, patronforslag } from './bransle'
 
 describe('gas till turen', () => {
-  it('räknar 100 g per person och dag på sommaren', () => {
-    expect(gasbehov(2, 5)).toBe(1000)
-    expect(gasbehov(3, 4)).toBe(1200)
+  it('följer Primus veckosiffror för en person', () => {
+    expect(gasbehov(1, 7)).toBe(460)
+    expect(gasbehov(1, 7, 'vinter')).toBe(680)
   })
 
-  it('räknar med en annan mängd per dag när den anges', () => {
-    expect(gasbehov(2, 3, 230)).toBe(1380)
+  it('räknar varje person med eget kök och avrundar uppåt till jämna 10 g', () => {
+    expect(gasbehov(2, 7)).toBe(920)
+    // 2 × 5 × 460 / 7 = 657 g
+    expect(gasbehov(2, 5)).toBe(660)
+    expect(gasbehov(1, 1)).toBe(70)
   })
 
   it('ger 0 när personer eller dagar saknas', () => {
@@ -29,6 +32,11 @@ describe('patroner som räcker', () => {
     expect(patronforslag(200)).toEqual([230])
     expect(patronforslag(1000)).toEqual([450, 450, 100])
     expect(patronforslag(600)).toEqual([450, 230])
+  })
+
+  it('ger Primus patroner för en person i en vecka', () => {
+    expect(patronforslag(gasbehov(1, 7))).toEqual([230, 230])
+    expect(patronforslag(gasbehov(1, 7, 'vinter'))).toEqual([450, 230])
   })
 
   it('ger tom lista när inget behövs och null när det krävs fler än åtta patroner', () => {
