@@ -1,7 +1,8 @@
 import { Nyckeltal } from '@/components/ui/nyckeltal'
 import { Sektion } from '@/components/ui/sektion'
 import { formateraVikt } from '@/lib/forrad'
-import { formateraKcal, saknasMeningar, type Matsummering as Summering, type Saknade } from '@/lib/mat'
+import { uppraknade } from '@/lib/kost'
+import { formateraKcal, platsText, saknasMeningar, type Matsummering as Summering, type Plats, type Saknade } from '@/lib/mat'
 
 /**
  * Siffrorna överst i matplanen: energi och protein per person och dag, matvikten för turen och per person,
@@ -10,12 +11,15 @@ import { formateraKcal, saknasMeningar, type Matsummering as Summering, type Sak
 export function Matsummering({
   summering,
   saknade,
+  saknasPerson = [],
   totaltG,
   perPerson,
 }: {
   summering: Summering
   /** Rätterna som saknar vikt, energi eller protein, så att summorna kan bli för låga. */
   saknade: Saknade
+  /** Huvudmåltider som bara vissa personer saknar, för att de inte äter någon av måltidens rätter. */
+  saknasPerson?: readonly { namn: string; platser: readonly Plats[] }[]
   totaltG: number
   /** Namn och matvikt i gram för varje deltagare som bär mat. */
   perPerson: readonly { id: string; namn: string; g: number }[]
@@ -37,6 +41,11 @@ export function Matsummering({
           {saknadeMaltider === 1 ? 'En måltid saknas.' : `${saknadeMaltider} måltider saknas.`} Frukost, lunch och middag räknas, mellanmål är frivilliga.
         </p>
       )}
+      {saknasPerson.map((p) => (
+        <p key={p.namn} className="font-medium text-accent-strong">
+          {p.namn} saknar {uppraknade(p.platser.map((x) => platsText(x).toLowerCase()))}.
+        </p>
+      ))}
       {meningar.length > 0 && <p className="text-sm text-muted-foreground">{meningar.join(' ')} Det som saknas räknas inte med, så summorna kan bli för låga.</p>}
       {perPerson.length > 0 && totaltG > 0 && (
         <div className="space-y-2">

@@ -283,7 +283,7 @@ describe('alternativen i kategorifiltret', () => {
       { nyckel: 'quilt', etikett: 'Quilt', antal: 1 },
       { nyckel: 'liggunderlag', etikett: 'Liggunderlag', antal: 0 },
     ])
-    expect(underkategorivalIForradet([], 'kok', 'brannare')).toEqual([{ nyckel: 'brannare', etikett: 'Kök och brännare', antal: 0 }])
+    expect(underkategorivalIForradet([], 'kok', 'brannare')).toEqual([{ nyckel: 'brannare', etikett: 'Brännare', antal: 0 }])
   })
 })
 

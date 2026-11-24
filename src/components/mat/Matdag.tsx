@@ -1,11 +1,13 @@
 import { ChevronDown, Plus, X } from 'lucide-react'
 import { useId } from 'react'
+import { Initial } from '@/components/mat/Initial'
+import type { Person } from '@/components/mat/RadPanel'
 import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
 import { formateraVikt } from '@/lib/forrad'
-import { varningar, type Behov } from '@/lib/kost'
+import { uppraknade, varningar, type Behov } from '@/lib/kost'
 import { formateraKcal, grupperaMaltid, HUVUDMALTIDER, kcalPer100g, MALTIDER, maltidsord, maltidsrutaId, orimligPortion, type Dagssumma, type Naring } from '@/lib/mat'
-import type { Maltid, Maltidsrad, Matprodukt, Ratt } from '@/lib/typer'
+import type { Maltid, Maltidsrad, Matatare, Matprodukt, Ratt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
 
 export interface Ratter {
@@ -18,6 +20,23 @@ export interface Ratter {
   ingredienser: ReadonlyMap<string, readonly string[]>
 }
 
+/** Turens personer med färger och vem som äter vad, för att visa vem som bär och äter varje rätt. */
+export interface Folk {
+  personer: readonly Person[]
+  farger: ReadonlyMap<string, string>
+  atare: readonly Matatare[]
+}
+
+const INGET_FOLK: Folk = { personer: [], farger: new Map(), atare: [] }
+
+/** De som äter en rad, sorterade, som nyckel. Tom: alla. */
+const atarnyckel = (folk: Folk, rad: Maltidsrad) =>
+  folk.atare
+    .filter((a) => a.maltid_id === rad.id)
+    .map((a) => a.deltagare_id)
+    .sort()
+    .join(',')
+
 /**
  * En dag i matplanen: rubriken med datum och energin per person, och en ruta per måltid. På dator ligger dagens fyra
  * rutor i en rad, i mobil två och två och på smala skärmar under varandra.
@@ -27,10 +46,12 @@ export function Matdag({
   datum,
   maltider,
   ratter,
+  folk = INGET_FOLK,
   behov,
   kanAndra,
   onLaggTill,
   onTaBort,
+  onVem,
 }: {
   summa: Dagssumma
   /** "fredag 4 december", eller null när turen saknar datum eller dagen är en reservdag. */
@@ -38,10 +59,13 @@ export function Matdag({
   /** Måltidsraderna för dagen. */
   maltider: readonly Maltidsrad[]
   ratter: Ratter
+  folk?: Folk
   behov: readonly Behov[]
   kanAndra: boolean
   onLaggTill: (maltid: Maltid) => void
   onTaBort: (rad: Maltidsrad) => void
+  /** Öppnar valet av vem som bär och äter raderna. */
+  onVem?: (rader: readonly Maltidsrad[]) => void
 }) {
   const { dag, naring } = summa
   const id = useId()
@@ -71,10 +95,12 @@ export function Matdag({
               etikett={etikett}
               rader={maltider.filter((m) => m.maltid === nyckel)}
               ratter={ratter}
+              folk={folk}
               behov={behov}
               kanAndra={kanAndra}
               onLaggTill={() => onLaggTill(nyckel)}
               onTaBort={onTaBort}
+              onVem={onVem}
             />
           </li>
         ))}
@@ -94,10 +120,12 @@ function Maltidsruta({
   etikett,
   rader,
   ratter,
+  folk,
   behov,
   kanAndra,
   onLaggTill,
   onTaBort,
+  onVem,
 }: {
   dag: number
   dagnamn: string
@@ -105,10 +133,12 @@ function Maltidsruta({
   etikett: string
   rader: readonly Maltidsrad[]
   ratter: Ratter
+  folk: Folk
   behov: readonly Behov[]
   kanAndra: boolean
   onLaggTill: () => void
   onTaBort: (rad: Maltidsrad) => void
+  onVem?: (rader: readonly Maltidsrad[]) => void
 }) {
   const synliga = rader.filter((r) => ratter.ratter.has(r.ratt_id))
   const tom = synliga.length === 0
@@ -129,8 +159,8 @@ function Maltidsruta({
       </h3>
       {!tom && (
         <ul className="space-y-1.5">
-          {grupperaMaltid(synliga).map((grupp) => (
-            <Rattrad key={grupp.rattId} grupp={grupp} ratter={ratter} behov={behov} kanAndra={kanAndra} onTaBort={onTaBort} vad={vad} />
+          {grupperaMaltid(synliga, (r) => atarnyckel(folk, r)).map((grupp) => (
+            <Rattrad key={grupp.rader[0].id} grupp={grupp} ratter={ratter} folk={folk} behov={behov} kanAndra={kanAndra} onTaBort={onTaBort} onVem={onVem} vad={vad} />
           ))}
         </ul>
       )}
@@ -161,16 +191,20 @@ const KORT_LISTA = 3
 function Rattrad({
   grupp,
   ratter,
+  folk,
   behov,
   kanAndra,
   onTaBort,
+  onVem,
   vad,
 }: {
   grupp: { rattId: string; rader: readonly Maltidsrad[] }
   ratter: Ratter
+  folk: Folk
   behov: readonly Behov[]
   kanAndra: boolean
   onTaBort: (rad: Maltidsrad) => void
+  onVem?: (rader: readonly Maltidsrad[]) => void
   vad: string
 }) {
   const ratt = ratter.ratter.get(grupp.rattId)
@@ -182,6 +216,11 @@ function Rattrad({
   const lista = pase ? varningar(pase, behov) : []
   const per100 = kcalPer100g(portion.kcal, portion.gram)
   const ingredienser = ratt.matprodukt_id ? [] : (ratter.ingredienser.get(ratt.id) ?? [])
+  const barsAv = grupp.rader[0].bars_av ?? null
+  const barare = barsAv ? folk.personer.find((p) => p.id === barsAv) : undefined
+  const atare = atarnyckel(folk, grupp.rader[0])
+  const atarnamn = atare ? folk.personer.filter((p) => atare.split(',').includes(p.id)).map((p) => p.namn) : []
+  const vemText = barare ? `${barare.namn} bär` : 'Ingen bär än'
   return (
     // Namnet får hela rutans bredd. Energin och Ta bort står på raden under, så att långa namn går att läsa i smala rutor.
     <li className="space-y-0.5 rounded-knapp bg-muted/60 pt-2 pl-3">
@@ -200,6 +239,15 @@ function Rattrad({
         </ul>
       )}
       {orimligPortion(portion) && <p className="pr-3 text-xs font-medium text-accent-strong">Ovanligt stor portion. Kontrollera mängderna.</p>}
+      {(barare || (kanAndra && onVem) || atarnamn.length > 0) && (
+        <Vem
+          barare={barare?.namn}
+          farg={barsAv ? folk.farger.get(barsAv) : undefined}
+          atare={atarnamn}
+          onAndra={kanAndra && onVem ? () => onVem(grupp.rader) : undefined}
+          etikett={`${vemText}${atarnamn.length > 0 ? `, äts av ${uppraknade(atarnamn)}` : ''}. Ändra vem som bär och äter ${ratt.namn}`}
+        />
+      )}
       <div className="flex items-center justify-between gap-1">
         <p className="py-2 text-xs text-muted-foreground tabular-nums">
           {portion.kcal > 0 ? (
@@ -218,6 +266,33 @@ function Rattrad({
         )}
       </div>
     </li>
+  )
+}
+
+/**
+ * Vem som bär rätten, med initialen i bärarens färg, och vilka som äter den när det inte är alla. För ägare och
+ * redigerare är raden en knapp som öppnar valet.
+ */
+function Vem({ barare, farg, atare, onAndra, etikett }: { barare: string | undefined; farg: string | undefined; atare: readonly string[]; onAndra?: () => void; etikett: string }) {
+  const innehall = (
+    <>
+      {barare ? <Initial namn={barare} farg={farg} className="size-6 text-xs" /> : <span aria-hidden className="size-6 shrink-0 rounded-full border-2 border-dashed border-muted-foreground/50" />}
+      <span className="min-w-0 break-words">
+        {barare ? `${barare} bär` : 'Ingen bär än'}
+        {atare.length > 0 && <span className="block text-muted-foreground">Äts av {uppraknade(atare)}</span>}
+      </span>
+    </>
+  )
+  if (!onAndra) return <p className="flex items-center gap-2 py-1 pr-3 text-xs">{innehall}</p>
+  return (
+    <button
+      type="button"
+      onClick={onAndra}
+      aria-label={etikett}
+      className="-ml-1.5 my-1 flex min-h-11 w-[calc(100%-0.375rem)] items-center gap-2 rounded-knapp px-1.5 text-left text-xs hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+    >
+      {innehall}
+    </button>
   )
 }
 

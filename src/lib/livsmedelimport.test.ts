@@ -93,7 +93,16 @@ describe('CSV:n', () => {
 describe('livsmedelSeedSql', () => {
   it('uppdaterar ett livsmedel som redan finns och skriver apostrofer rätt', () => {
     const sql = livsmedelSeedSql([radFranApi({ nummer: 1, namn: "Kock's gryta" }, naring, [])], 'supabase/katalog/livsmedel/livsmedel.csv')
-    expect(sql).toContain(`(1, 'Kock''s gryta', null, null, 357, 12, 1.7, 70.1, 3, 2.5, 0.01, 0, null)`)
+    // Utan grupp är allergenerna okända.
+    expect(sql).toContain(`(1, 'Kock''s gryta', null, null, 357, 12, 1.7, 70.1, 3, 2.5, 0.01, 0, null, null)`)
     expect(sql).toContain('on conflict (nummer) do update set')
+    expect(sql).toContain('  allergener = excluded.allergener')
+  })
+
+  it('skriver allergenerna för enkla råvaror som en lista, och en tom lista när det inte finns några', () => {
+    const rad = (nummer: number, namn: string, grupp: string) => ({ ...radFranApi({ nummer, namn }, naring, []), grupp })
+    const sql = livsmedelSeedSql([rad(2, 'Vetemjöl', 'Cerealier eller cerealielika mjölprodukter och derivat'), rad(3, 'Linser torkade', 'Baljväxter')], 'x.csv')
+    expect(sql).toContain("0, null, array['gluten'])")
+    expect(sql).toContain("0, null, '{}')")
   })
 })

@@ -81,3 +81,24 @@ När man skriver en ingrediens söker databasen på det längsta ordet, och `ran
 - Vid lika träff kommer torrt före rått före okänt före tillagat, och kortare namn först.
 
 Varor som redan finns i turen eller i ens recept föreslås före livsmedlen. Väljer man ett livsmedel kopieras namnet, kcal och protein in i raden. Värdena går att ändra, och raden pekar inte på livsmedlet efteråt.
+
+## Allergener
+
+Varje livsmedel har kolumnen `allergener` med EU:s 14 allergener, som påsarna i matkatalogen. Saknas värdet (null) är livsmedlet okänt, och okänt räknas aldrig som att livsmedlet passar. En tom lista betyder att det inte innehåller någon av de 14. Livsmedelsverkets databas har inga allergener, så de räknas ut med regler i `allergenerForLivsmedel` i `src/lib/livsmedelsgrupper.ts` när seed-migreringen skapas. Ändra reglerna där och här samtidigt, och skapa en ny seed-migrering.
+
+Reglerna gäller bara enkla råvaror. Allt annat är okänt.
+
+- **Enkla grupper:** Mjölk, Fil och yoghurt, Grädde, Smör, Hårdost, Lagrad ost, Halvhård ost, Mjukost, Ost, Färskost, Övriga ostprodukter, Mejeriprodukter, Övriga mjölkprodukter, Ägg, Fisk, Fisk och skaldjur, Rött kött, Fågel, Innanmat och inälvsmat, Andra djurfetter, Grönsaker och svamp, Grönsaker, rotfrukter och svamp, Frukt och bär, Potatis och stärkelserika rötter, Baljväxter, Nöt, frö eller kärna, Ris eller annat spannmål, Spannmål och spannmålsprodukter, Cerealier eller cerealielika mjölprodukter och derivat, Pasta och liknande produkter, Vegetabiliskt fett och olja, Krydda, Socker, honung eller sirap och Vatten.
+- **Sammansatt trots gruppen:** namn med till exempel panerad, pastej, korv, pudding, bröd, gröt, sås, soppa, margarin eller choklad, och namn med "m." följt av något annat än salt, ben, skinn, skal, svål, lag, vatten, olja, fett eller ägg ("Kyckling m. bacon jordnötter"), är okända.
+- **Mejerigrupperna** innehåller alltid mjölk, även laktosfria, eftersom laktosfritt fortfarande är mjölkprotein. **Ägg** innehåller ägg.
+- **Fisk och skaldjur:** räkor, krabba, hummer och kräftor är kräftdjur. Musslor, ostron, bläckfisk och sniglar är blötdjur. Övrigt i grupperna Fisk och Fisk och skaldjur är fisk. Skaldjur räknas inte som fisk.
+- **Gluten:** vete (inte bovete), råg, korn (spannmålet, inte "krossade korn" av bovete eller hirs), havre, dinkel, spelt, bulgur, couscous och mannagryn. Pasta innehåller gluten om den inte är gjord på ris, majs eller baljväxter, är glasnudlar eller kallas glutenfri.
+- **Ur namnet:** jordnötter, nötter (mandel, hasselnöt, valnöt, cashew, pekan, para, pistage, macadamia, men inte mandelpotatis), sesam, soja, lupin, selleri (inte sellerikål), senap och ägg (som eget ord eller början på ett ord, inte "lägg").
+- **Torkad frukt** är okänd, eftersom den kan innehålla svaveldioxid.
+- **Oljor:** raffinerade oljor räknas inte som allergener, som i EU:s undantag. Sesamolja och jordnötsolja gör det.
+
+Vid den första körningen 2026-11-24 fick 255 livsmedel allergener, 579 inga och 1 771 okända. Förslagen visar "Innehåller gluten" och så vidare under namnet när allergenerna är kända.
+
+## Råvaror före maträtter
+
+När man skriver en ingrediens kommer råvaror före färdiga rätter, eftersom man oftast skriver in det man själv köper och lagar. Grupperna som räknas som maträtter står i `MATRATTSGRUPPER` i `src/lib/livsmedelsgrupper.ts`: Kötträtt, Sås i maträtt, Cerealierätter (klimp, risotto, pannkakor med fyllning, couscous, smörgåsar), Fisk- och skaldjursrätt, Grönsaksrätter, Potatisrätter, Soppa, Matpaj eller pizza, Baljväxträtter, Pastarätter, Färdigsallad, Äggrätter, Svamprätter, Smörgåsar, Maträtter och efterrätter, Livsmedelsrätter och ingredienser, Pannkaka eller våffla och Dessert.

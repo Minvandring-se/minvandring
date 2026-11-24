@@ -6,7 +6,7 @@ import type { Recept } from '@/lib/typer'
 /** Ens egna recept. null medan de hämtas, 'fel' om det inte gick. */
 export type Receptlage = Recept[] | null | 'fel'
 
-const KOLUMNER = 'id, namn, rader:receptrader(id, recept_id, vara, gram_per_portion, kcal_per_100g, protein_per_100g, sortering)'
+const KOLUMNER = 'id, namn, rader:receptrader(id, recept_id, vara, mangd, enhet, gram_per_portion, kcal_per_100g, protein_per_100g, sortering)'
 
 async function hamtaRecept(): Promise<Recept[] | 'fel'> {
   if (!supabase) return 'fel'
@@ -15,7 +15,8 @@ async function hamtaRecept(): Promise<Recept[] | 'fel'> {
   if (error) return 'fel'
   return (data as unknown as Recept[]).map((r) => ({
     ...r,
-    rader: r.rader.map((x) => ({ ...x, protein_per_100g: x.protein_per_100g === null ? null : Number(x.protein_per_100g) })),
+    // Postgres numeric kommer som text.
+    rader: r.rader.map((x) => ({ ...x, mangd: x.mangd === null ? null : Number(x.mangd), protein_per_100g: x.protein_per_100g === null ? null : Number(x.protein_per_100g) })),
   }))
 }
 

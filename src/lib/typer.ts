@@ -1,3 +1,4 @@
+import type { Enhet } from './handla'
 import type { Allergen } from './kost'
 import type { Roll } from './roller'
 import type { Typ } from './vikt'
@@ -89,6 +90,43 @@ export interface DeltagareRad {
   user_id: string | null
 }
 
+/** En rad i turens packlista, som den står i packrader. */
+export interface PackradRad {
+  id: string
+  tur_id: string
+  namn: string
+  /** Förrådets kategorinyckel, till exempel sova. */
+  kategori: string
+  underkategori: string | null
+  /** Produkten i katalogen raden kom från. */
+  produkt_id: string | null
+  antal: number
+  vikt_g: number | null
+  typ: Typ
+  /** Deltagaren som bär raden. Tomt när alla = true. */
+  bars_av: string | null
+  /** Varje person har en egen, till exempel sovsäck. */
+  alla: boolean
+  /** En person bär raden åt gruppen. */
+  gemensam: boolean
+  /** Svaret att alla rader av samma sort behövs, så att appen inte frågar igen. */
+  dubblett_ok: boolean
+  med: boolean
+  notering: string | null
+  sortering: number
+}
+
+/** En deltagares bock på en packrad och, på rader som alla ska ha, hens egen modell. */
+export interface PackstatusRad {
+  packrad_id: string
+  deltagare_id: string
+  tur_id: string
+  packad: boolean
+  namn: string | null
+  vikt_g: number | null
+  produkt_id: string | null
+}
+
 /** Måltiderna i matplanen, som de står i maltider.maltid. */
 export type Maltid = 'frukost' | 'lunch' | 'middag' | 'mellanmal'
 
@@ -138,7 +176,11 @@ export interface Receptrad {
   id: string
   recept_id: string
   vara: string
-  gram_per_portion: number
+  /** Mängd och enhet som receptet skrevs med, till exempel 2 dl. Tomt för det som bara ska med, som salt. */
+  mangd: number | null
+  enhet: Enhet | null
+  /** Vikten som energin räknas med. Räknas ut för g och kg, frivillig för andra enheter. */
+  gram_per_portion: number | null
   kcal_per_100g: number | null
   protein_per_100g: number | null
   sortering: number
@@ -172,13 +214,26 @@ export interface Vara {
   varifran: 'kopa' | 'hemifran' | null
   ansvarig: string | null
   klart: boolean
+  /** Butiksavdelningen. Tom: appen gissar utifrån namnet (avdelningFor i handla.ts). */
+  avdelning?: string | null
 }
 
 export interface Ingrediens {
   id: string
   ratt_id: string
   vara_id: string
-  gram_per_portion: number
+  /** Mängd och enhet som rätten skrevs med. Tomt för det som bara ska med, som salt. */
+  mangd: number | null
+  enhet: Enhet | null
+  /** Vikten som energin räknas med. Räknas ut för g och kg, frivillig för andra enheter. */
+  gram_per_portion: number | null
+}
+
+/** En bock i inköpslistan: deltagaren har köpt varan eller påsen (en rätt ur matkatalogen). */
+export interface InkopKlart {
+  deltagare_id: string
+  vara_id: string | null
+  ratt_id: string | null
 }
 
 /** En rätt i en måltid en viss dag. En måltid kan ha flera rätter. */
@@ -188,6 +243,14 @@ export interface Maltidsrad {
   maltid: Maltid
   ratt_id: string
   sortering: number
+  /** Deltagaren som bär raden. Tomt när ingen gör det. */
+  bars_av?: string | null
+}
+
+/** En som äter en rad i matplanen, som raden ser ut i maltid_atare. Inga rader för en måltid betyder att alla äter. */
+export interface Matatare {
+  maltid_id: string
+  deltagare_id: string
 }
 
 /** En deltagares kostbehov, som raden ser ut i kostbehov. */
@@ -221,4 +284,6 @@ export interface Livsmedel {
   vatten_per_100g: number | null
   /** Datumet för livsmedlets version hos Livsmedelsverket (ÅÅÅÅ-MM-DD). */
   version: string | null
+  /** EU:s 14 allergener för enkla råvaror. null: okänt. Tom: ingen av dem. */
+  allergener: Allergen[] | null
 }
