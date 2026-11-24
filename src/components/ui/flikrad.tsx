@@ -16,8 +16,9 @@ export interface Flik {
 }
 
 /**
- * Flikar som byter del av en sida: turens delar, Matplaneringens delar och förrådets delar. I mobil runda knappar i en
- * rad som går att svepa, skrollad fram till den aktiva fliken. På dator flikar med en rostfärgad linje under den aktiva.
+ * Flikar som byter del av en sida: turens delar, Matplaneringens delar och förrådets delar. Text med en rostfärgad
+ * linje under den aktiva fliken, på en tunn linje över hela raden. I mobil går raden att svepa och skrollas fram till
+ * den aktiva fliken.
  */
 export function Flikrad({
   etikett,
@@ -37,11 +38,12 @@ export function Flikrad({
     <nav
       ref={rad}
       aria-label={etikett}
-      className="relative -mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:overflow-visible md:border-b md:border-border md:px-0"
+      className="relative -mx-4 overflow-x-auto px-4 [scrollbar-width:none] sm:-mx-6 sm:px-6 md:mx-0 md:overflow-visible md:px-0"
     >
-      <ul className="flex gap-2 py-1 md:-mb-px md:flex-wrap md:gap-1 md:py-0">
+      {/* Linjen ligger på listan och fliken lägger sin linje över den, så att inget sticker ut under raden som skrollar. */}
+      <ul className="flex w-max min-w-full gap-2 border-b border-border md:w-auto md:flex-wrap md:gap-x-3">
         {flikar.map((f) => (
-          <li key={f.nyckel} className="shrink-0">
+          <li key={f.nyckel} className="-mb-px shrink-0">
             {f.till ? (
               <Link
                 to={f.till}
@@ -49,11 +51,8 @@ export function Flikrad({
                 aria-current={aktiv === f.nyckel ? 'page' : undefined}
                 className={cn(
                   bas,
-                  // Fokusringen ligger utanför knappen i mobil, så att den syns även på den mörka aktiva fliken.
-                  'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring md:focus-visible:-outline-offset-2',
-                  aktiv === f.nyckel
-                    ? 'border-primary bg-primary font-semibold text-primary-foreground md:border-accent md:bg-transparent md:text-foreground'
-                    : 'border-border bg-card text-muted-foreground hover:text-foreground md:border-transparent md:bg-transparent',
+                  'focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+                  aktiv === f.nyckel ? 'border-accent font-semibold text-foreground' : 'border-transparent text-muted-foreground hover:text-foreground',
                 )}
               >
                 <Innehall flik={f} />
@@ -61,7 +60,7 @@ export function Flikrad({
               </Link>
             ) : (
               // En del som inte finns än. Ingen länk, eftersom den inte går att öppna.
-              <span className={cn(bas, 'border-border bg-card text-muted-foreground md:border-transparent md:bg-transparent')}>
+              <span className={cn(bas, 'border-transparent text-muted-foreground')}>
                 <Innehall flik={f} />
                 <Snart />
               </span>
@@ -74,7 +73,7 @@ export function Flikrad({
 }
 
 const bas =
-  'flex min-h-11 items-center gap-2 rounded-full border px-4 text-sm whitespace-nowrap transition-colors md:rounded-none md:border-0 md:border-b-[3px] md:px-3.5 md:text-[0.9375rem]'
+  'flex min-h-12 min-w-11 items-center justify-center gap-2 border-b-2 px-2 text-[0.9375rem] whitespace-nowrap transition-colors'
 
 function Innehall({ flik }: { flik: Flik }): ReactNode {
   return (
