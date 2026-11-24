@@ -1,9 +1,11 @@
 import { Plus, X } from 'lucide-react'
 import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
+import { IngrediensSok } from '@/components/mat/IngrediensSok'
 import { Input } from '@/components/ui/input'
 import { formateraVikt } from '@/lib/forrad'
 import { formateraKcal, MAX_RATTNAMN, naringForRader, tolkaRattformular, type Ingrediensfalt, type TolkadIngrediens } from '@/lib/mat'
+import { faltFranLivsmedel } from '@/lib/livsmedel'
 import { raderTillFalt } from '@/lib/recept'
 import type { Vara } from '@/lib/typer'
 
@@ -148,22 +150,25 @@ export function EgenRattFormular({
 
       <fieldset className="space-y-3">
         <legend className="text-sm font-medium">Ingredienser per portion</legend>
-        <datalist id={`${id}-varor`}>
-          {varor.map((v) => (
-            <option key={v.namn} value={v.namn} />
-          ))}
-        </datalist>
         {falt.map((rad, i) => (
-          <div key={i} className="space-y-2 rounded-md border border-border p-3">
-            <div className="flex items-end gap-2">
+          <div key={i} className="space-y-2 rounded-ruta border border-border p-3">
+            <div className="flex items-start gap-2">
               <div className="min-w-0 flex-1 space-y-1">
                 <label htmlFor={`${id}-vara-${i}`} className="text-sm font-medium">
                   Ingrediens {i + 1}
                 </label>
-                <Input id={`${id}-vara-${i}`} list={`${id}-varor`} value={rad.vara} onChange={(e) => andra(i, { vara: e.target.value })} />
+                <IngrediensSok
+                  id={`${id}-vara-${i}`}
+                  varde={rad.vara}
+                  varor={varor}
+                  onAndra={(text) => andra(i, { vara: text })}
+                  onValjVara={(v) => andra(i, { ...faltForVara(v), gram: rad.gram })}
+                  // Värdena kopieras och går att ändra. Raden pekar inte på livsmedlet efteråt.
+                  onValjLivsmedel={(l) => andra(i, { vara: l.namn, ...faltFranLivsmedel(l) })}
+                />
               </div>
               {falt.length > 1 && (
-                <Button type="button" variant="ghost" size="ikon" aria-label={`Ta bort ingrediens ${i + 1}`} onClick={() => setFalt((f) => f.filter((_, j) => j !== i))}>
+                <Button type="button" variant="ghost" size="ikon" className="mt-6" aria-label={`Ta bort ingrediens ${i + 1}`} onClick={() => setFalt((f) => f.filter((_, j) => j !== i))}>
                   <X className="size-4" aria-hidden />
                 </Button>
               )}

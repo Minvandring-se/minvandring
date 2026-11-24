@@ -201,3 +201,24 @@ export interface Kostbehov {
   /** När personen samtyckte till att uppgifterna sparas och visas för deltagarna i turen. */
   samtycke_tid: string
 }
+
+/** Om livsmedlet är torrt, rått eller tillagat. Vandrare packar torr vikt, så det ska synas i förslagen. */
+export type Tillstand = 'torr' | 'ra' | 'tillagad'
+
+/** Ett livsmedel som det ligger i tabellen livsmedel. Värdena gäller 100 g, och null betyder att värdet saknas. */
+export interface Livsmedel {
+  nummer: number
+  namn: string
+  grupp: string | null
+  tillstand: Tillstand | null
+  kcal_per_100g: number | null
+  protein_per_100g: number | null
+  fett_per_100g: number | null
+  kolhydrater_per_100g: number | null
+  fiber_per_100g: number | null
+  sockerarter_per_100g: number | null
+  salt_per_100g: number | null
+  vatten_per_100g: number | null
+  /** Datumet för livsmedlets version hos Livsmedelsverket (ÅÅÅÅ-MM-DD). */
+  version: string | null
+}
