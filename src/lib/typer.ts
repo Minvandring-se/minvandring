@@ -89,6 +89,41 @@ export interface DeltagareRad {
   user_id: string | null
 }
 
+/** En rad i turens packlista, som den står i packrader. */
+export interface PackradRad {
+  id: string
+  tur_id: string
+  namn: string
+  /** Förrådets kategorinyckel, till exempel sova. */
+  kategori: string
+  underkategori: string | null
+  /** Produkten i katalogen raden kom från. */
+  produkt_id: string | null
+  antal: number
+  vikt_g: number | null
+  typ: Typ
+  /** Deltagaren som bär raden. Tomt när alla = true. */
+  bars_av: string | null
+  /** Varje person har en egen, till exempel sovsäck. */
+  alla: boolean
+  /** En person bär raden åt gruppen. */
+  gemensam: boolean
+  med: boolean
+  notering: string | null
+  sortering: number
+}
+
+/** En deltagares bock på en packrad och, på rader som alla ska ha, hens egen modell. */
+export interface PackstatusRad {
+  packrad_id: string
+  deltagare_id: string
+  tur_id: string
+  packad: boolean
+  namn: string | null
+  vikt_g: number | null
+  produkt_id: string | null
+}
+
 /** Måltiderna i matplanen, som de står i maltider.maltid. */
 export type Maltid = 'frukost' | 'lunch' | 'middag' | 'mellanmal'
 

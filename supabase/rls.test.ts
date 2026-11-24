@@ -324,11 +324,11 @@ describe('roller', () => {
 
   it('viewer kan bocka av sin egen packning men inte någon annans', async () => {
     await som(C, (tx) =>
-      tx.query('insert into public.packstatus (packrad_id, deltagare_id, packad) values ($1, $2, true)', [packrad, cillasDeltagare]),
+      tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id, packad) values ($1, $2, $3, true)', [packrad, cillasDeltagare, tur]),
     )
     await forvantaFel(
       som(C, (tx) =>
-        tx.query('insert into public.packstatus (packrad_id, deltagare_id, packad) values ($1, $2, true)', [packrad, annasDeltagare]),
+        tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id, packad) values ($1, $2, $3, true)', [packrad, annasDeltagare, tur]),
       ),
     )
   })
@@ -778,7 +778,7 @@ describe('ta över en person utan konto', () => {
       tx.query<{ id: string }>(`insert into public.packrader (tur_id, namn, bars_av) values ($1, 'Tält', $2) returning id`, [tur, pichi]),
     )
     packrad = p.rows[0].id
-    await som(A, (tx) => tx.query('insert into public.packstatus (packrad_id, deltagare_id, packad) values ($1, $2, true)', [packrad, pichi]))
+    await som(A, (tx) => tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id, packad) values ($1, $2, $3, true)', [packrad, pichi, tur]))
     await som(A, (tx) => tx.query('update public.deltagare set max_barvikt_kg = 14.5 where id = $1', [pichi]))
   })
 
@@ -2358,5 +2358,256 @@ describe('egna recept', () => {
     await db.query('delete from auth.users where id = $1', [XENIA])
     expect((await db.query('select 1 from public.recept where user_id = $1', [XENIA])).rows).toHaveLength(0)
     expect((await db.query('select 1 from public.receptrader where user_id = $1', [XENIA])).rows).toHaveLength(0)
+  })
+})
+
+describe('packlistan', () => {
+  // Egna användare, så att försöken att gå med i de andra testerna inte räknas mot spärren här.
+  const PA = '00000000-0000-0000-0000-0000000000b1'
+  const PB = '00000000-0000-0000-0000-0000000000b2'
+  const PC = '00000000-0000-0000-0000-0000000000b3'
+  const PD = '00000000-0000-0000-0000-0000000000b4'
+  let tur: string
+  let annanTur: string
+  let anna: string
+  let cilla: string
+  let david: string
+  let annanPerson: string
+  let sovsack: string
+  let talt: string
+
+  const status = (rad: string, deltagare: string) =>
+    db.query<{ packad: boolean; namn: string | null; vikt_g: number | null }>(
+      'select packad, namn, vikt_g from public.packstatus where packrad_id = $1 and deltagare_id = $2',
+      [rad, deltagare],
+    )
+
+  beforeAll(async () => {
+    await db.exec(
+      `insert into auth.users (id, email) values ('${PA}', 'pa@exempel.se'), ('${PB}', 'pb@exempel.se'), ('${PC}', 'pc@exempel.se'), ('${PD}', 'pd@exempel.se');`,
+    )
+    tur = await skapaTur(PA, 'Packtur')
+    const kod = await kodFor(tur)
+    await som(PC, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(PD, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const d = await db.query<{ id: string; user_id: string }>('select id, user_id from public.deltagare where tur_id = $1', [tur])
+    anna = d.rows.find((r) => r.user_id === PA)!.id
+    cilla = d.rows.find((r) => r.user_id === PC)!.id
+    david = d.rows.find((r) => r.user_id === PD)!.id
+    await som(PA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [david]))
+
+    annanTur = await skapaTur(PB, 'Någon annans tur')
+    const p = await som(PB, (tx) =>
+      tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn, typ) values ($1, 'Okänd', 'person') returning id`, [annanTur]),
+    )
+    annanPerson = p.rows[0].id
+
+    const r = await som(PA, (tx) =>
+      tx.query<{ id: string; namn: string }>(
+        `insert into public.packrader (tur_id, namn, kategori, underkategori, alla) values ($1, 'Sovsäck', 'sova', 'sovsack', true)
+         returning id, namn`,
+        [tur],
+      ),
+    )
+    sovsack = r.rows[0].id
+    const t = await som(PC, (tx) =>
+      tx.query<{ id: string }>(
+        `insert into public.packrader (tur_id, namn, kategori, vikt_g, gemensam, bars_av) values ($1, 'Tält', 'talt', 1800, true, $2) returning id`,
+        [tur, anna],
+      ),
+    )
+    talt = t.rows[0].id
+  })
+
+  it('en rad har förrådets kategori och en underkategori som hör till den', async () => {
+    const r = await db.query<{ kategori: string }>(`select kategori from public.packrader where id = $1`, [sovsack])
+    expect(r.rows[0].kategori).toBe('sova')
+    await forvantaFel(som(PA, (tx) => tx.query(`insert into public.packrader (tur_id, namn, kategori) values ($1, 'Grej', 'Övrigt')`, [tur])))
+    await forvantaFel(
+      som(PA, (tx) => tx.query(`insert into public.packrader (tur_id, namn, kategori, underkategori) values ($1, 'Grej', 'talt', 'sovsack')`, [tur])),
+    )
+    const utan = await som(PA, (tx) => tx.query<{ kategori: string }>(`insert into public.packrader (tur_id, namn) values ($1, 'Grej') returning kategori`, [tur]))
+    expect(utan.rows[0].kategori).toBe('ovrigt')
+  })
+
+  it('en rad kan inte både vara gemensam och något som alla ska ha, och namnet får inte vara tomt', async () => {
+    await forvantaFel(som(PA, (tx) => tx.query(`insert into public.packrader (tur_id, namn, gemensam, alla) values ($1, 'Kåsa', true, true)`, [tur])))
+    await forvantaFel(som(PA, (tx) => tx.query(`insert into public.packrader (tur_id, namn) values ($1, '  ')`, [tur])))
+  })
+
+  it('den som bär en rad måste vara med i turen', async () => {
+    await forvantaFel(
+      som(PA, (tx) => tx.query(`insert into public.packrader (tur_id, namn, bars_av) values ($1, 'Kök', $2)`, [tur, annanPerson])),
+    )
+    await forvantaFel(som(PA, (tx) => tx.query(`update public.packrader set bars_av = $2 where id = $1`, [talt, annanPerson])))
+  })
+
+  it('en bock måste gälla en packrad och en deltagare i samma tur', async () => {
+    await forvantaFel(
+      som(PA, (tx) =>
+        tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id) values ($1, $2, $3)', [sovsack, annanPerson, tur]),
+      ),
+    )
+    // Fel tur på raden går inte heller, även om man har rätt att ändra den turen.
+    await forvantaFel(
+      som(PB, (tx) =>
+        tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id) values ($1, $2, $3)', [sovsack, annanPerson, annanTur]),
+      ),
+    )
+  })
+
+  it('en läsare väljer sin egen sovsäck och bockar av den, men inte någon annans', async () => {
+    await som(PD, (tx) =>
+      tx.query(`insert into public.packstatus (packrad_id, deltagare_id, tur_id, namn, vikt_g) values ($1, $2, $3, 'Mammut Nordic', 980)`, [
+        sovsack,
+        david,
+        tur,
+      ]),
+    )
+    await som(PD, (tx) => tx.query('update public.packstatus set packad = true where packrad_id = $1 and deltagare_id = $2', [sovsack, david]))
+    expect((await status(sovsack, david)).rows[0]).toEqual({ packad: true, namn: 'Mammut Nordic', vikt_g: 980 })
+
+    await forvantaFel(
+      som(PD, (tx) =>
+        tx.query(`insert into public.packstatus (packrad_id, deltagare_id, tur_id, namn) values ($1, $2, $3, 'Smygbyte')`, [sovsack, cilla, tur]),
+      ),
+    )
+    await som(PA, (tx) => tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id) values ($1, $2, $3)', [sovsack, cilla, tur]))
+    const r = await som(PD, (tx) => tx.query(`update public.packstatus set vikt_g = 1 where packrad_id = $1 and deltagare_id = $2`, [sovsack, cilla]))
+    expect(r.affectedRows).toBe(0)
+  })
+
+  it('en läsare kan inte flytta sin bock till någon annan', async () => {
+    await expect(
+      som(PD, (tx) => tx.query('update public.packstatus set deltagare_id = $3 where packrad_id = $1 and deltagare_id = $2', [sovsack, david, anna])),
+    ).rejects.toThrow(/row-level security/)
+    expect((await status(sovsack, david)).rows).toHaveLength(1)
+  })
+
+  it('en läsare kan inte flytta sin bock till en packrad eller tur där hen inte hör hemma', async () => {
+    // David är också med i en annan tur, med en egen packrad där.
+    const egenTur = await skapaTur(PD, 'Davids egen tur')
+    const r = await som(PD, (tx) => tx.query<{ id: string }>(`insert into public.packrader (tur_id, namn) values ($1, 'Kåsa') returning id`, [egenTur]))
+    await forvantaFel(
+      som(PD, (tx) =>
+        tx.query('update public.packstatus set packrad_id = $3, tur_id = $4 where packrad_id = $1 and deltagare_id = $2', [sovsack, david, r.rows[0].id, egenTur]),
+      ),
+    )
+    await forvantaFel(
+      som(PD, (tx) => tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id) values ($1, $2, $3)', [r.rows[0].id, david, egenTur])),
+    )
+    expect((await status(sovsack, david)).rows).toHaveLength(1)
+  })
+
+  it('en läsare tar bort sin egen bock men inte någon annans', async () => {
+    await som(PD, (tx) => tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id) values ($1, $2, $3)', [talt, david, tur]))
+    const egen = await som(PD, (tx) => tx.query('delete from public.packstatus where packrad_id = $1 and deltagare_id = $2', [talt, david]))
+    expect(egen.affectedRows).toBe(1)
+    const annans = await som(PD, (tx) => tx.query('delete from public.packstatus where packrad_id = $1 and deltagare_id = $2', [sovsack, cilla]))
+    expect(annans.affectedRows).toBe(0)
+  })
+
+  it('en läsare kan inte ändra packraderna', async () => {
+    const r = await som(PD, (tx) => tx.query(`update public.packrader set vikt_g = 1 where id = $1`, [talt]))
+    expect(r.affectedRows).toBe(0)
+    await forvantaFel(som(PD, (tx) => tx.query(`insert into public.packrader (tur_id, namn) values ($1, 'Läsarens sak')`, [tur])))
+  })
+
+  it('en redigerare ändrar allas rader och bockar', async () => {
+    await som(PC, (tx) => tx.query(`update public.packrader set bars_av = $2 where id = $1`, [talt, cilla]))
+    await som(PC, (tx) => tx.query(`update public.packstatus set namn = 'Lånad sovsäck', vikt_g = 1200 where packrad_id = $1 and deltagare_id = $2`, [sovsack, david]))
+    expect((await status(sovsack, david)).rows[0]).toMatchObject({ namn: 'Lånad sovsäck', vikt_g: 1200 })
+  })
+
+  it('den som inte är med i turen och den som inte är inloggad ser ingenting', async () => {
+    const rader = await som(PB, (tx) => tx.query('select id from public.packrader where tur_id = $1', [tur]))
+    expect(rader.rows).toHaveLength(0)
+    const bockar = await som(PB, (tx) => tx.query('select packrad_id from public.packstatus where tur_id = $1', [tur]))
+    expect(bockar.rows).toHaveLength(0)
+    const andrat = await som(PB, (tx) => tx.query(`update public.packstatus set packad = false where tur_id = $1`, [tur]))
+    expect(andrat.affectedRows).toBe(0)
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.packrader')))
+    await forvantaFel(somAnon((tx) => tx.query('select packrad_id from public.packstatus')))
+  })
+
+  it('en borttagen deltagare förlorar åtkomsten, och hens bockar försvinner', async () => {
+    await som(PA, (tx) => tx.query('delete from public.deltagare where id = $1', [david]))
+    const rader = await som(PD, (tx) => tx.query('select id from public.packrader where tur_id = $1', [tur]))
+    expect(rader.rows).toHaveLength(0)
+    expect((await status(sovsack, david)).rows).toHaveLength(0)
+    await forvantaFel(som(PD, (tx) => tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id) values ($1, $2, $3)', [sovsack, david, tur])))
+  })
+
+  it('när den som bär en rad tas bort finns raden kvar utan bärare', async () => {
+    await som(PA, (tx) => tx.query('delete from public.deltagare where id = $1', [cilla]))
+    const r = await db.query<{ bars_av: string | null; tur_id: string }>('select bars_av, tur_id from public.packrader where id = $1', [talt])
+    expect(r.rows[0]).toEqual({ bars_av: null, tur_id: tur })
+  })
+
+  it('när en packrad tas bort försvinner dess bockar, och turen går att radera med allt i den', async () => {
+    await som(PA, (tx) => tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id, packad) values ($1, $2, $3, true)', [talt, anna, tur]))
+    await som(PA, (tx) => tx.query('delete from public.packrader where id = $1', [talt]))
+    expect((await status(talt, anna)).rows).toHaveLength(0)
+
+    const k = await som(PA, (tx) => tx.query<{ id: string }>(`insert into public.packrader (tur_id, namn, bars_av) values ($1, 'Kök', $2) returning id`, [tur, anna]))
+    await som(PA, (tx) => tx.query('insert into public.packstatus (packrad_id, deltagare_id, tur_id) values ($1, $2, $3)', [k.rows[0].id, anna, tur]))
+    await som(PA, (tx) => tx.query('delete from public.turer where id = $1', [tur]))
+    const kvar = await db.query('select id from public.packrader where tur_id = $1', [tur])
+    expect(kvar.rows).toHaveLength(0)
+    const bockar = await db.query('select packrad_id from public.packstatus where tur_id = $1', [tur])
+    expect(bockar.rows).toHaveLength(0)
+  })
+})
+
+describe('packlistans migrering mot befintliga rader', () => {
+  const packlista = fs.readdirSync(path.join(import.meta.dirname, 'migrations')).find((f) => f.endsWith('_packlista.sql'))!
+  let gammal: PGlite
+  const T1 = '00000000-0000-0000-0000-0000000000d1'
+  const T2 = '00000000-0000-0000-0000-0000000000d2'
+
+  const rad = async (namn: string) =>
+    (await gammal.query<{ kategori: string; bars_av: string | null; vikt_g: number | null }>(
+      'select kategori, bars_av, vikt_g from public.packrader where namn = $1',
+      [namn],
+    )).rows[0]
+
+  beforeAll(async () => {
+    gammal = await nyDatabas((f) => f < packlista)
+    // Rader som det gamla schemat släppte igenom: kategorier som fri text, en bärare och en bock från en annan tur,
+    // ett tomt namn och en orimlig vikt.
+    await gammal.exec(`
+      insert into auth.users (id, email) values ('${A}', 'anna@exempel.se');
+      insert into public.turer (id, namn, skapad_av) values ('${T1}', 'Tur ett', '${A}'), ('${T2}', 'Tur två', '${A}');
+      insert into public.packrader (tur_id, namn, kategori, vikt_g) values
+        ('${T1}', 'Sovsäck', 'Sova', 900),
+        ('${T1}', 'Kåsa', 'kok', 50),
+        ('${T1}', 'Tält', 'Tält och vindskydd', 1800),
+        ('${T1}', 'Grej', 'Skräp', 200000),
+        ('${T1}', '   ', 'Övrigt', null);
+      insert into public.packrader (tur_id, namn, bars_av) values
+        ('${T1}', 'Kök', (select id from public.deltagare where tur_id = '${T2}'));
+      insert into public.packstatus (packrad_id, deltagare_id, packad) values
+        ((select id from public.packrader where namn = 'Sovsäck'), (select id from public.deltagare where tur_id = '${T1}'), true),
+        ((select id from public.packrader where namn = 'Kåsa'), (select id from public.deltagare where tur_id = '${T2}'), true);
+    `)
+    await korMigreringar(gammal, (f) => f >= packlista)
+  })
+
+  it('behåller kategorier skrivna som i förrådet och gör resten till Övrigt', async () => {
+    expect((await rad('Sovsäck')).kategori).toBe('sova')
+    expect((await rad('Kåsa')).kategori).toBe('kok')
+    expect((await rad('Tält')).kategori).toBe('talt')
+    expect((await rad('Grej')).kategori).toBe('ovrigt')
+  })
+
+  it('rättar tomma namn och orimliga vikter i stället för att stoppa', async () => {
+    expect(await rad('Namnlös')).toMatchObject({ kategori: 'ovrigt' })
+    expect((await rad('Grej')).vikt_g).toBeNull()
+  })
+
+  it('tar bort bärare och bockar från en annan tur, och ger bockarna turen', async () => {
+    expect((await rad('Kök')).bars_av).toBeNull()
+    const bockar = await gammal.query<{ tur_id: string }>('select tur_id from public.packstatus')
+    expect(bockar.rows).toEqual([{ tur_id: T1 }])
   })
 })
