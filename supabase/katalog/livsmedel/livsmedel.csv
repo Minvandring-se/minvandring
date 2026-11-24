@@ -41,8 +41,8 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 59;Hollandaisesås hemlagad;Sås i maträtt;tillagad;516;3;56,7;0,6;0;0,3;1,2;40;2026-06-29
 60;Rhode Islandsås hemlagad;Sås i maträtt;;356;1,8;36,5;6,3;0,4;5,4;1,3;53,2;2026-06-29
 62;Dressing vinägrett fett 65%;Dressing, majonnäs;;586;0,6;65;2,2;0;1;2;30;2026-06-29
-63;Bearnaisesås tillagad frysvara el. pulver;Sås i maträtt;torr;224;2,6;21;6,7;0;3,1;1,3;68;2026-06-29
-64;Hollandaisesås tillagad frysvara el. pulver;Sås i maträtt;torr;232;2,6;22;6,6;0;3,1;1,4;67;2026-06-29
+63;Bearnaisesås tillagad frysvara el. pulver;Sås i maträtt;tillagad;224;2,6;21;6,7;0;3,1;1,3;68;2026-06-29
+64;Hollandaisesås tillagad frysvara el. pulver;Sås i maträtt;tillagad;232;2,6;22;6,6;0;3,1;1,4;67;2026-06-29
 66;Mesost fett ca 30%;Övriga ostprodukter;;460;11;29;39;0;39;0,7;19;2026-06-29
 68;Messmör fett 5% berikad;Övriga ostprodukter;;260;7;5;46;0;48;1,1;37;2026-06-29
 69;Messmör fett 2% berikad;Övriga ostprodukter;;245;7;2;49;0;49;1,4;37;2026-06-29
@@ -374,26 +374,26 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 473;Ärtpurésoppa gröna ärtor tillagad veg.;Baljväxträtter;tillagad;51;1,4;3;3,1;1,2;2;1;88,6;2026-06-29
 478;Gryta kikärtsgryta grönsaksgryta veg.;Grönsaker, rotfrukter och svamp;tillagad;61;2,4;1,9;6,6;3,8;3,8;0,6;84,2;2026-06-30
 479;Gratäng m. grönsaker rotfrukter veg.;Grönsaker och svamp;tillagad;93;3,7;4,4;8,6;1,9;2,9;0,4;80,3;2026-06-30
-480;Grönsakssoppa m. pasta tillagad pulver;Soppa;torr;30;0,9;0,8;4,2;1,1;2,5;1;92;2026-06-29
-481;Löksoppa fransk tillagad pulver m. vatten;Soppa;torr;25;0,4;0,2;5,2;0,2;0,3;0,9;92,9;2026-06-29
+480;Grönsakssoppa m. pasta tillagad pulver;Soppa;tillagad;30;0,9;0,8;4,2;1,1;2,5;1;92;2026-06-29
+481;Löksoppa fransk tillagad pulver m. vatten;Soppa;tillagad;25;0,4;0,2;5,2;0,2;0,3;0,9;92,9;2026-06-29
 482;Grönsakssoppa tillagad klar konserv.;Soppa;tillagad;15;0,6;0,1;2,3;1,5;1,6;1;94,4;2026-06-29
-484;Grönsakssoppa tillagad redd pulver m. vatten mjölk;Soppa;torr;49;1,7;2,2;5,1;1,3;2,4;1;88,3;2026-06-29
-486;Grönsakssoppa tillagad redd pulver;Soppa;torr;45;0,5;2,2;5,3;1,3;0,8;0,9;89,8;2026-06-29
+484;Grönsakssoppa tillagad redd pulver m. vatten mjölk;Soppa;tillagad;49;1,7;2,2;5,1;1,3;2,4;1;88,3;2026-06-29
+486;Grönsakssoppa tillagad redd pulver;Soppa;tillagad;45;0,5;2,2;5,3;1,3;0,8;0,9;89,8;2026-06-29
 487;Gurka inlagd;Grönsaksprodukter;;59;0,7;0,7;11,4;1,8;6,1;2,1;82,8;2026-06-29
 488;Bostongurka;Grönsaksprodukter;;78;1;0,4;16,6;1,8;15,7;1,5;79;2026-06-29
 489;Gurka fermenterad u. lag;Grönsaksprodukter;;9;1;0;1;0,5;0,3;2,1;97,1;2026-06-29
 490;Saltgurka u. lag;Grönsaksprodukter;;15;0,9;0,2;1,4;1,8;0;3,5;92;2026-06-29
 491;Ättiksgurka u. lag;Grönsaksprodukter;;43;0,9;0,3;8,2;1,8;4,5;2,3;88;2026-06-29
 492;Kronärtskocka kokt;Grönsaksprodukter;tillagad;52;2,8;0,2;9,4;0,5;2;0,1;86,5;2026-06-29
-493;Champinjonsoppa tillagad pulver m. vatten mjölk;Soppa;torr;56;1,6;2,6;6,5;0,2;1,8;1;87,8;2026-06-29
+493;Champinjonsoppa tillagad pulver m. vatten mjölk;Soppa;tillagad;56;1,6;2,6;6,5;0,2;1,8;1;87,8;2026-06-29
 494;Champinjonsoppa tillagad redd m. mjölk konserv.;Soppa;tillagad;64;2,2;3,7;5,5;0,2;2,7;1;87;2026-06-29
 495;Majskolv kokt;Grönsaksprodukter;tillagad;100;3,3;1;17,3;3,7;1,7;0,6;74,1;2026-06-29
-496;Blomkålssoppa tillagad pulver m. vatten mjölk;Soppa;torr;51;1,6;2,2;5,9;0,3;1,8;0,9;88,7;2026-06-29
-497;Tomatsoppa tillagad pulver m. vatten;Soppa;torr;32;1;0,8;4,6;1,4;2,6;0,8;91;2026-06-29
+496;Blomkålssoppa tillagad pulver m. vatten mjölk;Soppa;tillagad;51;1,6;2,2;5,9;0,3;1,8;0,9;88,7;2026-06-29
+497;Tomatsoppa tillagad pulver m. vatten;Soppa;tillagad;32;1;0,8;4,6;1,4;2,6;0,8;91;2026-06-29
 498;Tomatsoppa tillagad konserv. m. vatten mjölk;Soppa;tillagad;45;1,2;1,4;6,3;1,1;4,6;1;88,6;2026-06-29
-499;Sparrissoppa tillagad pulver m. vatten mjölk veg.;Soppa;torr;50;1,4;2,3;5,9;0,2;1,9;1;88,8;2026-06-29
+499;Sparrissoppa tillagad pulver m. vatten mjölk veg.;Soppa;tillagad;50;1,4;2,3;5,9;0,2;1,9;1;88,8;2026-06-29
 500;Rödkål konserv.;Grönsaksprodukter;;72;1,5;0,2;15;1,5;15;0;80,2;2026-06-29
-501;Champinjonsås tillagad pulver m. mjölk smör;Sås i maträtt;torr;113;3,6;7,5;7,6;0,8;4,1;1,2;78,9;2026-06-29
+501;Champinjonsås tillagad pulver m. mjölk smör;Sås i maträtt;tillagad;113;3,6;7,5;7,6;0,8;4,1;1,2;78,9;2026-06-29
 502;Grönsaker blandade fermenterade;Grönsaksprodukter;;15;1,2;0,1;1,1;2,5;1,1;1,5;94,5;2026-06-29
 503;Grönsaksjuice fermenterad;Juice och nektar;;22;1,5;0,1;3,5;0,5;2,1;0,2;93,4;2026-06-29
 504;Kåldolmar råa u. sås frysvara;Maträtter och efterrätter;ra;88;5;5;5,2;1,4;2,7;1,1;82;2026-06-29
@@ -576,8 +576,8 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 740;Räkcrêpe m. mellanmjölk vispgrädde fyllning 44% hemlagad;Maträtter och efterrätter;tillagad;149;8;7,8;11,3;0,5;2,4;0,9;71;2026-06-29
 741;Räkcrêpe värmd fyllning 37% frysvara;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;tillagad;175;6,5;8;18,9;0,6;2,8;1,1;64,5;2026-06-29
 742;Champinjoncrêpe m. mellanmjölk vispgrädde veg. hemlagad;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;tillagad;166;6,5;9,9;12,4;0,8;2,3;1;68,9;2026-06-29
-743;Baguette m. salami brieost soltorkad tomat sallad;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;torr;240;9,3;13,4;19,7;1,9;2,9;1,8;53;2026-06-29
-744;Ciabatta m. mozzarella soltorkad tomat sallad;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;torr;191;7,9;5,9;25,1;2,5;2,5;1;57,1;2026-06-29
+743;Baguette m. salami brieost soltorkad tomat sallad;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;;240;9,3;13,4;19,7;1,9;2,9;1,8;53;2026-06-29
+744;Ciabatta m. mozzarella soltorkad tomat sallad;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;;191;7,9;5,9;25,1;2,5;2,5;1;57,1;2026-06-29
 745;Bagel m. rökt lax färskost sallad;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;;212;9;7;26,8;2,4;3,1;1,4;52,9;2026-06-29
 746;Champinjoncrêpe värmd veg. frysvara;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;tillagad;163;5,4;6,8;19;2;2,7;0,9;65,4;2026-06-29
 747;Crêpefyllning m. spenat färskost fetaost skinka;Färskost;tillagad;130;10,3;9,1;1,7;0,6;1,1;2,2;75,4;2026-06-29
@@ -613,7 +613,7 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 779;Baguette grov m. ost skinka sallad lättmajonnäs;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;;184;7,7;4,6;25,9;3,5;3,1;0,8;56,8;2026-06-29
 780;Bagel m. salami färskost sallad oliv;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;;166;5,9;7,5;17,2;2,9;3,2;0,8;65,1;2026-06-29
 781;Sandwich m. räkor ägg sallad majonnäs;Smörgåsar;;295;7,3;19,7;21,6;1,6;2,2;1,2;47,9;2026-06-29
-782;Sandwich m. rökt kalkon färskost soltorkad tomat sallad;Smörgåsar;torr;180;10,3;5,3;21,2;2,5;3,8;1,9;58,2;2026-06-29
+782;Sandwich m. rökt kalkon färskost soltorkad tomat sallad;Smörgåsar;;180;10,3;5,3;21,2;2,5;3,8;1,9;58,2;2026-06-29
 783;Sandwich m. salami färskost sallad;Smörgåsar;;164;9,1;6,4;16,2;2,7;4,6;1,5;63,6;2026-06-29
 784;Tunnbrödsrulle m. pastrami potatis sallad majonnäs;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;;159;5,4;7,8;15,6;2,1;5,7;1;67,3;2026-06-29
 785;Wrap vetetortilla m. ris köttfärs majs ost;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;;142;7,9;3,3;19,3;1,3;2,4;0,8;66,9;2026-06-29
@@ -622,7 +622,7 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 788;Falafel m. pitabröd sallad sesamsås pepperoni;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;;150;5,2;5,7;17,3;4,2;2;1,4;65,5;2026-06-29
 789;Paj m. ost skinka mellanmjölk matlagningsgrädde hemlagad;Matpaj eller pizza;tillagad;286;11,4;19,8;15;2,1;1,2;0,9;50,1;2026-06-29
 792;Wrap vetetortilla m. fetaost oliver sallad vitlöksdressing;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;;175;5,1;7,5;20,1;2,9;0,9;1;62,7;2026-06-29
-793;Matmuffins grov fullkorn m. getost fårost broccoli spenat soltorkade tomater;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;torr;292;9,5;16;26;3,4;3,5;1,8;42,2;2026-06-29
+793;Matmuffins grov fullkorn m. getost fårost broccoli spenat soltorkade tomater;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;;292;9,5;16;26;3,4;3,5;1,8;42,2;2026-06-29
 795;Pizzapålägg m. tomatsås skinka champinjoner hårdost;Grönsaksrätter;tillagad;153;10,8;9,5;5,3;1,6;3,5;1,6;69,4;2026-06-29
 796;Paj m. ost skinka mellanmjölk hemlagad;Matpaj eller pizza;tillagad;237;10;15,8;13,2;1,1;2;1,3;57,9;2026-06-29
 797;Smörgåstårta el. landgång;Cerealierätter t.ex. klimp, risotto, pannkakor med fyllning, couscous, smörgåsar;tillagad;237;8,7;15,5;15,1;1,8;2,5;1,3;57,3;2026-06-29
@@ -670,17 +670,17 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 874;Bondbönor torkade;Baljväxter;torr;318;25;1,7;41,9;16,4;3,5;0;11,9;2026-06-29
 875;Bruna bönor torkade;Baljväxter;torr;317;22;1,5;45,1;16,4;4,6;0,1;11,2;2026-06-29
 877;Kidney bönor torkade;Baljväxter;torr;326;19,9;1,8;48,6;16,6;1,5;0;9,9;2026-06-29
-878;Röda bönor torkade kokta u. salt;Baljväxter;torr;108;7,8;0,5;14,5;6,9;1,5;0;69;2026-06-29
+878;Röda bönor torkade kokta u. salt;Baljväxter;tillagad;108;7,8;0,5;14,5;6,9;1,5;0;69;2026-06-29
 879;Vita bönor torkade;Baljväxter;torr;319;22;1,6;45,7;15,8;4,6;0;11;2026-06-29
-880;Vita bönor torkade kokta u. salt;Baljväxter;torr;108;7,8;0,6;14,2;7;1,5;0;69;2026-06-29
+880;Vita bönor torkade kokta u. salt;Baljväxter;tillagad;108;7,8;0,6;14,2;7;1,5;0;69;2026-06-29
 881;Kikärtor torkade;Baljväxter;torr;331;18,8;5,1;39,6;25,2;1;0,1;8,6;2026-06-29
-883;Mungbönor torkade kokta u. salt;Baljväxter;torr;112;8,6;0,7;14,5;6,1;0,4;0;69,3;2026-06-29
+883;Mungbönor torkade kokta u. salt;Baljväxter;tillagad;112;8,6;0,7;14,5;6,1;0,4;0;69,3;2026-06-29
 884;Linser torkade;Baljväxter;torr;339;24,4;0,8;52,5;10,4;2;0;9,7;2026-06-29
 886;Mungbönor torkade;Baljväxter;torr;322;22,5;1,1;46,1;17;0,5;0;10;2026-06-29
 887;Sojabönor torkade;Baljväxter;torr;410;37,8;19,4;10,2;22,6;2,2;0;5,5;2026-06-29
-888;Sojabönor torkade kokta u. salt;Baljväxter;torr;128;11;5,7;5,8;5;2;0;71;2026-06-29
+888;Sojabönor torkade kokta u. salt;Baljväxter;tillagad;128;11;5,7;5,8;5;2;0;71;2026-06-29
 889;Vignabönor svartögda bönor torkade;Baljväxter;torr;336;23;1,5;52,1;9,4;4,6;0,1;10,5;2026-06-29
-890;Vignabönor svartögda bönor torkade kokta u. salt;Baljväxter;torr;69;5,1;0,3;9,1;4,7;2,2;0;80;2026-06-29
+890;Vignabönor svartögda bönor torkade kokta u. salt;Baljväxter;tillagad;69;5,1;0,3;9,1;4,7;2,2;0;80;2026-06-29
 891;Gröna el. gula ärtor torkade;Grönsaker och svamp;torr;317;21,5;1;49,2;10,7;2,1;0;15;2026-06-29
 897;Ärtsoppa m. fläsk hemlagad;Soppa;tillagad;85;6,4;2,1;8,9;2,3;0,8;0,7;79;2026-06-29
 898;Gryta chili con carne;Baljväxträtter;tillagad;103;7,5;3,9;7,8;3,3;2,1;0,9;75,9;2026-06-29
@@ -932,8 +932,8 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 1203;Hälleflundra vild rå;Fisk;ra;139;15,5;8,6;0;0;0;0,2;75;2026-06-29
 1206;Kycklingsoppa thailändsk;Soppa;tillagad;70;7,8;3,5;1,5;0,6;0,5;0,5;85,8;2026-06-29
 1207;Kyckling nugget friterad tillagad på restaurang;Kötträtt;tillagad;221;16,8;10,4;14,2;1,4;0,3;1,2;55,3;2026-06-29
-1208;Kycklingsoppa tillagad redd pulver m. vatten mjölk;Soppa;torr;51;1,9;2,4;5,1;1;2;1,2;88,3;2026-06-29
-1209;Kycklingsoppa tillagad redd pulver m. vatten;Soppa;torr;40;0,6;1,3;5,8;1;0,5;1;90,1;2026-06-29
+1208;Kycklingsoppa tillagad redd pulver m. vatten mjölk;Soppa;tillagad;51;1,9;2,4;5,1;1;2;1,2;88,3;2026-06-29
+1209;Kycklingsoppa tillagad redd pulver m. vatten;Soppa;tillagad;40;0,6;1,3;5,8;1;0,5;1;90,1;2026-06-29
 1210;Kalvbuljong pasta el. pulver storhushåll;Kryddning eller extrakt;torr;222;18,8;8;18,5;0;4,5;46,8;6;2026-06-29
 1211;Kalvbuljong pasta el. pulver lågsalt storhushåll;Kryddning eller extrakt;torr;292;25;5,5;35;0;4,5;28,8;3,6;2026-06-29
 1212;Köttbuljong pasta el. pulver storhushåll;Kryddning eller extrakt;torr;201;15,2;5;23,4;0;11;48,8;5,1;2026-06-29
@@ -1112,10 +1112,10 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 1414;Västkustsallad m. musslor räkor champinjon hemlagad;Fisk- och skaldjursrätt;;49;7,2;0,9;2,3;1,2;1,3;0,4;87;2026-06-29
 1416;Medelhavssallad m. tonfisk skaldjur majonnäsdressing sallad tomat;Färdigsallad;;126;7,4;9,5;2,5;0,8;1,4;0,9;78,4;2026-06-29
 1417;Skaldjurspaté;Fisk- och skaldjursrätt;tillagad;151;11,7;10,2;2,3;2,1;1;1,8;71,3;2026-06-29
-1418;Räksoppa tillagad pulver m. vatten mjölk;Soppa;torr;51;2,1;2,1;5,8;0,1;1,9;1;88,6;2026-06-29
+1418;Räksoppa tillagad pulver m. vatten mjölk;Soppa;tillagad;51;2,1;2,1;5,8;0,1;1,9;1;88,6;2026-06-29
 1419;Fiskbuljong pasta el. pulver storhushåll;Kryddning eller extrakt;torr;216;25;4,9;17,5;0;5;46,5;4,2;2026-06-29
 1420;Fiskbuljong pasta el. pulver lågsalt storhushåll;Kryddning eller extrakt;torr;267;35;3,5;23;0;5;34,2;1,3;2026-06-29
-1421;Fisk och skaldjurssås tillagad pulver m. mjölk vatten smör typ Smögen;Sås i maträtt;torr;112;2,7;7,6;8,2;0;3,9;1,2;79,9;2026-06-29
+1421;Fisk och skaldjurssås tillagad pulver m. mjölk vatten smör typ Smögen;Sås i maträtt;tillagad;112;2,7;7,6;8,2;0;3,9;1,2;79,9;2026-06-29
 1422;Fiskbuljong ätf.;Kryddning eller extrakt;;4;0,3;0,2;0,3;0;0,1;0,7;98;2026-06-29
 1423;Gris blod rått;Innanmat och inälvsmat;ra;73;16,6;0,4;0,4;0;0,1;0,5;81;2026-06-29
 1424;Nöt blod rått;Innanmat och inälvsmat;ra;70;16,4;0,4;0;0;0,1;0,8;81,8;2026-06-29
@@ -1382,7 +1382,7 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 1751;Nyponsoppa ätf. pastöriserad el. pulver berikad;Dessert;torr;52;0,2;0,1;12,1;0,5;9,5;0;87;2026-06-29
 1752;Nyponsoppa ätf. pulver osötad berikad;Soppa;torr;20;0,2;0,1;4,3;0,3;0,8;0;95;2026-06-29
 1758;Mjuk kaka m. katrinplommon;Dessert;tillagad;172;5,4;5,2;24,2;2,9;20;0,1;59,5;2026-06-29
-1759;Kalvdans m. mjölkpulver ägg;Dessert;torr;120;9;3,5;12,9;0;12,8;0,4;72,8;2026-06-29
+1759;Kalvdans m. mjölkpulver ägg;Dessert;tillagad;120;9;3,5;12,9;0;12,8;0,4;72,8;2026-06-29
 1760;Ostkaka m. cottage cheese;Dessert;tillagad;168;10,1;9,3;10,5;1,2;8,7;0,4;68;2026-06-29
 1761;Marängsviss hovdessert;Dessert;;354;4,5;20;37,4;3,9;36,6;0,2;33,1;2026-06-29
 1762;Brylépudding;Dessert;tillagad;129;4,9;3,3;19,5;0;19,6;0,3;71,6;2026-06-29
@@ -1398,7 +1398,7 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 1773;Ostkaka lätt osötad fett 3%;Övriga ostprodukter;;111;12;3;8,6;0,4;5;0,1;74,7;2026-06-29
 1775;Fromage citron;Dessert;;173;2,4;11;16,2;0;14,7;0;69,9;2026-06-29
 1776;Vaniljsås m. havre fett 11%;Dessertsås;;154;0,6;9,6;16,1;0,9;9,7;0,2;72,6;2026-06-29
-1777;Vaniljsås tillagad pulver m. mjölk;Dessertsås;torr;106;3,1;3,2;16,1;0;11,9;0,2;76,9;2026-06-29
+1777;Vaniljsås tillagad pulver m. mjölk;Dessertsås;tillagad;106;3,1;3,2;16,1;0;11,9;0,2;76,9;2026-06-29
 1778;Glassås choklad;Dessertsås;;352;3,1;5,5;69,5;3,9;55,1;0,3;16,8;2026-06-29
 1779;Glassås frukt;Dessertsås;;316;0,1;0;77,8;0;54,2;0,3;21,8;2026-06-29
 1781;Rabarberpaj;Bageriprodukter, söta och/eller feta;tillagad;277;2,6;13,7;34,5;2,9;17,1;0,2;46,1;2026-06-29
@@ -1579,8 +1579,8 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 1995;Currysås hemlagad;Sås i maträtt;tillagad;101;1,4;8,7;4,6;0,2;0,7;1,9;83,3;2026-06-29
 1996;Brunsås m. kaffegrädde;Sås i maträtt;tillagad;98;1,3;7,1;7,4;0,2;3,9;1,8;81,9;2026-06-29
 1997;Korintsås;Sås i maträtt;tillagad;70;0,8;3;9,6;0,6;6,9;1;84,5;2026-06-29
-1998;Brunsås tillagad pulver m. mjölk vatten;Sås i maträtt;torr;56;2,2;2;7,1;0,1;2,5;1,4;86,9;2026-06-29
-1999;Gräddsås tillagad pulver m. mjölk vatten smör;Sås i maträtt;torr;117;2,7;8,4;7,6;0,1;3,3;1,3;79,6;2026-06-29
+1998;Brunsås tillagad pulver m. mjölk vatten;Sås i maträtt;tillagad;56;2,2;2;7,1;0,1;2,5;1,4;86,9;2026-06-29
+1999;Gräddsås tillagad pulver m. mjölk vatten smör;Sås i maträtt;tillagad;117;2,7;8,4;7,6;0,1;3,3;1,3;79,6;2026-06-29
 2000;Tomatsås kryddstark;Sås i maträtt;tillagad;54;1,1;2,6;5,8;1,5;4,8;0,6;87,5;2026-06-29
 2001;Dillsås;Sås i maträtt;tillagad;106;1,4;7,8;7,5;0,4;3,7;1,2;81,2;2026-06-29
 2002;Äggsås m. persilja;Sås i maträtt;tillagad;110;3,5;8,9;4;0,2;0,7;0,9;82,2;2026-06-29
@@ -1863,9 +1863,9 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 3752;Couscous kokt m. salt fullkorn;Ris eller annat spannmål;tillagad;144;4,7;0,9;27;3,9;1,1;0,6;62,5;2026-06-29
 3756;Pasta kokt m. salt;Pasta och liknande produkter;tillagad;139;4,6;0,6;27,5;2;0,6;0,4;64,9;2026-06-29
 3759;Hallon importerade;Frukt och bär;;40;1,1;0;6,7;4;4,5;0;87,8;2026-06-30
-3760;Vita bönor torkade kokta m. salt;Baljväxter;torr;112;8,8;0,9;11;12,5;0,6;0,5;65,4;2026-06-29
+3760;Vita bönor torkade kokta m. salt;Baljväxter;tillagad;112;8,8;0,9;11;12,5;0,6;0,5;65,4;2026-06-29
 3761;Stora vita bönor konserv. u. lag;Baljväxter;tillagad;107;6,9;0,8;14,6;6,8;0,7;0,6;69,6;2026-06-29
-3762;Kikärtor torkade kokta m. salt;Baljväxter;torr;133;8,1;2,9;12,6;12,3;0,7;0,6;62,8;2026-06-29
+3762;Kikärtor torkade kokta m. salt;Baljväxter;tillagad;133;8,1;2,9;12,6;12,3;0,7;0,6;62,8;2026-06-29
 3765;Sötpotatis rå;Potatis och stärkelserika rötter;ra;71;1,6;0,4;12,9;4,4;6,1;0;79,5;2026-06-29
 3771;Sötpotatis ugnsstekt m. olja salt;Potatisrätter;tillagad;118;2;3,8;16,2;5,5;7,7;0,9;70;2026-06-29
 3772;Sötpotatis kokt m. salt;Potatis och stärkelserika rötter;tillagad;93;2,1;0,5;16,9;5,8;8;0,3;72,9;2026-06-29
@@ -1884,8 +1884,8 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 3818;Hamburgerbröd;Jäst bröd;tillagad;290;8;6,7;47;3,5;7,7;0,8;33,5;2026-06-29
 3819;Bröd vitt mjölk fibrer ca 4% typ tekaka;Jäst bröd;tillagad;285;8,1;4,1;51,2;4,2;6;0,7;31,2;2026-06-29
 3820;Bruna bönor rullpack kylvara;Baljväxter;tillagad;95;4,4;0,5;15;6,4;4,9;2,3;72,2;2026-06-29
-3821;Gröna linser torkade kokta m. salt;Baljväxter;torr;127;9,4;0,7;15,9;9,6;0,5;0,6;62,9;2026-06-29
-3822;Röda linser torkade kokta m. salt;Baljväxter;torr;125;10,6;0,6;14,6;9,1;0,6;0,6;63,7;2026-06-29
+3821;Gröna linser torkade kokta m. salt;Baljväxter;tillagad;127;9,4;0,7;15,9;9,6;0,5;0,6;62,9;2026-06-29
+3822;Röda linser torkade kokta m. salt;Baljväxter;tillagad;125;10,6;0,6;14,6;9,1;0,6;0,6;63,7;2026-06-29
 3823;Röda linser konserv. u. lag;Baljväxter;tillagad;89;6,9;0,5;11,9;4,1;0,2;0,6;75,7;2026-06-29
 3824;Gröna linser konserv. u. lag;Baljväxter;tillagad;92;6,2;0,6;13,1;4,4;0,2;0,8;74,5;2026-06-29
 3825;Hamburgerbröd grovt;Jäst bröd;tillagad;263;7,5;5;43;7,3;5,1;0,8;35,6;2026-06-29
@@ -2049,9 +2049,9 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 5863;Brysselkål kokt;Grönsaksprodukter;tillagad;41;2,6;0;5,5;4,3;0;0,2;86,5;2026-06-29
 5864;Rotselleri kokt;Grönsaker och svamp;tillagad;25;1;0,5;2,7;2,9;0;0,1;92;2026-06-29
 5865;Gula ärtor kokta m. salt;Baljväxter;tillagad;128;8,4;0,6;16,4;11,2;0,5;0,3;62,3;2026-06-29
-5866;Bruna bönor torkade kokta m. salt;Baljväxter;torr;137;8,8;0,9;16,8;13,2;0;0,5;58,8;2026-06-29
+5866;Bruna bönor torkade kokta m. salt;Baljväxter;tillagad;137;8,8;0,9;16,8;13,2;0;0,5;58,8;2026-06-29
 5867;Gråärtor kokta m. salt;Baljväxter;tillagad;130;10,2;0,5;16,6;8,6;0;0,6;62,3;2026-06-29
-5868;Åkerbönor torkade kokta m. salt;Baljväxter;torr;134;10,2;0,5;18,4;7,1;0;0,6;62,2;2026-06-29
+5868;Åkerbönor torkade kokta m. salt;Baljväxter;tillagad;134;10,2;0,5;18,4;7,1;0;0,6;62,2;2026-06-29
 5869;Äpple Aroma rött;Frukt och bär;;46;0;0;10,2;2,2;10,8;0;87,1;2026-06-29
 5870;Äpple Ingrid Marie rött;Frukt och bär;;49;0;0;11;2,2;10,3;0;86,5;2026-06-29
 5871;Äpple Frida;Frukt och bär;;56;0;0;12,6;2,2;10,9;0;85;2026-06-29
@@ -2241,7 +2241,7 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 6379;Grönsaksbiff broccolibiff stekt veg.;Grönsaksrätter;tillagad;271;7,3;15,9;24,1;2;3,9;1,2;48,6;2026-06-30
 6380;Gryta kycklinggryta m. bönor kakao;Fågel;tillagad;95;11;3,3;4,1;2,1;1,8;0,9;77,5;2026-06-29
 6381;Fisk Björkeby m. ströbröd smör persilja ugnsstekt;Fisk;tillagad;263;17,8;16;11,4;1,7;0,9;1,3;52,2;2026-06-29
-6382;Fisk m. soltorkad tomat persilja vitlök;Fisk;torr;232;17,8;12,6;10,9;2,3;2,7;2;53,8;2026-06-29
+6382;Fisk m. soltorkad tomat persilja vitlök;Fisk;tillagad;232;17,8;12,6;10,9;2,3;2,7;2;53,8;2026-06-29
 6383;Gratäng djungelgratäng m. kyckling banan mango chutney crème fraiche;Fågel;tillagad;218;11,1;16,1;7,3;0,5;6,7;0,2;64,1;2026-06-30
 6384;Mango chutney;Sylt eller marmelad;tillagad;110;0,6;0,1;25,7;1,6;23,8;0;71,5;2026-06-30
 6385;Gratäng m. kassler ananas ost;Kötträtt;tillagad;128;18,3;4,3;3,7;0,3;3,1;3,3;68,7;2026-06-30
@@ -2287,8 +2287,8 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 6426;Sojafärssås veg.;Grönsaksrätter;tillagad;117;7,7;5,8;7;3,4;3,7;2,1;72,7;2026-06-29
 6427;Sojafärssås m. linser veg.;Vegetariska produkter;tillagad;112;7,5;4,9;7,8;3,5;3,1;1,9;73,2;2026-06-29
 6429;Tikka masala m. potatis grönsaker veg.;Grönsaksrätter;tillagad;107;2,8;6,3;8,8;2,2;4,5;0,1;78,9;2026-06-30
-6430;Medelhavssås m. grädde soltorkad tomat;Sås i maträtt;torr;281;3,8;26,6;6,7;1,5;6,7;3,6;56,3;2026-06-29
-6431;Sås m. grädde soltorkad tomat basilika vitlök;Sås i maträtt;torr;198;4,4;16,1;8,3;1,7;6,9;5,1;62,8;2026-06-29
+6430;Medelhavssås m. grädde soltorkad tomat;Sås i maträtt;;281;3,8;26,6;6,7;1,5;6,7;3,6;56,3;2026-06-29
+6431;Sås m. grädde soltorkad tomat basilika vitlök;Sås i maträtt;;198;4,4;16,1;8,3;1,7;6,9;5,1;62,8;2026-06-29
 6433;Gryta currygryta m. grönsaker veg.;Grönsaksrätter;tillagad;104;1,8;8,2;5,2;1,7;4;1,2;81,1;2026-06-30
 6434;Pasta carbonara m. pasta sojabönor veg.;Pastarätter;tillagad;151;5,2;8,3;13,2;1,9;1,6;0,6;70,3;2026-06-29
 6436;Lasagne m. linser veg.;Pastarätter;tillagad;136;4,6;9,5;7,2;1,8;2,9;0,7;75,4;2026-06-29
@@ -2575,7 +2575,7 @@ nummer;namn;grupp;tillstand;kcal;protein_g;fett_g;kolhydrater_g;fiber_g;sockerar
 7206;Mörk choklad kakao 70% m. frukt nötter;Choklad eller chokladprodukt;;571;8,2;42,7;34,3;10,7;28,7;0;2,3;2026-06-29
 7207;Knäck;Konfekt och annan sockerprodukt dvs ej choklad;tillagad;463;2,5;22,3;62,5;1,4;62,9;0,5;10,2;2026-06-29
 7219;Potatismos pulver;Potatisrätter;torr;343;9;1,4;68,1;8,3;5,6;3,1;6,2;2026-06-29
-7221;Potatismos pulver tillagat;Potatisrätter;torr;64;1,7;0,3;12,7;1,6;1;0,6;82,5;2026-06-29
+7221;Potatismos pulver tillagat;Potatisrätter;tillagad;64;1,7;0,3;12,7;1,6;1;0,6;82,5;2026-06-29
 7226;Mörk choklad m. sötningsm.;Choklad eller chokladprodukt;;581;8,4;43,9;34;10,8;0,1;0;1;2026-06-29
 7231;Kola hemlagad;Konfekt och annan sockerprodukt dvs ej choklad;tillagad;471;1,1;22,8;65,4;0;65,5;0,5;10,1;2026-06-29
 7232;Tomatsås till pizza konserv.;Grönsaksrätter;tillagad;49;1,5;1,5;6;2,1;6,2;1,4;86,4;2026-06-29

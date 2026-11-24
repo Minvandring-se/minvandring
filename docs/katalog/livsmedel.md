@@ -63,11 +63,14 @@ Alla näringsvärden gäller 100 g ätlig del, som hos Livsmedelsverket (`matris
 
 Vandrare packar torr vikt, så förslagen visar om livsmedlet är torrt, rått eller tillagat. Funktionen `tillstandFranNamn` i `src/lib/livsmedel.ts` läser namnet i den här ordningen:
 
-1. **Torr:** ord som okokt, torkad, torkade, torr, frystorkad, och ord som slutar på pulver eller mjöl (mjölkpulver, vetemjöl). Går först, så att "okokt" inte räknas som kokt.
-2. **Tillagad:** ord som slutar på kokt eller stekt, och grillad, tillagad, friterad, ugnsbakad, gräddad, ångad med flera.
-3. **Rå:** ordet rå, råa eller rått, men inte rå mitt i ett ord (råris, råg).
-4. **Reserv:** säger namnet inget används tillagningen i klassificeringen (LanguaL G), om den säger att livsmedlet är kokt, stekt och så vidare.
-5. Annars tomt, eftersom en gissning kan ge fel vikt.
+1. **Torr, om namnet säger okokt.** Går först, så att "okokt" inte räknas som kokt.
+2. **Tillagad:** ord som slutar på kokt eller stekt, och grillad, tillagad, friterad, ugnsbakad, gräddad, ångad med flera. Går före övriga torra ord, så att "Röda linser torkade kokta m. salt" och "Tomatsoppa tillagad pulver m. vatten" blir tillagade.
+3. **Torr:** ord som torkad, torkade, torr, frystorkad, och ord som slutar på pulver eller mjöl (mjölkpulver, vetemjöl). Bara delen före "m." (med) läses, eftersom det som kommer efter är i eller till maträtten: "Kalvdans m. mjölkpulver ägg" och "Baguette m. salami soltorkad tomat" blir inte torra.
+4. **Rå:** ordet rå, råa eller rått, men inte rå mitt i ett ord (råris, råg).
+5. **Reserv:** säger namnet inget används tillagningen i klassificeringen (LanguaL G), om den säger att livsmedlet är kokt, stekt och så vidare.
+6. Annars tomt, eftersom en gissning kan ge fel vikt.
+
+Reglerna rättades samma dag som den första seeden kördes. Rättelsen ligger i en egen seed-migrering (`livsmedel_2026_11_tillstand`), som uppdaterar tillståndet på 38 livsmedel.
 
 ## Förslagen i appen
 
