@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ExternalLink, Search } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ExternalLink, Plus, Search, X } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
@@ -12,7 +12,6 @@ import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
 import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
 import { KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { Panel } from '@/components/ui/panel'
 import { Sektion } from '@/components/ui/sektion'
@@ -20,7 +19,8 @@ import { Specrutor } from '@/components/ui/specrutor'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, underkategoriFor, underkategorierFor, type KategoriNyckel } from '@/lib/forrad'
 import { forradsadress } from '@/lib/forradslista'
-import { arKokgrupp, filtreraKokgrupp, KOKGRUPPER, kokEtikettFor, type Kokgrupp } from '@/lib/kokkarl'
+import { gemensamtSystem, KOKKARL, KOKVARMARE, kokvikt, passarMed, passarMedRubrik, sakerForKok } from '@/lib/kokkarl'
+import { visaEgenskaper } from '@/lib/produktegenskaper'
 import {
   forvalFranProdukt,
   gArAttSoka,
@@ -48,6 +48,12 @@ const OMGANG = 1000
 const MAX_OMGANGAR = 10
 const FORDROJNING_MS = 250
 // Allt som visas i detaljpanelen hämtas i samma fråga, så att det inte blir en fråga per kort.
+/** Brännaren och kokkärlen man har valt till den i Ditt kök. */
+type Kokval = { for: string; valda: Katalogprodukt[] }
+
+/** Så många visas under Passar med innan man fäller ut resten. */
+const FORST_PASSAR = 5
+
 const KOLUMNER = 'id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad, granskad, kalla_typ, minvikt_g, pris_sek_ca, kalla, egenskaper'
 
 type Lage = { nyckel: string; modeller: Modell<Katalogprodukt>[] } | { nyckel: string; fel: true } | null
@@ -80,8 +86,6 @@ export function Utrustningskatalog() {
   const [text, setText] = useState('')
   const [kategori, setKategori] = useState<KategoriNyckel | ''>('')
   const [underkategori, setUnderkategori] = useState('')
-  // Bara brännare eller med kokkärl. Väljs bara när kategorin är kök.
-  const [kokval, setKokval] = useState<Kokgrupp | ''>('')
   const [antal, setAntal] = useState<number | null>(null)
   const [lage, setLage] = useState<Lage>(null)
   // Hur många kort som visas, för sökningen i nyckel. En ny sökning börjar om från en sida.
@@ -92,6 +96,8 @@ export function Utrustningskatalog() {
   const [iForradet, setIForradet] = useState<IForradetKarta>(new Map())
   // Produkten som läggs i förrådet just nu, i formuläret.
   const [laggTill, setLaggTill] = useState<Katalogprodukt | null>(null)
+  // Kokkärlen man har lagt till i "Ditt kök" för en brännare. Ligger kvar när man öppnar ett kokkärl och går tillbaka.
+  const [kok, setKok] = useState<Kokval | null>(null)
   // En produkt som öppnas från en länk och inte finns i träfflistan hämtas för sig, med sin modells alla storlekar.
   const [direkt, setDirekt] = useState<{ for: string; modeller: Modell<Katalogprodukt>[]; iForradet: IForradetKarta } | null>(null)
 
@@ -102,7 +108,7 @@ export function Utrustningskatalog() {
 
   const harText = gArAttSoka(text)
   const sokbar = harText || kategori !== ''
-  const nyckel = `${kategori}|${underkategori}|${kokval}|${text}`
+  const nyckel = `${kategori}|${underkategori}|${text}`
 
   useEffect(() => {
     supabase
@@ -133,7 +139,7 @@ export function Utrustningskatalog() {
         alla.push(...((data as Katalogprodukt[] | null) ?? []))
         if ((data?.length ?? 0) < OMGANG) break
       }
-      const produkter = filtreraKokgrupp(alla, kokval)
+      const produkter = alla
       const egna = fel ? new Map<string, string | null>() : await hamtaIForradet()
       if (avbruten) return
       setIForradet(egna)
@@ -143,7 +149,7 @@ export function Utrustningskatalog() {
       avbruten = true
       window.clearTimeout(timer)
     }
-  }, [text, kategori, underkategori, kokval, harText, sokbar, nyckel, forsok])
+  }, [text, kategori, underkategori, harText, sokbar, nyckel, forsok])
 
   const aktuellt = sokbar && lage?.nyckel === nyckel ? lage : null
   // Förra träfflistan ligger kvar, dämpad, tills nästa kommer. Då hoppar inte sidan medan man skriver.
@@ -177,11 +183,18 @@ export function Utrustningskatalog() {
     }
   }, [produktId, behoverHamtas])
 
+  /** Markerar produkter som finns i förrådet efter att de har lagts dit, utan att hämta om träfflistan. */
+  function markeraIForradet(produkter: Katalogprodukt[]) {
+    const nytt = (s: IForradetKarta) => new Map([...s, ...produkter.map((p) => [p.id, p.version] as const)])
+    setIForradet(nytt)
+    setDirekt((d) => (d ? { ...d, iForradet: nytt(d.iForradet) } : d))
+  }
+
   /** Öppnar panelen. Ett nytt steg i historiken, så att bakåtknappen stänger den. */
-  function oppna(produkt: string) {
+  function oppna(produkt: string, fran?: string) {
     const p = new URLSearchParams(parametrar)
     p.set('produkt', produkt)
-    setParametrar(p, { state: { panel: true } })
+    setParametrar(p, { state: { panel: true, fran } })
   }
 
   /** Byter storlek i panelen utan ett nytt steg i historiken. */
@@ -241,26 +254,10 @@ export function Utrustningskatalog() {
             const ny = arKategori(k) ? k : ''
             setKategori(ny)
             setUnderkategori(ny && underkategoriFor(ny, u) ? u : '')
-            if (ny !== 'kok') setKokval('')
           }}
         />
       </div>
 
-      {kategori === 'kok' && (
-        <div className="space-y-1 sm:max-w-xs">
-          <label htmlFor={`${id}-kokval`} className="block text-sm font-medium">
-            Innehåll
-          </label>
-          <Select id={`${id}-kokval`} value={kokval} onChange={(e) => setKokval(arKokgrupp(e.target.value) ? e.target.value : '')}>
-            <option value="">Alla</option>
-            {KOKGRUPPER.map((g) => (
-              <option key={g.nyckel} value={g.nyckel}>
-                {g.etikett}
-              </option>
-            ))}
-          </Select>
-        </div>
-      )}
 
       {!sokbar && <p className="text-sm text-muted-foreground">Skriv minst två tecken eller välj en kategori.</p>}
       {sokbar && !aktuellt && !modeller && (
@@ -276,7 +273,7 @@ export function Utrustningskatalog() {
       </div>
 
       {synliga && synliga.length > 0 && (
-        <ul aria-busy={gammal} className={cn('grid gap-3 transition-opacity md:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4', gammal && 'opacity-60')}>
+        <ul aria-busy={gammal} className={cn('grid gap-3 transition-opacity md:grid-cols-2 xl:grid-cols-3', gammal && 'opacity-60')}>
           {synliga.map((m) => (
             <Produktkort key={m.nyckel} modell={m} iForradet={iForradet} onOppna={() => oppna(m.varianter[0].id)} />
           ))}
@@ -297,6 +294,12 @@ export function Utrustningskatalog() {
           iForradet={oppenIForradet}
           onValj={valjStorlek}
           onLaggTill={setLaggTill}
+          onOppna={(id) => oppna(id, produktnamn(oppen.modell))}
+          onSparat={markeraIForradet}
+          kok={kok}
+          onKok={setKok}
+          tillbaka={(location.state as { fran?: string } | null)?.fran}
+          onTillbaka={() => navigate(-1)}
           onStang={stang}
         />
       )}
@@ -306,9 +309,7 @@ export function Utrustningskatalog() {
           <SakFormular
             forval={forvalFranProdukt(laggTill)}
             onKlar={() => {
-              const nytt = (s: IForradetKarta) => new Map([...s, [laggTill.id, laggTill.version]])
-              setIForradet(nytt)
-              setDirekt((d) => (d ? { ...d, iForradet: nytt(d.iForradet) } : d))
+              markeraIForradet([laggTill])
               setLaggTill(null)
             }}
             onAvbryt={() => setLaggTill(null)}
@@ -339,12 +340,12 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
   const flera = modell.varianter.length > 1
   const finns = iForradetFor(modell, iForradet)
   return (
-    <li className="flex flex-col rounded-lg border border-border bg-card">
+    <li className="flex h-full flex-col rounded-lg border border-border bg-card">
       <button
         type="button"
         aria-haspopup="dialog"
         onClick={onOppna}
-        className="flex w-full flex-col gap-2 rounded-lg p-4 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
+        className="flex w-full flex-1 flex-col gap-2 rounded-lg p-4 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
         <span className="flex w-full items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
@@ -353,7 +354,7 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
           <span className="min-w-0 flex-1">
             <span className="block font-semibold break-words">{produktnamn(modell)}</span>
             <span className="block text-sm text-muted-foreground">
-              {flera ? `${etikett}, ${modell.varianter.length} storlekar` : [etikett, forsta.version, kokEtikettFor(forsta)].filter(Boolean).join(', ')}
+              {flera ? `${etikett}, ${modell.varianter.length} storlekar` : [etikett, forsta.version].filter(Boolean).join(', ')}
             </span>
           </span>
           <span className="shrink-0 font-heading text-lg font-semibold tabular-nums">
@@ -365,7 +366,7 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
           <span className="block w-full space-y-0.5 border-t border-border pt-2 text-sm">
             {modell.varianter.map((v) => (
               <span key={v.id} className="flex justify-between gap-3">
-                <span className="min-w-0 break-words text-muted-foreground">{[v.version || 'Utan storlek', kokEtikettFor(v)].filter(Boolean).join(', ')}</span>
+                <span className="min-w-0 break-words text-muted-foreground">{v.version || 'Utan storlek'}</span>
                 <span className="shrink-0 tabular-nums">{formateraVikt(v.packvikt_g)}</span>
               </span>
             ))}
@@ -390,6 +391,12 @@ function Produktpanel({
   iForradet,
   onValj,
   onLaggTill,
+  onOppna,
+  onSparat,
+  kok,
+  onKok,
+  tillbaka,
+  onTillbaka,
   onStang,
 }: {
   modell: Modell<Katalogprodukt>
@@ -397,6 +404,13 @@ function Produktpanel({
   iForradet: IForradetKarta
   onValj: (id: string) => void
   onLaggTill: (p: Katalogprodukt) => void
+  onOppna: (id: string) => void
+  onSparat: (produkter: Katalogprodukt[]) => void
+  kok: Kokval | null
+  onKok: (k: Kokval) => void
+  /** Namnet på produkten man kom från via "Passar med", för knappen tillbaka dit. */
+  tillbaka?: string
+  onTillbaka: () => void
   onStang: () => void
 }) {
   const id = useId()
@@ -412,9 +426,15 @@ function Produktpanel({
       onStang={onStang}
       rubrik={
         <div className="space-y-1">
+          {tillbaka && (
+            <button type="button" onClick={onTillbaka} className={cn('-ml-1 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary', fokus)}>
+              <ChevronLeft className="size-4 shrink-0" aria-hidden />
+              Tillbaka till {tillbaka}
+            </button>
+          )}
           <h2 className="text-2xl break-words">{produktnamn(modell)}</h2>
           <p className="font-heading text-3xl font-semibold tabular-nums">{formateraVikt(vald.packvikt_g)}</p>
-          {(vald.version || kokEtikettFor(vald)) && <p className="text-sm text-muted-foreground">{[vald.version, kokEtikettFor(vald)].filter(Boolean).join(', ')}</p>}
+          {vald.version && <p className="text-sm text-muted-foreground">{vald.version}</p>}
           {finns && <IForradet finns={finns} />}
         </div>
       }
@@ -466,6 +486,8 @@ function Produktpanel({
           </div>
         )}
 
+        <PassarMed produkt={vald} brannarenFinns={iForradet.has(vald.id)} kok={kok} onKok={onKok} onOppna={onOppna} onSparat={onSparat} />
+
         <div className="flex flex-wrap items-center gap-x-4 gap-y-1">
           <Granskad produkt={vald} />
           <a href={vald.kalla} target="_blank" rel="noopener noreferrer" className={lankKlass}>
@@ -494,5 +516,172 @@ function IForradet({ finns }: { finns: { produkt: Katalogprodukt; text: string }
         Visa i Mitt förråd
       </Link>
     </p>
+  )
+}
+
+/**
+ * Det som passar ihop med produkten i köket: kokkärl och stekpannor till en brännare eller ett komplett kök, och
+ * brännare och kompletta kök till ett kokkärl. På en brännare kan man lägga till kokkärl i "Ditt kök", som visar den
+ * sammanlagda vikten och lägger brännaren och kokkärlen i förrådet var för sig. Valen gäller bara medan panelen är öppen.
+ */
+function PassarMed({
+  produkt,
+  brannarenFinns,
+  kok,
+  onKok,
+  onOppna,
+  onSparat,
+}: {
+  produkt: Katalogprodukt
+  brannarenFinns: boolean
+  kok: Kokval | null
+  onKok: (k: Kokval) => void
+  onOppna: (id: string) => void
+  onSparat: (produkter: Katalogprodukt[]) => void
+}) {
+  const rubrik = passarMedRubrik(produkt.underkategori)
+  const [kandidater, setKandidater] = useState<{ for: string; produkter: Katalogprodukt[] } | null>(null)
+  const [visaAlla, setVisaAlla] = useState(false)
+  const valda = kok?.for === produkt.id ? kok.valda : []
+  const setValda = (f: (v: Katalogprodukt[]) => Katalogprodukt[]) => onKok({ for: produkt.id, valda: f(valda) })
+  const [sparar, setSparar] = useState(false)
+  const [besked, setBesked] = useState<{ fel: boolean; text: string } | null>(null)
+  const kanValja = (KOKVARMARE as readonly string[]).includes(produkt.underkategori)
+
+  useEffect(() => {
+    if (!supabase || !rubrik) return
+    let avbruten = false
+    supabase
+      .from('produkter')
+      .select(KOLUMNER)
+      .eq('kategori', 'kok')
+      .in('underkategori', [...KOKVARMARE, KOKKARL])
+      .limit(OMGANG)
+      .then(({ data }) => {
+        if (!avbruten) setKandidater({ for: produkt.id, produkter: (data as Katalogprodukt[] | null) ?? [] })
+      })
+    return () => {
+      avbruten = true
+    }
+  }, [produkt.id, rubrik])
+
+  if (!rubrik) return null
+  const lista = kandidater?.for === produkt.id ? passarMed(produkt, kandidater.produkter) : null
+  const synliga = lista && !visaAlla ? lista.slice(0, FORST_PASSAR) : lista
+  // "Gjord för Trangia 27" på det som delar kokkärlssystem med produkten.
+  const gjordFor = (p: Katalogprodukt) => {
+    const system = gemensamtSystem(produkt.egenskaper, p.egenskaper)
+    return system ? visaEgenskaper(KOKKARL, { system })[0]?.varde : null
+  }
+  const arVald = (p: Katalogprodukt) => valda.some((v) => v.id === p.id)
+  const vaxla = (p: Katalogprodukt) => {
+    setBesked(null)
+    setValda((v) => (v.some((x) => x.id === p.id) ? v.filter((x) => x.id !== p.id) : [...v, p]))
+  }
+
+  async function spara() {
+    if (!supabase) return
+    setSparar(true)
+    setBesked(null)
+    const saker = sakerForKok(produkt, valda, brannarenFinns)
+    const { error } = await supabase.from('forradssaker').insert(saker)
+    setSparar(false)
+    if (error) {
+      setBesked({ fel: true, text: 'Det gick inte att spara. Kontrollera uppkopplingen och försök igen.' })
+      return
+    }
+    onSparat(brannarenFinns ? valda : [produkt, ...valda])
+    setBesked({ fel: false, text: saker.length === 1 ? 'Kokkärlet ligger nu i förrådet.' : `${saker.length} saker ligger nu i förrådet.` })
+    setValda(() => [])
+  }
+
+  return (
+    <section aria-labelledby={`passar-${produkt.id}`} className="space-y-3">
+      {kanValja && (valda.length > 0 || besked) && (
+        <div className="space-y-2 rounded-lg border border-primary bg-primary-soft p-3" aria-live="polite">
+          {valda.length > 0 && (
+            <>
+              <p className="font-heading text-lg font-semibold">Ditt kök</p>
+              <ul className="space-y-1 text-sm">
+                <li className="flex justify-between gap-3">
+                  <span className="min-w-0 break-words">
+                    {produktnamn(produkt)} {produkt.version}
+                    {brannarenFinns && <span className="text-muted-foreground"> (finns redan i förrådet)</span>}
+                  </span>
+                  <span className="shrink-0 tabular-nums">{formateraVikt(produkt.packvikt_g)}</span>
+                </li>
+                {valda.map((v) => (
+                  <li key={v.id} className="flex items-center justify-between gap-2">
+                    <span className="min-w-0 break-words">{[v.marke, v.modell, v.version].filter(Boolean).join(' ')}</span>
+                    <span className="flex shrink-0 items-center gap-1">
+                      <span className="tabular-nums">{formateraVikt(v.packvikt_g)}</span>
+                      <button type="button" onClick={() => vaxla(v)} aria-label={`Ta bort ${v.modell} ur ditt kök`} className={cn('flex size-11 items-center justify-center rounded-md text-muted-foreground hover:bg-muted hover:text-foreground', fokus)}>
+                        <X className="size-4" aria-hidden />
+                      </button>
+                    </span>
+                  </li>
+                ))}
+              </ul>
+              <p className="flex justify-between gap-3 border-t border-border pt-2 font-semibold">
+                <span>Tillsammans</span>
+                <span className="tabular-nums">{formateraVikt(kokvikt([produkt, ...valda]))}</span>
+              </p>
+              <Button onClick={spara} disabled={sparar}>
+                {sparar ? 'Sparar …' : 'Lägg köket i förrådet'}
+              </Button>
+            </>
+          )}
+          {besked && <p className={cn('text-sm', besked.fel ? 'text-destructive' : 'font-medium')}>{besked.text}</p>}
+        </div>
+      )}
+
+      <h3 id={`passar-${produkt.id}`} className="font-heading text-lg font-semibold">
+        {rubrik}
+      </h3>
+      {!lista && <p className="text-sm text-muted-foreground">Hämtar …</p>}
+      {lista?.length === 0 && <p className="text-sm text-muted-foreground">Inget i katalogen än.</p>}
+      {lista && lista.length > 0 && (
+        <ul className="divide-y divide-border rounded-lg border border-border">
+          {synliga?.map((p) => (
+            <li key={p.id} className="flex items-stretch">
+              <button
+                type="button"
+                onClick={() => onOppna(p.id)}
+                className={cn('flex min-h-11 min-w-0 flex-1 items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-muted', fokus)}
+              >
+                <span className="min-w-0 break-words">
+                  {[p.marke, p.modell, p.version].filter(Boolean).join(' ')}
+                  <span className="block text-muted-foreground">
+                    {[underkategoriFor(p.kategori, p.underkategori)?.etikett, gjordFor(p) && `Gjord för ${gjordFor(p)}`].filter(Boolean).join(', ')}
+                  </span>
+                </span>
+                <span className="shrink-0 tabular-nums">{formateraVikt(p.packvikt_g)}</span>
+              </button>
+              {kanValja && (
+                <button
+                  type="button"
+                  aria-pressed={arVald(p)}
+                  onClick={() => vaxla(p)}
+                  className={cn(
+                    'flex min-h-11 w-24 shrink-0 items-center justify-center gap-1 border-l border-border px-2 text-sm font-medium',
+                    fokus,
+                    arVald(p) ? 'bg-primary-soft text-primary' : 'text-primary hover:bg-muted',
+                  )}
+                >
+                  {arVald(p) ? <Check className="size-4" aria-hidden /> : <Plus className="size-4" aria-hidden />}
+                  {arVald(p) ? 'Tillagd' : 'Lägg till'}
+                </button>
+              )}
+            </li>
+          ))}
+        </ul>
+      )}
+      {lista && lista.length > FORST_PASSAR && (
+        <button type="button" aria-expanded={visaAlla} onClick={() => setVisaAlla((v) => !v)} className={cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary', fokus)}>
+          {visaAlla ? 'Visa färre' : `Visa alla (${lista.length})`}
+          <ChevronDown className={cn('size-4 transition-transform', visaAlla && 'rotate-180')} aria-hidden />
+        </button>
+      )}
+    </section>
   )
 }

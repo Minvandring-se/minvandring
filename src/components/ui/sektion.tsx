@@ -61,7 +61,7 @@ export function Sektion({
             </p>
           )}
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
-            <Rubrik id={id} className={cn('min-w-0 text-xl wrap-anywhere lg:text-2xl', variant === 'hjortron' && 'text-hjortron-strong', rubrikKlass)}>
+            <Rubrik id={id} className={cn('min-w-0 text-xl wrap-anywhere lg:text-2xl 3xl:text-[1.75rem]', variant === 'hjortron' && 'text-hjortron-strong', rubrikKlass)}>
               {rubrik}
             </Rubrik>
             {etikett && <span {...exempel}>{etikett}</span>}

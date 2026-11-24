@@ -6,11 +6,11 @@ export function SidRubrik({ rubrik, etikett, text, knappar }: { rubrik: string; 
     <div className="flex flex-wrap items-end justify-between gap-x-6 gap-y-3">
       <div className="min-w-0 space-y-2">
         <div className="flex flex-wrap items-center gap-x-3 gap-y-1">
-          {/* 32 px i mobil. Växer lite med skärmen från dator och uppåt, upp till 2,75rem. */}
-          <h1 className="text-[2rem] leading-tight break-words lg:text-[clamp(2.25rem,1.6rem+0.9vw,2.75rem)]">{rubrik}</h1>
+          {/* 32 px i mobil. Växer lite med skärmen från dator och uppåt, upp till 2,75rem vid 1920 px och 3,5rem vid 2560 px. */}
+          <h1 className="text-[2rem] leading-tight break-words lg:text-[clamp(2.25rem,1.6rem+0.9vw,2.75rem)] 3xl:text-[clamp(2.75rem,1.2rem+1.3vw,3.5rem)]">{rubrik}</h1>
           {etikett}
         </div>
-        {text && <p className="max-w-prose text-muted-foreground lg:text-[1.0625rem]">{text}</p>}
+        {text && <p className="max-w-prose text-muted-foreground lg:text-[1.0625rem] 3xl:text-lg">{text}</p>}
       </div>
       {knappar && <div className="flex shrink-0 gap-2">{knappar}</div>}
     </div>

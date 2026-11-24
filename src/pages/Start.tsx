@@ -16,7 +16,7 @@ import { StigProvider } from '@/components/start/stig/StigProvider'
 import { useSession } from '@/hooks/useSession'
 import { Kontaktlank } from '@/components/Kontaktlank'
 import { KONTAKT_MEJL } from '@/lib/kontakt'
-import { cn } from '@/lib/utils'
+import { cn, menyBredd } from '@/lib/utils'
 
 /** Flödet i tre steg direkt under hero. Korten längre ner visar innehållet. */
 const floden = [
@@ -141,10 +141,10 @@ const [stigBorja, stigPackning, stigTanken, stigFragor] = kopplaStig([
   { id: 'fragor', karta: 'fjall', detaljer: [{ typ: 'gryt', lage: 0.5 }] },
 ] as const)
 
-/** Upplyft panel för sektionerna mellan hero och avslutningen. Samma innehållsbredd som förut. */
-const panel = 'mx-auto max-w-6xl rounded-lg bg-card shadow-soft'
+/** Upplyft panel för sektionerna mellan hero och avslutningen. */
+const panel = 'mx-auto max-w-[75rem] rounded-lg bg-card shadow-soft'
 /** Samma panel i sand, för Tanken bakom MinVandring. */
-const panelSand = 'mx-auto max-w-6xl rounded-lg bg-sand/50 shadow-soft'
+const panelSand = 'mx-auto max-w-[75rem] rounded-lg bg-sand/50 shadow-soft'
 /** Luft i panelerna. Lite mindre i nederkant, där innehållet redan slutar med kort eller text. */
 const panelLuft = 'px-4 pt-8 pb-7 sm:px-6 sm:pt-11 sm:pb-9 lg:pt-13 lg:pb-11'
 
@@ -174,13 +174,13 @@ export function Start() {
   return (
     <StigProvider>
       <header className="absolute inset-x-0 top-0 z-20">
-        <nav aria-label="Huvudmeny" className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-3 sm:px-6">
+        <nav aria-label="Huvudmeny" className={`${menyBredd} flex items-center justify-between gap-4 py-3 min-[1920px]:py-5`}>
           <Link to="/" className={`flex min-h-11 items-center rounded-md text-pa-bild ${fokusPaBild}`}>
-            <Logotyp yta="mork" className="text-xl" />
+            <Logotyp yta="mork" className="text-xl min-[1920px]:text-2xl" />
           </Link>
           <Link
             to="/logga-in"
-            className={`inline-flex h-11 items-center rounded-md border border-pa-bild/70 bg-black/20 px-4 text-sm font-semibold text-pa-bild transition-colors hover:bg-pa-bild/15 ${fokusPaBild}`}
+            className={`inline-flex h-11 items-center rounded-md border border-pa-bild/70 bg-black/20 px-4 text-sm font-semibold text-pa-bild transition-colors hover:bg-pa-bild/15 min-[1920px]:h-12 min-[1920px]:px-5 min-[1920px]:text-base ${fokusPaBild}`}
           >
             Logga in
           </Link>
@@ -188,24 +188,35 @@ export function Start() {
       </header>
 
       <main>
-        {/* Mobil och dator: 80 % av skärmhöjden. Riktigt breda skärmar (bredare än 2:1) får lite högre bildspel så att bilderna beskärs mindre, men nästa rubrik får alltid plats. */}
-        <section aria-labelledby="start-rubrik" className="relative isolate flex h-[80svh] min-h-[36rem] flex-col text-pa-bild md:h-[80svh] md:max-h-[64rem] md:[@media(min-aspect-ratio:2/1)]:h-[calc(100svh-8rem)]">
+        {/* 80 % av skärmhöjden. På dator aldrig mer än dubbelt så bred som hög, annars syns bara en smal remsa av bilderna
+            (vinterbilden behöver både toppen och personen). Då blir bildspelet högre än skärmen på riktigt breda skärmar, men rubriken och knappen syns ändå. */}
+        <section
+          aria-labelledby="start-rubrik"
+          className="relative isolate flex h-[80svh] min-h-[36rem] flex-col text-pa-bild md:max-h-[64rem] md:min-h-[max(36rem,50vw)]"
+        >
           <Bildspel />
 
-          <div className="relative flex flex-1 flex-col items-center justify-center px-4 pt-20 pb-10 text-center [text-shadow:0_1px_14px_rgb(0_0_0/0.35)] sm:pt-24">
-            <h1 id="start-rubrik" className="text-[2.6rem] leading-[1.05] font-bold sm:text-6xl lg:text-7xl">
-              Planera. Packa. Upplev.
-            </h1>
-            <p className="mt-5 max-w-xl text-lg font-medium text-pa-bild [text-shadow:0_1px_2px_rgb(0_0_0/0.7),0_0_14px_rgb(0_0_0/0.45)] sm:text-xl">
-              Din nästa vandring börjar här. <span className="sm:block">Samla planen, packningen och maten på ett ställe.</span>
-            </p>
-            <PlaneraKnapp className="mt-8" />
-            <a
-              href="#sa-fungerar-det"
-              className={`mt-3 inline-flex min-h-11 items-center rounded-md px-2 font-semibold underline decoration-2 underline-offset-4 [text-shadow:0_1px_3px_rgb(0_0_0/0.6),0_0_12px_rgb(0_0_0/0.4)] ${fokusPaBild}`}
-            >
-              Så fungerar det
-            </a>
+          <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4 pt-20 pb-10 text-center [text-shadow:0_1px_14px_rgb(0_0_0/0.35)] sm:pt-24 md:justify-start md:pt-[max(5.5rem,8%)]">
+            <div className="relative isolate flex flex-col items-center">
+              {/* Mjuk skugga bara bakom texten och knappen, så att den vita texten klarar kontrastkraven utan att hela bilden dämpas. */}
+              <div
+                aria-hidden
+                className="pointer-events-none absolute -inset-x-[32%] -inset-y-[36%] -z-10 bg-[radial-gradient(closest-side,rgb(0_0_0/0.55),rgb(0_0_0/0.48)_55%,rgb(0_0_0/0.26)_80%,rgb(0_0_0/0.08)_93%,transparent)]"
+              />
+              <h1 id="start-rubrik" className="text-[2.6rem] leading-[1.05] font-bold sm:text-6xl lg:text-[clamp(4.5rem,4.2vw,6.5rem)]">
+                Planera. Packa. Upplev.
+              </h1>
+              <p className="mt-5 max-w-xl text-lg font-medium text-pa-bild [text-shadow:0_1px_2px_rgb(0_0_0/0.7),0_0_14px_rgb(0_0_0/0.45)] sm:text-xl lg:max-w-[30em] lg:text-[clamp(1.25rem,1vw,1.625rem)]">
+                Din nästa vandring börjar här. <span className="sm:block">Samla planen, packningen och maten på ett ställe.</span>
+              </p>
+              <PlaneraKnapp className="mt-8" />
+              <a
+                href="#sa-fungerar-det"
+                className={`mt-3 inline-flex min-h-11 items-center rounded-md px-2 font-semibold underline decoration-2 underline-offset-4 [text-shadow:0_1px_3px_rgb(0_0_0/0.6),0_0_12px_rgb(0_0_0/0.4)] ${fokusPaBild}`}
+              >
+                Så fungerar det
+              </a>
+            </div>
           </div>
         </section>
 
@@ -237,7 +248,7 @@ export function Start() {
                 Börja med din nästa tur
               </h2>
               <Rubrikstreck />
-              <p className="mt-5 text-lg text-muted-foreground">En gemensam plan, från första packlistan till sista dagen.</p>
+              <p className="mt-5 max-w-[70ch] text-lg text-muted-foreground">En gemensam plan, från första packlistan till sista dagen.</p>
 
               <ul className="mt-12 grid gap-6 md:grid-cols-3 lg:mt-14 lg:gap-8">
                 {steg.map(({ Illustration, rubrik, text }) => (
@@ -362,7 +373,7 @@ export function Start() {
         </div>
 
         <section aria-labelledby="cta-rubrik" className="bg-yta-stark text-yta-stark-foreground">
-          <div className="mx-auto flex max-w-6xl flex-col items-center px-4 py-20 text-center sm:px-6 lg:py-28">
+          <div className="mx-auto flex max-w-[75rem] flex-col items-center px-4 py-20 text-center sm:px-6 lg:py-28">
             <h2 id="cta-rubrik" className="text-3xl font-bold sm:text-4xl">
               Redo för nästa tur?
             </h2>
