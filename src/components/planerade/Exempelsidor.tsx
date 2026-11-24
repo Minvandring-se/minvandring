@@ -9,7 +9,7 @@ const kort = 'rounded-lg border border-border bg-card'
 /** Packlistor och mallar: några mallar att starta en tur från. */
 export function Mallexempel() {
   return (
-    <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
+    <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {MALLAR.map((m) => (
         <li key={m.namn} className={`${kort} flex items-start gap-3.5 p-4`}>
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
@@ -54,7 +54,7 @@ export function Dagboksexempel() {
 /** Kom ihåg till nästa: lärdomarna grupperade efter ämne. */
 export function Lardomsexempel() {
   return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
+    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
       {LARDOMAR.map((g) => (
         <section key={g.amne} className={`${kort} p-5`}>
           <h2 className="mb-2 text-lg">{g.amne}</h2>
@@ -75,7 +75,7 @@ export function Lardomsexempel() {
 /** Vandringskompisar: personer ni har vandrat med. */
 export function Kompisexempel() {
   return (
-    <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
+    <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
       {KOMPISAR.map((k) => (
         <li key={k.namn} className={`${kort} flex items-center gap-3.5 p-4`}>
           <Namnbricka namn={k.namn} />

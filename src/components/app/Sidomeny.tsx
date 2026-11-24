@@ -22,13 +22,13 @@ function Menyrad({ sida, aktiv }: { sida: Sida; aktiv: boolean }) {
       // En sida med delar markerar delen som page, och sidan bara som aktuell.
       aria-current={aktiv ? (UNDERSIDOR[sida] ? 'true' : 'page') : undefined}
       className={cn(
-        'relative flex min-h-11 items-center gap-3 rounded-md px-3 py-1.5 text-[0.9375rem] transition-colors',
+        'relative flex min-h-11 items-center gap-3 rounded-md px-3 py-1.5 text-[0.9375rem] transition-colors 3xl:min-h-12 3xl:text-base',
         fokus,
         aktiv ? 'bg-primary-soft font-semibold text-primary' : 'text-foreground hover:bg-muted',
       )}
     >
       {aktiv && <span aria-hidden className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent" />}
-      <Ikon className="size-5 shrink-0" aria-hidden strokeWidth={aktiv ? 2.25 : 1.75} />
+      <Ikon className="size-5 shrink-0 3xl:size-[1.375rem]" aria-hidden strokeWidth={aktiv ? 2.25 : 1.75} />
       {/* Långa namn som Vandringskompisar avstavas, så att de inte går in under "Snart". */}
       <span className="min-w-0 flex-1 hyphens-auto wrap-break-word">{namn}</span>
       {!byggd && <Snart />}
@@ -64,12 +64,12 @@ export function Sidomeny({
     <aside className="hidden border-r border-border bg-card lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:overflow-y-auto">
       <div className="flex flex-1 flex-col px-4 pt-6 pb-4">
         <Link to="/turer" className={cn('flex min-h-11 items-center rounded-md px-2', fokus)}>
-          <Logotyp className="text-xl" />
+          <Logotyp className="text-xl 3xl:text-2xl" />
         </Link>
         <nav aria-label="Huvudmeny" className="mt-2">
           {MENYGRUPPER.map((g) => (
             <div key={g.rubrik}>
-              <h2 className="px-3 pt-4 pb-1 font-sans text-xs font-semibold text-muted-foreground">{g.rubrik}</h2>
+              <h2 className="px-3 pt-4 pb-1 font-sans text-xs font-semibold text-muted-foreground 3xl:text-[0.8125rem]">{g.rubrik}</h2>
               <ul className="space-y-0.5">
                 {g.sidor.map((s) => (
                   <li key={s}>
@@ -91,7 +91,7 @@ export function Sidomeny({
         >
           <Namnbricka namn={namn || epost || '?'} bild={bild} laddar={bildLaddar} />
           {profilHamtad ? (
-            <span className="min-w-0 flex-1 truncate font-medium">{namn || 'Din profil'}</span>
+            <span className="min-w-0 flex-1 truncate font-medium 3xl:text-[1.0625rem]">{namn || 'Din profil'}</span>
           ) : (
             <>
               <Skelett className="h-4 w-24" />

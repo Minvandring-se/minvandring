@@ -14,6 +14,7 @@ import {
   matdagar,
   maltidsAdress,
   maltidsord,
+  matplanstext,
   matstatus,
   matsummering,
   saknadeMaltider,
@@ -408,6 +409,22 @@ describe('saknadeMaltider och matstatus', () => {
     const data: Matdata = { ratter: [ratt('r1')], ingredienser: [], varor: [], pasar: new Map(), maltider: [maltid(1, 'lunch', 'r1')] }
     const perDag = dagssummor(data, dagar).flatMap((s) => s.saknas.map((m) => `${s.dag.dag}:${m}`))
     expect(saknadeMaltider(dagar, data.maltider).map((p) => `${p.dag.dag}:${p.maltid}`)).toEqual(perDag)
+  })
+})
+
+describe('matplanstext', () => {
+  const status = (totalt: number, saknas: number) => ({ totalt, planerade: totalt - saknas, saknas, forsta: null })
+
+  it('en kommande tur visar hur många måltider som saknas', () => {
+    expect(matplanstext(status(9, 4), false)).toBe('saknas')
+    expect(matplanstext(status(9, 0), false)).toBe('klar')
+    expect(matplanstext(status(0, 0), false)).toBe('inga-dagar')
+  })
+
+  it('en avslutad tur visar bara att planen är klar', () => {
+    expect(matplanstext(status(9, 0), true)).toBe('klar')
+    expect(matplanstext(status(9, 4), true)).toBeNull()
+    expect(matplanstext(status(0, 0), true)).toBeNull()
   })
 })
 

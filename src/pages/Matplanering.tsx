@@ -12,13 +12,13 @@ import { knappStil } from '@/components/ui/knappStil'
 import { useDinaTurer, type DinTur } from '@/hooks/useDinaTurer'
 import { useMatlagen, type Matlagen } from '@/hooks/useMatlagen'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { maltidsAdress, matdagar, matstatus, saknasText, type Matstatus } from '@/lib/mat'
+import { maltidsAdress, matdagar, matplanstext, matstatus, saknasText, type Matstatus } from '@/lib/mat'
 import { turdelAdress } from '@/lib/turdelar'
 import { datumIntervall, delaUppTurer, lokaltDatum } from '@/lib/turlista'
 
 /**
  * Mina matplaner, den första delen av Matplanering: nästa tur överst på den mörkgröna ytan, och sedan övriga kommande
- * och tidigare turer som tunna rader. Varje tur visar hur många måltider som saknas.
+ * och tidigare turer som tunna rader. Kommande turer visar hur många måltider som saknas, tidigare turer bara om planen är klar.
  */
 export function Matplanering() {
   const rubrik = 'Mina matplaner'
@@ -64,7 +64,7 @@ function Turlistor({ turer }: { turer: DinTur[] }) {
       {lagen.rader === 'fel' && <Laddfel vad="matplanerna" onForsokIgen={lagen.forsokIgen} />}
       {nasta && <NastaTurMat tur={nasta} status={status(nasta)} />}
       {kommande.length > 0 && <Lista rubrik={nasta ? 'Övriga kommande turer' : 'Kommande turer'} turer={kommande} status={status} />}
-      {tidigare.length > 0 && <Lista rubrik="Tidigare turer" turer={tidigare} status={status} />}
+      {tidigare.length > 0 && <Lista rubrik="Tidigare turer" turer={tidigare} status={status} avslutade />}
     </div>
   )
 }
@@ -74,7 +74,17 @@ function statusFor(tur: DinTur, rader: Matlagen['rader']): Matstatus | null | 'f
   return matstatus(matdagar(tur.dagar, tur.reservdagar), rader.get(tur.id) ?? [])
 }
 
-function Lista({ rubrik, turer, status }: { rubrik: string; turer: DinTur[]; status: (t: DinTur) => Matstatus | null | 'fel' }) {
+function Lista({
+  rubrik,
+  turer,
+  status,
+  avslutade = false,
+}: {
+  rubrik: string
+  turer: DinTur[]
+  status: (t: DinTur) => Matstatus | null | 'fel'
+  avslutade?: boolean
+}) {
   const id = useId()
   return (
     <section aria-labelledby={id} className="space-y-3 lg:space-y-4">
@@ -84,7 +94,7 @@ function Lista({ rubrik, turer, status }: { rubrik: string; turer: DinTur[]; sta
       <ul className="divide-y divide-border overflow-hidden rounded-ruta border border-border bg-card">
         {turer.map((t) => (
           <li key={t.id}>
-            <Turrad tur={t} status={status(t)} />
+            <Turrad tur={t} status={status(t)} avslutad={avslutade} />
           </li>
         ))}
       </ul>
@@ -93,8 +103,9 @@ function Lista({ rubrik, turer, status }: { rubrik: string; turer: DinTur[]; sta
 }
 
 /** En tur som en tunn rad: namn, datum och status. I mobil under varandra, på dator i kolumner. */
-function Turrad({ tur, status }: { tur: DinTur; status: Matstatus | null | 'fel' }) {
-  const forsta = status !== null && status !== 'fel' ? status.forsta : null
+function Turrad({ tur, status, avslutad }: { tur: DinTur; status: Matstatus | null | 'fel'; avslutad: boolean }) {
+  // En avslutad tur öppnar matfliken, inte den första måltiden som saknas.
+  const forsta = status !== null && status !== 'fel' && !avslutad ? status.forsta : null
   return (
     <Link
       to={forsta ? maltidsAdress(tur.id, forsta.dag.dag, forsta.maltid) : turdelAdress(tur.id, 'mat')}
@@ -103,18 +114,20 @@ function Turrad({ tur, status }: { tur: DinTur; status: Matstatus | null | 'fel'
       <span className="flex min-w-0 flex-col gap-1 md:contents">
         <span className="font-heading text-lg font-semibold wrap-anywhere lg:text-xl">{tur.namn}</span>
         <span className="text-sm text-muted-foreground lg:text-[0.9375rem]">{datumIntervall(tur.avresa, tur.hemkomst)}</span>
-        <Radstatus status={status} />
+        <Radstatus status={status} avslutad={avslutad} />
       </span>
       <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
     </Link>
   )
 }
 
-function Radstatus({ status }: { status: Matstatus | null | 'fel' }) {
+function Radstatus({ status, avslutad }: { status: Matstatus | null | 'fel'; avslutad: boolean }) {
   const klass = 'text-sm font-medium lg:text-[0.9375rem]'
   if (status === null) return <Skelett className="h-4 w-32" />
   if (status === 'fel') return null
-  if (status.totalt === 0) return <span className={`${klass} text-muted-foreground`}>Inga vandringsdagar angivna</span>
-  if (status.saknas === 0) return <span className={`${klass} text-primary`}>Matplanen är klar</span>
-  return <span className={`${klass} text-accent-strong`}>{saknasText(status.saknas)}</span>
+  const text = matplanstext(status, avslutad)
+  if (text === 'inga-dagar') return <span className={`${klass} text-muted-foreground`}>Inga vandringsdagar angivna</span>
+  if (text === 'klar') return <span className={`${klass} text-primary`}>Matplanen är klar</span>
+  if (text === 'saknas') return <span className={`${klass} text-accent-strong`}>{saknasText(status.saknas)}</span>
+  return null
 }

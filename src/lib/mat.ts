@@ -155,6 +155,16 @@ export function maltidsrutaId(dag: number, maltid: Maltid): string {
   return `maltid-${dag}-${maltid}`
 }
 
+/**
+ * Vad en tur visar om matplanen. En avslutad tur visar bara att planen är klar, aldrig hur många måltider som saknas
+ * eller att vandringsdagar saknas, eftersom det inte går att göra något åt längre.
+ */
+export function matplanstext(status: Matstatus, avslutad: boolean): 'klar' | 'saknas' | 'inga-dagar' | null {
+  if (status.totalt === 0) return avslutad ? null : 'inga-dagar'
+  if (status.saknas === 0) return 'klar'
+  return avslutad ? null : 'saknas'
+}
+
 /** "1 måltid saknas" eller "12 måltider saknas". */
 export function saknasText(antal: number): string {
   return `${antal} ${antal === 1 ? 'måltid' : 'måltider'} saknas`

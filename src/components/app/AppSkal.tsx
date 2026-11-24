@@ -52,7 +52,7 @@ export function AppSkal() {
   const kontext: AppKontext = { anvandarId, epost: session?.user.email ?? '', namn, profilHamtad, setNamn, bildUppdaterad, setBildUppdaterad }
 
   return (
-    <div className="min-h-dvh lg:grid lg:grid-cols-[17.5rem_1fr]">
+    <div className="min-h-dvh lg:grid lg:grid-cols-[17.5rem_1fr] 3xl:grid-cols-[19.5rem_1fr]">
       {/* Hoppar förbi menyn med tangentbordet. Syns bara när den har fokus. */}
       <a
         href="#innehall"
@@ -89,24 +89,27 @@ export function AppSkal() {
         )}
 
         {/* Luft under innehållet i mobil, så att inget hamnar bakom bottennavigationen. */}
-        {/* På dator ligger innehållet direkt intill sidomenyn, upp till 100rem (1600 px). Luften runt växer på stora skärmar. */}
+        {/* På dator centreras innehållet i ytan bredvid sidomenyn, högst 75rem (1200 px) brett. Luften runt växer på stora
+            skärmar, och från 1920 px blir texten lite större. Formulär och brödtext har egna, smalare bredder. */}
         <main
           id="innehall"
           tabIndex={-1}
-          className="w-full max-w-[100rem] flex-1 px-4 pt-5 pb-8 outline-none sm:px-6 lg:px-10 lg:pt-8 lg:pb-12 2xl:px-14 2xl:pt-10 3xl:px-16 3xl:pt-12"
+          className="w-full flex-1 px-4 pt-5 pb-8 outline-none sm:px-6 lg:px-10 lg:pt-8 lg:pb-12 2xl:px-14 2xl:pt-10 3xl:px-16 3xl:pt-12 3xl:text-[1.0625rem]"
         >
-          <Felgrans aterstall={pathname}>
-          <Suspense
-            fallback={
-              <Laddar text="Hämtar sidan">
-                <Skelett className="h-9 w-48" />
-                <Skelett className="h-5 w-64 max-w-full" />
-              </Laddar>
-            }
-          >
-            <Outlet context={kontext} />
-          </Suspense>
-          </Felgrans>
+          <div className="mx-auto w-full max-w-[75rem]">
+            <Felgrans aterstall={pathname}>
+            <Suspense
+              fallback={
+                <Laddar text="Hämtar sidan">
+                  <Skelett className="h-9 w-48" />
+                  <Skelett className="h-5 w-64 max-w-full" />
+                </Laddar>
+              }
+            >
+              <Outlet context={kontext} />
+            </Suspense>
+            </Felgrans>
+          </div>
         </main>
 
         <Sidfot className="mx-4 mb-[calc(5rem+env(safe-area-inset-bottom))] lg:hidden" />
