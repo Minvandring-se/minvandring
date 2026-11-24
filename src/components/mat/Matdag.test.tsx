@@ -51,7 +51,8 @@ function rita(maltider: Maltidsrad[]) {
 describe('Matdag', () => {
   it('varnar när en påse inte passar någons kostbehov', () => {
     const html = rita([rad('m1', 'pase')])
-    expect(html).toContain('Innehåller gluten, passar inte Oscar')
+    expect(html).toContain('Inte glutenfri, passar inte Oscar')
+    expect(html).not.toContain('Innehåller gluten')
   })
 
   it('visar samma rätt flera gånger i en måltid som en rad med antal', () => {

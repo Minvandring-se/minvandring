@@ -4,7 +4,7 @@ import { Select } from '@/components/ui/select'
 import { Sektion } from '@/components/ui/sektion'
 import { formateraVikt } from '@/lib/forrad'
 import { inkopsgrupper, type Inkopsrad } from '@/lib/mat'
-import { bastForeStatus, BASTFORE_TEXT, hemma, kopText } from '@/lib/skafferi'
+import { bastForeStatus, BASTFORE_TEXT, bokadText, hemma, kopText, ledigaHemma } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import type { DeltagareRad, Skafferirad } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -34,6 +34,7 @@ export function Inkopslista({
   kanAndra,
   mittDeltagareId,
   skafferi,
+  bokade = new Map(),
   onAndra,
 }: {
   rader: readonly Inkopsrad[]
@@ -43,16 +44,18 @@ export function Inkopslista({
   mittDeltagareId: string | null
   /** Ens eget skafferi. */
   skafferi: readonly Skafferirad[]
+  /** Påsar hemma som går till turer före den här. */
+  bokade?: ReadonlyMap<string, number>
   onAndra: (rad: Inkopsrad, andring: Andring) => Promise<boolean>
 }) {
   const [fel, setFel] = useState(false)
   const idag = lokaltDatum()
-  const iSkafferiet = hemma(skafferi, idag)
+  const iSkafferiet = ledigaHemma(hemma(skafferi, idag), bokade)
   const infoFor = (r: Inkopsrad): Skafferiinfo | null => {
     if (r.typ !== 'pase' || !r.matproduktId || !mittDeltagareId || r.ansvarig !== mittDeltagareId) return null
     const rad = skafferi.find((s) => s.matprodukt_id === r.matproduktId)
     const status = rad ? bastForeStatus(rad.bast_fore, idag) : null
-    const text = kopText(r.pasar ?? 0, iSkafferiet.get(r.matproduktId) ?? 0)
+    const text = [kopText(r.pasar ?? 0, iSkafferiet.get(r.matproduktId) ?? 0), bokadText(bokade.get(r.matproduktId) ?? 0)].filter(Boolean).join(' ') || null
     const bastFore = status === 'passerat' || status === 'snart' ? BASTFORE_TEXT[status] : null
     return text || bastFore ? { text, bastFore } : null
   }

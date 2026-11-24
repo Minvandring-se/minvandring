@@ -15,14 +15,14 @@ import { TurFlikar } from '@/components/tur/TurHuvud'
 import { useTur } from '@/components/tur/turKontext'
 import { knappStil } from '@/components/ui/knappStil'
 import { sparaRecept, useRecept } from '@/hooks/useRecept'
-import { useSkafferi } from '@/hooks/useSkafferi'
+import { useAndraTurer, useSkafferi } from '@/hooks/useSkafferi'
 import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
-import { dagssummor, inkopslista, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, matviktTotalt, rattPerPortion, ratterSomSaknar, vemTarMedVad, type Ansvarsratt, type Matdag as Dag, type Matstatus } from '@/lib/mat'
+import { dagssummor, dubblettText, inkopslista, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, matviktTotalt, rattPerPortion, rattPlatser, ratterSomSaknar, vemTarMedVad, type Ansvarsratt, type Matdag as Dag, type Matstatus } from '@/lib/mat'
 import { dagensDatum } from '@/lib/datum'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import { receptbesked, receptMedNamn, receptTillRader, valForRecept } from '@/lib/recept'
-import { hemma } from '@/lib/skafferi'
+import { bokade, hemma, ledigaHemma, senastAnvanda, turerFore } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import { turdelAdress } from '@/lib/turdelar'
 import type { DeltagareRad, Maltid, Maltidsrad } from '@/lib/typer'
@@ -109,11 +109,19 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
   // Ens eget skafferi. Om det inte går att hämta visas matplanen ändå, utan uppgifterna om vad man har hemma.
   const { skafferi } = useSkafferi()
   const egnaRader = useMemo(() => (skafferi && skafferi !== 'fel' ? skafferi.rader : []), [skafferi])
-  const egetSkafferi = useMemo(
-    () => ({ favoriter: skafferi && skafferi !== 'fel' ? skafferi.favoriter : new Set<string>(), hemma: hemma(egnaRader, lokaltDatum()) }),
-    [skafferi, egnaRader],
-  )
   const mittDeltagareId = deltagare.find((d) => d.user_id === mittUserId)?.id ?? null
+  // Påsarna i ens andra turer: det man har hemma och som går till en tur som börjar före den här är bokat.
+  const andra = useAndraTurer(tur.id, mittUserId)
+  const bokat = useMemo(() => bokade(andra.bokningar, turerFore(andra.turer, tur.id, lokaltDatum())), [andra, tur.id])
+  const egetSkafferi = useMemo(() => {
+    const denna = plan.ratter.flatMap((r) => (r.matprodukt_id ? [{ turId: tur.id, matproduktId: r.matprodukt_id }] : []))
+    return {
+      favoriter: skafferi && skafferi !== 'fel' ? skafferi.favoriter : new Set<string>(),
+      hemma: ledigaHemma(hemma(egnaRader, lokaltDatum()), bokat),
+      bokade: bokat,
+      senast: senastAnvanda([...denna, ...andra.pasar], andra.turer, tur.id),
+    }
+  }, [skafferi, egnaRader, bokat, plan.ratter, andra, tur.id])
 
   const personer = plan.matdeltagare.filter((d) => d.typ === 'person').length
   const behov = useMemo(() => behovMedNamn(plan, deltagare), [plan, deltagare])
@@ -248,6 +256,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
         kanAndra={kanAndra}
         mittDeltagareId={mittDeltagareId}
         skafferi={egnaRader}
+        bokade={bokat}
         onAndra={async (rad, andring) => {
           const ok = await andraInkopsrad(rad.typ, rad.id, andring)
           if (ok) await laddaOm()
@@ -267,6 +276,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
           behov={behov}
           skafferi={egetSkafferi}
           recept={recept}
+          finnsRedan={(rattId) => dubblettText(rattPlatser(plan.maltider, dagar, rattId))}
           onValjRecept={async (r) => {
             const rader = receptTillRader(r)
             const val = valForRecept(r.namn, rader, plan.ratter, plan.ingredienser, plan.varor)
@@ -290,7 +300,9 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
           onStang={() => setValjer(null)}
           onValjPase={async (pase) => {
             const befintlig = plan.ratter.find((r) => r.matprodukt_id === pase.id)
-            const ok = await laggTillPase(tur.id, pase, befintlig, valjer.dag.dag, valjer.maltid, sortering(valjer.dag.dag, valjer.maltid))
+            // Har man påsen hemma blir man ansvarig för den, så att påsarna hemma är bokade till turen.
+            const ansvarig = (egetSkafferi.hemma.get(pase.id) ?? 0) > 0 ? mittDeltagareId : null
+            const ok = await laggTillPase(tur.id, pase, befintlig, valjer.dag.dag, valjer.maltid, sortering(valjer.dag.dag, valjer.maltid), ansvarig)
             if (ok) await lagdTill(valjer.dag.dag, valjer.maltid)
             return ok
           }}

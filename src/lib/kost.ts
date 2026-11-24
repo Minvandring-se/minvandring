@@ -109,7 +109,9 @@ export function skalForPerson(p: Kostinfo, b: Behov): Skal[] {
     if (p.allergener === null) skal.push({ typ: 'okand_allergen', allergen })
     else if (p.allergener.includes(allergen)) skal.push({ typ: 'innehaller', allergen })
   }
-  return skal
+  // Är påsen inte glutenfri, eller okänd, för den som vill ha glutenfritt säger gluten samma sak en gång till.
+  const glutenfri = skal.some((s) => (s.typ === 'inte' || s.typ === 'okant_val') && s.val === 'glutenfri')
+  return glutenfri ? skal.filter((s) => !((s.typ === 'innehaller' || s.typ === 'okand_allergen') && s.allergen === 'gluten')) : skal
 }
 
 export interface Varning {
@@ -195,4 +197,16 @@ export function kostsvarText(svar: Kostsvar): string {
   if (svar.lage === 'inga') return 'Inga kostbehov'
   if (svar.lage === 'inte-svarat') return 'Har inte angett något än'
   return 'Kan fylla i själv när hen har gått med'
+}
+
+/** Filtret i ord, till exempel "Glutenfri, utan sesam". null utan filter. */
+export function filterText(f: Kostfilter): string | null {
+  const delar = [
+    ...KOSTVAL.filter((k) => f.val.includes(k.nyckel)).map((k) => k.etikett.toLowerCase()),
+    // Glutenfri säger redan utan gluten.
+    ...ALLERGENER.filter((a) => f.utan.includes(a.nyckel) && !(a.nyckel === 'gluten' && f.val.includes('glutenfri'))).map((a) => `utan ${a.etikett.toLowerCase()}`),
+  ]
+  if (delar.length === 0) return null
+  const text = delar.join(', ')
+  return text.charAt(0).toUpperCase() + text.slice(1)
 }

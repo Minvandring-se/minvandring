@@ -2,6 +2,7 @@
 //
 // En påse vars bäst-före-datum har passerat räknas inte som att man har den hemma, men visas märkt.
 // En påse vars datum passerar inom en månad räknas, och märks.
+import { lage } from './turlista'
 import type { Skafferirad } from './typer'
 
 export type Bastfore = 'passerat' | 'snart' | 'ok'
@@ -64,3 +65,79 @@ export function sorteraSkafferi<T extends Pick<Skafferirad, 'bast_fore'>>(rader:
 }
 
 export const MAX_ANTAL = 999
+
+/** En tur man är med i, så som bokningen behöver den. */
+export interface Bokningstur {
+  id: string
+  avresa: string | null
+  hemkomst: string | null
+  dagar: number | null
+  skapad: string
+}
+
+/**
+ * Turerna som får ta påsar ur skafferiet före en tur: andra kommande eller pågående turer som börjar tidigare.
+ * Turer utan datum kommer efter turer med datum, och bland dem den som skapades först. Avslutade turer räknas inte.
+ */
+export function turerFore(turer: readonly Bokningstur[], turId: string, idag: string): Set<string> {
+  const aktiva = turer.filter((t) => t.id === turId || lage(t, idag) !== 'tidigare')
+  const sorterade = [...aktiva].sort((a, b) => {
+    if (a.avresa !== b.avresa) {
+      if (a.avresa === null) return 1
+      if (b.avresa === null) return -1
+      return a.avresa < b.avresa ? -1 : 1
+    }
+    return a.skapad < b.skapad ? -1 : a.skapad > b.skapad ? 1 : 0
+  })
+  const plats = sorterade.findIndex((t) => t.id === turId)
+  return new Set(sorterade.slice(0, Math.max(0, plats)).map((t) => t.id))
+}
+
+/** En påse man själv ansvarar för i en tur: hur många påsar turen behöver. */
+export interface Bokning {
+  turId: string
+  matproduktId: string
+  pasar: number
+}
+
+/**
+ * Hur många av varje påse hemma som redan går till turer före den här. Bokningen sparas inte: den räknas ut från
+ * påsarna man ansvarar för i de turerna, så att den följer med när man byter ansvarig eller tar bort en måltid.
+ */
+export function bokade(bokningar: readonly Bokning[], fore: ReadonlySet<string>): Map<string, number> {
+  const ut = new Map<string, number>()
+  for (const b of bokningar) if (fore.has(b.turId) && b.pasar > 0) ut.set(b.matproduktId, (ut.get(b.matproduktId) ?? 0) + b.pasar)
+  return ut
+}
+
+/** Det man har hemma minus det som går till turer före den här. Påsar utan något ledigt kommer inte med. */
+export function ledigaHemma(iSkafferiet: ReadonlyMap<string, number>, bokat: ReadonlyMap<string, number>): Map<string, number> {
+  const ut = new Map<string, number>()
+  for (const [id, antal] of iSkafferiet) {
+    const ledigt = antal - (bokat.get(id) ?? 0)
+    if (ledigt > 0) ut.set(id, ledigt)
+  }
+  return ut
+}
+
+/** Texten när påsar hemma går till en tur före den här. null när inga gör det. */
+export function bokadText(antal: number): string | null {
+  if (antal <= 0) return null
+  return antal === 1 ? 'En påse hemma är bokad till en tur som börjar före den här.' : `${antal} påsar hemma är bokade till en tur som börjar före den här.`
+}
+
+/**
+ * Påsarna man har använt senast, högst ett visst antal och varje påse en gång: först den här turens påsar, sedan
+ * påsarna i ens andra turer, den senast skapade turen först.
+ */
+export function senastAnvanda(
+  ratter: readonly { turId: string; matproduktId: string }[],
+  turer: readonly Pick<Bokningstur, 'id' | 'skapad'>[],
+  turId: string,
+  max = 6,
+): string[] {
+  const skapad = new Map(turer.map((t) => [t.id, t.skapad]))
+  const vikt = (id: string) => (id === turId ? '￿' : (skapad.get(id) ?? ''))
+  const sorterade = [...ratter].sort((a, b) => (vikt(a.turId) < vikt(b.turId) ? 1 : vikt(a.turId) > vikt(b.turId) ? -1 : 0))
+  return [...new Set(sorterade.map((r) => r.matproduktId))].slice(0, max)
+}
