@@ -3,6 +3,7 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { TomtLage } from '@/components/app/TomtLage'
+import { Gasbehov } from '@/components/mat/Gasbehov'
 import { Inkopslista } from '@/components/mat/Inkopslista'
 import { Kostbehov } from '@/components/mat/Kostbehov'
 import { Matdag } from '@/components/mat/Matdag'
@@ -126,6 +127,8 @@ function Matplanvy({ plan, dagar, laddaOm }: { plan: Matplan; dagar: Dag[]; ladd
       {!kanAndra && <p className="text-muted-foreground">Du är läsare. Du kan se matplanen och ange dina egna kostbehov. Ägare och redigerare ändrar resten.</p>}
 
       <Matsummering summering={matsummering(summor)} totaltG={totaltG} perPerson={perPerson} />
+
+      <Gasbehov personer={personer} dagar={dagar.length} />
 
       <Kostbehov
         deltagare={deltagare}
