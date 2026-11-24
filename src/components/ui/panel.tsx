@@ -12,7 +12,7 @@ export function Panel({ etikett, rubrik, fot, onStang, children }: { etikett: st
     <Dialog
       etikett={etikett}
       onStang={onStang}
-      className="mx-0 mt-auto mb-0 max-h-[90dvh] w-full overflow-hidden rounded-t-lg rounded-b-none bg-card md:my-0 md:mr-0 md:ml-auto md:h-dvh md:max-h-dvh md:w-[30rem] md:rounded-none"
+      className="mx-0 mt-auto mb-0 max-h-[90dvh] w-full overflow-hidden rounded-t-yta rounded-b-none bg-card md:my-0 md:mr-0 md:ml-auto md:h-dvh md:max-h-dvh md:w-[30rem] md:rounded-none"
     >
       <div className="flex max-h-[90dvh] flex-col md:h-dvh md:max-h-dvh">
         <div className="flex items-start justify-between gap-3 border-b border-border px-4 pt-4 pb-3 sm:px-5">
@@ -21,7 +21,7 @@ export function Panel({ etikett, rubrik, fot, onStang, children }: { etikett: st
             type="button"
             aria-label="Stäng"
             onClick={onStang}
-            className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-md text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="-mr-2 flex size-11 shrink-0 items-center justify-center rounded-knapp text-muted-foreground transition-colors hover:bg-muted hover:text-foreground focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
           >
             <X className="size-5" aria-hidden />
           </button>

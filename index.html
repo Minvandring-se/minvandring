@@ -7,7 +7,7 @@
     <link rel="apple-touch-icon" href="/apple-touch-icon.png" sizes="180x180" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
     <!-- Webbläsarens färg runt sidan, samma som bakgrunden i ljust och mörkt läge (TEMAFARG i src/lib/tema.ts). -->
-    <meta name="theme-color" content="#eef0eb" media="(prefers-color-scheme: light)" />
+    <meta name="theme-color" content="#f7f8f5" media="(prefers-color-scheme: light)" />
     <meta name="theme-color" content="#0e1512" media="(prefers-color-scheme: dark)" />
     <script>
       {
@@ -21,7 +21,7 @@
         }
         if (val === 'ljus' || val === 'mork') {
           document.documentElement.setAttribute('data-tema', val)
-          const farg = val === 'mork' ? '#0e1512' : '#eef0eb'
+          const farg = val === 'mork' ? '#0e1512' : '#f7f8f5'
           for (const meta of document.querySelectorAll('meta[name="theme-color"]')) meta.setAttribute('content', farg)
         }
       }
