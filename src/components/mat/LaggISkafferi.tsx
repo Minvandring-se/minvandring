@@ -61,7 +61,7 @@ export function LaggISkafferi({
 
   return (
     <div className="space-y-3 rounded-ruta border border-border bg-card p-3">
-      {hemma > 0 && <p className="text-sm text-muted-foreground">Du har {hemma} hemma. Antalet läggs till.</p>}
+      {hemma > 0 && <p className="text-sm text-muted-foreground">Du har {hemma} hemma. Antalet läggs till och det tidigaste bäst före gäller.</p>}
       <div className="space-y-1">
         <p className="text-sm font-medium">
           Antal
@@ -73,7 +73,7 @@ export function LaggISkafferi({
           <span aria-live="polite" className="min-w-10 text-center font-semibold tabular-nums">
             {antal}
           </span>
-          <Button variant="outline" size="ikon" aria-label="Öka antalet" disabled={antal >= MAX_ANTAL} onClick={() => setAntal((a) => Math.min(MAX_ANTAL, a + 1))}>
+          <Button variant="outline" size="ikon" autoFocus aria-label="Öka antalet" disabled={antal >= MAX_ANTAL} onClick={() => setAntal((a) => Math.min(MAX_ANTAL, a + 1))}>
             <Plus className="size-4" aria-hidden />
           </Button>
         </div>

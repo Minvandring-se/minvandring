@@ -479,6 +479,7 @@ function Pasrad({
           <Button
             variant="ghost"
             size="ikon"
+            id={`lagg-i-skafferiet-${pase.id}`}
             aria-expanded={skafferiOppet}
             aria-label={`Lägg ${pasnamn(pase)} i skafferiet`}
             onClick={() => setSkafferiOppet((o) => !o)}
@@ -488,7 +489,10 @@ function Pasrad({
         )}
       </div>
       {laggISkafferi && skafferiOppet && (
-        <LaggISkafferi namn={pasnamn(pase)} hemma={hemma} onSpara={(antal, bastFore) => laggISkafferi(pase, antal, bastFore)} onKlar={() => setSkafferiOppet(false)} />
+        <LaggISkafferi namn={pasnamn(pase)} hemma={hemma} onSpara={(antal, bastFore) => laggISkafferi(pase, antal, bastFore)} onKlar={() => {
+            setSkafferiOppet(false)
+            document.getElementById(`lagg-i-skafferiet-${pase.id}`)?.focus()
+          }} />
       )}
     </li>
   )

@@ -306,12 +306,16 @@ function Paspanel({ pase, skafferi, laddaOm, onStang }: { pase: Matprodukt; skaf
                 if (ny) await laddaOm()
                 return ny
               }}
-              onKlar={() => setLaggTill(false)}
+              onKlar={() => {
+                setLaggTill(false)
+                // Knappen kommer tillbaka när formuläret stängs, och får fokus igen.
+                requestAnimationFrame(() => document.getElementById(`lagg-i-skafferiet-${pase.id}`)?.focus())
+              }}
             />
           )}
           <div className="flex flex-wrap items-center gap-2">
             {!laggTill && (
-              <Button disabled={sparar || !egna} onClick={() => setLaggTill(true)}>
+              <Button id={`lagg-i-skafferiet-${pase.id}`} disabled={sparar || !egna} onClick={() => setLaggTill(true)}>
                 Lägg i skafferiet
               </Button>
             )}
