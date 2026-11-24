@@ -98,6 +98,7 @@ Vid prioritering: 1) planera en vandring 2) planera tillsammans 3) packning och 
 5. Bygg minsta rimliga lösning.
 6. Kör `npm run build`, `npm test` och `npm run lint` innan du säger att något är klart.
 7. Avsluta med en kort sammanfattning och hur ändringen testas.
+8. Svara aldrig på webbläsarens bekräftelserutor (confirm, alert) med skript. Behöver något raderas i appen: be mig göra det.
 
 Om ett viktigt produktbeslut är oklart: beskriv alternativen kort och rekommendera det enklaste. Fråga inte om små tekniska detaljer som har en etablerad lösning.
 
