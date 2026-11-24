@@ -1,3 +1,6 @@
+import { sakFranProdukt } from './produktsok'
+import type { Produkt } from './typer'
+
 /**
  * Vad som passar ihop i köket: brännare och kompletta kök på ena sidan, kokkärl och stekpannor på den andra.
  * Ett kokkärlssystem (egenskapen system, till exempel trangia_27) anges bara när tillverkaren säger vad som passar.
@@ -60,4 +63,18 @@ export function passarMed<P extends Koksak>(produkt: Koksak, kandidater: P[]): P
   return traffar
     .filter((k) => k.id !== produkt.id)
     .sort((a, b) => forst(a) - forst(b) || (a.packvikt_g ?? Infinity) - (b.packvikt_g ?? Infinity))
+}
+
+/** Den sammanlagda vikten för en brännare och de kokkärl man har valt till den, i gram. */
+export function kokvikt(delar: readonly { packvikt_g: number }[]): number {
+  return delar.reduce((summa, d) => summa + d.packvikt_g, 0)
+}
+
+/**
+ * Sakerna som läggs i förrådet när man sparar sitt kök: brännaren och de valda kokkärlen, var för sig och med
+ * koppling till katalogen. Brännaren tas inte med om den redan finns i förrådet, och samma kokkärl bara en gång.
+ */
+export function sakerForKok(brannare: Produkt, valda: readonly Produkt[], brannarenFinns: boolean) {
+  const unika = valda.filter((v, i) => v.id !== brannare.id && valda.findIndex((x) => x.id === v.id) === i)
+  return [...(brannarenFinns ? [] : [brannare]), ...unika].map(sakFranProdukt)
 }

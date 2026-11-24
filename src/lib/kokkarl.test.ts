@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
-import { gemensamtSystem, passarIhop, passarMed, passarMedRubrik } from './kokkarl'
+import { gemensamtSystem, kokvikt, passarIhop, passarMed, passarMedRubrik, sakerForKok } from './kokkarl'
+import type { Produkt } from './typer'
 
 describe('vilka kokkärl som passar vilka brännare', () => {
   const jetboil = { typ: 'systemkok', system: 'jetboil_fluxring' }
@@ -68,5 +69,29 @@ describe('listan över det som passar', () => {
     expect(passarMedRubrik('talt')).toBeNull()
     expect(passarMedRubrik('brannare')).toBe('Kokkärl och stekpannor som passar')
     expect(passarMedRubrik('kastrull')).toBe('Brännare och kök det passar på')
+  })
+})
+
+describe('ditt kök', () => {
+  const produkt = (id: string, underkategori: string, packvikt_g: number) =>
+    ({ id, marke: 'Trangia', modell: id, version: null, kategori: 'kok', underkategori, packvikt_g, kontrollerad: null, granskad: null, kalla_typ: 'tillverkare' }) as Produkt
+  const crux = produkt('Crux', 'brannare', 72)
+  const billy = produkt('Billy', 'kastrull', 320)
+  const panna = produkt('Panna', 'kastrull', 359)
+
+  it('lägger ihop vikten', () => {
+    expect(kokvikt([crux, billy, panna])).toBe(751)
+    expect(kokvikt([])).toBe(0)
+  })
+
+  it('lägger brännaren och kokkärlen i förrådet var för sig, med koppling till katalogen', () => {
+    const saker = sakerForKok(crux, [billy, panna, billy], false)
+    expect(saker.map((s) => s.produkt_id)).toEqual(['Crux', 'Billy', 'Panna'])
+    expect(saker.map((s) => s.underkategori)).toEqual(['brannare', 'kastrull', 'kastrull'])
+    expect(saker.every((s) => s.antal === 1)).toBe(true)
+  })
+
+  it('tar inte med brännaren när den redan finns i förrådet', () => {
+    expect(sakerForKok(crux, [billy], true).map((s) => s.produkt_id)).toEqual(['Billy'])
   })
 })
