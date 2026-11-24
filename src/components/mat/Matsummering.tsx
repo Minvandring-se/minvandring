@@ -37,7 +37,7 @@ export function Matsummering({
           {saknadeMaltider === 1 ? 'En måltid saknas.' : `${saknadeMaltider} måltider saknas.`} Frukost, lunch och middag räknas, mellanmål är frivilliga.
         </p>
       )}
-      {meningar.length > 0 && <p className="text-sm text-muted-foreground">{meningar.join(' ')} Summorna och matvikten blir därför för låga.</p>}
+      {meningar.length > 0 && <p className="text-sm text-muted-foreground">{meningar.join(' ')} Det som saknas räknas inte med, så summorna kan bli för låga.</p>}
       {perPerson.length > 0 && totaltG > 0 && (
         <div className="space-y-2">
           <h3 className="text-base">Matvikt per person vid start</h3>

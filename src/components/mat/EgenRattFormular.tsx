@@ -202,7 +202,7 @@ export function EgenRattFormular({
           <>
             Per portion: {formateraKcal(portion.kcal)}, {Math.round(portion.proteinG)} g protein och {formateraVikt(portion.gram)}.
             {portion.ofullstandig && <span className="text-muted-foreground"> Några varor saknar kcal eller protein.</span>}
-            {orimligPortion(portion) && <span className="font-medium text-accent-strong"> Kontrollera mängderna, portionen är ovanligt stor.</span>}
+            {orimligPortion(portion) && <span className="font-medium text-accent-strong"> Ovanligt stor portion. Kontrollera mängderna.</span>}
           </>
         )}
       </p>

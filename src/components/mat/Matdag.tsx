@@ -1,4 +1,4 @@
-import { Plus, X } from 'lucide-react'
+import { ChevronDown, Plus, X } from 'lucide-react'
 import { useId } from 'react'
 import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
@@ -199,7 +199,7 @@ function Rattrad({
           ))}
         </ul>
       )}
-      {orimligPortion(portion) && <p className="pr-3 text-xs font-medium text-accent-strong">Kontrollera mängderna</p>}
+      {orimligPortion(portion) && <p className="pr-3 text-xs font-medium text-accent-strong">Ovanligt stor portion. Kontrollera mängderna.</p>}
       <div className="flex items-center justify-between gap-1">
         <p className="py-2 text-xs text-muted-foreground tabular-nums">
           {portion.kcal > 0 ? (
@@ -212,7 +212,7 @@ function Rattrad({
           )}
         </p>
         {kanAndra && (
-          <Button variant="ghost" size="ikon" onClick={() => onTaBort(grupp.rader.at(-1)!)} aria-label={antal > 1 ? `Ta bort en ${ratt.namn} från ${vad}` : `Ta bort ${ratt.namn} från ${vad}`}>
+          <Button variant="ghost" size="ikon" onClick={() => onTaBort(grupp.rader.at(-1)!)} aria-label={antal > 1 ? `Ta bort en portion ${ratt.namn} från ${vad}` : `Ta bort ${ratt.namn} från ${vad}`}>
             <X className="size-4" aria-hidden />
           </Button>
         )}
@@ -226,9 +226,10 @@ function Ingredienser({ namn }: { namn: readonly string[] }) {
   if (namn.length <= KORT_LISTA) return <p className="pr-3 text-xs break-words text-muted-foreground">{namn.join(', ')}</p>
   return (
     <details className="group pr-3 text-xs text-muted-foreground">
-      <summary className="flex min-h-11 cursor-pointer items-center break-words rounded-knapp focus-visible:outline-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+      <summary className="flex min-h-11 cursor-pointer items-center gap-1 break-words rounded-knapp focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring [&::-webkit-details-marker]:hidden">
+        <ChevronDown className="size-3.5 shrink-0 transition-transform group-open:rotate-180" aria-hidden />
         <span className="group-open:hidden">
-          {namn.slice(0, KORT_LISTA).join(', ')} och {namn.length - KORT_LISTA} till
+          Ingredienser: {namn.slice(0, KORT_LISTA).join(', ')} och {namn.length - KORT_LISTA} till
         </span>
         <span className="hidden group-open:inline">Ingredienser</span>
       </summary>

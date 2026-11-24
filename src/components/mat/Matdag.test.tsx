@@ -58,12 +58,12 @@ describe('Matdag', () => {
     const html = rita(['a', 'b', 'c', 'd', 'e', 'f'].map((id) => rad(id, 'pase')))
     expect(html.match(/>Test Pasta med vete</g)?.length).toBe(1)
     expect(html).toContain('6 st')
-    expect(html).toContain('aria-label="Ta bort en Test Pasta med vete från lunch dag 1"')
+    expect(html).toContain('aria-label="Ta bort en portion Test Pasta med vete från lunch dag 1"')
   })
 
   it('visar ingredienserna i en egen rätt, och fäller ihop dem när de är många', () => {
     const html = rita([rad('m1', 'gryta')])
-    expect(html).toContain('Älgfärs, Potatis, Grädde och 2 till')
+    expect(html).toContain('Ingredienser: Älgfärs, Potatis, Grädde och 2 till')
     expect(html).toContain('Älgfärs, Potatis, Grädde, Morot, Lök')
   })
 
