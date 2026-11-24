@@ -100,6 +100,11 @@ describe('sökning och sortering', () => {
     expect(ids(sokPasar(katalog, '', filter({ val: ['vegetarisk'], utan: ['mjolk'] })))).toEqual(['b'])
   })
 
+  it('hoppar över ett märke som inte finns i katalogen, till exempel från en gammal länk', () => {
+    expect(ids(sokPasar(katalog, '', filter({ marke: 'finnsinte' })))).toEqual(['c', 'b', 'a', 'd'])
+    expect(ids(sokPasar(katalog, '', filter({ marke: 'finnsinte', maltid: 'frukost' })))).toEqual(['c'])
+  })
+
   it('listar märkena en gång var i bokstavsordning', () => {
     expect(marken(katalog)).toEqual(['Adventure Food', 'Okänd', 'Real'])
   })
