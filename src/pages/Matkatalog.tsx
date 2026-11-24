@@ -174,7 +174,7 @@ export function Matkatalog() {
           {traffar.length === 0 && <TomtLage kompakt text="Inga påsar passar sökningen och filtret." />}
 
           {traffar.length > 0 && (
-            <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3 3xl:grid-cols-4">
+            <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {traffar.map((p) => (
                 <Paskort key={p.id} pase={p} mestEnergi={p.id === basta} favorit={!!egna?.favoriter.has(p.id)} onOppna={() => oppna(p.id)} />
               ))}

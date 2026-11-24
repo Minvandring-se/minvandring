@@ -20,7 +20,7 @@ export function DinaTurer({ turer, oppenTurId }: { turer: TurIListan[] | null; o
 
   return (
     <nav aria-labelledby="dina-turer-rubrik" className="space-y-1">
-      <h2 id="dina-turer-rubrik" className="px-3 pt-4 pb-1 font-sans text-xs font-semibold text-muted-foreground">
+      <h2 id="dina-turer-rubrik" className="px-3 pt-4 pb-1 font-sans text-xs font-semibold text-muted-foreground 3xl:text-[0.8125rem]">
         Dina turer
       </h2>
       {turer === null ? (
@@ -40,7 +40,7 @@ export function DinaTurer({ turer, oppenTurId }: { turer: TurIListan[] | null; o
                   title={tur.namn}
                   aria-current={oppen ? 'page' : undefined}
                   className={cn(
-                    'flex min-h-12 gap-2.5 rounded-md border px-3 py-1.5 text-sm transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                    'flex min-h-12 gap-2.5 rounded-md border px-3 py-1.5 text-sm transition-colors 3xl:text-[0.9375rem] focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
                     oppen ? 'border-border bg-background' : 'border-transparent text-foreground hover:bg-muted',
                   )}
                 >
