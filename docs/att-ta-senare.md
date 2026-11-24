@@ -209,3 +209,11 @@ Utrustningskatalogen hämtar i dag alla träffar för en sökning, i omgångar o
 Flytta rangordningen och grupperingen till databasen, till exempel en funktion som ger modellerna sida för sida med det riktiga antalet, när något av det här händer:
 - Katalogen växer så att en sökning eller en stor kategori ger flera tusen rader.
 - Vi bygger skyddet mot att någon hämtar hela katalogen (till exempel en gräns för antal rader per fråga eller per konto). Då går det inte längre att hämta alla träffar.
+
+## Matplanen: varor som blir kvar när ingredienserna byts
+
+När en egen rätt får nya ingredienser (`spara_egen_ratt` i `20261124120001_spara_ratt_och_recept.sql`) tas de gamla ingrediensraderna bort, men varor som ingen rätt använder längre ligger kvar i `varor`. De syns inte i inköpslistan, eftersom den bara tar med varor med mängd. De följer dock med om samma namn används igen, med sina gamla värden för kcal och protein. `ta_bort_egen_ratt` städar redan bort sådana varor (de som saknar egen mängd, `extra_g <= 0`). Gör samma sak i `spara_egen_ratt`: spara rättens gamla `vara_id` före borttagningen och ta bort de som inte används längre efter loopen. Lägg till ett test där Ris byts mot Bulgur och Ris försvinner.
+
+## Matplanen: "Ris" och "ris" i samma tur
+
+`spara_egen_ratt` matchar varor i turen utan hänsyn till stora och små bokstäver, men den unika nyckeln på `varor (tur_id, namn)` skiljer på dem. Läggs "Ris" och "ris" in direkt, eller av två samtidiga anrop, finns båda, och funktionen väljer då den med lägst id. Inget läcker mellan turer. Rätta med en ny migrering: slå först ihop dubbletterna i varje tur (flytta ingredienserna till en av varorna och lägg ihop `extra_g`), och lägg sedan till ett unikt index på `public.varor (tur_id, lower(namn))`.
