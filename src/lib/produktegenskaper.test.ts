@@ -154,7 +154,7 @@ describe('tolkaEgenskap', () => {
 
 describe('underkategorier utan egna egenskaper', () => {
   it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar, kök och kokkärl har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'kastrull', 'filter', 'rening', 'stavar', 'pannlampa'])
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'filter', 'rening', 'stavar', 'pannlampa'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
@@ -642,19 +642,20 @@ describe('egenskaper för kök och brännare', () => {
     packmatt_cm: '12 x 16',
     system: 'jetboil_fluxring',
   }
-  const felnycklar = (e: Record<string, unknown>) => valideraEgenskaper('brannare', e).fel.map((f) => f.split(':')[0])
+  const felnycklar = (e: Record<string, unknown>) => valideraEgenskaper('komplett_kok', e).fel.map((f) => f.split(':')[0])
 
-  it('har tolv egenskaper, varav fem behövs för jämförelser', () => {
+  it('har tolv egenskaper, varav fem behövs för jämförelser, samma för brännare och kompletta kök', () => {
     expect(egenskaperFor('brannare').map((e) => e.nyckel)).toEqual(Object.keys(kok))
+    expect(egenskaperFor('komplett_kok')).toEqual(egenskaperFor('brannare'))
     expect(egenskaperFor('brannare').filter((e) => e.forJamforelse).map((e) => e.nyckel)).toEqual(['typ', 'bransle', 'personer', 'effekt_w', 'koktid_1l_min'])
   })
 
   it('godkänner ett komplett kök utan fel eller varningar', () => {
-    expect(valideraEgenskaper('brannare', kok)).toEqual({ fel: [], varningar: [] })
+    expect(valideraEgenskaper('komplett_kok', kok)).toEqual({ fel: [], varningar: [] })
   })
 
   it('varnar men stoppar inte när ett spritkök saknar effekt och koktid', () => {
-    const r = valideraEgenskaper('brannare', { typ: 'stormkok', bransle: 'sprit', personer: 2, kokkarl_l: 1.5 })
+    const r = valideraEgenskaper('komplett_kok', { typ: 'stormkok', bransle: 'sprit', personer: 2, kokkarl_l: 1.5 })
     expect(r.fel).toEqual([])
     expect(r.varningar.map((v) => v.split(':')[0])).toEqual(['effekt_w', 'koktid_1l_min'])
   })
@@ -671,7 +672,14 @@ describe('egenskaper för kök och brännare', () => {
     const { kokkarl_l: _, ...utanKokkarl } = kok
     expect(felnycklar({ ...utanKokkarl, typ: 'stormkok' })).toEqual(['kokkarl_l'])
     expect(felnycklar({ ...utanKokkarl, typ: 'systemkok' })).toEqual(['kokkarl_l'])
-    expect(felnycklar({ ...utanKokkarl, typ: 'toppmonterat' })).toEqual([])
+  })
+
+  it('kräver kokkärl för ett komplett kök och förbjuder det för en brännare', () => {
+    const { kokkarl_l: _, ...utanKokkarl } = kok
+    const brannare = { ...utanKokkarl, typ: 'toppmonterat' }
+    expect(felnycklar(brannare)).toEqual(['kokkarl_l'])
+    expect(valideraEgenskaper('brannare', brannare).fel).toEqual([])
+    expect(valideraEgenskaper('brannare', { ...brannare, kokkarl_l: 1 }).fel.map((f) => f.split(':')[0])).toEqual(['kokkarl_l'])
   })
 
   it('ger fel för typer och bränslen som inte finns', () => {

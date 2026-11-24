@@ -1,53 +1,20 @@
+import { sakFranProdukt } from './produktsok'
+import type { Produkt } from './typer'
+
 /**
- * Ett kök i katalogen är antingen bara en brännare eller ett kit där kokkärl ingår.
- * Det avgörs av kokkarl_l: fältet fylls i när kokkärl ingår och lämnas tomt för en ren brännare.
- * Vikterna går bara att jämföra inom samma grupp.
+ * Vad som passar ihop i köket: brännare och kompletta kök på ena sidan, kokkärl och stekpannor på den andra.
+ * Ett kokkärlssystem (egenskapen system, till exempel trangia_27) anges bara när tillverkaren säger vad som passar.
  */
-export type Kokgrupp = 'bara_brannare' | 'med_kokkarl'
-
-export const KOKGRUPPER: { nyckel: Kokgrupp; etikett: string }[] = [
-  { nyckel: 'bara_brannare', etikett: 'Bara brännare' },
-  { nyckel: 'med_kokkarl', etikett: 'Med kokkärl' },
-]
-
-/** Underkategorin där köken ligger. Etiketten och filtret gäller bara den. */
-export const KOK_UNDERKATEGORI = 'brannare'
-
-export function arKokgrupp(varde: string): varde is Kokgrupp {
-  return KOKGRUPPER.some((g) => g.nyckel === varde)
-}
-
 type Egenskaper = Record<string, unknown> | null | undefined
 
-function kokkarlLiter(egenskaper: Egenskaper): number | null {
-  const v = egenskaper?.kokkarl_l
-  return typeof v === 'number' && v > 0 ? v : null
-}
+/** Underkategorierna som värmer: brännare utan kokkärl och kompletta kök. */
+export const KOKVARMARE = ['brannare', 'komplett_kok'] as const
 
-/** Gruppen för en produkt i underkategorin brannare. */
-export function kokgrupp(egenskaper: Egenskaper): Kokgrupp {
-  return kokkarlLiter(egenskaper) === null ? 'bara_brannare' : 'med_kokkarl'
-}
+/** Underkategorin för lösa kokkärl och stekpannor. */
+export const KOKKARL = 'kastrull'
 
-/** Etikett att visa på ett kök, till exempel "Med kokkärl 1,3 l" eller "Bara brännare". */
-export function kokkarlEtikett(egenskaper: Egenskaper): string {
-  const liter = kokkarlLiter(egenskaper)
-  if (liter === null) return 'Bara brännare'
-  return `Med kokkärl ${liter.toLocaleString('sv-SE', { maximumFractionDigits: 2 })} l`
-}
-
-/** Etiketten för en produkt i katalogen, eller null för allt som inte är ett kök. */
-export function kokEtikettFor(p: { underkategori: string; egenskaper?: Egenskaper }): string | null {
-  return p.underkategori === KOK_UNDERKATEGORI ? kokkarlEtikett(p.egenskaper) : null
-}
-
-/**
- * Behåller bara köken i den valda gruppen. Produkter i andra underkategorier filtreras inte bort,
- * och utan vald grupp blir listan som den var.
- */
-export function filtreraKokgrupp<P extends { underkategori: string; egenskaper?: Egenskaper }>(produkter: P[], grupp: Kokgrupp | ''): P[] {
-  if (!grupp) return produkter
-  return produkter.filter((p) => p.underkategori !== KOK_UNDERKATEGORI || kokgrupp(p.egenskaper) === grupp)
+function arVarmare(underkategori: string): boolean {
+  return (KOKVARMARE as readonly string[]).includes(underkategori)
 }
 
 /** Brännare som tar vanliga kastruller: de står fritt eller sitter på patronen och har öppna pannstöd. */
@@ -63,4 +30,51 @@ export function passarIhop(brannare: Egenskaper, kokkarl: Egenskaper): boolean {
   if (typeof brannarsystem === 'string' && brannarsystem) return kokkarl?.system === brannarsystem
   if (kokkarl?.bara_system === true) return false
   return typeof brannare?.typ === 'string' && OPPNA_TYPER.has(brannare.typ)
+}
+
+type Koksak = { id: string; underkategori: string; egenskaper?: Egenskaper; packvikt_g?: number | null }
+
+/** Rubriken för listan över det som passar, eller null när produkten inte hör till köket. */
+export function passarMedRubrik(underkategori: string): string | null {
+  if (arVarmare(underkategori)) return 'Kokkärl och stekpannor som passar'
+  if (underkategori === KOKKARL) return 'Brännare och kök det passar på'
+  return null
+}
+
+/** Kokkärlssystemet två produkter delar, till exempel trangia_27, eller null när de inte delar något. */
+export function gemensamtSystem(a: Egenskaper, b: Egenskaper): string | null {
+  const s = a?.system
+  return typeof s === 'string' && s && b?.system === s ? s : null
+}
+
+/**
+ * Det bland kandidaterna som passar ihop med produkten: kokkärl till en brännare eller ett komplett kök, och brännare
+ * och kompletta kök till ett kokkärl. Det som är gjort för samma kokkärlssystem kommer först, sedan resten, och inom
+ * varje grupp det lättaste först. Produkten själv tas aldrig med.
+ */
+export function passarMed<P extends Koksak>(produkt: Koksak, kandidater: P[]): P[] {
+  let traffar: P[] = []
+  if (arVarmare(produkt.underkategori)) {
+    traffar = kandidater.filter((k) => k.underkategori === KOKKARL && passarIhop(produkt.egenskaper, k.egenskaper))
+  } else if (produkt.underkategori === KOKKARL) {
+    traffar = kandidater.filter((k) => arVarmare(k.underkategori) && passarIhop(k.egenskaper, produkt.egenskaper))
+  }
+  const forst = (k: P) => (gemensamtSystem(produkt.egenskaper, k.egenskaper) ? 0 : 1)
+  return traffar
+    .filter((k) => k.id !== produkt.id)
+    .sort((a, b) => forst(a) - forst(b) || (a.packvikt_g ?? Infinity) - (b.packvikt_g ?? Infinity))
+}
+
+/** Den sammanlagda vikten för en brännare och de kokkärl man har valt till den, i gram. */
+export function kokvikt(delar: readonly { packvikt_g: number }[]): number {
+  return delar.reduce((summa, d) => summa + d.packvikt_g, 0)
+}
+
+/**
+ * Sakerna som läggs i förrådet när man sparar sitt kök: brännaren och de valda kokkärlen, var för sig och med
+ * koppling till katalogen. Brännaren tas inte med om den redan finns i förrådet, och samma kokkärl bara en gång.
+ */
+export function sakerForKok(brannare: Produkt, valda: readonly Produkt[], brannarenFinns: boolean) {
+  const unika = valda.filter((v, i) => v.id !== brannare.id && valda.findIndex((x) => x.id === v.id) === i)
+  return [...(brannarenFinns ? [] : [brannare]), ...unika].map(sakFranProdukt)
 }
