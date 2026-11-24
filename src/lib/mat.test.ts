@@ -1,13 +1,19 @@
 import { describe, expect, it } from 'vitest'
 import {
   ingredienserTillDatabasen,
+  borjaMed,
   dagssummor,
   formateraKcal,
   inkopsgrupper,
   inkopslista,
   kcalPer100g,
   matdagar,
+  maltidsAdress,
+  maltidsord,
+  matstatus,
   matsummering,
+  saknadeMaltider,
+  saknasText,
   matviktTotalt,
   naringForRader,
   PASAR_TILL,
@@ -353,5 +359,76 @@ describe('pasnamn och PASAR_TILL', () => {
   it('visar efterrätter vid middag och mellanmål', () => {
     expect(PASAR_TILL.middag).toContain('dessert')
     expect(PASAR_TILL.frukost).toEqual(['frukost'])
+  })
+})
+
+describe('saknadeMaltider och matstatus', () => {
+  const dagar = matdagar(2, 1)
+  const rad = (dag: number, m: Maltid) => ({ dag, maltid: m })
+  const text = (p: { dag: { namn: string }; maltid: Maltid }) => `${p.dag.namn} ${p.maltid}`
+
+  it('räknar frukost, lunch och middag på alla dagar, reservdagar inräknade, men inte mellanmål', () => {
+    expect(saknadeMaltider(dagar, [])).toHaveLength(9)
+    expect(saknadeMaltider(dagar, [rad(1, 'mellanmal')])).toHaveLength(9)
+    expect(matstatus(dagar, [])).toMatchObject({ totalt: 9, planerade: 0, saknas: 9 })
+  })
+
+  it('ger de saknade i ordning, dag för dag med reservdagen sist', () => {
+    const saknas = saknadeMaltider(dagar, [rad(1, 'frukost'), rad(2, 'lunch'), rad(3, 'middag')])
+    expect(saknas.map(text)).toEqual(['Dag 1 lunch', 'Dag 1 middag', 'Dag 2 frukost', 'Dag 2 middag', 'Reservdag 1 frukost', 'Reservdag 1 lunch'])
+  })
+
+  it('räknar en måltid med flera rätter en gång', () => {
+    expect(matstatus(dagar, [rad(1, 'frukost'), rad(1, 'frukost')])).toMatchObject({ planerade: 1, saknas: 8 })
+  })
+
+  it('bortser från rader på dagar som inte finns i turen', () => {
+    expect(matstatus(dagar, [rad(7, 'frukost')]).saknas).toBe(9)
+  })
+
+  it('pekar på den första som saknas, och null när planen är klar', () => {
+    expect(matstatus(dagar, [rad(1, 'frukost')]).forsta).toMatchObject({ dag: { dag: 1 }, maltid: 'lunch' })
+    const allt = dagar.flatMap((d) => (['frukost', 'lunch', 'middag'] as const).map((m) => rad(d.dag, m)))
+    expect(matstatus(dagar, allt)).toMatchObject({ saknas: 0, planerade: 9, forsta: null })
+  })
+
+  it('är tom för en tur utan dagar', () => {
+    expect(matstatus([], [])).toEqual({ totalt: 0, planerade: 0, saknas: 0, forsta: null })
+  })
+
+  it('ger samma saknade som dagssummor', () => {
+    const data: Matdata = { ratter: [ratt('r1')], ingredienser: [], varor: [], pasar: new Map(), maltider: [maltid(1, 'lunch', 'r1')] }
+    const perDag = dagssummor(data, dagar).flatMap((s) => s.saknas.map((m) => `${s.dag.dag}:${m}`))
+    expect(saknadeMaltider(dagar, data.maltider).map((p) => `${p.dag.dag}:${p.maltid}`)).toEqual(perDag)
+  })
+})
+
+describe('saknasText och maltidsord', () => {
+  it('böjer måltid efter antalet', () => {
+    expect(saknasText(1)).toBe('1 måltid saknas')
+    expect(saknasText(12)).toBe('12 måltider saknas')
+  })
+
+  it('ger måltidens namn med liten bokstav', () => {
+    expect(maltidsord('mellanmal')).toBe('mellanmål')
+  })
+})
+
+describe('maltidsAdress', () => {
+  it('pekar på turens flik Mat med dag och måltid', () => {
+    expect(maltidsAdress('abc', 2, 'lunch')).toBe('/tur/abc/mat?dag=2&maltid=lunch')
+  })
+})
+
+describe('borjaMed', () => {
+  const [dag1, , reserv] = matdagar(2, 1)
+
+  it('säger måltiden i bestämd form och datumet', () => {
+    expect(borjaMed({ dag: dag1, maltid: 'frukost' }, 'fredag 4 december')).toBe('Börja med frukosten fredag 4 december.')
+  })
+
+  it('säger dagen när datumet saknas, och alltid för en reservdag', () => {
+    expect(borjaMed({ dag: dag1, maltid: 'lunch' }, null)).toBe('Börja med lunchen dag 1.')
+    expect(borjaMed({ dag: reserv, maltid: 'middag' }, 'söndag 6 december')).toBe('Börja med middagen reservdag 1.')
   })
 })

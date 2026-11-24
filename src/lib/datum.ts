@@ -14,3 +14,15 @@ export function datumText(iso: string | null | undefined): string {
   if (Number.isNaN(d.getTime())) return ''
   return d.toLocaleDateString('sv-SE', { day: 'numeric', month: 'long', year: 'numeric', timeZone: 'UTC' })
 }
+
+/**
+ * Veckodagen och datumet för en dag i turen, räknat från avresan: dag 1 är avresedagen. "fredag 4 december".
+ * null när avresan saknas eller är fel.
+ */
+export function dagensDatum(avresa: string | null | undefined, dag: number): string | null {
+  if (!avresa || dag < 1) return null
+  const d = new Date(`${avresa}T12:00:00Z`)
+  if (Number.isNaN(d.getTime())) return null
+  d.setUTCDate(d.getUTCDate() + dag - 1)
+  return d.toLocaleDateString('sv-SE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'UTC' })
+}
