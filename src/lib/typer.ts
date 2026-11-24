@@ -89,6 +89,43 @@ export interface DeltagareRad {
   user_id: string | null
 }
 
+/** En rad i turens packlista, som den står i packrader. */
+export interface PackradRad {
+  id: string
+  tur_id: string
+  namn: string
+  /** Förrådets kategorinyckel, till exempel sova. */
+  kategori: string
+  underkategori: string | null
+  /** Produkten i katalogen raden kom från. */
+  produkt_id: string | null
+  antal: number
+  vikt_g: number | null
+  typ: Typ
+  /** Deltagaren som bär raden. Tomt när alla = true. */
+  bars_av: string | null
+  /** Varje person har en egen, till exempel sovsäck. */
+  alla: boolean
+  /** En person bär raden åt gruppen. */
+  gemensam: boolean
+  /** Svaret att alla rader av samma sort behövs, så att appen inte frågar igen. */
+  dubblett_ok: boolean
+  med: boolean
+  notering: string | null
+  sortering: number
+}
+
+/** En deltagares bock på en packrad och, på rader som alla ska ha, hens egen modell. */
+export interface PackstatusRad {
+  packrad_id: string
+  deltagare_id: string
+  tur_id: string
+  packad: boolean
+  namn: string | null
+  vikt_g: number | null
+  produkt_id: string | null
+}
+
 /** Måltiderna i matplanen, som de står i maltider.maltid. */
 export type Maltid = 'frukost' | 'lunch' | 'middag' | 'mellanmal'
 
@@ -200,4 +237,25 @@ export interface Kostbehov {
   utan: Allergen[]
   /** När personen samtyckte till att uppgifterna sparas och visas för deltagarna i turen. */
   samtycke_tid: string
+}
+
+/** Om livsmedlet är torrt, rått eller tillagat. Vandrare packar torr vikt, så det ska synas i förslagen. */
+export type Tillstand = 'torr' | 'ra' | 'tillagad'
+
+/** Ett livsmedel som det ligger i tabellen livsmedel. Värdena gäller 100 g, och null betyder att värdet saknas. */
+export interface Livsmedel {
+  nummer: number
+  namn: string
+  grupp: string | null
+  tillstand: Tillstand | null
+  kcal_per_100g: number | null
+  protein_per_100g: number | null
+  fett_per_100g: number | null
+  kolhydrater_per_100g: number | null
+  fiber_per_100g: number | null
+  sockerarter_per_100g: number | null
+  salt_per_100g: number | null
+  vatten_per_100g: number | null
+  /** Datumet för livsmedlets version hos Livsmedelsverket (ÅÅÅÅ-MM-DD). */
+  version: string | null
 }

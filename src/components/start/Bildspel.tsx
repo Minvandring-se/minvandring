@@ -3,19 +3,29 @@ import { cn } from '@/lib/utils'
 
 // Bildfokus (object-position) så att det viktiga syns när bilden beskärs.
 // fokusMobil: i stående format beskärs bilden från sidorna, så den första siffran styr.
-// fokus (dator): på breda skärmar beskärs bilden uppifrån och nerifrån, så den andra siffran styr.
-// Norrskenet är första bilden. Utsiktsbilden är mörkast och ligger därför sist.
-// ljus: dämpar ljusa bilder så att den vita texten klarar WCAG AA (uppmätt bakom rubrik, undertext och meny).
-const bilder = [
-  { namn: '5-norrsken', alt: 'Norrsken över fjäll och sjö', fokusMobil: '30% 50%', fokus: '50% 90%', ljus: 1 },
-  { namn: '2-sommarfjall', alt: 'En vandrare med packning på en stig i sommarfjällen', fokusMobil: '70% 50%', fokus: '70% 70%', ljus: 0.62 },
-  { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokusMobil: '20% 50%', fokus: '25% 78%', ljus: 0.62 },
-  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokusMobil: '45% 50%', fokus: '40% 60%', ljus: 1 },
+// fokus (dator): bildspelet är aldrig bredare än 2:1 (se Start.tsx), så bilden beskärs uppifrån och nerifrån och den
+//   andra siffran styr. Texten ligger i övre halvan, och personerna ska stå under den, inte bakom rubriken eller knappen.
+// Fjällängen är första bilden. Utsiktsbilden är mörkast och ligger därför sist.
+// ljus: dämpar ljusa bilder lite. Det mesta av skuggan ligger bakom texten (Start.tsx). Den vita texten klarar
+//   WCAG AA mot bilden bakom rubrik, undertext, knapp och meny.
+// bred: datorbilden är ett eget bredare utsnitt (design/hero/bredbilder.cjs), eftersom motivet annars inte får plats i 2:1.
+// mobil: false betyder att bilden inte visas på stående mobil, där personen annars står bakom texten.
+// zoom (dator): punkten som den långsamma zoomen utgår från, vid personerna, så att de inte skärs bort.
+type Bild = { namn: string; alt: string; fokusMobil: string; fokus: string; zoom: string; ljus: number; bred?: boolean; mobil?: boolean }
+
+const alla: Bild[] = [
+  { namn: '6-fjallang', alt: 'Två vandrare går över en fjällhed mot ett fjäll', fokusMobil: '50% 50%', fokus: '50% 12%', zoom: '50% 80%', ljus: 0.9 },
+  { namn: '7-vinterfjall', alt: 'En person vilar på ett renskinn i snön framför ett snötäckt fjäll', fokusMobil: '50% 50%', fokus: '50% 50%', zoom: '40% 50%', ljus: 0.9, bred: true },
+  { namn: '5-norrsken', alt: 'Norrsken över fjäll och sjö', fokusMobil: '30% 50%', fokus: '50% 85%', zoom: '50% 70%', ljus: 1 },
+  { namn: '4-kust', alt: 'En vandrare på en kuststig längs havet', fokusMobil: '20% 50%', fokus: '25% 78%', zoom: '20% 70%', ljus: 0.8, mobil: false },
+  { namn: '3-utsikt', alt: 'En person står på en klippa och blickar ut över en fjälldal med sjö', fokusMobil: '45% 50%', fokus: '40% 12%', zoom: '38% 70%', ljus: 1, mobil: false },
 ]
 
 /** Hur länge varje bild syns. Övertoningen (0,8 s) ligger i klassen duration-800. */
 const VISNING_MS = 7000
 const BREDDER = [640, 1280, 1920, 2560]
+/** De breda datorbilderna finns inte i 640 px. */
+const BREDA_BREDDER = [1280, 1920, 2560]
 /** Stående mobilbilder (9:16), redan beskurna kring fokusMobil. Görs om med design/hero/mobilbilder.cjs. */
 const MOBILBREDDER = [640, 900]
 
@@ -28,15 +38,15 @@ function srcset(namn: string, bredder: number[], tillagg = '') {
   return bredder.map((b) => `/hero/${namn}${tillagg}-${b}.webp ${b}w`).join(', ')
 }
 
-function useMinskaRorelse() {
-  const [minska, setMinska] = useState(() => window.matchMedia('(prefers-reduced-motion: reduce)').matches)
+function useMedia(fraga: string) {
+  const [traff, setTraff] = useState(() => window.matchMedia(fraga).matches)
   useEffect(() => {
-    const mq = window.matchMedia('(prefers-reduced-motion: reduce)')
-    const andra = () => setMinska(mq.matches)
+    const mq = window.matchMedia(fraga)
+    const andra = () => setTraff(mq.matches)
     mq.addEventListener('change', andra)
     return () => mq.removeEventListener('change', andra)
-  }, [])
-  return minska
+  }, [fraga])
+  return traff
 }
 
 function useFlikenSyns() {
@@ -49,13 +59,21 @@ function useFlikenSyns() {
   return syns
 }
 
+const mobilens = alla.filter((b) => b.mobil !== false)
+
+/** Stående mobil får färre bilder. Bildspelet börjar om när skärmen vänds, så att räknarna hör till rätt lista. */
+export function Bildspel() {
+  const mobil = useMedia(MOBIL_MEDIA)
+  return <Bilder key={mobil ? 'mobil' : 'dator'} bilder={mobil ? mobilens : alla} />
+}
+
 /**
  * Lugnt bildspel som bakgrund, utan pilar eller prickar.
  * Första bilden laddas direkt. De andra laddas när webbläsaren har tid över efter att sidan visats.
  * Med "minska rörelse" visas bara första bilden. Växlingen pausar när fliken inte syns.
  */
-export function Bildspel() {
-  const minskaRorelse = useMinskaRorelse()
+function Bilder({ bilder }: { bilder: readonly Bild[] }) {
+  const minskaRorelse = useMedia('(prefers-reduced-motion: reduce)')
   const syns = useFlikenSyns()
   const [aktiv, setAktiv] = useState(0)
   const [forra, setForra] = useState<number | null>(null)
@@ -89,7 +107,7 @@ export function Bildspel() {
       setAktiv(nasta)
     }, VISNING_MS)
     return () => clearTimeout(id)
-  }, [aktiv, laddade, laddaResten, minskaRorelse, syns])
+  }, [aktiv, bilder, laddade, laddaResten, minskaRorelse, syns])
 
   return (
     <div className="absolute inset-0 isolate overflow-hidden bg-black">
@@ -100,17 +118,18 @@ export function Bildspel() {
           <picture key={bild.namn} className="contents">
             <source media={MOBIL_MEDIA} srcSet={srcset(bild.namn, MOBILBREDDER, '-mobil')} sizes="100vw" />
             <img
-              src={`/hero/${bild.namn}-1280.webp`}
-              srcSet={srcset(bild.namn, BREDDER)}
+              src={`/hero/${bild.namn}${bild.bred ? '-bred' : ''}-1280.webp`}
+              srcSet={bild.bred ? srcset(bild.namn, BREDA_BREDDER, '-bred') : srcset(bild.namn, BREDDER)}
               sizes={SIZES}
               alt={synlig ? bild.alt : ''}
               aria-hidden={synlig ? undefined : true}
               fetchPriority={i === 0 ? 'high' : 'low'}
               decoding="async"
               onLoad={() => laddad(i)}
-              style={{ '--fokus-mobil': bild.fokusMobil, '--fokus': bild.fokus, filter: bild.ljus < 1 ? `brightness(${bild.ljus})` : undefined } as CSSProperties}
+              style={{ '--fokus-mobil': bild.fokusMobil, '--fokus': bild.fokus, '--zoom': bild.zoom, filter: bild.ljus < 1 ? `brightness(${bild.ljus})` : undefined } as CSSProperties}
               className={cn(
                 'absolute inset-0 size-full object-cover [object-position:var(--fokus-mobil)] md:[object-position:var(--fokus)]',
+                'md:[transform-origin:var(--zoom)]',
                 // Mobilbilderna är redan beskurna kring fokus.
                 '[@media(max-width:767px)_and_(orientation:portrait)]:[object-position:50%_50%]',
                 // Den nya bilden tonar in ovanpå. Den gamla ligger kvar helt synlig under tills övergången är klar.
@@ -124,11 +143,8 @@ export function Bildspel() {
           </picture>
         )
       })}
-      {/* Neutral skugga så att bilderna behåller sina färger: lätt överst bakom menyn, mörkare bakom texten och i nederkant.
-          Lagren är i procent av ytan. I stående format blir de därför lättare och smalare, annars täcker de nästan hela bilden. */}
-      <div className="absolute inset-0 z-20 bg-linear-to-b from-black/50 via-black/10 via-20% to-transparent to-40% md:from-black/55 md:via-30%" />
-      <div className="absolute inset-0 z-20 bg-[radial-gradient(ellipse_95%_36%_at_50%_48%,rgb(0_0_0/0.5),transparent)] md:bg-[radial-gradient(ellipse_70%_48%_at_50%_52%,rgb(0_0_0/0.55),transparent)]" />
-      <div className="absolute inset-0 z-20 bg-linear-to-t from-black/60 via-black/10 via-15% to-transparent to-30% md:from-black/65 md:via-black/15 md:via-25% md:to-45%" />
+      {/* Lätt skugga överst bakom menyn. Skuggan bakom rubrik, undertext och knapp ligger i Start.tsx, så att resten av bilden behåller sitt ljus. */}
+      <div className="absolute inset-x-0 top-0 z-20 h-40 bg-linear-to-b from-black/55 to-transparent" />
     </div>
   )
 }

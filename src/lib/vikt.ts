@@ -21,6 +21,8 @@ export interface Packrad {
   barsAv: string | null
   /** Varje person har en egen (t.ex. sovsäck). Gäller inte hundar. */
   alla: boolean
+  /** Bara när alla = true: vikten på var och ens egen modell, per deltagare. Saknas den gäller radens vikt. */
+  egenVikt?: ReadonlyMap<string, number | null>
 }
 
 export interface Vikter {
@@ -32,11 +34,15 @@ export interface Vikter {
   kropp: number
 }
 
-/** Radens vikt per bärare i gram. Saknas antal räknas det som 1, saknas vikt som 0. */
-export function radvikt(rad: Packrad): number {
+/**
+ * Radens vikt per bärare i gram. Saknas antal räknas det som 1, saknas vikt som 0. På en rad som alla ska ha gäller
+ * deltagarens egen vikt när den finns.
+ */
+export function radvikt(rad: Packrad, deltagareId?: string): number {
   if (!rad.med) return 0
   const antal = Number.isFinite(rad.antal) ? rad.antal : 1
-  return antal * (rad.viktG ?? 0)
+  const egen = rad.alla && deltagareId ? rad.egenVikt?.get(deltagareId) : null
+  return antal * (egen ?? rad.viktG ?? 0)
 }
 
 /** Bär deltagaren den här raden? */
@@ -53,7 +59,7 @@ export function packvikter(rader: Packrad[], deltagare: Deltagare[]): Map<string
     const v: Vikter = { bas: 0, forbrukas: 0, kropp: 0 }
     for (const rad of rader) {
       if (!barRaden(rad, d)) continue
-      const g = radvikt(rad)
+      const g = radvikt(rad, d.id)
       if (rad.typ === 'ryggsack') v.bas += g
       else if (rad.typ === 'forbrukas') v.forbrukas += g
       else v.kropp += g
@@ -96,3 +102,23 @@ export function matvikter(manniskomatG: number, deltagare: Deltagare[], dagarInk
   }
   return ut
 }
+
+export interface Startvikt extends Vikter {
+  /** Maten deltagaren bär vid start (gram). */
+  mat: number
+  /** Det som bärs i ryggsäcken vid start: basvikt, förbrukning och mat (gram). Det man har på sig räknas inte. */
+  start: number
+}
+
+/** Startvikten per deltagare: packlistans vikter plus maten. */
+export function startvikter(rader: Packrad[], deltagare: Deltagare[], mat: ReadonlyMap<string, number>): Map<string, Startvikt> {
+  const pack = packvikter(rader, deltagare)
+  const ut = new Map<string, Startvikt>()
+  for (const d of deltagare) {
+    const v = pack.get(d.id)!
+    const m = mat.get(d.id) ?? 0
+    ut.set(d.id, { ...v, mat: m, start: v.bas + v.forbrukas + m })
+  }
+  return ut
+}
+

@@ -8,7 +8,7 @@ export const TEMA_NYCKEL = 'minvandring-tema'
 export const TEMAVAL: readonly Temaval[] = ['ljus', 'mork', 'system']
 
 /** Webbläsarens färg runt sidan (theme-color), samma som bakgrunden i varje läge. */
-export const TEMAFARG: Record<Lage, string> = { ljus: '#eef0eb', mork: '#0e1512' }
+export const TEMAFARG: Record<Lage, string> = { ljus: '#f7f8f5', mork: '#0e1512' }
 
 /** Ett sparat värde som ett giltigt val. Saknat, okänt eller trasigt värde blir "system". */
 export function tolkaTemaval(varde: unknown): Temaval {

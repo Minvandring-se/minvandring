@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bastForeStatus, enManadEfter, formateraDatum, hemma, kopText, skafferietForst, sorteraSkafferi } from './skafferi'
+import { bastForeStatus, bokade, bokadText, enManadEfter, formateraDatum, hemma, kopText, ledigaHemma, senastAnvanda, skafferietForst, sorteraSkafferi, turerFore, type Bokningstur } from './skafferi'
 import type { Skafferirad } from './typer'
 
 const rad = (matprodukt_id: string, antal: number, bast_fore: string | null = null): Skafferirad => ({ id: `r-${matprodukt_id}`, matprodukt_id, antal, bast_fore })
@@ -60,5 +60,64 @@ describe('ordningen i skafferiet', () => {
     const namn: Record<string, string> = { a: 'Öl', b: 'Gröt', c: 'Bönor', d: 'Ärtsoppa' }
     const rader = [rad('a', 1), rad('b', 1, '2027-05-01'), rad('c', 1), rad('d', 1, '2027-01-01')]
     expect(sorteraSkafferi(rader, (r) => namn[r.matprodukt_id]).map((r) => r.matprodukt_id)).toEqual(['d', 'b', 'c', 'a'])
+  })
+})
+
+describe('bokning från skafferiet', () => {
+  const tur = (id: string, avresa: string | null, skapad: string, dagar = 3): Bokningstur => ({ id, avresa, hemkomst: null, dagar, skapad })
+  const turer = [
+    tur('juni', '2027-06-01', '2026-11-03'),
+    tur('mars', '2027-03-01', '2026-11-05'),
+    tur('utan', null, '2026-11-01'),
+    tur('utan2', null, '2026-11-02'),
+    tur('forra', '2026-08-01', '2026-07-01'),
+  ]
+  const idag = '2026-11-24'
+
+  it('låter kommande turer som börjar tidigare ta påsarna först', () => {
+    expect(turerFore(turer, 'mars', idag)).toEqual(new Set())
+    expect(turerFore(turer, 'juni', idag)).toEqual(new Set(['mars']))
+    // Turer utan datum kommer sist, i den ordning de skapades. Avslutade turer räknas inte.
+    expect(turerFore(turer, 'utan2', idag)).toEqual(new Set(['mars', 'juni', 'utan']))
+    expect(turerFore(turer, 'forra', idag)).toEqual(new Set())
+  })
+
+  it('räknar bara påsarna i turerna före', () => {
+    const bokningar = [
+      { turId: 'mars', matproduktId: 'p1', pasar: 2 },
+      { turId: 'juni', matproduktId: 'p1', pasar: 3 },
+      { turId: 'mars', matproduktId: 'p2', pasar: 1 },
+    ]
+    expect(bokade(bokningar, new Set(['mars']))).toEqual(new Map([['p1', 2], ['p2', 1]]))
+    expect(bokade(bokningar, new Set(['mars', 'juni']))).toEqual(new Map([['p1', 5], ['p2', 1]]))
+  })
+
+  it('drar av det bokade från det man har hemma', () => {
+    const iSkafferiet = new Map([['p1', 3], ['p2', 1], ['p3', 2]])
+    expect(ledigaHemma(iSkafferiet, new Map([['p1', 2], ['p2', 4]]))).toEqual(new Map([['p1', 1], ['p3', 2]]))
+  })
+
+  it('säger hur många påsar som går till en tidigare tur', () => {
+    expect(bokadText(0)).toBeNull()
+    expect(bokadText(1)).toBe('En påse hemma är bokad till en tur som börjar före den här.')
+    expect(bokadText(3)).toBe('3 påsar hemma är bokade till en tur som börjar före den här.')
+  })
+})
+
+describe('senastAnvanda', () => {
+  const turer = [
+    { id: 'a', skapad: '2026-10-01' },
+    { id: 'b', skapad: '2026-11-01' },
+    { id: 'denna', skapad: '2026-09-01' },
+  ]
+  it('tar den här turens påsar först, sedan den senast skapade turen, och varje påse en gång', () => {
+    const ratter = [
+      { turId: 'a', matproduktId: 'p1' },
+      { turId: 'b', matproduktId: 'p2' },
+      { turId: 'denna', matproduktId: 'p3' },
+      { turId: 'a', matproduktId: 'p2' },
+    ]
+    expect(senastAnvanda(ratter, turer, 'denna')).toEqual(['p3', 'p2', 'p1'])
+    expect(senastAnvanda(ratter, turer, 'denna', 2)).toEqual(['p3', 'p2'])
   })
 })

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { barRaden, matandelar, matvikter, packvikter, radvikt, type Deltagare, type Packrad } from './vikt'
+import { barRaden, matandelar, matvikter, packvikter, radvikt, startvikter, type Deltagare, type Packrad } from './vikt'
 
 const oscar: Deltagare = { id: 'o', typ: 'person', matandel: null }
 const andreas: Deltagare = { id: 'a', typ: 'person', matandel: null }
@@ -95,3 +95,43 @@ describe('matvikter', () => {
     expect(m.get('b')).toBe(2100)
   })
 })
+
+describe('egen modell på rader som alla ska ha', () => {
+  const sovsack = rad({ alla: true, viktG: 1000, egenVikt: new Map([['o', 780], ['a', null]]) })
+
+  it('räknar var och ens egen vikt och annars radens', () => {
+    expect(radvikt(sovsack, 'o')).toBe(780)
+    expect(radvikt(sovsack, 'a')).toBe(1000)
+    expect(radvikt(sovsack, 'p')).toBe(1000)
+    expect(radvikt(sovsack)).toBe(1000)
+  })
+
+  it('bryr sig inte om egen vikt på en rad som en person bär', () => {
+    expect(radvikt(rad({ barsAv: 'o', viktG: 500, egenVikt: new Map([['o', 1]]) }), 'o')).toBe(500)
+  })
+
+  it('går in i packvikterna per person', () => {
+    const v = packvikter([sovsack], [oscar, andreas, bamse])
+    expect(v.get('o')!.bas).toBe(780)
+    expect(v.get('a')!.bas).toBe(1000)
+    expect(v.get('b')!.bas).toBe(0)
+  })
+})
+
+describe('startvikter', () => {
+  it('är basvikt, förbrukning och mat, utan det man har på sig', () => {
+    const rader = [
+      rad({ barsAv: 'o', viktG: 1800 }),
+      rad({ barsAv: 'o', viktG: 390, typ: 'forbrukas' }),
+      rad({ alla: true, viktG: 400, typ: 'kropp' }),
+    ]
+    const v = startvikter(rader, [oscar, andreas], new Map([['o', 2500], ['a', 2500]]))
+    expect(v.get('o')).toEqual({ bas: 1800, forbrukas: 390, kropp: 400, mat: 2500, start: 4690 })
+    expect(v.get('a')).toEqual({ bas: 0, forbrukas: 0, kropp: 400, mat: 2500, start: 2500 })
+  })
+
+  it('räknar 0 g mat för den som inte finns i matvikterna', () => {
+    expect(startvikter([], [pichi], new Map()).get('p')!.start).toBe(0)
+  })
+})
+
