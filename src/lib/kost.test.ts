@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arAllergen, behovstext, filterForGruppen, passarFilter, skalForPerson, uppraknade, varningar, type Behov, type Kostinfo } from './kost'
+import { arAllergen, behovstext, filterForGruppen, filterText, kostsvar, kostsvarText, passarFilter, skalForPerson, uppraknade, varningar, type Behov, type Kostinfo } from './kost'
 
 const kand: Kostinfo = { vegetarisk: true, vegansk: false, glutenfri: true, laktosfri: true, allergener: ['soja', 'selleri'] }
 const okand: Kostinfo = { vegetarisk: null, vegansk: null, glutenfri: null, laktosfri: null, allergener: null }
@@ -76,7 +76,8 @@ describe('varningar', () => {
     expect(
       varningar(p, [behov('Lisa', { utan: ['gluten'] }), behov('Erik', { utan: ['gluten'], glutenfri: true }), behov('Anna', { glutenfri: true })]),
     ).toEqual([
-      { text: 'Innehåller gluten, passar inte Lisa och Erik', okand: false },
+      // Erik vill ha glutenfritt, så Inte glutenfri räcker för honom.
+      { text: 'Innehåller gluten, passar inte Lisa', okand: false },
       { text: 'Inte glutenfri, passar inte Erik och Anna', okand: false },
     ])
   })
@@ -118,6 +119,13 @@ describe('arAllergen', () => {
 })
 
 describe('behovstext', () => {
+  it('skriver inte gluten två gånger, men skriver både laktosfri och mjölk', () => {
+    expect(behovstext(behov('Oscar', { glutenfri: true, utan: ['gluten'] }))).toBe('Glutenfri')
+    expect(behovstext(behov('Oscar', { glutenfri: true, utan: ['gluten', 'sesam'] }))).toBe('Glutenfri, tål inte sesam')
+    expect(behovstext(behov('Lisa', { utan: ['gluten'] }))).toBe('Tål inte gluten')
+    expect(behovstext(behov('Erik', { laktosfri: true, utan: ['mjolk'] }))).toBe('Laktosfri, tål inte mjölk')
+  })
+
   it('räknar upp kostval och allergener', () => {
     expect(behovstext(behov('Lisa', { vegetarisk: true, glutenfri: true, utan: ['sesam', 'notter'] }))).toBe('Vegetarisk, glutenfri, tål inte nötter och sesam')
   })
@@ -132,5 +140,35 @@ describe('behovstext', () => {
 
   it('är tom utan behov', () => {
     expect(behovstext(behov('Lisa'))).toBe('')
+  })
+})
+
+describe('kostsvar', () => {
+  const inga = { vegetarisk: false, vegansk: false, glutenfri: false, laktosfri: false, utan: [] }
+
+  it('skiljer på att inte ha svarat och att ha sagt att man inte har några kostbehov', () => {
+    expect(kostsvar({ user_id: 'u' }, undefined)).toEqual({ lage: 'inte-svarat' })
+    expect(kostsvar({ user_id: 'u' }, inga)).toEqual({ lage: 'inga' })
+    expect(kostsvarText({ lage: 'inte-svarat' })).toBe('Har inte angett något än')
+    expect(kostsvarText({ lage: 'inga' })).toBe('Inga kostbehov')
+  })
+
+  it('visar kostbehoven som text', () => {
+    const svar = kostsvar({ user_id: 'u' }, { ...inga, glutenfri: true, utan: ['notter'] })
+    expect(svar).toEqual({ lage: 'behov', text: 'Glutenfri, tål inte nötter' })
+  })
+
+  it('säger att en person utan konto kan fylla i själv', () => {
+    expect(kostsvar({ user_id: null }, undefined)).toEqual({ lage: 'utan-konto' })
+  })
+})
+
+describe('filterText', () => {
+  it('beskriver filtret i ord', () => {
+    expect(filterText({ val: [], utan: [] })).toBeNull()
+    expect(filterText({ val: ['glutenfri'], utan: [] })).toBe('Glutenfri')
+    expect(filterText({ val: ['laktosfri', 'vegetarisk'], utan: ['sesam'] })).toBe('Vegetarisk, laktosfri, utan sesam')
+    expect(filterText({ val: [], utan: ['agg'] })).toBe('Utan ägg')
+    expect(filterText({ val: ['glutenfri'], utan: ['gluten', 'sesam'] })).toBe('Glutenfri, utan sesam')
   })
 })

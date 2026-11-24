@@ -9,6 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { KATEGORIER } from '../src/lib/forrad'
 import { ALLERGENER } from '../src/lib/kost'
 import { godkanda, importera } from '../src/lib/katalogimport'
+import { godkandaLivsmedel, importeraLivsmedel, LIVSMEDELSKOLUMNER, livsmedelSeedSql } from '../src/lib/livsmedelimport'
 import { godkandaPasar, importeraMatkatalog, MATKOLUMNER, matSeedSql } from '../src/lib/matkatalogimport'
 
 const A = '00000000-0000-0000-0000-00000000000a'
@@ -1566,6 +1567,75 @@ describe('matplanen', () => {
       )
       const nycklar = [...r.rows[0].def.matchAll(/'([a-z]+)'/g)].map((m) => m[1])
       expect(nycklar.sort()).toEqual(ALLERGENER.map((a) => a.nyckel).sort())
+    })
+  })
+
+  describe('livsmedlen', () => {
+    // Fejkade rader i CSV:ns format. De finns bara här. Numren är höga så att de inte krockar med seeden.
+    const csv = (kcal: string) =>
+      [
+        LIVSMEDELSKOLUMNER.join(';'),
+        `990001;Testpasta okokt;Pasta;torr;${kcal};12;1,7;70,1;3;2,5;0,01;0;2026-06-29`,
+        '990002;Testmorot rå;;ra;;;;;;;;;',
+      ].join('\n')
+    const korSeed = (kcal: string) => db.exec(livsmedelSeedSql(godkandaLivsmedel(importeraLivsmedel(csv(kcal))), 'test.csv'))
+
+    beforeAll(async () => {
+      await korSeed('357')
+    })
+
+    it('alla inloggade kan läsa dem, också den som inte är med i någon tur', async () => {
+      const r = await som(UTOMSTAENDE, (tx) => tx.query<{ namn: string }>('select namn from public.livsmedel where nummer = 990001'))
+      expect(r.rows).toEqual([{ namn: 'Testpasta okokt' }])
+    })
+
+    it('ingen användare kan lägga till, ändra eller ta bort', async () => {
+      await forvantaFel(som(AGARE, (tx) => tx.query(`insert into public.livsmedel (nummer, namn) values (990099, 'Eget')`)))
+      await forvantaFel(som(AGARE, (tx) => tx.query('update public.livsmedel set kcal_per_100g = 1 where nummer = 990001')))
+      await forvantaFel(som(AGARE, (tx) => tx.query('delete from public.livsmedel where nummer = 990001')))
+      const k = await db.query<{ kcal_per_100g: number }>('select kcal_per_100g from public.livsmedel where nummer = 990001')
+      expect(k.rows).toEqual([{ kcal_per_100g: 357 }])
+    })
+
+    it('går inte att nå utan inloggning', async () => {
+      await forvantaFel(somAnon((tx) => tx.query('select nummer from public.livsmedel')))
+    })
+
+    it('har bara select för inloggade och ingenting för anon, och RLS är påslaget', async () => {
+      // Prövar rättigheterna direkt, så att testet inte litar på att en check eller ett villkor råkar neka.
+      const har = async (roll: string, vad: string) =>
+        (await db.query<{ r: boolean }>(`select has_table_privilege($1, 'public.livsmedel', $2) as r`, [roll, vad])).rows[0].r
+      for (const vad of ['insert', 'update', 'delete', 'truncate']) {
+        expect(await har('authenticated', vad)).toBe(false)
+        expect(await har('anon', vad)).toBe(false)
+      }
+      expect(await har('authenticated', 'select')).toBe(true)
+      expect(await har('anon', 'select')).toBe(false)
+      const rls = await db.query<{ relrowsecurity: boolean }>(`select relrowsecurity from pg_class where oid = 'public.livsmedel'::regclass`)
+      expect(rls.rows).toEqual([{ relrowsecurity: true }])
+    })
+
+    it('seeden går att köra igen och uppdaterar livsmedlet, och värden som saknas blir null, inte 0', async () => {
+      await korSeed('360')
+      const r = await som(LASARE, (tx) =>
+        tx.query<{ nummer: number; kcal_per_100g: number | null; protein_per_100g: string | null; salt_per_100g: string | null; vatten_per_100g: string | null; tillstand: string | null }>(
+          'select nummer, kcal_per_100g, protein_per_100g, salt_per_100g, vatten_per_100g, tillstand from public.livsmedel where nummer >= 990001 order by nummer',
+        ),
+      )
+      expect(r.rows).toEqual([
+        { nummer: 990001, kcal_per_100g: 360, protein_per_100g: '12.0', salt_per_100g: '0.01', vatten_per_100g: '0.0', tillstand: 'torr' },
+        { nummer: 990002, kcal_per_100g: null, protein_per_100g: null, salt_per_100g: null, vatten_per_100g: null, tillstand: 'ra' },
+      ])
+    })
+
+    it('tillståndet tar bara emot torr, ra och tillagad, och värdena har gränser', async () => {
+      await forvantaFel(db.query(`insert into public.livsmedel (nummer, namn, tillstand) values (990010, 'Fel', 'kall')`))
+      await forvantaFel(db.query(`insert into public.livsmedel (nummer, namn, kcal_per_100g) values (990011, 'Fel', 1200)`))
+      await forvantaFel(db.query(`insert into public.livsmedel (nummer, namn, protein_per_100g) values (990012, 'Fel', -1)`))
+      await forvantaFel(db.query(`insert into public.livsmedel (nummer, namn) values (990013, '  ')`))
+      await forvantaFel(db.query(`insert into public.livsmedel (nummer, namn) values (0, 'Noll')`))
+      await forvantaFel(db.query(`insert into public.livsmedel (nummer, namn, grupp) values (990014, 'Lång grupp', repeat('a', 201))`))
+      await forvantaFel(db.query(`insert into public.livsmedel (nummer, namn, salt_per_100g) values (990015, 'Saltig', 101)`))
     })
   })
 

@@ -1,19 +1,21 @@
-import { Lock } from 'lucide-react'
+import { ChevronDown, Lock } from 'lucide-react'
 import { useId, useState, type FormEvent } from 'react'
+import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
-import { Sektion } from '@/components/ui/sektion'
-import { ALLERGENER, behovstext, KOSTVAL, SAMTYCKE, type Allergen, type Kostval } from '@/lib/kost'
+import { ALLERGENER, KOSTVAL, kostsvar, kostsvarText, SAMTYCKE, uppraknade, type Allergen, type Kostval } from '@/lib/kost'
 import { kanAndraKostbehov } from '@/lib/roller'
 import type { DeltagareRad, Kostbehov as Behovsrad } from '@/lib/typer'
+import { cn } from '@/lib/utils'
 
 type Behovsval = Omit<Behovsrad, 'samtycke_tid'>
 
 const TOMT: Omit<Behovsval, 'deltagare_id'> = { vegetarisk: false, vegansk: false, glutenfri: false, laktosfri: false, utan: [] }
 
 /**
- * Kostbehoven i gruppen: en rad per person. Bara personen själv anger sina, eftersom uppgifterna bygger på
- * personens eget samtycke. Personer utan konto kan fylla i själva när de har gått med.
+ * Kostbehoven i gruppen som en kompakt rad ovanför måltiderna: de kostbehov som finns syns direkt, och raden går att
+ * öppna för alla personer och för att ändra sina egna. Bara personen själv anger sina, eftersom uppgifterna bygger på
+ * personens eget samtycke. "Inga kostbehov" (sagt uttryckligen) skiljs från att någon inte har svarat.
  */
 export function Kostbehov({
   deltagare,
@@ -29,35 +31,75 @@ export function Kostbehov({
   onTaBort: (deltagareId: string) => Promise<boolean>
 }) {
   const [andrar, setAndrar] = useState<DeltagareRad | null>(null)
-  const personer = deltagare.filter((d) => d.typ === 'person')
-  const behovFor = (id: string) => kostbehov.find((k) => k.deltagare_id === id)
+  const [oppen, setOppen] = useState(false)
+  const id = useId()
+  const behovFor = (deltagareId: string) => kostbehov.find((k) => k.deltagare_id === deltagareId)
+  const personer = deltagare.filter((d) => d.typ === 'person').map((d) => ({ d, svar: kostsvar(d, behovFor(d.id)) }))
+  const medBehov = personer.filter((p) => p.svar.lage === 'behov')
+  const inga = personer.filter((p) => p.svar.lage === 'inga').map((p) => p.d.namn)
+  const inteSvarat = personer.filter((p) => p.svar.lage !== 'behov' && p.svar.lage !== 'inga').map((p) => p.d.namn)
 
   return (
-    <Sektion rubrik="Kostbehov i gruppen">
-      <p className="flex items-start gap-2 text-sm text-muted-foreground">
-        <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
-        Syns bara för er som är med i turen. Var och en anger sina egna.
-      </p>
-      <ul className="divide-y divide-border">
-        {personer.map((d) => {
-          const behov = behovFor(d.id)
-          const jag = kanAndraKostbehov({ typ: d.typ, userId: d.user_id }, mittUserId)
-          const text = d.user_id === null ? 'Kan fylla i själv när hen har gått med.' : (behov && behovstext(behov)) || 'Inga kostbehov angivna'
-          return (
-            <li key={d.id} className="flex items-center gap-3 py-2">
-              <div className="min-w-0 flex-1">
-                <p className="font-medium break-words">{jag ? `${d.namn} (du)` : d.namn}</p>
-                <p className="text-sm text-muted-foreground">{text}</p>
-              </div>
-              {jag && (
-                <Button variant="outline" onClick={() => setAndrar(d)} aria-label="Ändra dina kostbehov">
-                  Ändra
-                </Button>
+    <section aria-labelledby={`${id}-rubrik`} className="rounded-ruta border border-border bg-card">
+      <h2 id={`${id}-rubrik`} className="font-sans text-base">
+        <button
+          type="button"
+          aria-label="Kostbehov"
+          aria-describedby={`${id}-sammanfattning`}
+          aria-expanded={oppen}
+          aria-controls={`${id}-detaljer`}
+          onClick={() => setOppen((o) => !o)}
+          className="flex min-h-14 w-full items-start gap-3 rounded-ruta px-4 py-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:px-5"
+        >
+          <span className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
+            <span className="shrink-0 pt-0.5 font-semibold">Kostbehov</span>
+            <span id={`${id}-sammanfattning`} className="flex min-w-0 flex-col gap-1.5 font-normal">
+              {medBehov.length > 0 && (
+                <span className="flex flex-wrap gap-1.5">
+                  {medBehov.map((p) => (
+                    <Bricka key={p.d.id}>
+                      {p.d.namn}: {kostsvarText(p.svar).toLowerCase()}
+                    </Bricka>
+                  ))}
+                </span>
               )}
-            </li>
-          )
-        })}
-      </ul>
+              <span className="text-sm text-muted-foreground">
+                {[
+                  inga.length > 0 && `Inga kostbehov: ${uppraknade(inga)}.`,
+                  inteSvarat.length > 0 && `Har inte angett något: ${uppraknade(inteSvarat)}.`,
+                ]
+                  .filter(Boolean)
+                  .join(' ')}
+              </span>
+            </span>
+          </span>
+          <ChevronDown className={cn('mt-0.5 size-5 shrink-0 text-muted-foreground transition-transform', oppen && 'rotate-180')} aria-hidden />
+        </button>
+      </h2>
+      <div id={`${id}-detaljer`} hidden={!oppen} className="space-y-3 border-t border-border px-4 py-4 sm:px-5">
+        <p className="flex items-start gap-2 text-sm text-muted-foreground">
+          <Lock className="mt-0.5 size-4 shrink-0" aria-hidden />
+          Syns bara för er som är med i turen. Var och en anger sina egna.
+        </p>
+        <ul className="divide-y divide-border">
+          {personer.map(({ d, svar }) => {
+            const jag = kanAndraKostbehov({ typ: d.typ, userId: d.user_id }, mittUserId)
+            return (
+              <li key={d.id} className="flex items-center gap-3 py-2">
+                <div className="min-w-0 flex-1">
+                  <p className="font-medium break-words">{jag ? `${d.namn} (du)` : d.namn}</p>
+                  <p className="text-sm text-muted-foreground">{kostsvarText(svar)}</p>
+                </div>
+                {jag && (
+                  <Button variant="outline" onClick={() => setAndrar(d)} aria-label="Ändra dina kostbehov">
+                    Ändra
+                  </Button>
+                )}
+              </li>
+            )
+          })}
+        </ul>
+      </div>
       {andrar && (
         <Behovspanel
           finns={behovFor(andrar.id) !== undefined}
@@ -75,7 +117,7 @@ export function Kostbehov({
           }}
         />
       )}
-    </Sektion>
+    </section>
   )
 }
 
@@ -107,7 +149,6 @@ function Behovspanel({
   const [sparar, setSparar] = useState(false)
   const [fel, setFel] = useState<string | null>(null)
 
-  const tomt = !behov.vegetarisk && !behov.vegansk && !behov.glutenfri && !behov.laktosfri && behov.utan.length === 0
   const vaxlaVal = (k: Kostval, pa: boolean) => setBehov((b) => ({ ...b, [k]: pa }))
   const vaxlaAllergen = (a: Allergen, pa: boolean) => setBehov((b) => ({ ...b, utan: pa ? [...b.utan, a] : b.utan.filter((x) => x !== a) }))
 
@@ -121,9 +162,8 @@ function Behovspanel({
 
   function spara(e: FormEvent) {
     e.preventDefault()
-    // Allt urbockat betyder att uppgifterna tas bort. Det kräver inget samtycke.
-    if (tomt) return void gor(finns ? onTaBort : async () => true)
-    if (!samtycke) return setFel('Kryssa i att du samtycker för att kunna spara.')
+    // Allt urbockat sparas som att man inte har några kostbehov. Det kräver också samtycke.
+    if (!samtycke) return setFel('Bocka i att du samtycker för att kunna spara.')
     void gor(() => onSpara(behov))
   }
 
@@ -148,7 +188,7 @@ function Behovspanel({
       <form id={formId} onSubmit={spara} noValidate className="space-y-5">
         <p className="text-sm text-muted-foreground">
           Uppgifterna sparas bara för den här turen och syns för alla som är med i den, så att ni kan välja mat som passar. Det är
-          frivilligt. Bockar du ur allt och sparar, eller tar bort dem, tas de bort och samtycket är återkallat.
+          frivilligt. Sparar du utan att bocka i något noteras det att du inte har några kostbehov. Ta bort dina kostbehov om du vill ta tillbaka samtycket.
         </p>
         <fieldset className="space-y-1">
           <legend className="mb-1 text-sm font-medium">Kost</legend>
@@ -164,12 +204,10 @@ function Behovspanel({
             ))}
           </div>
         </fieldset>
-        {!tomt && (
-          <label className="flex cursor-pointer items-start gap-3 rounded-md border border-border p-3">
-            <input type="checkbox" checked={samtycke} onChange={(e) => setSamtycke(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-primary" />
-            <span className="text-sm">{SAMTYCKE}</span>
-          </label>
-        )}
+        <label className="flex cursor-pointer items-start gap-3 rounded-knapp border border-border p-3">
+          <input type="checkbox" checked={samtycke} onChange={(e) => setSamtycke(e.target.checked)} className="mt-0.5 size-5 shrink-0 accent-primary" />
+          <span className="text-sm">{SAMTYCKE}</span>
+        </label>
         {fel && (
           <p role="alert" className="text-sm text-destructive">
             {fel}

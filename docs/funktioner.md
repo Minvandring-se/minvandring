@@ -54,10 +54,13 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Egna rätter med ingredienser | Finns |
 | Matkatalog med frystorkade och lufttorkade påsar | Finns, fylls på med data från Astra |
 | Egen sida för matkatalogen med sökning, filter, sortering och panel | Finns (`/matplanering/katalog`) |
+| Mina matplaner: nästa tur överst och hur många måltider som saknas i varje tur | Finns (`/matplanering`) |
 | Inköpslista med ansvarig | Finns |
 | Kcal, protein och matvikt per person och dag | Finns |
 | Kostbehov och allergier per deltagare, med samtycke | Finns |
 | Varning när en påse inte passar någon i gruppen | Finns |
+| Fliken Mat: kompakt turhuvud, en ruta per måltid, Nästa att planera och Vem tar med vad | Finns |
+| Förslag med näringsvärden från Livsmedelsverket när man skriver ingredienser i egna rätter och recept | Finns |
 | Kostinformation för egna rätter | Senare |
 | Skafferi: påsar hemma med antal och bäst före, och favoriter | Finns (`/matplanering/skafferi`), personligt |
 | Favoriter och det man har hemma först i Välj rätt, och "Köp 2 (du har 1 hemma)" i inköpslistan | Finns |

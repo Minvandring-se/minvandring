@@ -109,7 +109,9 @@ export function skalForPerson(p: Kostinfo, b: Behov): Skal[] {
     if (p.allergener === null) skal.push({ typ: 'okand_allergen', allergen })
     else if (p.allergener.includes(allergen)) skal.push({ typ: 'innehaller', allergen })
   }
-  return skal
+  // Är påsen inte glutenfri, eller okänd, för den som vill ha glutenfritt säger gluten samma sak en gång till.
+  const glutenfri = skal.some((s) => (s.typ === 'inte' || s.typ === 'okant_val') && s.val === 'glutenfri')
+  return glutenfri ? skal.filter((s) => !((s.typ === 'innehaller' || s.typ === 'okand_allergen') && s.allergen === 'gluten')) : skal
 }
 
 export interface Varning {
@@ -164,7 +166,9 @@ export function behovstext(b: Omit<Behov, 'namn'>): string {
   // Vegansk innebär vegetarisk, så det räcker att skriva vegansk.
   const visade = b.vegansk ? val.filter((v) => v !== 'vegetarisk') : val
   const delar = [...visade]
-  const utan = ALLERGENER.filter((a) => b.utan.includes(a.nyckel)).map((a) => a.etikett.toLowerCase())
+  // Glutenfri säger redan att personen inte tål gluten, så det skrivs inte två gånger. Laktosfri och mjölk är olika
+  // saker (laktos och mjölkprotein) och skrivs båda.
+  const utan = ALLERGENER.filter((a) => b.utan.includes(a.nyckel) && !(a.nyckel === 'gluten' && b.glutenfri)).map((a) => a.etikett.toLowerCase())
   if (utan.length) delar.push(`tål inte ${uppraknade(utan)}`)
   const text = delar.join(', ')
   return text.charAt(0).toUpperCase() + text.slice(1)
@@ -172,3 +176,37 @@ export function behovstext(b: Omit<Behov, 'namn'>): string {
 
 /** Texten vid kryssrutan för samtycke. Kostbehov sparas bara när den är ikryssad. */
 export const SAMTYCKE = 'Jag samtycker till att mina kostbehov och allergier sparas och visas för deltagarna i den här turen.'
+
+/**
+ * Vad en person har sagt om sina kostbehov i turen. Ingen rad betyder att personen inte har svarat, och en rad
+ * utan val betyder att personen har sagt att den inte har några kostbehov.
+ */
+export type Kostsvar = { lage: 'behov'; text: string } | { lage: 'inga' } | { lage: 'inte-svarat' } | { lage: 'utan-konto' }
+
+export function kostsvar(person: { user_id: string | null }, rad: Omit<Behov, 'namn'> | undefined): Kostsvar {
+  if (rad) {
+    const text = behovstext(rad)
+    return text ? { lage: 'behov', text } : { lage: 'inga' }
+  }
+  return person.user_id === null ? { lage: 'utan-konto' } : { lage: 'inte-svarat' }
+}
+
+/** Texten för ett svar: kostbehoven, "Inga kostbehov" eller att uppgifterna saknas. */
+export function kostsvarText(svar: Kostsvar): string {
+  if (svar.lage === 'behov') return svar.text
+  if (svar.lage === 'inga') return 'Inga kostbehov'
+  if (svar.lage === 'inte-svarat') return 'Har inte angett något än'
+  return 'Kan fylla i själv när hen har gått med'
+}
+
+/** Filtret i ord, till exempel "Glutenfri, utan sesam". null utan filter. */
+export function filterText(f: Kostfilter): string | null {
+  const delar = [
+    ...KOSTVAL.filter((k) => f.val.includes(k.nyckel)).map((k) => k.etikett.toLowerCase()),
+    // Glutenfri säger redan utan gluten.
+    ...ALLERGENER.filter((a) => f.utan.includes(a.nyckel) && !(a.nyckel === 'gluten' && f.val.includes('glutenfri'))).map((a) => `utan ${a.etikett.toLowerCase()}`),
+  ]
+  if (delar.length === 0) return null
+  const text = delar.join(', ')
+  return text.charAt(0).toUpperCase() + text.slice(1)
+}

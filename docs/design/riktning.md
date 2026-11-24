@@ -2,6 +2,8 @@
 
 Så här ser MinVandring ut från och med den nya riktningen (november 2026). Skissen finns i `Claude outputs/design-turoversikt/`. Huvudreferensen är `Dator-v3.html` (turens översikt på dator) och `Mobil-v2.html` (samma vy i mobil). Reglerna i CLAUDE.md under Design och UX gäller fortfarande och går före det här.
 
+Riktningen blev ljusare och skarpare i slutet av november 2026, utifrån skisserna A "Skogsljus" och B "Mörkgrönt turhuvud" i `Claude outputs/riktning-mat/skisser/`. Matplaneringen är först att följa den.
+
 ## Känslan
 
 Skandinavisk, lugn och naturnära, som en välgjord fjällkarta. Allt ska gå att läsa snabbt, i tältet med en hand eller vid datorn hemma.
@@ -9,26 +11,38 @@ Skandinavisk, lugn och naturnära, som en välgjord fjällkarta. Allt ska gå at
 ## Sektioner i stället för likadana kort
 
 - En sida är uppbyggd av sektioner (`Sektion` i `src/components/ui/`) med en rubrik, eventuellt en länk eller knapp till höger och innehållet under.
-- En sektion är en vit yta på den färgade bakgrunden. Hierarkin kommer från storlek, placering och rubrik, inte från skuggor.
+- En sektion är en vit yta med tunn kant på den nästan vita bakgrunden. Hierarkin kommer från storlek, placering och rubrik, inte från skuggor.
 - Sektionerna får olika bredd på dator (en, två eller tre kolumner i rutnätet) beroende på hur mycket de innehåller. I mobil ligger allt i en kolumn.
 - Inga tunga skuggor. Kanten är tunn (`border-border`).
 
 ## En huvudknapp per vy
 
 - Varje vy har en enda fylld knapp (`bg-primary`) för det viktigaste man gör där, till exempel Öppna turen eller Lägg till utrustning.
+- Står den på den mörkgröna ytan är den ljus (`knappStil({ variant: 'ljus' })`). Knappar med kant på den ytan är `kant-stark`.
 - Övriga åtgärder är knappar med kant (`outline`) eller textlänkar.
 
 ## Siffror i rader med tunna avgränsare
 
 - Nyckeltal (datum, antal dagar, vikt) visas i en rad med etikett över värdet och en tunn linje emellan (`Nyckeltal`).
 - Inga stora siffror med liten etikett och färgtoning som dekoration. Siffran ska svara på en fråga man har.
-- Inga mittpunkter mellan uppgifter (`4 dagar · 3 deltagare`). Varje uppgift får en egen plats.
+- Inga mittpunkter mellan uppgifter (`4 dagar · 3 deltagare`). Varje uppgift får en egen plats, med en tunn linje emellan (`border-l border-border`, eller `border-yta-stark-linje` på den mörkgröna ytan).
+- Listor med turer eller saker är tunna rader i en ruta med kant, med en linje mellan raderna, inte ett kort per rad.
+
+## Former
+
+- Allt är rundat, och radierna ligger som variabler i `src/index.css`. Använd dem, aldrig egna värden.
+- `rounded-knapp` (12 px): knappar och fält.
+- `rounded-ruta` (16 px): mindre rutor i en yta, till exempel en måltid, och rutor med en lista av rader.
+- `rounded-yta` (20 px): sektioner, paneler, kort och den mörkgröna ytan.
+- `rounded-full`: brickor, avatarer och förloppslister.
+- `rounded-md` och `rounded-lg` är samma som `knapp` och `yta`, så att äldre klasser följer med. Använd de nya namnen i ny kod.
 
 ## Två accentfärger: rost och hjortron
 
 - Grönt (`primary`) bär appen. Resten är neutralt.
 - Rost (`accent`), som ledkrysset på en fjälled, är för det man ska lägga märke till: det som saknas, nedräkningen, aktiv flik.
 - Hjortron (`hjortron`) är för möjligheter och det positiva: tips, vinster och att lägga till något. Den får också användas för sidans viktigaste siffra och för små markeringar: ikonen i huvudknappen (`hjortron-ikon`), det aktiva antalet i en flik och den korta linjen under en rubrik. Den används sparsamt, aldrig som text eller signal på ljusa ytor.
+- I praktiken är hjortron oftast bara två saker på en sida: siffran på den mörkgröna ytan (till exempel "12 måltider saknas" eller en förloppslist) och plustecknet i huvudknappen.
 - Hjortron är aldrig text på ljusa ytor. Den används som fyllning (en prick, `bg-hjortron-soft`) eller som text på den mörkgröna ytan (`yta-stark`). Text på `hjortron-soft` är `hjortron-strong` eller `foreground`, och `hjortron-strong` går också som text på ytorna.
 - Använd aldrig fler signalfärger. Fel visas med `destructive`.
 
@@ -40,14 +54,15 @@ Skandinavisk, lugn och naturnära, som en välgjord fjällkarta. Allt ska gå at
 - Alla tre laddas lokalt från `@fontsource-variable` i `src/main.tsx`.
 - Siffror som ska jämföras (vikter i listor och summor) har tabellsiffror (`tabular-nums`).
 
-## Vita ytor på färgad bakgrund
+## Vita ytor på nästan vit bakgrund
 
-- Bakgrunden är svagt grön (`background`). Ytorna är vita (`card`). Då syns sektionerna utan skuggor.
-- I mörkt läge är bakgrunden nästan svart och ytorna mörkgröna.
+- Bakgrunden är nästan vit (`background`, #f7f8f5). Ytorna är vita (`card`) med en tunn kant (`border-border`). Kanten skiljer ytan från bakgrunden, inte en skugga.
+- I mörkt läge är bakgrunden nästan svart och ytorna mörkgröna, med samma kanter och former.
 
-## Mörkgrön yta för en eller två saker per sida
+## Mörkgrön yta för det viktigaste
 
-- Den mörka primärfärgen används som yta för högst en eller två saker per sida, till exempel färdplanen. Den drar blicken, så den ska användas sparsamt.
+- Den mörkgröna ytan (`bg-yta-stark`, eller `Sektion` med `variant="stark"`) används för det viktigaste på sidan, högst en eller två saker per sida, till exempel nästa tur eller turens huvud på fliken Mat. Den drar blicken, så den ska användas sparsamt.
+- Text på ytan är `yta-stark-foreground` och `yta-stark-muted`. Linjer och spår är `yta-stark-linje`. Siffran som betyder mest står i hjortron.
 
 ## Ljust och mörkt läge
 
@@ -82,7 +97,7 @@ Från designinventeringen i november 2026 (`Claude outputs/design-inventering/in
 
 ### Flikar
 
-- **Byta del av en sida:** `Flikrad`. Det gäller turens delar, Matplaneringens delar och förrådets delar. I mobil är flikarna runda knappar som skrollas fram till den aktiva, på dator har den aktiva en rostfärgad linje. En del som inte finns än står med ”Snart” och går inte att öppna.
+- **Byta del av en sida:** `Flikrad`. Det gäller turens delar, Matplaneringens delar och förrådets delar. Flikarna är text på en tunn linje, och den aktiva har en rostfärgad linje under sig, i mobil och på dator. I mobil går raden att svepa och skrollas fram till den aktiva. En del som inte finns än står med ”Snart” och går inte att öppna.
 - **Filtrera en lista:** runda knappar med `role="tab"`, som Kommande och Tidigare i Mina turer och Påsar, Egna rätter och Recept i Välj rätt.
 - **Välja ett värde:** en segmentväljare, som Utseende och året i Statistik.
 - **Antal i en flik:** `FlikAntal`, en liten prick i hjortron. Aldrig ”(2)”.
