@@ -358,6 +358,7 @@ describe('pasdetaljer', () => {
     id: 'p',
     marke: 'Testmat',
     namn: 'Gryta',
+    andra_namn: [],
     maltid: 'lunch_middag',
     torkning: 'frystorkad',
     vikt_torr_g: 150,

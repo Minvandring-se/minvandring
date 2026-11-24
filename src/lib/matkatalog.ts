@@ -1,7 +1,7 @@
 // Matkatalogen: filter och sortering som står i adressen, sökning bland påsarna och det som visas på korten
 // och i panelen. Rena funktioner utan databas.
 import { ALLERGENER, allergenetikett, arAllergen, KOSTVAL, passarFilter, uppraknade, type Allergen, type Kostval } from './kost'
-import { kcalPer100g, pasnamn } from './mat'
+import { kcalPer100g, paseMatchar, pasnamn } from './mat'
 import type { Katalogmaltid, Matprodukt } from './typer'
 
 export const KATALOGMALTIDER: readonly { nyckel: Katalogmaltid; etikett: string }[] = [
@@ -94,8 +94,7 @@ export function sokPasar(katalog: readonly Matprodukt[], sok: string, f: Katalog
       if (f.maltid && p.maltid !== f.maltid) return false
       if (marke && p.marke.toLowerCase() !== marke) return false
       if (!passarFilter(p, { val: f.val, utan: f.utan })) return false
-      const namn = pasnamn(p).toLowerCase()
-      return ord.every((o) => namn.includes(o))
+      return paseMatchar(p, ord.join(' '))
     })
     .sort((a, b) => SORTERA[f.sortering](a, b) || pasnamn(a).localeCompare(pasnamn(b), 'sv'))
 }

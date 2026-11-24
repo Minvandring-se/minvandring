@@ -138,6 +138,8 @@ export interface Matprodukt {
   id: string
   marke: string
   namn: string
+  /** Andra namn på påsen, till exempel det svenska. Bara för sökningen. Det första visas under namnet. */
+  andra_namn: string[]
   maltid: Katalogmaltid
   torkning: 'frystorkad' | 'lufttorkad' | null
   vikt_torr_g: number

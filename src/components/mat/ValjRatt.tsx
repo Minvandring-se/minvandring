@@ -15,7 +15,7 @@ import { useMatkatalog } from '@/hooks/useMatplan'
 import type { Receptlage } from '@/hooks/useRecept'
 import { formateraVikt } from '@/lib/forrad'
 import { filterForGruppen, filterText, passarFilter, varningar, type Behov, type Kostfilter } from '@/lib/kost'
-import { formateraKcal, kcalPer100g, naringForRader, PASAR_TILL, pasdetaljer, pasnamn, type Naring, type TolkadIngrediens } from '@/lib/mat'
+import { forstaAndraNamn, formateraKcal, kcalPer100g, naringForRader, PASAR_TILL, pasdetaljer, paseMatchar, pasnamn, type Naring, type TolkadIngrediens } from '@/lib/mat'
 import { rattTillRader, receptMedNamn, receptTillRader } from '@/lib/recept'
 import { bokadText, skafferietForst } from '@/lib/skafferi'
 import type { Ingrediens, Maltid, Matprodukt, Ratt, Recept, Vara } from '@/lib/typer'
@@ -321,7 +321,7 @@ export function Pasar({
   const traffar = useMemo(() => {
     if (!Array.isArray(katalog) || !s) return []
     const passar = katalog.filter(
-      (p) => (allaMaltider || maltid === null || PASAR_TILL[maltid].includes(p.maltid)) && passarFilter(p, filter) && pasnamn(p).toLowerCase().includes(s),
+      (p) => (allaMaltider || maltid === null || PASAR_TILL[maltid].includes(p.maltid)) && passarFilter(p, filter) && paseMatchar(p, s),
     )
     return skafferietForst(passar, skafferi.favoriter, skafferi.hemma)
   }, [katalog, s, filter, allaMaltider, maltid, skafferi])
@@ -457,7 +457,7 @@ function Pasrad({
       <div className="flex items-start gap-1">
         <button type="button" disabled={valjer} onClick={onValj} className={cn('min-w-0 flex-1 space-y-1 rounded-md px-2 py-2.5 text-left hover:bg-muted disabled:opacity-60', fokus)}>
           <span className="flex items-start gap-2">
-            <PasNamn marke={pase.marke} namn={pase.namn} className="flex-1" namnKlass="font-medium" />
+            <PasNamn marke={pase.marke} namn={pase.namn} ettAnnat={forstaAndraNamn(pase)} className="flex-1" namnKlass="font-medium" />
             {favorit && <Star className="mt-0.5 size-4 shrink-0 fill-primary text-primary" aria-label="Favorit" role="img" />}
           </span>
           {hemma > 0 && <span className="block text-sm font-medium text-primary">Du har {hemma} hemma</span>}

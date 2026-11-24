@@ -1543,21 +1543,28 @@ describe('matplanen', () => {
       const csv = (kcal: string) =>
         [
           MATKOLUMNER.join(';'),
-          `Seedmat;Gryta;lunch_middag;frystorkad;150;2;${kcal};24,5;;;450;varmt;8;ja;ja;ja;;inga;sesam;129;https://butik.exempel.se/g;https://seedmat.exempel.se/g;2026-11-24`,
-          'Seedmat;Müsli;frukost;;100;;400;;;;;inget;;;;;;;;;;https://seedmat.exempel.se/m;',
+          `Seedmat;Gryta;"Viltgryta;8021";lunch_middag;frystorkad;150;2;${kcal};24,5;;;450;varmt;8;ja;ja;ja;;inga;sesam;129;https://butik.exempel.se/g;https://seedmat.exempel.se/g;2026-11-24`,
+          'Seedmat;Müsli;;frukost;;100;;400;;;;;inget;;;;;;;;;;https://seedmat.exempel.se/m;',
         ].join('\n')
       const korSeed = (kcal: string) => db.exec(matSeedSql(godkandaPasar(importeraMatkatalog(csv(kcal))), ['test.csv']))
       await korSeed('600')
       await korSeed('640')
       const r = await som(LASARE, (tx) =>
-        tx.query<{ namn: string; kcal: number; protein_g: string; allergener: string[] | null; spar: string[]; pris_kalla: string | null; portioner: number }>(
-          `select namn, kcal, protein_g, allergener, spar, pris_kalla, portioner from public.matprodukter where marke = 'Seedmat' order by namn`,
+        tx.query<{ namn: string; andra_namn: string[]; kcal: number; protein_g: string; allergener: string[] | null; spar: string[]; pris_kalla: string | null; portioner: number }>(
+          `select namn, andra_namn, kcal, protein_g, allergener, spar, pris_kalla, portioner from public.matprodukter where marke = 'Seedmat' order by namn`,
         ),
       )
       expect(r.rows).toEqual([
-        { namn: 'Gryta', kcal: 640, protein_g: '24.5', allergener: [], spar: ['sesam'], pris_kalla: 'https://butik.exempel.se/g', portioner: 2 },
-        { namn: 'Müsli', kcal: 400, protein_g: null, allergener: null, spar: null, pris_kalla: null, portioner: 1 },
+        // Siffror tas bort ur andra namn.
+        { namn: 'Gryta', andra_namn: ['Viltgryta'], kcal: 640, protein_g: '24.5', allergener: [], spar: ['sesam'], pris_kalla: 'https://butik.exempel.se/g', portioner: 2 },
+        { namn: 'Müsli', andra_namn: [], kcal: 400, protein_g: null, allergener: null, spar: null, pris_kalla: null, portioner: 1 },
       ])
+    })
+
+    it('har andra namn från seeden, som inloggade läser, och ingen användare kan ändra dem', async () => {
+      const r = await som(UTOMSTAENDE, (tx) => tx.query<{ andra_namn: string[] }>("select andra_namn from public.matprodukter where marke = 'Real Turmat' and namn = 'Reindeer Stew'"))
+      expect(r.rows[0].andra_namn[0]).toBe('Viltgryta')
+      await forvantaFel(som(AGARE, (tx) => tx.query("update public.matprodukter set andra_namn = '{Eget}' where marke = 'Real Turmat' and namn = 'Reindeer Stew'")))
     })
 
     it('ingen påse från seed-migreringarna har märket först i namnet, så att det inte står två gånger', async () => {

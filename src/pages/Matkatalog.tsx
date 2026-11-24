@@ -19,7 +19,7 @@ import { useMatkatalog } from '@/hooks/useMatplan'
 import { laggISkafferi, sattFavorit, useSkafferi, type Skafferi } from '@/hooks/useSkafferi'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { formateraVikt } from '@/lib/forrad'
-import { formateraKcal, kcalPer100g, pasnamn, TILLAGNING } from '@/lib/mat'
+import { forstaAndraNamn, formateraKcal, kcalPer100g, pasnamn, TILLAGNING } from '@/lib/mat'
 import {
   allergentext,
   filterFranAdress,
@@ -208,7 +208,7 @@ function Paskort({ pase, mestEnergi, favorit, onOppna }: { pase: Matprodukt; mes
           </Bricka>
         )}
         <span className="flex w-full items-start gap-3">
-          <PasNamn marke={pase.marke} namn={pase.namn} className="flex-1" namnKlass="font-semibold" />
+          <PasNamn marke={pase.marke} namn={pase.namn} ettAnnat={forstaAndraNamn(pase)} className="flex-1" namnKlass="font-semibold" />
           {favorit && <Star className="mt-0.5 size-5 shrink-0 fill-primary text-primary" role="img" aria-label="Favorit" />}
         </span>
         <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm tabular-nums">
@@ -268,6 +268,7 @@ function Paspanel({ pase, skafferi, laddaOm, onStang }: { pase: Matprodukt; skaf
         <div className="space-y-1">
           <p className="text-sm text-muted-foreground">{pase.marke}</p>
           <h2 className="text-2xl break-words text-primary">{pase.namn}</h2>
+          {forstaAndraNamn(pase) && <p className="text-muted-foreground">{forstaAndraNamn(pase)}</p>}
           <p className="font-heading text-3xl font-semibold tabular-nums">{formateraKcal(pase.kcal)}</p>
           <p className="text-sm tabular-nums">
             {formateraVikt(pase.vikt_torr_g)}

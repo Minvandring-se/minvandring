@@ -553,6 +553,21 @@ export function pasnamn(p: Pick<Matprodukt, 'marke' | 'namn'>): string {
   return `${p.marke} ${p.namn}`
 }
 
+/**
+ * Passar påsen det man har skrivit? Varje ord måste finnas i märket, namnet eller ett av de andra namnen, utan hänsyn
+ * till stora och små bokstäver. "viltgryta" hittar Real Turmat Reindeer Stew, som också heter Viltgryta.
+ */
+export function paseMatchar(p: Pick<Matprodukt, 'marke' | 'namn'> & { andra_namn?: readonly string[] }, sok: string): boolean {
+  const ord = sok.toLowerCase().split(/\s+/).filter(Boolean)
+  const text = [pasnamn(p), ...(p.andra_namn ?? [])].join(' ').toLowerCase()
+  return ord.every((o) => text.includes(o))
+}
+
+/** Det andra namnet som visas under påsens namn, till exempel "Viltgryta". null när påsen inte har något. */
+export function forstaAndraNamn(p: { andra_namn?: readonly string[] }): string | null {
+  return p.andra_namn?.[0] ?? null
+}
+
 export const TILLAGNING: Record<NonNullable<Matprodukt['tillagning_vatten']>, string> = {
   varmt: 'Varmt vatten',
   kallt: 'Kallt vatten',
