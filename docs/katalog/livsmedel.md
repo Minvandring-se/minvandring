@@ -84,7 +84,7 @@ Varor som redan finns i turen eller i ens recept föreslås före livsmedlen. V�
 
 ## Allergener
 
-Varje livsmedel har kolumnen `allergener` med EU:s 14 allergener, som påsarna i matkatalogen. Tomt betyder okänt, och okänt räknas aldrig som att livsmedlet passar. En tom lista betyder att det inte innehåller någon av de 14. Livsmedelsverkets databas har inga allergener, så de räknas ut med regler i `allergenerForLivsmedel` i `src/lib/livsmedelsgrupper.ts` när seed-migreringen skapas. Ändra reglerna där och här samtidigt, och skapa en ny seed-migrering.
+Varje livsmedel har kolumnen `allergener` med EU:s 14 allergener, som påsarna i matkatalogen. Saknas värdet (null) är livsmedlet okänt, och okänt räknas aldrig som att livsmedlet passar. En tom lista betyder att det inte innehåller någon av de 14. Livsmedelsverkets databas har inga allergener, så de räknas ut med regler i `allergenerForLivsmedel` i `src/lib/livsmedelsgrupper.ts` när seed-migreringen skapas. Ändra reglerna där och här samtidigt, och skapa en ny seed-migrering.
 
 Reglerna gäller bara enkla råvaror. Allt annat är okänt.
 
