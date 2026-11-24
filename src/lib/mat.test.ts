@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest'
 import {
+  ingredienserTillDatabasen,
   dagssummor,
   formateraKcal,
   inkopsgrupper,
@@ -232,6 +233,20 @@ describe('tolkaTal', () => {
     expect(tolkaTal('  ')).toBeNull()
     expect(tolkaTal('-5')).toBeNaN()
     expect(tolkaTal('tio')).toBeNaN()
+  })
+})
+
+describe('ingredienserTillDatabasen', () => {
+  it('ger namnen som databasfunktionerna tar emot, med tomma värden som null', () => {
+    expect(
+      ingredienserTillDatabasen([
+        { vara: ' Havregryn ', gram: 90, kcalPer100g: 380, proteinPer100g: 12.5 },
+        { vara: 'Salt', gram: 1, kcalPer100g: null, proteinPer100g: null },
+      ]),
+    ).toEqual([
+      { vara: 'Havregryn', gram: 90, kcal: 380, protein: 12.5 },
+      { vara: 'Salt', gram: 1, kcal: null, protein: null },
+    ])
   })
 })
 

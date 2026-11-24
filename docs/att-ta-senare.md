@@ -201,3 +201,11 @@ Nordisks produktsidor säger inte vad "Official weight" är och anger ingen temp
 ## Kostbehov när ett konto tas bort
 
 I dag går ett konto i `auth.users` inte att ta bort så länge det är deltagare i en tur. Den främmande nyckeln `deltagare.user_id` sätter null, men triggern `skydda_deltagare` stoppar det bytet. När vi tillåter att konton tas bort (se Radera kontot ovan) ska de känsliga `kostbehov` raderas samtidigt, till exempel med `on delete cascade` på deltagaren eller en trigger som tar bort kostbehoven när `user_id` blir null. Annars blir raden en person utan konto, och då ligger kostbehoven kvar och syns för alla i turen utan att någon kan ta bort dem, fast samtycket inte längre går att återkalla. Lägg till ett test i `supabase/rls.test.ts` när det byggs.
+
+## Utrustningskatalogen: rangordning och gruppering i databasen
+
+Utrustningskatalogen hämtar i dag alla träffar för en sökning, i omgångar om 1 000 rader, och visar 100 kort åt gången med "Visa fler" (`src/pages/Utrustningskatalog.tsx`). Det fungerar eftersom katalogen är liten (runt 1 300 produkter). Rangordningen (`sorteraTraffar`), grupperingen till modeller (`grupperaModeller`) och filtret för kokkärl (`filtreraKokgrupp`) görs i webbläsaren, och därför går det inte att hämta en sida i taget från databasen.
+
+Flytta rangordningen och grupperingen till databasen, till exempel en funktion som ger modellerna sida för sida med det riktiga antalet, när något av det här händer:
+- Katalogen växer så att en sökning eller en stor kategori ger flera tusen rader.
+- Vi bygger skyddet mot att någon hämtar hela katalogen (till exempel en gräns för antal rader per fråga eller per konto). Då går det inte längre att hämta alla träffar.

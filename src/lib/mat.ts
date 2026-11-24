@@ -338,6 +338,11 @@ export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[])
   return { ok: true, namn: n, rader }
 }
 
+/** Ingredienserna som de skickas till spara_egen_ratt och spara_recept i databasen. */
+export function ingredienserTillDatabasen(rader: readonly TolkadIngrediens[]): { vara: string; gram: number; kcal: number | null; protein: number | null }[] {
+  return rader.map((r) => ({ vara: r.vara.trim(), gram: r.gram, kcal: r.kcalPer100g, protein: r.proteinPer100g }))
+}
+
 /** En portion av rätten i formuläret, för att visa medan man skriver. */
 export function naringForRader(rader: readonly TolkadIngrediens[]): Naring {
   return rader.reduce<Naring>(

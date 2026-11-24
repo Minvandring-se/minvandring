@@ -14,6 +14,7 @@ import {
   sokfilter,
   sokord,
   sorteraTraffar,
+  visasText,
 } from './produktsok'
 import type { Produkt } from './typer'
 
@@ -49,12 +50,12 @@ describe('gArAttSoka', () => {
 })
 
 describe('sokfilter', () => {
-  it('söker i märke och modell', () => {
-    expect(sokfilter('akto')).toBe('marke.ilike.%akto%,modell.ilike.%akto%')
+  it('söker i märke, modell och version', () => {
+    expect(sokfilter('akto')).toBe('marke.ilike.%akto%,modell.ilike.%akto%,version.ilike.%akto%')
   })
 
   it('tar med underkategorin när ordet är ett kategorinamn', () => {
-    expect(sokfilter('tarp')).toBe('marke.ilike.%tarp%,modell.ilike.%tarp%,underkategori.in.(tarp)')
+    expect(sokfilter('tarp')).toBe('marke.ilike.%tarp%,modell.ilike.%tarp%,version.ilike.%tarp%,underkategori.in.(tarp)')
     expect(sokfilter('sovsäck')).toContain('underkategori.in.(sovsack)')
   })
 
@@ -64,7 +65,7 @@ describe('sokfilter', () => {
   })
 
   it('gissar inte kategori på ett eller två tecken', () => {
-    expect(sokfilter('tä')).toBe('marke.ilike.%tä%,modell.ilike.%tä%')
+    expect(sokfilter('tä')).toBe('marke.ilike.%tä%,modell.ilike.%tä%,version.ilike.%tä%')
   })
 })
 
@@ -296,5 +297,18 @@ describe('antalText', () => {
     expect(antalText(1)).toBe('1 produkt')
     expect(antalText(42)).toBe('42 produkter')
     expect(antalText(0)).toBe('0 produkter')
+  })
+})
+
+describe('visasText', () => {
+  it('säger hur många som visas av det riktiga antalet när alla inte får plats', () => {
+    expect(visasText(100, 214)).toBe('Visar 100 av 214 produkter')
+    expect(visasText(200, 214)).toBe('Visar 200 av 214 produkter')
+  })
+
+  it('visar bara antalet när alla syns', () => {
+    expect(visasText(214, 214)).toBe('214 produkter')
+    expect(visasText(100, 1)).toBe('1 produkt')
+    expect(visasText(100, 100)).toBe('100 produkter')
   })
 })

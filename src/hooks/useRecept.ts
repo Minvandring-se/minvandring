@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { TolkadIngrediens } from '@/lib/mat'
+import { ingredienserTillDatabasen, type TolkadIngrediens } from '@/lib/mat'
 import { supabase } from '@/lib/supabase'
 import type { Recept } from '@/lib/typer'
 
@@ -41,38 +41,14 @@ export function useRecept(): { recept: Receptlage; laddaOm: () => Promise<void> 
 }
 
 /**
- * Sparar ett nytt eller ändrat recept och svarar med receptets id, eller null om det inte gick. Ett ändrat recept
- * får alla sina ingredienser på nytt. Ett nytt recept som inte gick att spara helt tas bort igen.
+ * Sparar ett nytt eller ändrat recept och svarar med receptets id, eller null om det inte gick. Görs av funktionen
+ * spara_recept i databasen, i en transaktion: ett ändrat recept får alla sina ingredienser på nytt, eller behåller
+ * de gamla om något går fel.
  */
 export async function sparaRecept(receptId: string | null, namn: string, rader: readonly TolkadIngrediens[]): Promise<string | null> {
   if (!supabase) return null
-  const db = supabase
-  let id = receptId
-  if (id) {
-    const { data, error } = await db.from('recept').update({ namn }).eq('id', id).select('id')
-    if (error || data.length !== 1) return null
-    const bort = await db.from('receptrader').delete().eq('recept_id', id)
-    if (bort.error) return null
-  } else {
-    const { data, error } = await db.from('recept').insert({ namn }).select('id').single()
-    if (error) return null
-    id = data.id as string
-  }
-  const { error } = await db.from('receptrader').insert(
-    rader.map((r, i) => ({
-      recept_id: id,
-      vara: r.vara.trim(),
-      gram_per_portion: r.gram,
-      kcal_per_100g: r.kcalPer100g,
-      protein_per_100g: r.proteinPer100g,
-      sortering: i,
-    })),
-  )
-  if (error) {
-    if (!receptId) await db.from('recept').delete().eq('id', id)
-    return null
-  }
-  return id
+  const { data, error } = await supabase.rpc('spara_recept', { r: receptId, recept_namn: namn, rader: ingredienserTillDatabasen(rader) })
+  return error || typeof data !== 'string' ? null : data
 }
 
 /** Raderar ett recept med dess ingredienser. Turer där det redan ligger påverkas inte. */
