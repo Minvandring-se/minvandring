@@ -1,5 +1,6 @@
-import { BookmarkPlus, Pencil, Search, Star } from 'lucide-react'
+import { BookmarkPlus, ChevronDown, Pencil, Search, Star } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
+import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
@@ -11,23 +12,27 @@ import { Panel } from '@/components/ui/panel'
 import { useMatkatalog } from '@/hooks/useMatplan'
 import type { Receptlage } from '@/hooks/useRecept'
 import { formateraVikt } from '@/lib/forrad'
-import { filterForGruppen, passarFilter, varningar, type Behov, type Kostfilter } from '@/lib/kost'
+import { filterForGruppen, filterText, passarFilter, varningar, type Behov, type Kostfilter } from '@/lib/kost'
 import { formateraKcal, kcalPer100g, naringForRader, PASAR_TILL, pasdetaljer, pasnamn, type Naring, type TolkadIngrediens } from '@/lib/mat'
 import { rattTillRader, receptMedNamn, receptTillRader } from '@/lib/recept'
-import { skafferietForst } from '@/lib/skafferi'
+import { bokadText, skafferietForst } from '@/lib/skafferi'
 import type { Ingrediens, Maltid, Matprodukt, Ratt, Recept, Vara } from '@/lib/typer'
 import { cn } from '@/lib/utils'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
-/** Ens egna favoriter och påsarna man har hemma, som visas först. Andras skafferier hämtas aldrig. */
+/** Ens egna favoriter, påsarna man har hemma och de man använt senast, som visas innan man söker. Andras skafferier hämtas aldrig. */
 export interface EgetSkafferi {
   favoriter: ReadonlySet<string>
-  /** Antal hemma per påse, utan påsar vars bäst-före har passerat. */
+  /** Lediga påsar hemma: utan påsar vars bäst-före har passerat och utan dem som går till turer före den här. */
   hemma: ReadonlyMap<string, number>
+  /** Påsar hemma som går till turer före den här. */
+  bokade: ReadonlyMap<string, number>
+  /** Påsarna man använt senast, den här turens först. */
+  senast: readonly string[]
 }
 
-const TOMT_SKAFFERI: EgetSkafferi = { favoriter: new Set(), hemma: new Map() }
+const TOMT_SKAFFERI: EgetSkafferi = { favoriter: new Set(), hemma: new Map(), bokade: new Map(), senast: [] }
 
 type Vy = { typ: 'lista' } | { typ: 'ny' } | { typ: 'andra'; ratt: Ratt }
 
@@ -53,6 +58,7 @@ export function ValjRatt({
   behov,
   skafferi = TOMT_SKAFFERI,
   recept = [],
+  finnsRedan = () => null,
   onValjPase,
   onValjRecept,
   onSparaSomRecept,
@@ -72,6 +78,8 @@ export function ValjRatt({
   skafferi?: EgetSkafferi
   /** Ens egna recept. */
   recept?: Receptlage
+  /** Frågan när en rätt redan ligger i planen, till exempel "Finns redan på lunch dag 1. Lägg till ändå?" */
+  finnsRedan?: (rattId: string) => string | null
   onValjPase: (p: Matprodukt) => Promise<boolean>
   /** Kopierar receptet till turen, eller använder en rätt med samma ingredienser, och lägger det i måltiden. */
   onValjRecept?: (r: Recept) => Promise<boolean>
@@ -89,8 +97,17 @@ export function ValjRatt({
   const [vy, setVy] = useState<Vy>({ typ: 'lista' })
   const [fel, setFel] = useState(false)
   const [valjer, setValjer] = useState(false)
+  const [fraga, setFraga] = useState<{ text: string; gor: () => Promise<boolean> } | null>(null)
 
-  async function valj(gor: () => Promise<boolean>) {
+  /** Lägger till, men frågar först om rätten redan ligger i planen. */
+  async function valj(gor: () => Promise<boolean>, rattId?: string) {
+    const text = rattId ? finnsRedan(rattId) : null
+    if (text) setFraga({ text, gor })
+    else await laggTill(gor)
+  }
+
+  async function laggTill(gor: () => Promise<boolean>) {
+    setFraga(null)
     setFel(false)
     setValjer(true)
     const ok = await gor()
@@ -107,6 +124,7 @@ export function ValjRatt({
         <EgenRattFormular
           ram={(falt, knappar) => (
             <Panel
+              mitten
               etikett={ratt ? `Ändra ${ratt.namn}` : 'Ny egen rätt'}
               onStang={onStang}
               rubrik={<h2 className="text-2xl">{ratt ? 'Ändra rätten' : 'Ny egen rätt'}</h2>}
@@ -147,6 +165,24 @@ export function ValjRatt({
 
   return (
     <Panel
+      mitten
+      fot={
+        fraga && (
+          <div className="space-y-2">
+            <p role="status" className="text-sm font-medium">
+              {fraga.text}
+            </p>
+            <div className="flex flex-wrap gap-2">
+              <Button autoFocus disabled={valjer} onClick={() => laggTill(fraga.gor)}>
+                Lägg till ändå
+              </Button>
+              <Button variant="outline" onClick={() => setFraga(null)}>
+                Avbryt
+              </Button>
+            </div>
+          </div>
+        )
+      }
       etikett={`Välj rätt till ${rubrik.toLowerCase()}`}
       onStang={onStang}
       rubrik={
@@ -194,7 +230,13 @@ export function ValjRatt({
 
         <div id={`${id}-innehall`} role="tabpanel" aria-labelledby={`${id}-flik-${flik}`}>
           {flik === 'pasar' ? (
-            <Pasar maltid={maltid} behov={behov} skafferi={skafferi} valjer={valjer} onValj={(p) => valj(() => onValjPase(p))} />
+            <Pasar
+              maltid={maltid}
+              behov={behov}
+              skafferi={skafferi}
+              valjer={valjer}
+              onValj={(p) => valj(() => onValjPase(p), ratter.find((r) => r.matprodukt_id === p.id)?.id)}
+            />
           ) : flik === 'recept' ? (
             <Receptlista recept={recept} valjer={valjer} onValj={(x) => onValjRecept && valj(() => onValjRecept(x))} />
           ) : (
@@ -210,7 +252,7 @@ export function ValjRatt({
                     const portion = perPortion.get(r.id)
                     return (
                       <li key={r.id} className="flex items-center gap-2 py-1">
-                        <button type="button" disabled={valjer} onClick={() => valj(() => onValjRatt(r.id))} className={cn('min-h-11 min-w-0 flex-1 rounded-md px-2 py-2 text-left hover:bg-muted', fokus)}>
+                        <button type="button" disabled={valjer} onClick={() => valj(() => onValjRatt(r.id), r.id)} className={cn('min-h-11 min-w-0 flex-1 rounded-md px-2 py-2 text-left hover:bg-muted', fokus)}>
                           <span className="block font-medium break-words">{r.namn}</span>
                           {portion && <span className="block text-sm text-muted-foreground tabular-nums">{formateraKcal(portion.kcal)} per portion, {formateraVikt(portion.gram)}</span>}
                         </button>
@@ -230,7 +272,10 @@ export function ValjRatt({
   )
 }
 
-/** Påsarna i katalogen, med sökning och filter. Favoriter och det man har hemma står först. */
+/**
+ * Påsarna i katalogen. Sökfältet står först. Innan man söker visas bara det man har hemma, favoriterna och de påsar
+ * man använt senast. Sökningen filtreras efter gruppens kostbehov och måltiden, och filtren är hopfällda.
+ */
 function Pasar({
   maltid,
   behov,
@@ -249,20 +294,36 @@ function Pasar({
   const [sok, setSok] = useState('')
   const [filter, setFilter] = useState<Kostfilter>(() => filterForGruppen(behov))
   const [allaMaltider, setAllaMaltider] = useState(false)
+  const [visaFilter, setVisaFilter] = useState(false)
+  const s = sok.trim().toLowerCase()
 
   const traffar = useMemo(() => {
-    if (!Array.isArray(katalog)) return []
-    const s = sok.trim().toLowerCase()
+    if (!Array.isArray(katalog) || !s) return []
     const passar = katalog.filter(
-      (p) =>
-        (allaMaltider || PASAR_TILL[maltid].includes(p.maltid)) && passarFilter(p, filter) && (!s || pasnamn(p).toLowerCase().includes(s)),
+      (p) => (allaMaltider || PASAR_TILL[maltid].includes(p.maltid)) && passarFilter(p, filter) && pasnamn(p).toLowerCase().includes(s),
     )
     return skafferietForst(passar, skafferi.favoriter, skafferi.hemma)
-  }, [katalog, sok, filter, allaMaltider, maltid, skafferi])
+  }, [katalog, s, filter, allaMaltider, maltid, skafferi])
+
+  const egna = useMemo(() => (Array.isArray(katalog) ? egnaListor(katalog, skafferi) : []), [katalog, skafferi])
 
   if (katalog === null) return <Listladdar text="Hämtar katalogen" />
   if (katalog === 'fel') return <Laddfel vad="katalogen" onForsokIgen={forsokIgen} />
   if (katalog.length === 0) return <TomtLage kompakt text="Det finns inga påsar i katalogen än. Lägg till en egen rätt i stället." />
+
+  const filtrerat = filterText(filter)
+  const rad = (p: Matprodukt) => (
+    <Pasrad
+      key={p.id}
+      pase={p}
+      behov={behov}
+      favorit={skafferi.favoriter.has(p.id)}
+      hemma={skafferi.hemma.get(p.id) ?? 0}
+      bokat={skafferi.bokade.get(p.id) ?? 0}
+      valjer={valjer}
+      onValj={() => onValj(p)}
+    />
+  )
 
   return (
     <div className="space-y-4">
@@ -276,27 +337,67 @@ function Pasar({
         </div>
       </div>
 
-      <Kostfilterval filter={filter} onAndra={setFilter} />
+      <div className="flex flex-wrap items-center justify-between gap-x-4">
+        <button
+          type="button"
+          aria-expanded={visaFilter}
+          aria-controls={`${id}-filter`}
+          onClick={() => setVisaFilter((v) => !v)}
+          className={cn('inline-flex min-h-11 min-w-0 items-center gap-1.5 text-left text-sm font-medium text-primary', fokus)}
+        >
+          <span className="min-w-0 break-words">Filter: {filtrerat ?? 'inga'}</span>
+          <ChevronDown className={cn('size-4 shrink-0 transition-transform', visaFilter && 'rotate-180')} aria-hidden />
+        </button>
+        <Link to="/matplanering/katalog" className={cn('inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4', fokus)}>
+          Utforska Matkatalogen
+        </Link>
+      </div>
 
-      {behov.length > 0 && (filter.val.length > 0 || filter.utan.length > 0) && (
-        <p className="text-sm text-muted-foreground">Filtret följer gruppens kostbehov. Okänt räknas inte som att påsen passar.</p>
+      <div id={`${id}-filter`} hidden={!visaFilter} className="space-y-3 rounded-ruta bg-muted/60 p-3">
+        <Kostfilterval filter={filter} onAndra={setFilter} />
+        {behov.length > 0 && <p className="text-sm text-muted-foreground">Filtret följer gruppens kostbehov. Okänt räknas inte som att påsen passar.</p>}
+        <label className="flex min-h-11 items-center gap-3 text-sm">
+          <input type="checkbox" checked={allaMaltider} onChange={(e) => setAllaMaltider(e.target.checked)} className="size-5 accent-primary" />
+          Visa påsar för alla måltider
+        </label>
+      </div>
+
+      {s ? (
+        <>
+          <p aria-live="polite" className="text-sm text-muted-foreground">
+            {traffar.length === 0 ? 'Ingen påse passar sökningen och filtret.' : traffar.length === 1 ? 'En påse' : `${traffar.length} påsar`}
+          </p>
+          <ul className="divide-y divide-border">{traffar.map(rad)}</ul>
+        </>
+      ) : egna.length === 0 ? (
+        <p className="text-sm text-muted-foreground">Sök på märke eller namn. Påsar du har hemma, dina favoriter och påsar du använt i dina turer visas här.</p>
+      ) : (
+        egna.map((lista) => (
+          <section key={lista.rubrik} aria-labelledby={`${id}-${lista.rubrik}`} className="space-y-1">
+            <h3 id={`${id}-${lista.rubrik}`} className="font-sans text-sm font-semibold">
+              {lista.rubrik}
+            </h3>
+            <ul className="divide-y divide-border">{lista.pasar.map(rad)}</ul>
+          </section>
+        ))
       )}
-
-      <label className="flex min-h-11 items-center gap-3 text-sm">
-        <input type="checkbox" checked={allaMaltider} onChange={(e) => setAllaMaltider(e.target.checked)} className="size-5 accent-primary" />
-        Visa påsar för alla måltider
-      </label>
-
-      <p aria-live="polite" className="text-sm text-muted-foreground">
-        {traffar.length === 1 ? 'En påse' : `${traffar.length} påsar`}
-      </p>
-
-      <ul className="divide-y divide-border">
-        {traffar.map((p) => (
-          <Pasrad key={p.id} pase={p} behov={behov} favorit={skafferi.favoriter.has(p.id)} hemma={skafferi.hemma.get(p.id) ?? 0} valjer={valjer} onValj={() => onValj(p)} />
-        ))}
-      </ul>
     </div>
+  )
+}
+
+/** Listorna innan man söker: Hemma, Favoriter och Senast använda. Varje påse står i den första lista den hör till. */
+function egnaListor(katalog: readonly Matprodukt[], skafferi: EgetSkafferi): { rubrik: string; pasar: Matprodukt[] }[] {
+  const perId = new Map(katalog.map((p) => [p.id, p]))
+  const namn = (i: string) => (perId.has(i) ? pasnamn(perId.get(i)!) : '')
+  const visade = new Set<string>()
+  const lista = (rubrik: string, ids: Iterable<string>) => {
+    const pasar = [...ids].filter((i) => !visade.has(i) && perId.has(i)).map((i) => perId.get(i)!)
+    for (const p of pasar) visade.add(p.id)
+    return { rubrik, pasar }
+  }
+  const iNamnordning = (ids: Iterable<string>) => [...ids].sort((a, b) => namn(a).localeCompare(namn(b), 'sv'))
+  return [lista('Hemma', iNamnordning(skafferi.hemma.keys())), lista('Favoriter', iNamnordning(skafferi.favoriter)), lista('Senast använda', skafferi.senast)].filter(
+    (l) => l.pasar.length > 0,
   )
 }
 
@@ -305,16 +406,21 @@ function Pasrad({
   behov,
   favorit,
   hemma,
+  bokat,
   valjer,
   onValj,
 }: {
   pase: Matprodukt
   behov: readonly Behov[]
   favorit: boolean
+  /** Lediga påsar hemma, utan dem som går till turer före den här. */
   hemma: number
+  /** Påsar hemma som går till turer före den här. */
+  bokat: number
   valjer: boolean
   onValj: () => void
 }) {
+  const bokatText = bokadText(bokat)
   const lista = varningar(pase, behov)
   const per100 = kcalPer100g(pase.kcal, pase.vikt_torr_g)
   return (
@@ -325,6 +431,7 @@ function Pasrad({
           {favorit && <Star className="mt-0.5 size-4 shrink-0 fill-primary text-primary" aria-label="Favorit" role="img" />}
         </span>
         {hemma > 0 && <span className="block text-sm font-medium text-primary">Du har {hemma} hemma</span>}
+        {bokatText && <span className="block text-sm text-muted-foreground">{bokatText}</span>}
         <span className="block text-sm tabular-nums">
           {formateraVikt(pase.vikt_torr_g)}, {formateraKcal(pase.kcal)}
           {per100 !== null && `, ${per100} kcal per 100 g`}

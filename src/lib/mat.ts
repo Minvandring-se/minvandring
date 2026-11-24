@@ -246,7 +246,7 @@ export function inkopslista(data: Matdata, dagar: readonly Matdag[], personer: n
     const n = ganger.get(ratt.id) ?? 0
     const pase = ratt.matprodukt_id ? data.pasar.get(ratt.matprodukt_id) : undefined
     if (!pase || n === 0 || personer === 0) continue
-    const antal = Math.ceil((n * personer) / Math.max(1, pase.portioner))
+    const antal = antalPasar(n, personer, pase.portioner)
     pasar.push({
       typ: 'pase',
       id: ratt.id,
@@ -261,6 +261,11 @@ export function inkopslista(data: Matdata, dagar: readonly Matdag[], personer: n
   }
 
   return [...varor, ...pasar].sort((a, b) => a.namn.localeCompare(b.namn, 'sv'))
+}
+
+/** Hela påsar för en rätt som äts ett antal gånger av ett antal personer. */
+export function antalPasar(ganger: number, personer: number, portioner: number): number {
+  return Math.ceil((ganger * personer) / Math.max(1, portioner))
 }
 
 export interface Inkopsgrupp {
@@ -307,10 +312,7 @@ export function vemTarMedVad(data: Pick<Matdata, 'ratter' | 'ingredienser' | 'va
   const varor = new Map(data.varor.map((v) => [v.id, v]))
   const ut: Ansvarsratt[] = []
   for (const ratt of data.ratter) {
-    const platser = data.maltider
-      .filter((m) => m.ratt_id === ratt.id && ordning.has(m.dag))
-      .map((m) => ({ dag: dagar[ordning.get(m.dag)!], maltid: m.maltid }))
-      .sort((a, b) => ordning.get(a.dag.dag)! - ordning.get(b.dag.dag)! || malOrdning(a.maltid) - malOrdning(b.maltid))
+    const platser = rattPlatser(data.maltider, dagar, ratt.id)
     if (platser.length === 0) continue
     if (ratt.matprodukt_id) {
       ut.push({ rattId: ratt.id, namn: ratt.namn, typ: 'pase', platser, ansvariga: ratt.ansvarig ? [ratt.ansvarig] : [], saknarAnsvarig: !ratt.ansvarig, varorUtanAnsvarig: [] })
@@ -339,6 +341,23 @@ export function vemTarMedVad(data: Pick<Matdata, 'ratter' | 'ingredienser' | 'va
 /** "Middag dag 1" eller "Lunch reservdag 1". */
 export function platsText(p: Plats): string {
   return `${MALTIDER.find((m) => m.nyckel === p.maltid)!.etikett} ${p.dag.namn.toLowerCase()}`
+}
+
+/** Måltiderna en rätt ligger i inom turens dagar, i ordning: dag för dag och inom dagen frukost, lunch, middag, mellanmål. */
+export function rattPlatser(maltider: readonly Pick<Maltidsrad, 'dag' | 'maltid' | 'ratt_id'>[], dagar: readonly Matdag[], rattId: string): Plats[] {
+  const ordning = new Map(dagar.map((d, i) => [d.dag, i]))
+  const malOrdning = (m: Maltid) => MALTIDER.findIndex((x) => x.nyckel === m)
+  return maltider
+    .filter((m) => m.ratt_id === rattId && ordning.has(m.dag))
+    .map((m) => ({ dag: dagar[ordning.get(m.dag)!], maltid: m.maltid }))
+    .sort((a, b) => ordning.get(a.dag.dag)! - ordning.get(b.dag.dag)! || malOrdning(a.maltid) - malOrdning(b.maltid))
+}
+
+/** Frågan när en rätt redan ligger i planen: "Finns redan på lunch dag 1. Lägg till ändå?" null när den inte gör det. */
+export function dubblettText(platser: readonly Plats[]): string | null {
+  if (platser.length === 0) return null
+  const text = platserText(platser)
+  return `Finns redan på ${text.charAt(0).toLowerCase()}${text.slice(1)}. Lägg till ändå?`
 }
 
 /** Samma måltid flera gånger blir en med antal: lunch dag 1 två gånger blir { lunch dag 1, antal: 2 }. Ordningen behålls. */

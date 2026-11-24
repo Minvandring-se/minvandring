@@ -27,6 +27,9 @@ import {
   platsText,
   platserMedAntal,
   platserText,
+  antalPasar,
+  dubblettText,
+  rattPlatser,
   rattPerPortion,
   tolkaRattformular,
   tolkaTal,
@@ -539,5 +542,30 @@ describe('saknasMeningar', () => {
       'Bullens pilsnerkorv saknar energi och protein.',
     ])
     expect(saknasMeningar({ energi: [], protein: [], vikt: [] })).toEqual([])
+  })
+})
+
+describe('rattPlatser och dubblettText', () => {
+  const dagar = matdagar(2, 1)
+  const rad = (dag: number, maltid: Maltid, ratt_id = 'r1') => ({ dag, maltid, ratt_id })
+  it('listar måltiderna rätten ligger i, i ordning och bara inom turen', () => {
+    const platser = rattPlatser([rad(2, 'lunch'), rad(1, 'middag'), rad(1, 'frukost'), rad(9, 'lunch'), rad(1, 'lunch', 'r2')], dagar, 'r1')
+    expect(platser.map((p) => `${p.dag.dag} ${p.maltid}`)).toEqual(['1 frukost', '1 middag', '2 lunch'])
+  })
+  it('frågar om rätten redan finns i planen', () => {
+    expect(dubblettText([])).toBeNull()
+    expect(dubblettText(rattPlatser([rad(1, 'lunch')], dagar, 'r1'))).toBe('Finns redan på lunch dag 1. Lägg till ändå?')
+    expect(dubblettText(rattPlatser([rad(1, 'lunch'), rad(2, 'mellanmal'), rad(2, 'mellanmal')], dagar, 'r1'))).toBe(
+      'Finns redan på lunch dag 1, mellanmål dag 2 (2 st). Lägg till ändå?',
+    )
+  })
+})
+
+describe('antalPasar', () => {
+  it('avrundar uppåt till hela påsar', () => {
+    expect(antalPasar(3, 2, 1)).toBe(6)
+    expect(antalPasar(3, 2, 2)).toBe(3)
+    expect(antalPasar(1, 3, 2)).toBe(2)
+    expect(antalPasar(2, 1, 0)).toBe(2)
   })
 })
