@@ -3,7 +3,7 @@
 // I första versionen äter alla personer i turen en portion av varje rätt i en måltid. Hundar äter egen mat,
 // som räknas i vikt.ts (hundmat_per_dag_g).
 import { allergenetikett, uppraknade } from './kost'
-import type { Ingrediens, Katalogmaltid, Maltid, Maltidsrad, Matprodukt, Ratt, Vara } from './typer'
+import type { Ingrediens, Katalogmaltid, Maltid, Maltidsrad, Matatare, Matprodukt, Ratt, Vara } from './typer'
 
 export const MALTIDER: readonly { nyckel: Maltid; etikett: string }[] = [
   { nyckel: 'frukost', etikett: 'Frukost' },
@@ -82,6 +82,8 @@ export interface Matdata {
   /** Påsarna som rätterna pekar på, med id som nyckel. */
   pasar: ReadonlyMap<string, Pase>
   maltider: readonly Maltidsrad[]
+  /** Vem som äter raderna. Saknas eller tom: alla äter allt. */
+  atare?: readonly Matatare[]
 }
 
 /** En portion av en rätt: påsens värden, eller summan av ingredienserna. */
@@ -224,19 +226,23 @@ export interface Inkopsrad {
 
 /**
  * Det som ska köpas eller tas med för hela turen.
- * Varor: receptmängden gånger antalet personer, för varje gång rätten äts, plus extra_g.
+ * Varor: receptmängden gånger antalet som äter, för varje gång rätten äts, plus extra_g. Utan ätare äter alla personer.
  * Påsar: portionerna delat med portioner per påse, avrundat uppåt till hela påsar.
  * Varor som inte används och inte har någon extra mängd kommer inte med.
  */
 export function inkopslista(data: Matdata, dagar: readonly Matdag[], personer: number): Inkopsrad[] {
-  const ganger = new Map<string, number>()
-  for (const m of inomTuren(data, dagar)) ganger.set(m.ratt_id, (ganger.get(m.ratt_id) ?? 0) + 1)
+  // Portionerna av varje rätt: för varje rad de som äter den, eller alla personer.
+  const portioner = new Map<string, number>()
+  for (const m of inomTuren(data, dagar)) {
+    const n = atareFor(m.id, data.atare, []).length || personer
+    portioner.set(m.ratt_id, (portioner.get(m.ratt_id) ?? 0) + n)
+  }
 
   const gramPerVara = new Map<string, number>()
   for (const ing of data.ingredienser) {
-    const n = ganger.get(ing.ratt_id) ?? 0
+    const n = portioner.get(ing.ratt_id) ?? 0
     if (n === 0) continue
-    gramPerVara.set(ing.vara_id, (gramPerVara.get(ing.vara_id) ?? 0) + ing.gram_per_portion * n * personer)
+    gramPerVara.set(ing.vara_id, (gramPerVara.get(ing.vara_id) ?? 0) + ing.gram_per_portion * n)
   }
 
   const varor: Inkopsrad[] = data.varor
@@ -253,10 +259,10 @@ export function inkopslista(data: Matdata, dagar: readonly Matdag[], personer: n
 
   const pasar: Inkopsrad[] = []
   for (const ratt of data.ratter) {
-    const n = ganger.get(ratt.id) ?? 0
+    const n = portioner.get(ratt.id) ?? 0
     const pase = ratt.matprodukt_id ? data.pasar.get(ratt.matprodukt_id) : undefined
-    if (!pase || n === 0 || personer === 0) continue
-    const antal = antalPasar(n, personer, pase.portioner)
+    if (!pase || n === 0) continue
+    const antal = antalPasar(n, 1, pase.portioner)
     pasar.push({
       typ: 'pase',
       id: ratt.id,
@@ -296,56 +302,92 @@ export function inkopsgrupper(rader: readonly Inkopsrad[], ordning: readonly str
   return { attKopa, hemifran: rader.filter((r) => r.varifran === 'hemifran') }
 }
 
-/** En rätt i planen och vem som tar med den. */
-export interface Ansvarsratt {
+/** De som äter en rad i matplanen: raderna i maltid_atare, eller alla personer när det inte finns några. */
+export function atareFor(maltidId: string, atare: readonly Matatare[] | undefined, personer: readonly string[]): string[] {
+  const egna = (atare ?? []).filter((a) => a.maltid_id === maltidId).map((a) => a.deltagare_id)
+  return egna.length > 0 ? egna : [...personer]
+}
+
+/** En rätt som samma deltagare bär, eller som ingen bär, med måltiderna i ordning. */
+export interface Barrad {
+  /** Rättens id och bäraren, så att samma rätt med två bärare blir två rader. */
+  nyckel: string
   rattId: string
   namn: string
   typ: 'pase' | 'egen'
-  /** Måltiderna rätten ligger i, i ordning. */
+  barsAv: string | null
+  /** Raderna i maltider, i samma ordning som platserna. */
+  maltidIds: string[]
   platser: Plats[]
-  /** Deltagarna som har ansvar: påsens ansvarig, eller ansvariga för den egna rättens varor. */
-  ansvariga: string[]
-  /** Något saknar ansvarig: påsen, eller någon av den egna rättens varor. */
-  saknarAnsvarig: boolean
-  /** Den egna rättens varor utan ansvarig. Det är dem "Jag tar den" sätter. */
-  varorUtanAnsvarig: string[]
 }
 
 /**
- * Vem som tar med vad: rätterna som ligger i en måltid inom turens dagar, med ansvariga. Samma uppgifter som
- * inköpslistan, så att de två alltid visar samma: en påse har ansvarig på rätten, en egen rätt på varje vara.
- * En egen rätt utan ingredienser har inget att ta med och kommer inte med.
+ * Vem bär vad: varje rad i matplanen inom turens dagar, ihopslagen per rätt och bärare. En egen rätt utan
+ * ingredienser har inget att bära och kommer inte med. Ordningen är den ordning rätterna äts första gången.
  */
-export function vemTarMedVad(data: Pick<Matdata, 'ratter' | 'ingredienser' | 'varor' | 'maltider'>, dagar: readonly Matdag[]): Ansvarsratt[] {
+export function vemBarVad(data: Pick<Matdata, 'ratter' | 'ingredienser' | 'maltider'>, dagar: readonly Matdag[]): Barrad[] {
   const ordning = new Map(dagar.map((d, i) => [d.dag, i]))
   const malOrdning = (m: Maltid) => MALTIDER.findIndex((x) => x.nyckel === m)
-  const varor = new Map(data.varor.map((v) => [v.id, v]))
-  const ut: Ansvarsratt[] = []
-  for (const ratt of data.ratter) {
-    const platser = rattPlatser(data.maltider, dagar, ratt.id)
-    if (platser.length === 0) continue
-    if (ratt.matprodukt_id) {
-      ut.push({ rattId: ratt.id, namn: ratt.namn, typ: 'pase', platser, ansvariga: ratt.ansvarig ? [ratt.ansvarig] : [], saknarAnsvarig: !ratt.ansvarig, varorUtanAnsvarig: [] })
-      continue
-    }
-    const rattensVaror = [...new Set(data.ingredienser.filter((i) => i.ratt_id === ratt.id).map((i) => i.vara_id))]
-      .map((id) => varor.get(id))
-      .filter((v): v is Vara => v !== undefined)
-    if (rattensVaror.length === 0) continue
-    const utan = rattensVaror.filter((v) => !v.ansvarig).map((v) => v.id)
-    ut.push({
-      rattId: ratt.id,
-      namn: ratt.namn,
-      typ: 'egen',
-      platser,
-      ansvariga: [...new Set(rattensVaror.map((v) => v.ansvarig).filter((a): a is string => !!a))],
-      saknarAnsvarig: utan.length > 0,
-      varorUtanAnsvarig: utan,
-    })
+  const ratter = new Map(data.ratter.map((r) => [r.id, r]))
+  const medIngredienser = new Set(data.ingredienser.map((i) => i.ratt_id))
+  const rader = data.maltider
+    .filter((m) => ordning.has(m.dag))
+    .sort((a, b) => ordning.get(a.dag)! - ordning.get(b.dag)! || malOrdning(a.maltid) - malOrdning(b.maltid))
+  const ut = new Map<string, Barrad>()
+  for (const m of rader) {
+    const ratt = ratter.get(m.ratt_id)
+    if (!ratt || (!ratt.matprodukt_id && !medIngredienser.has(ratt.id))) continue
+    const barsAv = m.bars_av ?? null
+    const nyckel = `${ratt.id}:${barsAv ?? ''}`
+    const rad = ut.get(nyckel) ?? { nyckel, rattId: ratt.id, namn: ratt.namn, typ: ratt.matprodukt_id ? 'pase' : 'egen', barsAv, maltidIds: [], platser: [] }
+    rad.maltidIds.push(m.id)
+    rad.platser.push({ dag: dagar[ordning.get(m.dag)!], maltid: m.maltid })
+    ut.set(nyckel, rad)
   }
-  // I den ordning rätterna äts första gången.
-  const forst = (r: Ansvarsratt) => ordning.get(r.platser[0].dag.dag)! * 10 + malOrdning(r.platser[0].maltid)
-  return ut.sort((a, b) => forst(a) - forst(b) || a.namn.localeCompare(b.namn, 'sv'))
+  return [...ut.values()]
+}
+
+/**
+ * Huvudmåltiderna varje person saknar: frukost, lunch och middag där ingen rad är till personen. En rad utan ätare
+ * är till alla. Personer utan något som saknas kommer inte med.
+ */
+export function saknasPerPerson(data: Pick<Matdata, 'maltider' | 'atare'>, dagar: readonly Matdag[], personer: readonly string[]): Map<string, Plats[]> {
+  const har = new Set<string>()
+  for (const m of data.maltider) for (const p of atareFor(m.id, data.atare, personer)) har.add(`${p}:${m.dag}:${m.maltid}`)
+  const ut = new Map<string, Plats[]>()
+  for (const p of personer) {
+    const saknas = dagar.flatMap((dag) => HUVUDMALTIDER.filter((maltid) => !har.has(`${p}:${dag.dag}:${maltid}`)).map((maltid) => ({ dag, maltid })))
+    if (saknas.length > 0) ut.set(p, saknas)
+  }
+  return ut
+}
+
+/** Matvikten varje deltagare bär, i gram: en portion gånger antalet som äter, för varje rad de bär inom turen. */
+export function barsAvPerson(data: Pick<Matdata, 'maltider' | 'atare'>, dagar: readonly Matdag[], perPortion: ReadonlyMap<string, Pick<Naring, 'gram'>>, personer: readonly string[]): Map<string, number> {
+  const finns = new Set(dagar.map((d) => d.dag))
+  const ut = new Map<string, number>()
+  for (const m of data.maltider) {
+    if (!m.bars_av || !finns.has(m.dag)) continue
+    const gram = (perPortion.get(m.ratt_id)?.gram ?? 0) * atareFor(m.id, data.atare, personer).length
+    ut.set(m.bars_av, (ut.get(m.bars_av) ?? 0) + gram)
+  }
+  return ut
+}
+
+/**
+ * Fördelar raderna som ingen bär så att vikten blir så jämn som möjligt: den tyngsta raden först, till den som bär
+ * minst just då. Vid lika vikt går raden till den som står först. Svarar med bäraren för varje rad.
+ */
+export function fordela(rader: readonly { id: string; gram: number }[], personer: readonly string[], redan: ReadonlyMap<string, number>): Map<string, string> {
+  const ut = new Map<string, string>()
+  if (personer.length === 0) return ut
+  const last = new Map(personer.map((p) => [p, redan.get(p) ?? 0]))
+  for (const r of [...rader].sort((a, b) => b.gram - a.gram)) {
+    const minst = personer.reduce((a, b) => (last.get(b)! < last.get(a)! ? b : a))
+    ut.set(r.id, minst)
+    last.set(minst, last.get(minst)! + r.gram)
+  }
+  return ut
 }
 
 /** "Middag dag 1" eller "Lunch reservdag 1". */
@@ -395,14 +437,16 @@ export function platserText(platser: readonly Plats[]): string {
  * Raderna i en måltid med samma rätt flera gånger ihopslagna till en rad med antal, i den ordning rätten kom in
  * första gången. Raderna finns kvar, så att Ta bort kan ta bort en av dem.
  */
-export function grupperaMaltid<T extends Pick<Maltidsrad, 'ratt_id'>>(rader: readonly T[]): { rattId: string; rader: T[] }[] {
-  const ut: { rattId: string; rader: T[] }[] = []
+export function grupperaMaltid<T extends Pick<Maltidsrad, 'ratt_id' | 'bars_av'>>(rader: readonly T[], extra: (r: T) => string = () => ''): { rattId: string; rader: T[] }[] {
+  const ut: { rattId: string; nyckel: string; rader: T[] }[] = []
   for (const r of rader) {
-    const finns = ut.find((g) => g.rattId === r.ratt_id)
+    // Samma rätt med olika bärare eller olika ätare blir egna rader.
+    const nyckel = `${r.ratt_id}:${r.bars_av ?? ''}:${extra(r)}`
+    const finns = ut.find((g) => g.nyckel === nyckel)
     if (finns) finns.rader.push(r)
-    else ut.push({ rattId: r.ratt_id, rader: [r] })
+    else ut.push({ rattId: r.ratt_id, nyckel, rader: [r] })
   }
-  return ut
+  return ut.map(({ rattId, rader }) => ({ rattId, rader }))
 }
 
 /** Gränserna för när en portion verkar orimlig, så att man kontrollerar mängderna. Ingen portion på tur är så stor. */

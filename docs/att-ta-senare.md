@@ -228,3 +228,11 @@ Fett och kolhydrater kan läggas till i formuläret senare. Det kräver:
 - två fält till per ingrediensrad, och fett och kolhydrater i summan per portion
 
 Värdena finns redan i tabellen, så inget behöver hämtas om. Vattnet kan användas för att räkna om mellan torr och tillagad vikt.
+
+## Matplanen: ta bort ratter.ansvarig och varor.ansvarig
+
+Sedan `20261124210000_vem_ater_och_bar.sql` bygger Vem tar med vad och bokningen ur skafferiet på `maltider.bars_av`. `ratter.ansvarig` (påsar) och `varor.ansvarig` (egna rätter) används bara av inköpslistan. När inköpslistan också bygger på `bars_av` (planerat i PR:en för handlingslistan) används kolumnerna inte längre. Ta då bort dem i en ny migrering, tillsammans med de främmande nycklarna `ratter_ansvarig_samma_tur` och `varor_ansvarig_samma_tur`, och ta bort `ansvarig` ur `Ratt` och `Vara` i `src/lib/typer.ts`. Sök efter `ansvarig` i `src/` först.
+
+## Matplanen: välja sin egen färg
+
+Färgen per deltagare räknas i dag ut i deltagarnas ordning (`personfarger` i `src/lib/personfarg.ts`, åtta färger i `src/index.css`). Att välja färg själv kräver en kolumn, till exempel `deltagare.farg` med de åtta bokstäverna som tillåtna värden, och att personen själv får ändra den på sin rad. I dag ändrar ingen sin egen rad direkt (se `synka_namn`). Bygg det när någon ber om det.

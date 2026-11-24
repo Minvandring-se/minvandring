@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { bastForeStatus, bokade, bokadText, enManadEfter, formateraDatum, hemma, kopText, ledigaHemma, senastAnvanda, skafferietForst, sorteraSkafferi, turerFore, type Bokningstur } from './skafferi'
+import { bastForeStatus, bokade, bokadText, bokningarFranRader, enManadEfter, formateraDatum, hemma, kopText, ledigaHemma, senastAnvanda, skafferietForst, sorteraSkafferi, turerFore, type Bokningstur } from './skafferi'
 import type { Skafferirad } from './typer'
 
 const rad = (matprodukt_id: string, antal: number, bast_fore: string | null = null): Skafferirad => ({ id: `r-${matprodukt_id}`, matprodukt_id, antal, bast_fore })
@@ -119,5 +119,21 @@ describe('senastAnvanda', () => {
     ]
     expect(senastAnvanda(ratter, turer, 'denna')).toEqual(['p3', 'p2', 'p1'])
     expect(senastAnvanda(ratter, turer, 'denna', 2)).toEqual(['p3', 'p2'])
+  })
+})
+
+describe('bokningarFranRader', () => {
+  it('lägger ihop portionerna man bär per tur och påse och avrundar uppåt till hela påsar', () => {
+    const rader = [
+      { turId: 'mars', matproduktId: 'p1', portioner: 2 },
+      { turId: 'mars', matproduktId: 'p1', portioner: 1 },
+      { turId: 'juni', matproduktId: 'p1', portioner: 1 },
+      { turId: 'mars', matproduktId: 'p2', portioner: 3 },
+    ]
+    expect(bokningarFranRader(rader, new Map([['p1', 2], ['p2', 1]]))).toEqual([
+      { turId: 'mars', matproduktId: 'p1', pasar: 2 },
+      { turId: 'juni', matproduktId: 'p1', pasar: 1 },
+      { turId: 'mars', matproduktId: 'p2', pasar: 3 },
+    ])
   })
 })
