@@ -20,13 +20,13 @@ import { sparaRecept, useRecept } from '@/hooks/useRecept'
 import { laggISkafferi, useAndraTurer, useSkafferi } from '@/hooks/useSkafferi'
 import { bockaInkop, laggIMaltid, laggTillPase, sattAtare, sattAvdelning, sattBarare, slappRader, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, taRader, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
-import { dagssummor, dubblettText, inkopslista, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, matviktTotalt, atareFor, barsAvPerson, fordela, platsText, rattPerPortion, rattPlatser, ratterSomSaknar, saknadeMaltider, saknasPerPerson, vemBarVad, type Barrad, type Matdag as Dag, type Matstatus } from '@/lib/mat'
+import { dagssummor, dubblettText, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, atareFor, fordela, platsText, portionerSomBars, rattPerPortion, rattPlatser, ratterSomSaknar, saknadeMaltider, saknasPerPerson, vemBarVad, type Barrad, type Matdag as Dag, type Matstatus } from '@/lib/mat'
 import { dagensDatum } from '@/lib/datum'
-import { handlingslista } from '@/lib/handlingslista'
+import { handlingslista, matviktPerBarare } from '@/lib/handlingslista'
 import { personfarger } from '@/lib/personfarg'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import { receptbesked, receptMedNamn, receptTillRader, valForRecept } from '@/lib/recept'
-import { bokade, garUtFore, hemma, jamforDatum, ledigaHemma, senastAnvanda, turerFore } from '@/lib/skafferi'
+import { bokade, garUtFore, hemma, jamforDatum, ledigaHemma, senastAnvanda, taPaseSjalv, turerFore } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import { turdelAdress } from '@/lib/turdelar'
 import type { DeltagareRad, Maltid, Maltidsrad } from '@/lib/typer'
@@ -149,11 +149,13 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
     }
     return { ratter: new Map(plan.ratter.map((r) => [r.id, r])), perPortion, pasar: plan.pasar, ingredienser }
   }, [plan, perPortion])
-  const summor = dagssummor(plan, dagar)
-  const inkop = inkopslista(plan, dagar, personer)
-  const totaltG = matviktTotalt(inkop)
-  const vikter = matvikter(totaltG, plan.matdeltagare, dagar.length)
-  const perPerson = deltagare.filter((d) => (vikter.get(d.id) ?? 0) > 0).map((d) => ({ id: d.id, namn: d.namn, g: vikter.get(d.id)! }))
+  const summor = dagssummor(plan, dagar, personIds)
+  // Matvikten räknas som inköpslistan: var och en bär det hen köper, i hela påsar. Hundarna bär sin egen mat.
+  const matvikt = matviktPerBarare(plan, dagar, personIds)
+  const hundmat = matvikter(0, plan.matdeltagare, dagar.length)
+  const perPerson = deltagare
+    .map((d) => ({ id: d.id, namn: d.namn, g: (matvikt.perBarare.get(d.id) ?? 0) + (hundmat.get(d.id) ?? 0) }))
+    .filter((p) => p.g > 0)
 
   /** Nästa plats i måltiden, så att en ny rätt hamnar sist. */
   function sortering(dag: number, maltid: Maltid): number {
@@ -201,7 +203,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
 
   const maltidsnamn = (m: Maltid) => MALTIDER.find((x) => x.nyckel === m)!.etikett
   const vemBar = vemBarVad(plan, dagar)
-  const burenVikt = barsAvPerson(plan, dagar, perPortion, personIds)
+  const burenVikt = matvikt.perBarare
   // Det som bara vissa personer saknar. Det som saknas för alla står redan i summeringen.
   const forAlla = new Set(saknadeMaltider(dagar, plan.maltider).map((p) => `${p.dag.dag}:${p.maltid}`))
   const saknasPerson = [...saknasPerPerson(plan, dagar, personIds)]
@@ -291,7 +293,15 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
         ))}
       </div>
 
-      <Matsummering summering={matsummering(summor)} saknade={ratterSomSaknar(plan, dagar)} saknasPerson={saknasPerson} totaltG={totaltG} perPerson={perPerson} />
+      <Matsummering
+        summering={matsummering(summor)}
+        saknade={ratterSomSaknar(plan, dagar)}
+        saknasPerson={saknasPerson}
+        totaltG={matvikt.totalt}
+        perPerson={perPerson}
+        inteFordelat={matvikt.inteFordelat}
+        namnFor={(id) => (folk.personer.length > 1 ? folk.personer.find((p) => p.id === id)?.namn : undefined)}
+      />
 
       <div id="inkopslista" tabIndex={-1} className="scroll-mt-6 focus:outline-none">
         <Inkopslista
@@ -374,8 +384,11 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
           onStang={() => setValjer(null)}
           onValjPase={async (pase) => {
             const befintlig = plan.ratter.find((r) => r.matprodukt_id === pase.id)
-            // Har man påsen hemma blir man ansvarig för den, så att påsarna hemma är bokade till turen.
-            const ansvarig = (egetSkafferi.hemma.get(pase.id) ?? 0) > 0 ? mittDeltagareId : null
+            // Har man en påse hemma som inte redan går till raderna man bär, bär man raden själv, så att påsen hemma
+            // är bokad till turen. Bäst före jämförs med turens första dag, som i inköpslistan.
+            const ledigt = ledigaHemma(hemma(egnaRader, jamforDatum(tur.avresa, lokaltDatum())), bokat).get(pase.id) ?? 0
+            const redan = mittDeltagareId && befintlig ? portionerSomBars(plan, dagar, personIds, mittDeltagareId, befintlig.id) : 0
+            const ansvarig = mittDeltagareId && taPaseSjalv(ledigt, redan, Math.max(1, personIds.length), pase.portioner) ? mittDeltagareId : null
             const ok = await laggTillPase(tur.id, pase, befintlig, valjer.dag.dag, valjer.maltid, sortering(valjer.dag.dag, valjer.maltid), ansvarig)
             if (ok) await lagdTill(valjer.dag.dag, valjer.maltid)
             return ok

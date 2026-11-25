@@ -5,9 +5,8 @@ import { PasNamn } from '@/components/mat/PasNamn'
 import type { Person } from '@/components/mat/RadPanel'
 import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
-import { formateraVikt } from '@/lib/forrad'
 import { uppraknade, varningar, type Behov } from '@/lib/kost'
-import { formateraKcal, grupperaMaltid, HUVUDMALTIDER, kcalPer100g, MALTIDER, maltidsord, maltidsrutaId, orimligPortion, type Dagssumma, type Naring } from '@/lib/mat'
+import { dagensText, formateraKcal, grupperaMaltid, HUVUDMALTIDER, kcalPer100g, MALTIDER, maltidsord, maltidsrutaId, orimligPortion, type Dagssumma, type Naring } from '@/lib/mat'
 import type { Maltid, Maltidsrad, Matatare, Matprodukt, Ratt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
 
@@ -39,7 +38,7 @@ const atarnyckel = (folk: Folk, rad: Maltidsrad) =>
     .join(',')
 
 /**
- * En dag i matplanen: rubriken med datum och energin per person, och en ruta per måltid. På dator ligger dagens fyra
+ * En dag i matplanen: rubriken med datum och energin per person (ett spann när personerna äter olika), och en ruta per måltid. På dator ligger dagens fyra
  * rutor i en rad, i mobil två och två och på smala skärmar under varandra.
  */
 export function Matdag({
@@ -68,7 +67,8 @@ export function Matdag({
   /** Öppnar valet av vem som bär och äter raderna. */
   onVem?: (rader: readonly Maltidsrad[]) => void
 }) {
-  const { dag, naring } = summa
+  const { dag } = summa
+  const perPerson = dagensText(summa)
   const id = useId()
   const undertext = datum ?? (dag.reserv ? 'Om turen drar ut' : null)
   return (
@@ -80,11 +80,7 @@ export function Matdag({
           </h2>
           {undertext && <p className="text-sm text-muted-foreground first-letter:uppercase lg:text-[0.9375rem]">{undertext}</p>}
         </div>
-        {naring.gram > 0 && (
-          <p className="text-sm text-muted-foreground tabular-nums">
-            {formateraKcal(naring.kcal)} och {formateraVikt(naring.gram)} per person
-          </p>
-        )}
+        {perPerson && <p className="text-sm text-muted-foreground tabular-nums">{perPerson}</p>}
       </div>
       <ul className="grid grid-cols-1 gap-3 min-[23.75rem]:grid-cols-2 lg:grid-cols-4">
         {MALTIDER.map(({ nyckel, etikett }) => (

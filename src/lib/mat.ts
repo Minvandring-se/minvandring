@@ -1,9 +1,9 @@
 // Matplanen: dagar, energi och vikt per portion och dag, och inköpslistan. Rena funktioner utan databas.
 //
-// I första versionen äter alla personer i turen en portion av varje rätt i en måltid. Hundar äter egen mat,
+// Varje person äter en portion av varje rad hen äter (maltid_atare, inga rader betyder alla). Hundar äter egen mat,
 // som räknas i vikt.ts (hundmat_per_dag_g).
 import { allergenetikett, uppraknade } from './kost'
-import { matvikter, type Deltagare } from './vikt'
+import { formateraVikt } from './forrad'
 import { arEnhet, type Enhet } from './handla'
 import type { Ingrediens, Katalogmaltid, Maltid, Maltidsrad, Matatare, Matprodukt, Ratt, Vara } from './typer'
 
@@ -36,6 +36,12 @@ export function matdagar(dagar: number | null, reservdagar: number): Matdag[] {
 /** Energi som den visas: "1 250 kcal". */
 export function formateraKcal(kcal: number): string {
   return `${Math.round(kcal).toLocaleString('sv-SE')} kcal`
+}
+
+/** En portion i listorna: "423 kcal per portion, 120 g", eller att energin saknas i stället för 0 kcal. */
+export function portionText(n: Pick<Naring, 'kcal' | 'gram'>): string {
+  if (n.kcal > 0) return `${formateraKcal(n.kcal)} per portion, ${formateraVikt(n.gram)}`
+  return n.gram > 0 ? `Energi saknas, ${formateraVikt(n.gram)}` : 'Energi och vikt saknas'
 }
 
 /** Kcal per 100 g, avrundat till heltal. null när vikten saknas. */
@@ -190,14 +196,23 @@ export function borjaMed(plats: Plats, datum: string | null): string {
 
 export interface Dagssumma {
   dag: Matdag
-  /** Per person. */
+  /** Varje persons energi, protein och vikt den dagen: en portion av varje rad personen äter. */
+  perPerson: Map<string, Naring>
+  /** Snittet för personerna. */
   naring: Naring
   /** Huvudmåltider utan någon rätt. */
   saknas: Maltid[]
 }
 
-/** Energi, protein och vikt per person för varje dag, och vilka huvudmåltider som saknas. */
-export function dagssummor(data: Matdata, dagar: readonly Matdag[]): Dagssumma[] {
+/** Nyckeln när turen saknar personer: då räknas dagen som för en person som äter allt. */
+const ALLA = ''
+
+/**
+ * Energi, protein och vikt per person för varje dag, efter vem som äter raderna (maltid_atare), och vilka
+ * huvudmåltider som saknas. En rad utan ätare äts av alla.
+ */
+export function dagssummor(data: Matdata, dagar: readonly Matdag[], personer: readonly string[]): Dagssumma[] {
+  const folk = personer.length > 0 ? personer : [ALLA]
   const ratter = new Map(data.ratter.map((r) => [r.id, r]))
   const perPortion = new Map(data.ratter.map((r) => [r.id, rattPerPortion(r, data)]))
   const saknas = saknadeMaltider(
@@ -205,104 +220,55 @@ export function dagssummor(data: Matdata, dagar: readonly Matdag[]): Dagssumma[]
     data.maltider.filter((m) => ratter.has(m.ratt_id)),
   )
   return dagar.map((dag) => {
-    const rader = data.maltider.filter((m) => m.dag === dag.dag && ratter.has(m.ratt_id))
-    const naring = rader.reduce((s, m) => plus(s, perPortion.get(m.ratt_id)!), NOLL)
-    return { dag, naring, saknas: saknas.filter((p) => p.dag.dag === dag.dag).map((p) => p.maltid) }
+    const perPerson = new Map(folk.map((p) => [p, NOLL]))
+    for (const m of data.maltider) {
+      if (m.dag !== dag.dag || !ratter.has(m.ratt_id)) continue
+      for (const p of atareFor(m.id, data.atare, folk)) {
+        const forut = perPerson.get(p)
+        if (forut) perPerson.set(p, plus(forut, perPortion.get(m.ratt_id)!))
+      }
+    }
+    return { dag, perPerson, naring: snitt([...perPerson.values()]), saknas: saknas.filter((p) => p.dag.dag === dag.dag).map((p) => p.maltid) }
   })
 }
 
-export interface Inkopsrad {
-  typ: 'vara' | 'pase'
-  /** Varans id, eller rättens id för en påse. Det är där ansvarig och klart sparas. */
-  id: string
-  namn: string
-  /** Total vikt i gram. För påsar hela påsar. */
-  gram: number
-  /** Antal påsar. Bara för påsar. */
-  pasar?: number
-  /** Påsens id i matkatalogen. Bara för påsar. */
-  matproduktId?: string
-  varifran: 'kopa' | 'hemifran'
-  ansvarig: string | null
-  klart: boolean
+function snitt(lista: readonly Naring[]): Naring {
+  if (lista.length === 0) return NOLL
+  const summa = lista.reduce((s, n) => plus(s, n), NOLL)
+  return { kcal: summa.kcal / lista.length, proteinG: summa.proteinG / lista.length, gram: summa.gram / lista.length, ofullstandig: summa.ofullstandig }
 }
 
 /**
- * Det som ska köpas eller tas med för hela turen.
- * Varor: receptmängden gånger antalet som äter, för varje gång rätten äts, plus extra_g. Utan ätare äter alla personer.
- * Påsar: portionerna delat med portioner per påse, avrundat uppåt till hela påsar.
- * Varor som inte används och inte har någon extra mängd kommer inte med.
+ * Ett värde, eller ett spann när det lägsta och högsta skiljer sig som de visas: "700 kcal", "423–700 kcal" eller
+ * "640 g–1,2 kg". Enheten skrivs en gång när båda har samma.
  */
-export function inkopslista(data: Matdata, dagar: readonly Matdag[], personer: number): Inkopsrad[] {
-  // Portionerna av varje rätt: för varje rad de som äter den, eller alla personer.
-  const portioner = new Map<string, number>()
-  for (const m of inomTuren(data, dagar)) {
-    const n = atareFor(m.id, data.atare, []).length || personer
-    portioner.set(m.ratt_id, (portioner.get(m.ratt_id) ?? 0) + n)
-  }
+function spann(varden: readonly number[], text: (n: number) => string): string {
+  const min = text(Math.min(...varden))
+  const max = text(Math.max(...varden))
+  if (min === max) return max
+  const enhet = (t: string) => t.slice(t.lastIndexOf(' '))
+  return enhet(min) === enhet(max) ? `${min.slice(0, min.lastIndexOf(' '))}–${max}` : `${min}–${max}`
+}
 
-  const gramPerVara = new Map<string, number>()
-  for (const ing of data.ingredienser) {
-    const n = portioner.get(ing.ratt_id) ?? 0
-    if (n === 0) continue
-    gramPerVara.set(ing.vara_id, (gramPerVara.get(ing.vara_id) ?? 0) + (ing.gram_per_portion ?? 0) * n)
-  }
-
-  const varor: Inkopsrad[] = data.varor
-    .map((v) => ({
-      typ: 'vara' as const,
-      id: v.id,
-      namn: v.namn,
-      gram: (gramPerVara.get(v.id) ?? 0) + Math.max(0, v.extra_g),
-      varifran: v.varifran ?? 'kopa',
-      ansvarig: v.ansvarig,
-      klart: v.klart,
-    }))
-    .filter((r) => r.gram > 0)
-
-  const pasar: Inkopsrad[] = []
-  for (const ratt of data.ratter) {
-    const n = portioner.get(ratt.id) ?? 0
-    const pase = ratt.matprodukt_id ? data.pasar.get(ratt.matprodukt_id) : undefined
-    if (!pase || n === 0) continue
-    const antal = antalPasar(n, 1, pase.portioner)
-    pasar.push({
-      typ: 'pase',
-      id: ratt.id,
-      namn: ratt.namn,
-      gram: antal * pase.vikt_torr_g,
-      pasar: antal,
-      matproduktId: pase.id,
-      varifran: 'kopa',
-      ansvarig: ratt.ansvarig,
-      klart: ratt.klart,
-    })
-  }
-
-  return [...varor, ...pasar].sort((a, b) => a.namn.localeCompare(b.namn, 'sv'))
+/**
+ * Dagens rad under rubriken: "1 250 kcal och 1,1 kg per person", eller ett spann när personerna äter olika mycket:
+ * "423–700 kcal och 120–150 g per person". null en dag utan mat.
+ */
+export function dagensText(summa: Pick<Dagssumma, 'perPerson'>): string | null {
+  const varden = [...summa.perPerson.values()]
+  if (!varden.some((n) => n.gram > 0)) return null
+  return `${spann(
+    varden.map((n) => n.kcal),
+    formateraKcal,
+  )} och ${spann(
+    varden.map((n) => n.gram),
+    formateraVikt,
+  )} per person`
 }
 
 /** Hela påsar för en rätt som äts ett antal gånger av ett antal personer. */
 export function antalPasar(ganger: number, personer: number, portioner: number): number {
   return Math.ceil((ganger * personer) / Math.max(1, portioner))
-}
-
-export interface Inkopsgrupp {
-  /** Deltagarens id, eller null för det som ingen ansvarar för. */
-  ansvarig: string | null
-  rader: Inkopsrad[]
-}
-
-/** Det som ska köpas, grupperat per ansvarig med det som ingen ansvarar för först, och det som tas hemifrån för sig. */
-export function inkopsgrupper(rader: readonly Inkopsrad[], ordning: readonly string[]): { attKopa: Inkopsgrupp[]; hemifran: Inkopsrad[] } {
-  const kopa = rader.filter((r) => r.varifran === 'kopa')
-  const ansvariga = [null, ...ordning] as (string | null)[]
-  // Den som inte längre finns bland deltagarna hamnar sist, så att ingen rad försvinner.
-  for (const r of kopa) if (!ansvariga.includes(r.ansvarig)) ansvariga.push(r.ansvarig)
-  const attKopa = ansvariga
-    .map((ansvarig) => ({ ansvarig, rader: kopa.filter((r) => r.ansvarig === ansvarig) }))
-    .filter((g) => g.rader.length > 0)
-  return { attKopa, hemifran: rader.filter((r) => r.varifran === 'hemifran') }
 }
 
 /** De som äter en rad i matplanen: raderna i maltid_atare, eller alla personer när det inte finns några. */
@@ -364,16 +330,12 @@ export function saknasPerPerson(data: Pick<Matdata, 'maltider' | 'atare'>, dagar
   return ut
 }
 
-/** Matvikten varje deltagare bär, i gram: en portion gånger antalet som äter, för varje rad de bär inom turen. */
-export function barsAvPerson(data: Pick<Matdata, 'maltider' | 'atare'>, dagar: readonly Matdag[], perPortion: ReadonlyMap<string, Pick<Naring, 'gram'>>, personer: readonly string[]): Map<string, number> {
+/** Portionerna en deltagare bär av en rätt inom turens dagar: antalet som äter, för varje rad hen bär. */
+export function portionerSomBars(data: Pick<Matdata, 'maltider' | 'atare'>, dagar: readonly Matdag[], personer: readonly string[], barare: string, rattId: string): number {
   const finns = new Set(dagar.map((d) => d.dag))
-  const ut = new Map<string, number>()
-  for (const m of data.maltider) {
-    if (!m.bars_av || !finns.has(m.dag)) continue
-    const gram = (perPortion.get(m.ratt_id)?.gram ?? 0) * atareFor(m.id, data.atare, personer).length
-    ut.set(m.bars_av, (ut.get(m.bars_av) ?? 0) + gram)
-  }
-  return ut
+  return data.maltider
+    .filter((m) => m.bars_av === barare && m.ratt_id === rattId && finns.has(m.dag))
+    .reduce((s, m) => s + atareFor(m.id, data.atare, personer).length, 0)
 }
 
 /**
@@ -513,43 +475,34 @@ export function ratterSomSaknar(data: Matdata, dagar: readonly Matdag[]): Saknad
   return { energi: ut.energi.sort(ordning), protein: ut.protein.sort(ordning), vikt: ut.vikt.sort(ordning) }
 }
 
-/** All mat till personerna i gram, för vikten per person i vikt.ts (matvikter). */
-export function matviktTotalt(rader: readonly Inkopsrad[]): number {
-  return rader.reduce((s, r) => s + r.gram, 0)
-}
-
-/**
- * Matvikten varje deltagare bär vid start: det hen bär enligt Vem bär i matplanen, plus en andel av maten som ingen
- * bär ännu, efter deltagarnas matandelar. Hundarnas egen mat räknas som i matvikter.
- */
-export function matviktPerDeltagare(data: Matdata, matdeltagare: Deltagare[], dagar: readonly Matdag[]): Map<string, number> {
-  const personIds = matdeltagare.filter((d) => d.typ === 'person').map((d) => d.id)
-  const totalt = matviktTotalt(inkopslista(data, dagar, personIds.length))
-  const perPortion = new Map(data.ratter.map((r) => [r.id, rattPerPortion(r, data)]))
-  const buren = barsAvPerson(data, dagar, perPortion, personIds)
-  const burenTotalt = [...buren.values()].reduce((a, g) => a + g, 0)
-  const rest = matvikter(Math.max(0, totalt - burenTotalt), matdeltagare, dagar.length)
-  return new Map(matdeltagare.map((d) => [d.id, (buren.get(d.id) ?? 0) + (rest.get(d.id) ?? 0)]))
-}
-
 export interface Matsummering {
   /** Snittet per person och dag, för dagar som har någon mat. */
   snittKcal: number
-  /** Den dag med minst energi per person, bland alla dagar. */
-  lagstaKcal: number
+  /**
+   * Den person och dag som får minst energi, bland dagar med mat. olika är sant när personerna den dagen äter olika
+   * mycket, så att det är värt att visa vem. null utan mat.
+   */
+  lagsta: { kcal: number; person: string; dag: Matdag; olika: boolean } | null
   snittProteinG: number
   saknadeMaltider: number
   ofullstandig: boolean
 }
 
-/** Översikten överst i matplanen. */
+/** Översikten i matplanen. Snittet och den lägsta dagen räknas per person, efter vem som äter raderna. */
 export function matsummering(summor: readonly Dagssumma[]): Matsummering {
-  const medMat = summor.filter((s) => s.naring.gram > 0)
-  const snitt = (f: (s: Dagssumma) => number) => (medMat.length ? medMat.reduce((t, s) => t + f(s), 0) / medMat.length : 0)
+  const medMat = summor.filter((s) => [...s.perPerson.values()].some((n) => n.gram > 0))
+  const varden = medMat.flatMap((s) => [...s.perPerson.values()])
+  const medel = (f: (n: Naring) => number) => (varden.length ? varden.reduce((t, n) => t + f(n), 0) / varden.length : 0)
+  let lagsta: Matsummering['lagsta'] = null
+  for (const s of medMat) {
+    const kcal = [...s.perPerson.values()].map((n) => Math.round(n.kcal))
+    const olika = Math.min(...kcal) < Math.max(...kcal)
+    for (const [person, n] of s.perPerson) if (!lagsta || n.kcal < lagsta.kcal) lagsta = { kcal: n.kcal, person, dag: s.dag, olika }
+  }
   return {
-    snittKcal: snitt((s) => s.naring.kcal),
-    lagstaKcal: summor.length ? Math.min(...summor.map((s) => s.naring.kcal)) : 0,
-    snittProteinG: snitt((s) => s.naring.proteinG),
+    snittKcal: medel((n) => n.kcal),
+    lagsta,
+    snittProteinG: medel((n) => n.proteinG),
     saknadeMaltider: summor.reduce((t, s) => t + s.saknas.length, 0),
     ofullstandig: summor.some((s) => s.naring.ofullstandig),
   }

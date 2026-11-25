@@ -29,6 +29,8 @@ Filerna här ligger medvetet utanför `supabase/katalog/`, så att `npm run kata
 | Vandringsstavar | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 |
 | Pannlampor | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 |
 
+Kök har också gåtts igenom direkt hos tillverkarna: gaspatroner från Primus, MSR och Jetboil (2026-11-24) och Trangias kokkärl, stekpannor, kokset och kittlar från trangia.se (2026-11-25). Outnorths kastruller, kokset och stekpannor från andra märken gicks igenom samma dag.
+
 ## Kolumnerna i genomgangar.csv
 
 - `datum`: när genomgången gjordes
