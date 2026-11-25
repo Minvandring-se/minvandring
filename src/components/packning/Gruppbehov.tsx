@@ -94,7 +94,10 @@ export function Gruppbehov({
                     }
                     className="size-5 shrink-0 accent-primary"
                   />
-                  {f.namn}
+                  <span>
+                    {f.namn}
+                    {f.hjalp && <span className="block text-sm text-muted-foreground">{f.hjalp}</span>}
+                  </span>
                 </label>
               </li>
             ))}
