@@ -6,7 +6,7 @@ import { Input } from '@/components/ui/input'
 import { Panel } from '@/components/ui/panel'
 import { Select } from '@/components/ui/select'
 import { useId, useState } from 'react'
-import { faltFran, formateraVikt, KATEGORIER, medKategori, tolkaSak, type SakVarden } from '@/lib/forrad'
+import { faltFran, formateraVikt, KATEGORIER, kategoriFor, medKategori, medUnderkategori, tolkaSak, underkategorierFor, type SakVarden } from '@/lib/forrad'
 import { medKoket } from '@/lib/forradskok'
 import type { Bars } from '@/lib/packlista'
 import type { Forradssak } from '@/lib/typer'
@@ -182,6 +182,25 @@ export function LaggTillUtrustning({
                 ))}
               </Select>
             </div>
+            {underkategorierFor(falt.kategori).length > 1 && (
+              <div className="space-y-1">
+                <label htmlFor={`${id}-underkategori`} className="block font-semibold">
+                  Sort <span className="font-normal text-muted-foreground">(frivilligt)</span>
+                </label>
+                <Select
+                  id={`${id}-underkategori`}
+                  value={falt.underkategori}
+                  onChange={(e) => setFalt(medUnderkategori(falt, e.target.value))}
+                >
+                  <option value="">Annat i {kategoriFor(falt.kategori).etikett.toLowerCase()}</option>
+                  {underkategorierFor(falt.kategori).map((u) => (
+                    <option key={u.nyckel} value={u.nyckel}>
+                      {u.etikett}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label htmlFor={`${id}-vikt`} className="block font-semibold">

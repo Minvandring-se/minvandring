@@ -981,10 +981,13 @@ describe('startutbudet i katalogen', () => {
     return fs.readFileSync(path.join(mapp, senaste), 'utf8')
   }
   // Så många produkter som CSV-filerna i supabase/katalog ger.
-  const iKatalogen = (() => {
+  const katalograder = (() => {
     const mapp = path.join(import.meta.dirname, 'katalog')
-    return fs.readdirSync(mapp).filter((f) => f.endsWith('.csv')).flatMap((f) => godkanda(importera(fs.readFileSync(path.join(mapp, f), 'utf8')))).length
+    return fs.readdirSync(mapp).filter((f) => f.endsWith('.csv')).flatMap((f) => godkanda(importera(fs.readFileSync(path.join(mapp, f), 'utf8'))))
   })()
+  const iKatalogen = katalograder.length
+  // De rader en grundare har godkänt efter stickprov.
+  const kontrolleradeIKatalogen = katalograder.filter((r) => r.kontrollerad).length
   const antal = async () => (await db.query<{ n: number }>(`select count(*)::int as n from public.produkter where marke <> 'Testmärke' and marke <> 'M'`)).rows[0].n
 
   it('ligger i katalogen efter migreringarna, och inloggade hittar produkterna', async () => {
@@ -1001,14 +1004,15 @@ describe('startutbudet i katalogen', () => {
 
   it('inloggade kan läsa även produkter som inte är granskade, men ingen kan skriva eller markera dem som granskade', async () => {
     const ogranskade = await som(A, (tx) => tx.query<{ id: string }>('select id from public.produkter where kontrollerad is null'))
-    expect(ogranskade.rows.length).toBeGreaterThanOrEqual(iKatalogen)
+    expect(ogranskade.rows.length).toBeGreaterThanOrEqual(iKatalogen - kontrolleradeIKatalogen)
     const id = ogranskade.rows[0].id
     await forvantaFel(som(A, (tx) => tx.query(`update public.produkter set kontrollerad = '2026-11-20' where id = $1`, [id])))
     await forvantaFel(som(A, (tx) => tx.query('update public.produkter set packvikt_g = 1 where id = $1', [id])))
     await forvantaFel(som(A, (tx) => tx.query('delete from public.produkter where id = $1', [id])))
     await forvantaFel(somAnon((tx) => tx.query('select id from public.produkter where kontrollerad is null')))
     const kvar = await db.query<{ n: number }>('select count(*)::int as n from public.produkter where kontrollerad is not null and marke <> $1 and marke <> $2', ['Testmärke', 'M'])
-    expect(kvar.rows[0].n).toBe(0)
+    // Bara det grundarna har godkänt är kontrollerat, inget annat.
+    expect(kvar.rows[0].n).toBe(kontrolleradeIKatalogen)
   })
 
   it('en produkt får sakna kontrollerad, och den går att sätta senare när den är granskad', async () => {
