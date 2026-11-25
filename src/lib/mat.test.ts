@@ -10,6 +10,7 @@ import {
   saknasMeningar,
   portionText,
   filterknappText,
+  ensamAtareText,
   dagensText,
   kcalPer100g,
   matdagar,
@@ -687,5 +688,24 @@ describe('tolkaRattformular med vikt utan mängd', () => {
   it('gör vikten till mängden i gram, så att den syns när rätten öppnas igen', () => {
     const svar = tolkaRattformular('Rätt', [{ vara: 'Mjölk', mangd: '', enhet: 'dl', gram: '200', kcal: '', protein: '' }])
     expect(svar).toEqual({ ok: true, namn: 'Rätt', rader: [{ vara: 'Mjölk', mangd: 200, enhet: 'g', gram: 200, kcalPer100g: null, proteinPer100g: null }] })
+  })
+})
+
+describe('ensamAtareText', () => {
+  const atare = [
+    { maltid_id: 'm1', deltagare_id: 'anna' },
+    { maltid_id: 'm2', deltagare_id: 'anna' },
+    { maltid_id: 'm3', deltagare_id: 'anna' },
+    { maltid_id: 'm3', deltagare_id: 'erik' },
+  ]
+
+  it('varnar när personen är den enda som äter några rader, utan pronomen', () => {
+    expect(ensamAtareText(atare, 'anna', 'Anna')).toBe('Anna är den enda som äter 2 rätter. Tas Anna bort äter alla dem.')
+    expect(ensamAtareText(atare.slice(1), 'anna', 'Anna')).toBe('Anna är den enda som äter 1 rätt. Tas Anna bort äter alla den.')
+  })
+
+  it('är tom när personen inte är ensam ätare på någon rad', () => {
+    expect(ensamAtareText(atare, 'erik', 'Erik')).toBeNull()
+    expect(ensamAtareText([], 'anna', 'Anna')).toBeNull()
   })
 })

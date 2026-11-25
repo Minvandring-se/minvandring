@@ -136,6 +136,9 @@ describe('funktionerna i public', () => {
     'public.bara_personer_ater()',
     'public.hund_ater_inte()',
     'public.bara_personer_koper()',
+    'public.konto_raderas()',
+    'public.bara_personer_bar()',
+    'public.pase_utan_ingredienser()',
     'public.skydda_forradskok()',
   ]
   const forInloggade = [
@@ -1933,9 +1936,15 @@ describe('matplanen', () => {
           { namn: 'Havregryn', gram_per_portion: 50 },
           { namn: 'Lingonsylt', gram_per_portion: 30 },
         ])
-        // Den befintliga varan får värdena från formuläret: kcal 370, och proteinet töms eftersom fältet var tomt (B7).
+        // Den befintliga varan får värdena från formuläret: kcal 370, och proteinet töms eftersom fältet var tomt.
         const v = await db.query<{ kcal_per_100g: number; protein_per_100g: string | null }>('select kcal_per_100g, protein_per_100g from public.varor where id = $1', [vara])
         expect(v.rows).toEqual([{ kcal_per_100g: 370, protein_per_100g: null }])
+        // Utan nyckeln protein behålls värdet, för den som anropar funktionen utan fältet.
+        await som(REDIGERARE, (tx) => tx.query(`update public.varor set protein_per_100g = 12.5 where id = $1`, [vara]))
+        await som(REDIGERARE, (tx) =>
+          tx.query('select public.spara_egen_ratt($1, null, $2, $3::jsonb)', [tur, 'Utan proteinnyckel', JSON.stringify([{ vara: 'Havregryn', gram: 40, kcal: 370 }])]),
+        )
+        expect((await db.query('select protein_per_100g from public.varor where id = $1', [vara])).rows).toEqual([{ protein_per_100g: '12.5' }])
         const m = await db.query('select dag, maltid, sortering from public.maltider where ratt_id = $1', [id])
         expect(m.rows).toEqual([{ dag: 4, maltid: 'middag', sortering: 3 }])
       })
@@ -2320,6 +2329,34 @@ describe('matplanen', () => {
       expect((await db.query('select 1 from public.inkop_klart where ratt_id = $1', [r])).rows).toHaveLength(0)
     })
 
+    it('sparar mängden som bockades av, och bocka_inkop byter bocken i en transaktion med samma rättigheter som tabellen', async () => {
+      const v = await nyVara(AGARE, tur, 'Mängdvara')
+      const bocka = (vem: string, deltagare: string, klart: boolean, mangd: string) =>
+        som(vem, (tx) => tx.query('select public.bocka_inkop($1, $2, $3, null, $4, $5)', [tur, deltagare, v, klart, mangd]))
+      const mangder = async () => (await db.query<{ deltagare_id: string; mangd: string }>('select deltagare_id, mangd from public.inkop_klart where vara_id = $1 order by deltagare_id', [v])).rows
+      // Läsaren bockar av åt sig själv, och en ny mängd byter ut den gamla bocken.
+      await bocka(LASARE, lasarensDeltagare, true, '1 dl')
+      await bocka(LASARE, lasarensDeltagare, true, '3 dl')
+      expect(await mangder()).toEqual([{ deltagare_id: lasarensDeltagare, mangd: '3 dl' }])
+      // En bock ändras inte direkt, inte heller mängden.
+      await forvantaFel(som(LASARE, (tx) => tx.query("update public.inkop_klart set mangd = '9 dl' where vara_id = $1", [v])))
+      // Läsaren bockar inte åt någon annan, och då blir ingenting borttaget heller.
+      await bocka(REDIGERARE, lisa, true, '2 dl')
+      await forvantaFel(bocka(LASARE, lisa, true, '5 dl'))
+      expect((await mangder()).find((r) => r.deltagare_id === lisa)?.mangd).toBe('2 dl')
+      // Redigeraren bockar åt vem som helst och tar bort bocken med klart = false.
+      await bocka(REDIGERARE, lasarensDeltagare, false, '')
+      expect(await mangder()).toEqual([{ deltagare_id: lisa, mangd: '2 dl' }])
+      // Den som inte är med når ingenting, och anon kan inte anropa funktionen.
+      await forvantaFel(bocka(UTOMSTAENDE, lisa, true, '1 dl'))
+      await forvantaFel(somAnon((tx) => tx.query('select public.bocka_inkop($1, $2, $3, null, true, $4)', [tur, lisa, v, '1 dl'])))
+      // Antingen en vara eller en påse, och högst 200 tecken.
+      await forvantaFel(som(AGARE, (tx) => tx.query('select public.bocka_inkop($1, $2, null, null, true, $3)', [tur, lisa, '1 dl'])))
+      await bocka(AGARE, lisa, true, 'x'.repeat(200))
+      await forvantaFel(bocka(AGARE, lisa, true, 'x'.repeat(201)))
+      await som(AGARE, (tx) => tx.query('delete from public.varor where id = $1', [v]))
+    })
+
     it('bockarna försvinner med deltagaren och med varan', async () => {
       const p = await som(AGARE, (tx) => tx.query<{ id: string }>("insert into public.deltagare (tur_id, namn) values ($1, 'Tillfällig köpare') returning id", [tur]))
       const v = await nyVara(AGARE, tur, 'Tillfällig bockvara')
@@ -2415,6 +2452,119 @@ describe('matplanen', () => {
           tx.query('select public.spara_egen_ratt($1, null, $2, $3::jsonb)', [tur, 'Rätt med okänd vara', JSON.stringify([{ vara: 'Okänd', gram: 10, varukatalog: crypto.randomUUID() }])]),
         ),
       )
+    })
+  })
+
+  describe('reglerna från felsökningen av matdelen', () => {
+    let egen: string
+    let paseRatt: string
+    let rad: string
+    let vara: string
+    let ingrediens: string
+
+    beforeAll(async () => {
+      egen = await nyRatt(AGARE, tur, 'Regelgryta')
+      vara = await nyVara(AGARE, tur, 'Regelvara')
+      await nyIngrediens(AGARE, tur, egen, vara)
+      ingrediens = (await db.query<{ id: string }>('select id from public.ingredienser where ratt_id = $1', [egen])).rows[0].id
+      paseRatt = await nyRatt(AGARE, tur, 'Testmat Regelpåse', await nyPase('Regelpåse'))
+      rad = (
+        await som(AGARE, (tx) => tx.query<{ id: string }>(`insert into public.maltider (tur_id, dag, maltid, ratt_id) values ($1, 2, 'lunch', $2) returning id`, [tur, egen]))
+      ).rows[0].id
+    })
+
+    it('bara personer bär en rad, och en person som blir hund släpper raderna hen bar', async () => {
+      await forvantaFel(som(AGARE, (tx) => tx.query('update public.maltider set bars_av = $1 where id = $2', [hund, rad])))
+      const p = await som(AGARE, (tx) => tx.query<{ id: string }>("insert into public.deltagare (tur_id, namn) values ($1, 'Blir hund och bär') returning id", [tur]))
+      await som(AGARE, (tx) => tx.query('update public.maltider set bars_av = $1 where id = $2', [p.rows[0].id, rad]))
+      // Redigeraren ändrar typen på en person utan konto, och raden blir utan bärare.
+      await som(REDIGERARE, (tx) => tx.query("update public.deltagare set typ = 'hund' where id = $1", [p.rows[0].id]))
+      expect((await db.query('select bars_av from public.maltider where id = $1', [rad])).rows).toEqual([{ bars_av: null }])
+    })
+
+    it('ta_ratt och slapp_ratt med tomt id ger fel, och redigerare och ägare tar en rad själva', async () => {
+      await forvantaFel(som(LASARE, (tx) => tx.query('select public.ta_ratt(null)')))
+      await forvantaFel(som(LASARE, (tx) => tx.query('select public.slapp_ratt(null)')))
+      const ta = async (vem: string) => (await som(vem, (tx) => tx.query<{ ok: boolean }>('select public.ta_ratt($1) as ok', [rad]))).rows[0].ok
+      expect(await ta(REDIGERARE)).toBe(true)
+      // Ägaren tar inte en rad som redigeraren bär.
+      expect(await ta(AGARE)).toBe(false)
+      await som(REDIGERARE, (tx) => tx.query('select public.slapp_ratt($1)', [rad]))
+      expect(await ta(AGARE)).toBe(true)
+      await som(AGARE, (tx) => tx.query('select public.slapp_ratt($1)', [rad]))
+    })
+
+    it('en bock på en rätt gäller bara påsar, och läsaren bockar av en påse åt sig själv', async () => {
+      await forvantaFel(som(AGARE, (tx) => tx.query('insert into public.inkop_klart (tur_id, deltagare_id, ratt_id) values ($1, $2, $3)', [tur, lisa, egen])))
+      await som(LASARE, (tx) => tx.query('insert into public.inkop_klart (tur_id, deltagare_id, ratt_id) values ($1, $2, $3)', [tur, lasarensDeltagare, paseRatt]))
+      expect((await db.query('select 1 from public.inkop_klart where ratt_id = $1 and deltagare_id = $2', [paseRatt, lasarensDeltagare])).rows).toHaveLength(1)
+    })
+
+    it('en påse får inga ingredienser, och en rätt med ingredienser blir ingen påse', async () => {
+      await forvantaFel(som(AGARE, (tx) => tx.query('insert into public.ingredienser (tur_id, ratt_id, vara_id, gram_per_portion) values ($1, $2, $3, 50)', [tur, paseRatt, vara])))
+      await forvantaFel(som(AGARE, async (tx) => tx.query('update public.ratter set matprodukt_id = (select matprodukt_id from public.ratter where id = $2) where id = $1', [egen, paseRatt])))
+    })
+
+    it('gränserna för gram, kcal och protein gäller också utan spara_egen_ratt', async () => {
+      for (const gram of [0, 5001, 2_000_000_000]) {
+        await forvantaFel(som(AGARE, (tx) => tx.query('update public.ingredienser set gram_per_portion = $1 where id = $2', [gram, ingrediens])))
+      }
+      await forvantaFel(som(AGARE, (tx) => tx.query('update public.varor set kcal_per_100g = 901 where id = $1', [vara])))
+      await forvantaFel(som(AGARE, (tx) => tx.query('update public.varor set protein_per_100g = 100.5 where id = $1', [vara])))
+      const ok = await som(AGARE, (tx) => tx.query('update public.varor set kcal_per_100g = 900, protein_per_100g = 100 where id = $1', [vara]))
+      expect(ok.affectedRows).toBe(1)
+    })
+
+    it('läsaren ändrar inte rätter, ingredienser eller måltider, och den som inte är med ändrar och tar bort ingenting', async () => {
+      for (const [sql, params] of [
+        ["update public.ratter set namn = 'Läsarens' where id = $1", [egen]],
+        ['update public.ingredienser set gram_per_portion = 10 where id = $1', [ingrediens]],
+        ['update public.maltider set dag = 3 where id = $1', [rad]],
+      ] as const) {
+        const r = await som(LASARE, (tx) => tx.query(sql, [...params]))
+        expect(r.affectedRows, sql).toBe(0)
+      }
+      for (const tabell of ['ratter', 'varor', 'ingredienser', 'maltider']) {
+        const u = await som(UTOMSTAENDE, (tx) => tx.query(`update public.${tabell} set tur_id = tur_id where tur_id = $1`, [tur]))
+        const d = await som(UTOMSTAENDE, (tx) => tx.query(`delete from public.${tabell} where tur_id = $1`, [tur]))
+        expect([u.affectedRows, d.affectedRows], tabell).toEqual([0, 0])
+      }
+    })
+
+    it('redigeraren flyttar inte en rad till en tur hen inte är med i', async () => {
+      const ingen = await skapaTur(UTOMSTAENDE, 'Utomståendes tur')
+      for (const [tabell, id] of [
+        ['ratter', egen],
+        ['varor', vara],
+        ['maltider', rad],
+      ] as const) {
+        await forvantaFel(som(REDIGERARE, (tx) => tx.query(`update public.${tabell} set tur_id = $1 where id = $2`, [ingen, id])).then((r) => {
+          if (r.affectedRows === 0) throw new Error('stoppad')
+        }))
+      }
+    })
+
+    it('ratter.ansvarig blir tom när deltagaren tas bort', async () => {
+      const p = await som(AGARE, (tx) => tx.query<{ id: string }>("insert into public.deltagare (tur_id, namn) values ($1, 'Ansvarig en stund') returning id", [tur]))
+      await som(AGARE, (tx) => tx.query('update public.ratter set ansvarig = $1 where id = $2', [p.rows[0].id, paseRatt]))
+      await som(AGARE, (tx) => tx.query('delete from public.deltagare where id = $1', [p.rows[0].id]))
+      expect((await db.query('select ansvarig from public.ratter where id = $1', [paseRatt])).rows).toEqual([{ ansvarig: null }])
+    })
+
+    it('matkatalogen går inte att ändra för inloggade, och anon når inte kostbehoven', async () => {
+      const har = async (roll: string, tabell: string, r: string) =>
+        (await db.query<{ ok: boolean }>('select has_table_privilege($1, $2, $3) as ok', [roll, tabell, r])).rows[0].ok
+      for (const r of ['insert', 'update', 'delete', 'truncate']) expect(await har('authenticated', 'public.matprodukter', r), r).toBe(false)
+      for (const r of ['select', 'insert', 'update', 'delete']) expect(await har('anon', 'public.kostbehov', r), r).toBe(false)
+    })
+
+    it('bockarna försvinner när turen raderas', async () => {
+      const t = await skapaTur(AGARE, 'Tur som raderas med bockar')
+      const v = await nyVara(AGARE, t, 'Bockvara som försvinner')
+      const d = await deltagareFor(t, AGARE)
+      await som(AGARE, (tx) => tx.query('insert into public.inkop_klart (tur_id, deltagare_id, vara_id) values ($1, $2, $3)', [t, d, v]))
+      await som(AGARE, (tx) => tx.query('delete from public.turer where id = $1', [t]))
+      expect((await db.query('select 1 from public.inkop_klart where tur_id = $1', [t])).rows).toHaveLength(0)
     })
   })
 
@@ -2552,15 +2702,180 @@ describe('matplanen', () => {
       await som(AGARE, (tx) => tx.query('delete from public.deltagare where id = $1', [lasarensDeltagare]))
       const kvar = await db.query('select 1 from public.kostbehov where deltagare_id = $1', [lasarensDeltagare])
       expect(kvar.rows).toHaveLength(0)
-      for (const tabell of ['kostbehov', 'maltider', 'ratter', 'maltid_atare', 'inkop_klart']) {
+      for (const tabell of ['kostbehov', 'maltider', 'ratter', 'maltid_atare', 'inkop_klart', 'varor', 'ingredienser']) {
         const r = await som(LASARE, (tx) => tx.query(`select 1 from public.${tabell}`))
         expect(r.rows, tabell).toHaveLength(0)
       }
       const rad = (await db.query<{ id: string }>('select id from public.maltider where tur_id = $1 and bars_av is null limit 1', [tur])).rows[0].id
       await forvantaFel(som(LASARE, (tx) => tx.query('select public.ta_ratt($1)', [rad])))
+      await forvantaFel(som(LASARE, (tx) => tx.query('select public.slapp_ratt($1)', [rad])))
       const vara = (await db.query<{ id: string }>('select id from public.varor where tur_id = $1 limit 1', [tur])).rows[0].id
       await forvantaFel(som(LASARE, (tx) => tx.query('insert into public.inkop_klart (tur_id, deltagare_id, vara_id) values ($1, $2, $3)', [tur, lasarensDeltagare, vara])))
+      // Inte heller funktionerna för egna rätter släpper fram den som inte är med längre.
+      await forvantaFel(som(LASARE, (tx) => tx.query(`select public.spara_egen_ratt($1, null, 'Smygrätt', '[]'::jsonb)`, [tur])))
+      const egen = (await db.query<{ id: string }>('select id from public.ratter where tur_id = $1 and matprodukt_id is null limit 1', [tur])).rows[0].id
+      await som(LASARE, (tx) => tx.query('select public.ta_bort_egen_ratt($1)', [egen])).catch(() => null)
+      expect((await db.query('select 1 from public.ratter where id = $1', [egen])).rows).toHaveLength(1)
     })
+
+    it('en borttagen redigerare förlorar rätten att ändra', async () => {
+      const d = await deltagareFor(tur, REDIGERARE)
+      await som(AGARE, (tx) => tx.query('delete from public.deltagare where id = $1', [d]))
+      const r = await som(REDIGERARE, (tx) => tx.query("update public.ratter set namn = namn || ' ändrad' where tur_id = $1", [tur]))
+      expect(r.affectedRows).toBe(0)
+      await forvantaFel(som(REDIGERARE, (tx) => tx.query(`select public.spara_egen_ratt($1, null, 'Efteråt', '[]'::jsonb)`, [tur])))
+    })
+  })
+})
+
+describe('ett konto som raderas', () => {
+  // Egna användare: Kim raderar sitt konto. Jon och Mia är med i Kims turer.
+  const KIM = '00000000-0000-0000-0000-000000000ab1'
+  const JON = '00000000-0000-0000-0000-000000000ab2'
+  const MIA = '00000000-0000-0000-0000-000000000ab3'
+  let medAndra: string
+  let ensam: string
+  let somRedigerare: string
+  let kimsRad: string
+  let platshallare: string
+  let tvaAgare: string
+  let lasareForst: string
+  let kimsMaltid: string
+
+  const deltagare = async (t: string) =>
+    (await db.query<{ user_id: string | null; roll: string; namn: string }>('select user_id, roll, namn from public.deltagare where tur_id = $1 order by namn', [t])).rows
+
+  beforeAll(async () => {
+    await db.query(`insert into auth.users (id, email) values ('${KIM}', 'kim@exempel.se'), ('${JON}', 'jon@exempel.se'), ('${MIA}', 'mia@exempel.se')`)
+    // Kim äger en tur med Jon och Mia (Jon gick med först) och en person utan konto, och har kostbehov där.
+    medAndra = await skapaTur(KIM, 'Kims tur med andra')
+    const kod = await kodFor(medAndra)
+    await som(JON, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(MIA, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(KIM, (tx) => tx.query(`insert into public.deltagare (tur_id, namn, sortering) values ($1, 'Utan konto', 0)`, [medAndra]))
+    kimsRad = (await db.query<{ id: string }>('select id from public.deltagare where tur_id = $1 and user_id = $2', [medAndra, KIM])).rows[0].id
+    await som(KIM, (tx) => tx.query(`insert into public.kostbehov (deltagare_id, glutenfri) values ($1, true)`, [kimsRad]))
+    // En tur där ingen annan har konto.
+    ensam = await skapaTur(KIM, 'Kims egen tur')
+    await som(KIM, (tx) => tx.query(`insert into public.deltagare (tur_id, namn) values ($1, 'Bara namn')`, [ensam]))
+    // En tur där Kim är redigerare hos Jon.
+    somRedigerare = await skapaTur(JON, 'Jons tur')
+    const jonsKod = await kodFor(somRedigerare)
+    await som(KIM, (tx) => tx.query('select public.ga_med($1)', [jonsKod]))
+    // Kim bär en rad, äter den ensam och har bockat av den i den första turen.
+    const r = await som(KIM, (tx) => tx.query<{ id: string }>(`insert into public.ratter (tur_id, namn) values ($1, 'Kims gröt') returning id`, [medAndra]))
+    kimsMaltid = (
+      await som(KIM, (tx) =>
+        tx.query<{ id: string }>(`insert into public.maltider (tur_id, dag, maltid, ratt_id, bars_av) values ($1, 1, 'frukost', $2, $3) returning id`, [medAndra, r.rows[0].id, kimsRad]),
+      )
+    ).rows[0].id
+    await som(KIM, (tx) => tx.query('insert into public.maltid_atare (tur_id, maltid_id, deltagare_id) values ($1, $2, $3)', [medAndra, kimsMaltid, kimsRad]))
+    const v = await som(KIM, (tx) => tx.query<{ id: string }>(`insert into public.varor (tur_id, namn) values ($1, 'Kims havregryn') returning id`, [medAndra]))
+    await som(KIM, (tx) => tx.query('insert into public.inkop_klart (tur_id, deltagare_id, vara_id) values ($1, $2, $3)', [medAndra, kimsRad, v.rows[0].id]))
+    // En tur där Kim har gjort en platshållare utan konto till ägare, och Jon är redigerare.
+    platshallare = await skapaTur(KIM, 'Kims tur med platshållare')
+    const p = await som(KIM, (tx) => tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn) values ($1, 'Pelle') returning id`, [platshallare]))
+    await som(KIM, (tx) => tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [p.rows[0].id]))
+    const pk = await kodFor(platshallare)
+    await som(JON, (tx) => tx.query('select public.ga_med($1)', [pk]))
+    // En tur där Kim och Jon båda är ägare, och Mia redigerare.
+    tvaAgare = await skapaTur(KIM, 'Kims och Jons tur')
+    const tk = await kodFor(tvaAgare)
+    await som(JON, (tx) => tx.query('select public.ga_med($1)', [tk]))
+    await som(MIA, (tx) => tx.query('select public.ga_med($1)', [tk]))
+    await som(KIM, (tx) => tx.query(`update public.deltagare set roll = 'owner' where tur_id = $1 and user_id = $2`, [tvaAgare, JON]))
+    // En tur där Jon gick med först men är läsare, och Mia är redigerare.
+    lasareForst = await skapaTur(KIM, 'Kims tur med läsare först')
+    const lk = await kodFor(lasareForst)
+    await som(JON, (tx) => tx.query('select public.ga_med($1)', [lk]))
+    await som(MIA, (tx) => tx.query('select public.ga_med($1)', [lk]))
+    await som(KIM, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where tur_id = $1 and user_id = $2`, [lasareForst, JON]))
+  })
+
+  it('tar bort personen och kostbehoven, gör nästa med konto till ägare och raderar turen där ingen annan har konto', async () => {
+    await db.query('delete from auth.users where id = $1', [KIM])
+
+    // Jon gick med först och blir ägare. Mia är kvar som redigerare, och personen utan konto är kvar.
+    const kvar = await deltagare(medAndra)
+    expect(kvar.map((d) => [d.user_id, d.roll]).sort()).toEqual([
+      [JON, 'owner'],
+      [MIA, 'editor'],
+      [null, 'editor'],
+    ].sort())
+    expect((await db.query('select 1 from public.kostbehov where deltagare_id = $1', [kimsRad])).rows).toHaveLength(0)
+    // Den nya ägaren kan ändra roller som en ägare.
+    const mia = (await db.query<{ id: string }>('select id from public.deltagare where tur_id = $1 and user_id = $2', [medAndra, MIA])).rows[0].id
+    const ok = await som(JON, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [mia]))
+    expect(ok.affectedRows).toBe(1)
+
+    // Turen där ingen annan hade konto finns inte längre.
+    expect(await turnamn(ensam)).toBeUndefined()
+    // I Jons tur försvinner bara Kims rad.
+    expect((await deltagare(somRedigerare)).map((d) => d.user_id)).toEqual([JON])
+    expect(await turnamn(somRedigerare)).toBe('Jons tur')
+    // Turen som Kim skapade finns kvar utan skapare.
+    expect((await db.query('select skapad_av from public.turer where id = $1', [medAndra])).rows).toEqual([{ skapad_av: null }])
+    // Ätarna och bockarna försvinner med Kims rad. Raden Kim bar blir utan bärare och ligger kvar i turen.
+    expect((await db.query('select 1 from public.maltid_atare where deltagare_id = $1', [kimsRad])).rows).toHaveLength(0)
+    expect((await db.query('select 1 from public.inkop_klart where deltagare_id = $1', [kimsRad])).rows).toHaveLength(0)
+    expect((await db.query('select tur_id, bars_av from public.maltider where id = $1', [kimsMaltid])).rows).toEqual([{ tur_id: medAndra, bars_av: null }])
+    // Profilen försvinner med kontot.
+    expect((await db.query('select 1 from public.profiler where id = $1', [KIM])).rows).toHaveLength(0)
+  })
+
+  it('en ägare utan konto räknas inte, en annan ägare med konto behålls, och en redigerare går före en läsare', async () => {
+    // Platshållaren Pelle var ägare, men utan konto. Jon blir ägare.
+    expect((await deltagare(platshallare)).map((d) => [d.user_id, d.roll]).sort()).toEqual([
+      [JON, 'owner'],
+      [null, 'owner'],
+    ].sort())
+    // Jon var redan ägare. Mia förblir redigerare.
+    expect((await deltagare(tvaAgare)).map((d) => [d.user_id, d.roll]).sort()).toEqual([
+      [JON, 'owner'],
+      [MIA, 'editor'],
+    ].sort())
+    // Jon gick med först men är läsare, så Mia, som är redigerare, blir ägare.
+    expect((await deltagare(lasareForst)).map((d) => [d.user_id, d.roll]).sort()).toEqual([
+      [JON, 'viewer'],
+      [MIA, 'owner'],
+    ].sort())
+  })
+
+  it('undantaget för ägarbyte gäller bara när en ny ägare utses vid en kontoradering', async () => {
+    const t = await skapaTur(JON, 'Jons tur med två ägare')
+    const kod = await kodFor(t)
+    await som(MIA, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const mia = (await db.query<{ id: string }>('select id from public.deltagare where tur_id = $1 and user_id = $2', [t, MIA])).rows[0].id
+    await som(JON, (tx) => tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [mia]))
+    // Även med inställningen satt går det inte att nedgradera en ägare utan att vara ägare.
+    await forvantaFel(
+      db.transaction(async (tx) => {
+        await tx.query(`select set_config('minvandring.konto_raderas', 'x', true)`)
+        return tx.query(`update public.deltagare set roll = 'editor' where id = $1`, [mia])
+      }),
+    )
+    // En redigerare får ändra en rad utan konto, men inte dess roll.
+    const p = await som(JON, (tx) => tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn) values ($1, 'Platshållare') returning id`, [t]))
+    await som(JON, (tx) => tx.query(`update public.deltagare set roll = 'editor' where id = $1`, [mia]))
+    await forvantaFel(som(MIA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [p.rows[0].id])))
+  })
+
+  it('ingen inloggad kan själv göra någon till ägare utan att vara ägare', async () => {
+    const t = await skapaTur(JON, 'Jons andra tur')
+    const kod = await kodFor(t)
+    await som(MIA, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const mia = (await db.query<{ id: string }>('select id from public.deltagare where tur_id = $1 and user_id = $2', [t, MIA])).rows[0].id
+    const forsok = (p: Promise<unknown>) => p.catch(() => null)
+    await forsok(som(MIA, (tx) => tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [mia])))
+    // Inte heller som anon, eller med rollen authenticated utan inloggning, som när auth.uid() är tom.
+    await forsok(somAnon((tx) => tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [mia])))
+    await forsok(
+      db.transaction(async (tx) => {
+        await tx.exec('set local role authenticated;')
+        return tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [mia])
+      }),
+    )
+    expect((await db.query('select roll from public.deltagare where id = $1', [mia])).rows).toEqual([{ roll: 'editor' }])
   })
 })
 

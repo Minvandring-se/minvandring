@@ -9,6 +9,7 @@ import { Input } from '@/components/ui/input'
 import { Sektion } from '@/components/ui/sektion'
 import { Select } from '@/components/ui/select'
 import { ROLLBESKRIVNING, ROLLNAMN, arAgare, kanAndra, kanTaBort, type Roll } from '@/lib/roller'
+import { ensamAtareText } from '@/lib/mat'
 import { supabase } from '@/lib/supabase'
 import type { DeltagareRad, Tur } from '@/lib/typer'
 
@@ -61,8 +62,11 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
   async function taBort(d: DeltagareRad) {
     if (!supabase) return
     const lamnar = d.user_id === mittUserId
+    // Är personen ensam ätare på några rader i matplanen äter alla dem efteråt, så det står i frågan.
+    const atare = await supabase.from('maltid_atare').select('maltid_id, deltagare_id').eq('tur_id', tur.id)
+    const varning = atare.error ? null : ensamAtareText(atare.data, d.id, d.namn)
     const fraga = lamnar ? 'Vill du lämna turen? Du behöver en ny inbjudan för att komma tillbaka.' : `Ta bort ${d.namn} från turen?`
-    if (!window.confirm(fraga)) return
+    if (!window.confirm(varning ? `${varning} ${fraga}` : fraga)) return
     setFel('')
     const { error } = await supabase.from('deltagare').delete().eq('id', d.id)
     if (error) {

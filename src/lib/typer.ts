@@ -296,6 +296,8 @@ export interface InkopKlart {
   deltagare_id: string
   vara_id: string | null
   ratt_id: string | null
+  /** Mängden som bockades av, som den stod i listan. null för bockar från före 25 november 2026. */
+  mangd?: string | null
 }
 
 /** En rätt i en måltid en viss dag. En måltid kan ha flera rätter. */

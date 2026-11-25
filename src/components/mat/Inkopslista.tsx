@@ -201,6 +201,11 @@ function Rad({
       ) : (
         <p className={cn('flex min-h-11 items-center gap-3', rad.kopare !== null && 'pl-8')}>{innehall}</p>
       )}
+      {rad.andradFran !== null && (
+        <p className="pb-2 pl-8 text-sm font-medium text-accent-strong">
+          Mängden har ändrats sedan du bockade av{rad.andradFran ? ` (var ${rad.andradFran})` : ''}
+        </p>
+      )}
       {skafferi && (
         <p className="pb-2 pl-8 text-sm">
           {skafferi.text && <span className="block font-medium text-primary">{skafferi.text}</span>}
@@ -212,7 +217,9 @@ function Rad({
           <label htmlFor={`${id}-avdelning`} className="block text-sm text-muted-foreground">
             Butiksavdelning för {rad.namn}
           </label>
-          <Select id={`${id}-avdelning`} value={rad.avdelning} onChange={(e) => onAvdelning(e.target.value)}>
+          <Select id={`${id}-avdelning`} value={rad.avdelningVald ? rad.avdelning : ''} onChange={(e) => onAvdelning(e.target.value || null)}>
+            {/* Tomt val låter appen gissa avdelningen utifrån namnet igen. */}
+            <option value="">Gissa åt mig ({AVDELNINGAR.find((a) => a.nyckel === rad.avdelning)!.etikett})</option>
             {AVDELNINGAR.map((a) => (
               <option key={a.nyckel} value={a.nyckel}>
                 {a.etikett}

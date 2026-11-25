@@ -325,7 +325,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
           utskrift={`${turdelAdress(tur.id, 'mat')}/inkopslista`}
           onBocka={async (rad, klart) => {
             if (!rad.kopare) return false
-            return ochLaddaOm(await bockaInkop(tur.id, rad.kopare, rad.typ, rad.id, klart))
+            return ochLaddaOm(await bockaInkop(tur.id, rad.kopare, rad.typ, rad.id, klart, rad.mangd))
           }}
           onAvdelning={async (varaId, avdelning) => ochLaddaOm(await sattAvdelning(varaId, avdelning))}
         />

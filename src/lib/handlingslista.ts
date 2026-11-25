@@ -1,6 +1,6 @@
 // Handlingslistan: det som ska köpas, per vara och person. Var och en köper det hen bär (maltider.bars_av).
 // Rena funktioner utan databas.
-import { AVDELNINGAR, avdelningFor, type Avdelning, type Enhet } from './handla'
+import { arAvdelning, AVDELNINGAR, avdelningFor, type Avdelning, type Enhet } from './handla'
 import { uppraknade } from './kost'
 import { antalPasar, atareFor, type Matdag, type Matdata } from './mat'
 import type { InkopKlart } from './typer'
@@ -35,11 +35,19 @@ export function summeraMangder(lista: readonly Mangd[]): string {
     else ovriga.set(enhet, (ovriga.get(enhet) ?? 0) + mangd)
   }
   const delar: string[] = []
-  if (gram > 0) delar.push(gram >= 1000 ? `${tal(gram / 1000)} kg` : `${Math.round(gram)} g`)
-  if (ml > 0) delar.push(ml >= 1000 ? `${tal(ml / 1000)} l` : ml >= 100 ? `${tal(ml / 100)} dl` : `${tal(ml)} ml`)
+  // Mängden avrundas innan enheten väljs, så att 999,6 g blir 1 kg och inte 1000 g. Det som är mindre än det som går
+  // att visa blir den minsta mängden, aldrig 0.
+  if (gram > 0) {
+    const g = Math.round(gram)
+    delar.push(g >= 1000 ? `${tal(gram / 1000)} kg` : `${Math.max(1, g)} g`)
+  }
+  if (ml > 0) {
+    const m = Math.round(ml * 100) / 100
+    delar.push(m >= 1000 ? `${tal(m / 1000)} l` : m >= 100 ? `${tal(m / 100)} dl` : `${tal(Math.max(0.01, m))} ml`)
+  }
   for (const enhet of ['st', 'msk', 'tsk', 'krm'] as const) {
     const n = ovriga.get(enhet)
-    if (n) delar.push(`${tal(n)} ${enhet}`)
+    if (n) delar.push(`${tal(Math.max(0.01, n))} ${enhet}`)
   }
   return uppraknade(delar)
 }
@@ -57,6 +65,8 @@ export interface Handlarad {
   /** Deltagaren som köper, eller null när ingen bär rätterna än. */
   kopare: string | null
   avdelning: Avdelning
+  /** Avdelningen är vald för varan. Annars är den gissad utifrån namnet. */
+  avdelningVald: boolean
   /** Mängden som den visas, till exempel "6 dl och 2 msk" eller "3 påsar". Tom när ingen mängd är angiven. */
   mangd: string
   /** Vikten i gram, när den är känd. */
@@ -69,8 +79,10 @@ export interface Handlarad {
   pase?: { marke: string; namn: string }
   /** Varan tas hemifrån i stället för att köpas. */
   hemifran: boolean
-  /** Köparen har bockat av den. Aldrig för det som ingen köper. */
+  /** Köparen har bockat av den, och mängden är densamma som då. Aldrig för det som ingen köper. */
   klart: boolean
+  /** Mängden när raden bockades av, när den har ändrats sedan dess. Då är raden inte avbockad. */
+  andradFran: string | null
 }
 
 interface Samling {
@@ -124,15 +136,23 @@ export function handlingslista(data: Matdata & { klart: readonly InkopKlart[] },
     s.gram += v.extra_g
   }
 
-  const klart = new Set(data.klart.map((k) => `${k.deltagare_id}:${k.vara_id ? 'vara' : 'pase'}:${k.vara_id ?? k.ratt_id}`))
+  // Bockarna med mängden som bockades av. En bock utan sparad mängd (från före migreringen inkop_klart_mangd) gäller
+  // vilken mängd som helst.
+  const klart = new Map(data.klart.map((k) => [`${k.deltagare_id}:${k.vara_id ? 'vara' : 'pase'}:${k.vara_id ?? k.ratt_id}`, k.mangd ?? null]))
   const ut: Handlarad[] = []
   for (const [nyckel, s] of samlingar) {
-    const avbockad = s.kopare !== null && klart.has(nyckel)
+    const bock = s.kopare !== null && klart.has(nyckel) ? { mangd: klart.get(nyckel) ?? null } : null
+    /** Avbockad när mängden är densamma som när raden bockades av. Annars mängden då. */
+    const status = (mangd: string) => ({
+      klart: bock !== null && (bock.mangd === null || bock.mangd === mangd),
+      andradFran: bock !== null && bock.mangd !== null && bock.mangd !== mangd ? bock.mangd : null,
+    })
     if (s.typ === 'pase') {
       const ratt = ratter.get(s.id)!
       const pase = ratt.matprodukt_id ? data.pasar.get(ratt.matprodukt_id) : undefined
       if (!pase) continue
       const pasar = antalPasar(s.portioner, 1, pase.portioner)
+      const mangd = pasar === 1 ? '1 påse' : `${pasar} påsar`
       ut.push({
         nyckel,
         typ: 'pase',
@@ -140,17 +160,19 @@ export function handlingslista(data: Matdata & { klart: readonly InkopKlart[] },
         namn: ratt.namn,
         kopare: s.kopare,
         avdelning: 'friluft',
-        mangd: pasar === 1 ? '1 påse' : `${pasar} påsar`,
+        avdelningVald: false,
+        mangd,
         gram: pasar * pase.vikt_torr_g,
         pasar,
         matproduktId: pase.id,
         pase: pase.marke && pase.namn ? { marke: pase.marke, namn: pase.namn } : undefined,
         hemifran: false,
-        klart: avbockad,
+        ...status(mangd),
       })
       continue
     }
     const vara = varor.get(s.id)!
+    const mangd = summeraMangder(s.mangder)
     ut.push({
       nyckel,
       typ: 'vara',
@@ -158,10 +180,11 @@ export function handlingslista(data: Matdata & { klart: readonly InkopKlart[] },
       namn: vara.namn,
       kopare: s.kopare,
       avdelning: avdelningFor(vara.namn, vara.avdelning),
-      mangd: summeraMangder(s.mangder),
+      avdelningVald: !!vara.avdelning && arAvdelning(vara.avdelning),
+      mangd,
       gram: s.gram,
       hemifran: vara.varifran === 'hemifran',
-      klart: avbockad,
+      ...status(mangd),
     })
   }
   return ut
