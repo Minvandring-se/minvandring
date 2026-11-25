@@ -159,6 +159,7 @@ export function viktrader(rader: readonly PackradRad[], status: readonly Packsta
     med: r.med,
     barsAv: r.bars_av,
     alla: r.alla,
+    kategori: r.kategori,
     egenVikt: r.alla
       ? new Map(status.filter((s) => s.packrad_id === r.id && s.vikt_g !== null).map((s) => [s.deltagare_id, s.vikt_g]))
       : undefined,
