@@ -20,6 +20,7 @@ function pase(id: string, extra: Partial<Matprodukt> = {}): Matprodukt {
     id,
     marke: 'Testmat',
     namn: `Påse ${id}`,
+    andra_namn: [],
     maltid: 'lunch_middag',
     torkning: null,
     vikt_torr_g: 100,

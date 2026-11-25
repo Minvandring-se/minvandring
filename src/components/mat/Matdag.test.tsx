@@ -57,7 +57,9 @@ describe('Matdag', () => {
 
   it('visar samma rätt flera gånger i en måltid som en rad med antal', () => {
     const html = rita(['a', 'b', 'c', 'd', 'e', 'f'].map((id) => rad(id, 'pase')))
-    expect(html.match(/>Test Pasta med vete</g)?.length).toBe(1)
+    // Märket står ovanför namnet, och namnet visas en gång.
+    expect(html.match(/>Pasta med vete</g)?.length).toBe(1)
+    expect(html.indexOf('>Test<')).toBeLessThan(html.indexOf('>Pasta med vete<'))
     expect(html).toContain('6 st')
     expect(html).toContain('aria-label="Ta bort en portion Test Pasta med vete från lunch dag 1"')
   })
@@ -66,6 +68,32 @@ describe('Matdag', () => {
     const html = rita([rad('m1', 'gryta')])
     expect(html).toContain('Ingredienser: Älgfärs, Potatis, Grädde och 2 till')
     expect(html).toContain('Älgfärs, Potatis, Grädde, Morot, Lök')
+  })
+
+  it('visar vem som bär en rätt och vilka som äter den när det inte är alla', () => {
+    const folk = {
+      personer: [{ id: 'o', namn: 'Oscar' }, { id: 'l', namn: 'Lisa' }],
+      farger: new Map([['o', 'var(--color-person-a)'], ['l', 'var(--color-person-b)']]),
+      atare: [{ maltid_id: 'm2', deltagare_id: 'l' }],
+    }
+    const html = renderToStaticMarkup(
+      <Matdag
+        summa={{ dag: dag1, naring: portion(0, 0), saknas: [] }}
+        datum={null}
+        maltider={[{ ...rad('m1', 'gryta'), bars_av: 'o' }, { ...rad('m2', 'gryta'), bars_av: 'o' }]}
+        ratter={ratter}
+        folk={folk}
+        behov={[]}
+        kanAndra
+        onLaggTill={() => {}}
+        onTaBort={() => {}}
+        onVem={() => {}}
+      />,
+    )
+    // Olika ätare blir två rader. Den ena äts bara av Lisa.
+    expect(html.match(/Oscar bär, äts av Lisa. Ändra vem som bär och äter Gryta/g)?.length).toBe(1)
+    expect(html).toContain('Äts av Lisa')
+    expect(html).toContain('Oscar bär')
   })
 
   it('ber en att kontrollera mängderna när portionen verkar orimlig', () => {

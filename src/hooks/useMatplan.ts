@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Deltagare as Matdeltagare } from '@/lib/vikt'
 import { ingredienserTillDatabasen, pasnamn, type TolkadIngrediens } from '@/lib/mat'
 import { supabase } from '@/lib/supabase'
-import type { Ingrediens, Kostbehov, Maltid, Maltidsrad, Matprodukt, Ratt, Vara } from '@/lib/typer'
+import type { Ingrediens, InkopKlart, Kostbehov, Maltid, Maltidsrad, Matatare, Matprodukt, Ratt, Vara } from '@/lib/typer'
 
 /** Allt i turens matplan. Påsarna är de som turens rätter pekar på. */
 export interface Matplan {
@@ -10,6 +10,10 @@ export interface Matplan {
   ingredienser: Ingrediens[]
   varor: Vara[]
   maltider: Maltidsrad[]
+  /** Vem som äter raderna. Inga rader för en måltid: alla äter. */
+  atare: Matatare[]
+  /** Bockarna i inköpslistan: vem som har köpt vad. */
+  klart: InkopKlart[]
   pasar: Map<string, Matprodukt>
   kostbehov: Kostbehov[]
   /** Deltagarna med matandel och hundmat, för vikten per person. */
@@ -18,18 +22,20 @@ export interface Matplan {
 
 export type Matlage = { lage: 'laddar' } | { lage: 'fel' } | { lage: 'klar'; plan: Matplan }
 
-const MATPRODUKT = 'id, marke, namn, maltid, torkning, vikt_torr_g, portioner, kcal, protein_g, fett_g, kolhydrater_g, vatten_ml, tillagning_vatten, tillagning_min, vegetarisk, vegansk, glutenfri, laktosfri, allergener, spar, pris_sek_ca, pris_kalla, kalla, kontrollerad'
+const MATPRODUKT = 'id, marke, namn, andra_namn, maltid, torkning, vikt_torr_g, portioner, kcal, protein_g, fett_g, kolhydrater_g, vatten_ml, tillagning_vatten, tillagning_min, vegetarisk, vegansk, glutenfri, laktosfri, allergener, spar, pris_sek_ca, pris_kalla, kalla, kontrollerad'
 
 async function hamtaMatplan(turId: string): Promise<Matplan | null> {
   if (!supabase) return null
-  const [ratter, ingredienser, varor, maltider, deltagare] = await Promise.all([
+  const [ratter, ingredienser, varor, maltider, deltagare, atare, klart] = await Promise.all([
     supabase.from('ratter').select('id, namn, matprodukt_id, ansvarig, klart').eq('tur_id', turId).order('namn'),
-    supabase.from('ingredienser').select('id, ratt_id, vara_id, gram_per_portion').eq('tur_id', turId),
-    supabase.from('varor').select('id, namn, kcal_per_100g, protein_per_100g, extra_g, varifran, ansvarig, klart').eq('tur_id', turId).order('namn'),
-    supabase.from('maltider').select('id, dag, maltid, ratt_id, sortering').eq('tur_id', turId).order('sortering'),
+    supabase.from('ingredienser').select('id, ratt_id, vara_id, mangd, enhet, gram_per_portion').eq('tur_id', turId),
+    supabase.from('varor').select('id, namn, kcal_per_100g, protein_per_100g, extra_g, varifran, ansvarig, klart, avdelning').eq('tur_id', turId).order('namn'),
+    supabase.from('maltider').select('id, dag, maltid, ratt_id, sortering, bars_av').eq('tur_id', turId).order('sortering'),
     supabase.from('deltagare').select('id, typ, matandel, hundmat_per_dag_g').eq('tur_id', turId),
+    supabase.from('maltid_atare').select('maltid_id, deltagare_id').eq('tur_id', turId),
+    supabase.from('inkop_klart').select('deltagare_id, vara_id, ratt_id').eq('tur_id', turId),
   ])
-  if (ratter.error || ingredienser.error || varor.error || maltider.error || deltagare.error) return null
+  if (ratter.error || ingredienser.error || varor.error || maltider.error || deltagare.error || atare.error || klart.error) return null
 
   const rattrader = ratter.data as Ratt[]
   const deltagarrader = deltagare.data as { id: string; typ: 'person' | 'hund'; matandel: number | null; hundmat_per_dag_g: number | null }[]
@@ -45,9 +51,12 @@ async function hamtaMatplan(turId: string): Promise<Matplan | null> {
 
   return {
     ratter: rattrader,
-    ingredienser: ingredienser.data as Ingrediens[],
+    // Postgres numeric kommer som text.
+    ingredienser: (ingredienser.data as Ingrediens[]).map((i) => ({ ...i, mangd: i.mangd === null ? null : Number(i.mangd) })),
     varor: varor.data as Vara[],
     maltider: maltider.data as Maltidsrad[],
+    atare: atare.data as Matatare[],
+    klart: klart.data as InkopKlart[],
     pasar: new Map((pasar.data as Matprodukt[]).map((p) => [p.id, p])),
     kostbehov: kostbehov.data as Kostbehov[],
     matdeltagare: deltagarrader.map((d) => ({ id: d.id, typ: d.typ, matandel: d.matandel, hundmatPerDagG: d.hundmat_per_dag_g })),
@@ -107,17 +116,16 @@ export function useMatkatalog(): { katalog: Matprodukt[] | null | 'fel'; forsokI
 // Funktionerna svarar true när det gick. Databasen avgör vem som får ändra (RLS). En ändring eller borttagning som
 // RLS stoppar ger inget fel, bara noll rader, så de funktionerna läser tillbaka raderna och räknar dem.
 
-/** Lägger en rätt som redan finns i turen i en måltid, sist. */
-export async function laggIMaltid(turId: string, rattId: string, dag: number, maltid: Maltid, sortering: number): Promise<boolean> {
+/** Lägger en rätt som redan finns i turen i en måltid, sist. Med barsAv bärs raden av den deltagaren. */
+export async function laggIMaltid(turId: string, rattId: string, dag: number, maltid: Maltid, sortering: number, barsAv: string | null = null): Promise<boolean> {
   if (!supabase) return false
-  const { error } = await supabase.from('maltider').insert({ tur_id: turId, dag, maltid, ratt_id: rattId, sortering })
+  const { error } = await supabase.from('maltider').insert({ tur_id: turId, dag, maltid, ratt_id: rattId, sortering, bars_av: barsAv })
   return !error
 }
 
 /**
  * Lägger en påse ur katalogen i en måltid. Rätten för påsen skapas första gången påsen används i turen.
- * Med ansvarig (när man har påsen hemma) blir man ansvarig för påsen om ingen annan är det, och då är påsarna
- * hemma bokade till turen.
+ * Med barsAv (när man har påsen hemma) bär man raden, och då är påsarna hemma bokade till turen.
  */
 export async function laggTillPase(
   turId: string,
@@ -126,23 +134,57 @@ export async function laggTillPase(
   dag: number,
   maltid: Maltid,
   sortering: number,
-  ansvarig: string | null = null,
+  barsAv: string | null = null,
 ): Promise<boolean> {
   if (!supabase) return false
   let rattId = befintlig?.id
   if (!rattId) {
     const { data, error } = await supabase
       .from('ratter')
-      .insert({ tur_id: turId, namn: pasnamn(pase), matprodukt_id: pase.id, ansvarig })
+      .insert({ tur_id: turId, namn: pasnamn(pase), matprodukt_id: pase.id })
       .select('id')
       .single()
     if (error) return false
     rattId = data.id as string
   }
-  if (!(await laggIMaltid(turId, rattId, dag, maltid, sortering))) return false
-  // Att bli ansvarig behövs inte för att påsen ska ligga i måltiden, så ett fel här stoppar inte.
-  if (befintlig && !befintlig.ansvarig && ansvarig) await supabase.from('ratter').update({ ansvarig }).eq('id', rattId)
-  return true
+  return laggIMaltid(turId, rattId, dag, maltid, sortering, barsAv)
+}
+
+/** Väljer vem som bär raderna. null: ingen bär dem. Bara ägare och redigerare (RLS). */
+export async function sattBarare(maltidIds: readonly string[], barsAv: string | null): Promise<boolean> {
+  if (!supabase || maltidIds.length === 0) return false
+  const { data, error } = await supabase.from('maltider').update({ bars_av: barsAv }).in('id', maltidIds).select('id')
+  return !error && data.length === maltidIds.length
+}
+
+/** Tar raderna själv, även som läsare (ta_ratt). Svarar true när man bär alla efteråt. */
+export async function taRader(maltidIds: readonly string[]): Promise<boolean> {
+  const db = supabase
+  if (!db) return false
+  const svar = await Promise.all(maltidIds.map((rad) => db.rpc('ta_ratt', { rad })))
+  return svar.every((r) => !r.error && r.data === true)
+}
+
+/** Släpper rader man själv bär (slapp_ratt). */
+export async function slappRader(maltidIds: readonly string[]): Promise<boolean> {
+  const db = supabase
+  if (!db) return false
+  const svar = await Promise.all(maltidIds.map((rad) => db.rpc('slapp_ratt', { rad })))
+  return svar.every((r) => !r.error && r.data === true)
+}
+
+/**
+ * Väljer vem som äter raderna. En tom lista betyder att alla äter. De gamla ätarna tas bort först, så går det
+ * andra steget inte igenom äter alla, vilket syns i planen.
+ */
+export async function sattAtare(turId: string, maltidIds: readonly string[], atare: readonly string[]): Promise<boolean> {
+  if (!supabase || maltidIds.length === 0) return false
+  const bort = await supabase.from('maltid_atare').delete().in('maltid_id', maltidIds)
+  if (bort.error) return false
+  if (atare.length === 0) return true
+  const rader = maltidIds.flatMap((maltid_id) => atare.map((deltagare_id) => ({ tur_id: turId, maltid_id, deltagare_id })))
+  const { error } = await supabase.from('maltid_atare').insert(rader)
+  return !error
 }
 
 export async function taBortUrMaltid(maltidId: string): Promise<boolean> {
@@ -177,19 +219,26 @@ export async function sparaEgenRatt(
   return error || typeof data !== 'string' ? null : data
 }
 
-/** Ändrar en rad i inköpslistan: en vara (ansvarig, klart, varifrån) eller en påse (ansvarig, klart). */
-export async function andraInkopsrad(
-  typ: 'vara' | 'pase',
-  id: string,
-  andring: { ansvarig?: string | null; klart?: boolean; varifran?: 'kopa' | 'hemifran' },
-): Promise<boolean> {
+/**
+ * Bockar av, eller tar bort bocken för, en vara eller en påse som en deltagare köper. Ägare och redigerare bockar åt
+ * alla, och var och en, även en läsare, åt sig själv (RLS).
+ */
+export async function bockaInkop(turId: string, deltagareId: string, typ: 'vara' | 'pase', id: string, klart: boolean): Promise<boolean> {
   if (!supabase) return false
-  if (typ === 'pase' && andring.varifran) return false
-  // En påse är en rätt med matprodukt_id. Egna rätter har ansvarig och klart på varorna.
-  const { data, error } =
-    typ === 'vara'
-      ? await supabase.from('varor').update(andring).eq('id', id).select('id')
-      : await supabase.from('ratter').update(andring).eq('id', id).not('matprodukt_id', 'is', null).select('id')
+  const kolumn = typ === 'vara' ? 'vara_id' : 'ratt_id'
+  if (klart) {
+    const { error } = await supabase.from('inkop_klart').insert({ tur_id: turId, deltagare_id: deltagareId, [kolumn]: id })
+    // En bock som redan finns räknas som att det gick.
+    return !error || error.code === '23505'
+  }
+  const { error } = await supabase.from('inkop_klart').delete().eq('deltagare_id', deltagareId).eq(kolumn, id)
+  return !error
+}
+
+/** Väljer butiksavdelning för en vara. Bara ägare och redigerare (RLS). */
+export async function sattAvdelning(varaId: string, avdelning: string | null): Promise<boolean> {
+  if (!supabase) return false
+  const { data, error } = await supabase.from('varor').update({ avdelning }).eq('id', varaId).select('id')
   return !error && data.length === 1
 }
 

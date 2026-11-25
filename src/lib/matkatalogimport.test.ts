@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { godkandaPasar, importeraMatkatalog, MATKOLUMNER, matrapport, matSeedSql, tolkaAllergener } from './matkatalogimport'
+import { godkandaPasar, importeraMatkatalog, MATKOLUMNER, matrapport, matSeedSql, rensaAndraNamn, tolkaAllergener } from './matkatalogimport'
 
 const RUBRIK = MATKOLUMNER.join(';')
 
@@ -8,6 +8,7 @@ function rad(andra: Partial<Record<(typeof MATKOLUMNER)[number], string>> = {}):
   const grund: Record<(typeof MATKOLUMNER)[number], string> = {
     marke: 'Testmat',
     namn: 'Gryta med linser',
+    andra_namn: '',
     maltid: 'lunch_middag',
     torkning: 'frystorkad',
     vikt_torr_g: '150',
@@ -43,6 +44,7 @@ describe('importeraMatkatalog', () => {
       {
         marke: 'Testmat',
         namn: 'Gryta med linser',
+        andra_namn: [],
         maltid: 'lunch_middag',
         torkning: 'frystorkad',
         vikt_torr_g: 150,
@@ -173,3 +175,18 @@ describe('matSeedSql och matrapport', () => {
     expect(text).toContain('Summa: 1 av 2 rader importeras. 1 stoppas av fel, 0 har varningar.')
   })
 })
+
+describe('andra namn', () => {
+  it('tar bort siffror, för allmänna ord, storleksord, dubbletter och påsens eget namn, och behåller ordningen', () => {
+    expect(rensaAndraNamn('Field Meal Burrito Bowl', 'Burrito Bowl;Burritokulho;8021')).toEqual({ namn: ['Burrito Bowl', 'Burritokulho'], borttagna: ['8021'] })
+    expect(rensaAndraNamn('Creamy Salmon with Pasta', 'Lax med pasta och gräddsås;Creamy Salmon with Pasta;Laks;Krämig lax med pasta')).toEqual({
+      namn: ['Lax med pasta och gräddsås', 'Krämig lax med pasta'],
+      borttagna: ['Laks'],
+    })
+    expect(rensaAndraNamn('Chicken couscous', 'Couscous med kyckling;Chicken couscous;Chicken Couscous 1-port').namn).toEqual(['Couscous med kyckling'])
+    expect(rensaAndraNamn('Gryta', 'Viltgryta - Stort format;Viltgryta – Dubbelportion;Viltgryta Big Portion;Viltgryta (2 portioner)').namn).toEqual(['Viltgryta'])
+    expect(rensaAndraNamn('Gryta', '').namn).toEqual([])
+    expect(rensaAndraNamn('Chili', 'Chili con carne - Stor portion;Chili con carne - Storformat;Penne med parmesan ();Biff Stroganoff - Dubbelportionsformat;Couscous - Dubbelporton').namn).toEqual(['Chili con carne', 'Penne med parmesan', 'Biff Stroganoff', 'Couscous'])
+  })
+})
+

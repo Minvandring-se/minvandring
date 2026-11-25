@@ -10,7 +10,7 @@ import type { Ingrediens, Ratt, Recept, Vara } from './typer'
 export function receptTillRader(r: Recept): TolkadIngrediens[] {
   return [...r.rader]
     .sort((a, b) => a.sortering - b.sortering)
-    .map((x) => ({ vara: x.vara, gram: x.gram_per_portion, kcalPer100g: x.kcal_per_100g, proteinPer100g: x.protein_per_100g }))
+    .map((x) => ({ vara: x.vara, mangd: x.mangd, enhet: x.enhet, gram: x.gram_per_portion, kcalPer100g: x.kcal_per_100g, proteinPer100g: x.protein_per_100g }))
 }
 
 /** En egen rätt i en tur som ingrediensrader, med varornas kcal och protein. Ingredienser utan vara hoppas över. */
@@ -19,15 +19,19 @@ export function rattTillRader(rattId: string, ingredienser: readonly Ingrediens[
     .filter((i) => i.ratt_id === rattId)
     .flatMap((i) => {
       const v = varor.find((x) => x.id === i.vara_id)
-      return v ? [{ vara: v.namn, gram: i.gram_per_portion, kcalPer100g: v.kcal_per_100g, proteinPer100g: v.protein_per_100g }] : []
+      return v ? [{ vara: v.namn, mangd: i.mangd, enhet: i.enhet, gram: i.gram_per_portion, kcalPer100g: v.kcal_per_100g, proteinPer100g: v.protein_per_100g }] : []
     })
 }
 
-/** Raderna som fält i formuläret. Protein skrivs med komma. */
+const medKomma = (tal: number | null) => tal?.toString().replace('.', ',') ?? ''
+
+/** Raderna som fält i formuläret. Decimaler skrivs med komma. Vikten står bara för andra enheter än g och kg. */
 export function raderTillFalt(rader: readonly TolkadIngrediens[]): Ingrediensfalt[] {
   return rader.map((r) => ({
     vara: r.vara,
-    gram: String(r.gram),
+    mangd: medKomma(r.mangd),
+    enhet: r.enhet ?? 'g',
+    gram: r.enhet === 'g' || r.enhet === 'kg' ? '' : medKomma(r.gram),
     kcal: r.kcalPer100g?.toString() ?? '',
     protein: r.proteinPer100g?.toString().replace('.', ',') ?? '',
   }))
@@ -35,12 +39,18 @@ export function raderTillFalt(rader: readonly TolkadIngrediens[]): Ingrediensfal
 
 const nyckel = (text: string) => text.trim().toLowerCase()
 
-/** Samma ingredienser och mängder, oavsett ordning och stora och små bokstäver. Kcal och protein jämförs inte. */
+/** Mängden som en jämförbar text: mängd, enhet och vikt. */
+const mangdnyckel = (r: TolkadIngrediens) => `${r.mangd ?? ''}|${r.enhet ?? ''}|${r.gram ?? ''}`
+
+/**
+ * Samma ingredienser och mängder, oavsett ordning och stora och små bokstäver. Mängd, enhet och vikt jämförs,
+ * så "Mjölk 2 dl" och "Mjölk 3 dl" är olika även när ingen av dem har en vikt. Kcal och protein jämförs inte.
+ */
 export function sammaIngredienser(a: readonly TolkadIngrediens[], b: readonly TolkadIngrediens[]): boolean {
   if (a.length !== b.length) return false
-  const mangder = new Map(a.map((r) => [nyckel(r.vara), r.gram]))
+  const mangder = new Map(a.map((r) => [nyckel(r.vara), mangdnyckel(r)]))
   if (mangder.size !== a.length) return false
-  return b.every((r) => mangder.get(nyckel(r.vara)) === r.gram)
+  return b.every((r) => mangder.get(nyckel(r.vara)) === mangdnyckel(r))
 }
 
 /** Ett namn som inte är upptaget i turen: namnet självt, annars "Namn (2)", "Namn (3)" och så vidare. */

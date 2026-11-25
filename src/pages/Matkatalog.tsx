@@ -9,6 +9,8 @@ import { Kostfilterval } from '@/components/mat/Kostfilterval'
 import { Matflikar } from '@/components/mat/Matflikar'
 import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
+import { LaggISkafferi } from '@/components/mat/LaggISkafferi'
+import { PasNamn } from '@/components/mat/PasNamn'
 import { Input } from '@/components/ui/input'
 import { Panel } from '@/components/ui/panel'
 import { Select } from '@/components/ui/select'
@@ -17,7 +19,7 @@ import { useMatkatalog } from '@/hooks/useMatplan'
 import { laggISkafferi, sattFavorit, useSkafferi, type Skafferi } from '@/hooks/useSkafferi'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { formateraVikt } from '@/lib/forrad'
-import { formateraKcal, kcalPer100g, pasnamn, TILLAGNING } from '@/lib/mat'
+import { forstaAndraNamn, formateraKcal, kcalPer100g, pasnamn, TILLAGNING } from '@/lib/mat'
 import {
   allergentext,
   filterFranAdress,
@@ -33,7 +35,7 @@ import {
   spartext,
   type Katalogfilter,
 } from '@/lib/matkatalog'
-import { bastForeStatus, BASTFORE_TEXT } from '@/lib/skafferi'
+import { manadOchAr, SKAFFERISTATUS_TEXT, skafferistatus } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import { laddfelText } from '@/lib/texter'
 import type { Matprodukt } from '@/lib/typer'
@@ -206,10 +208,7 @@ function Paskort({ pase, mestEnergi, favorit, onOppna }: { pase: Matprodukt; mes
           </Bricka>
         )}
         <span className="flex w-full items-start gap-3">
-          <span className="min-w-0 flex-1">
-            <span className="block font-semibold break-words">{pase.namn}</span>
-            <span className="block text-sm text-muted-foreground">{pase.marke}</span>
-          </span>
+          <PasNamn marke={pase.marke} namn={pase.namn} ettAnnat={forstaAndraNamn(pase)} className="flex-1" namnKlass="font-semibold" />
           {favorit && <Star className="mt-0.5 size-5 shrink-0 fill-primary text-primary" role="img" aria-label="Favorit" />}
         </span>
         <span className="flex flex-wrap gap-x-4 gap-y-1 text-sm tabular-nums">
@@ -236,7 +235,8 @@ function Paspanel({ pase, skafferi, laddaOm, onStang }: { pase: Matprodukt; skaf
   const egna = skafferi && skafferi !== 'fel' ? skafferi : null
   const rad = egna?.rader.find((r) => r.matprodukt_id === pase.id)
   const favorit = !!egna?.favoriter.has(pase.id)
-  const status = rad ? bastForeStatus(rad.bast_fore, lokaltDatum()) : null
+  const status = rad ? skafferistatus(rad.bast_fore, lokaltDatum()) : null
+  const [laggTill, setLaggTill] = useState(false)
   const per100 = kcalPer100g(pase.kcal, pase.vikt_torr_g)
   const pris = pristext(pase)
   const spar = spartext(pase)
@@ -266,8 +266,9 @@ function Paspanel({ pase, skafferi, laddaOm, onStang }: { pase: Matprodukt; skaf
       onStang={onStang}
       rubrik={
         <div className="space-y-1">
-          <h2 className="text-2xl break-words text-primary">{pase.namn}</h2>
           <p className="text-sm text-muted-foreground">{pase.marke}</p>
+          <h2 className="text-2xl break-words text-primary">{pase.namn}</h2>
+          {forstaAndraNamn(pase) && <p className="break-words text-muted-foreground">{forstaAndraNamn(pase)}</p>}
           <p className="font-heading text-3xl font-semibold tabular-nums">{formateraKcal(pase.kcal)}</p>
           <p className="text-sm tabular-nums">
             {formateraVikt(pase.vikt_torr_g)}
@@ -281,7 +282,12 @@ function Paspanel({ pase, skafferi, laddaOm, onStang }: { pase: Matprodukt; skaf
               </Link>
             </p>
           )}
-          {(status === 'passerat' || status === 'snart') && <p className="text-sm font-medium text-accent-strong">{BASTFORE_TEXT[status]}</p>}
+          {rad?.bast_fore && (
+            <p className={cn('text-sm', status === 'gatt_ut' ? 'font-medium text-accent-strong' : 'text-muted-foreground')}>
+              Bäst före {manadOchAr(rad.bast_fore)}
+              {status && `. ${SKAFFERISTATUS_TEXT[status]}`}
+            </p>
+          )}
         </div>
       }
       fot={
@@ -292,10 +298,28 @@ function Paspanel({ pase, skafferi, laddaOm, onStang }: { pase: Matprodukt; skaf
             </p>
           )}
           {skafferi === 'fel' && <p className="text-sm text-destructive">{laddfelText('ditt skafferi')}</p>}
+          {laggTill && egna && (
+            <LaggISkafferi
+              namn={pasnamn(pase)}
+              hemma={rad?.antal ?? 0}
+              onSpara={async (antal, bastFore) => {
+                const ny = await laggISkafferi(pase.id, rad, antal, bastFore)
+                if (ny) await laddaOm()
+                return ny
+              }}
+              onKlar={() => {
+                setLaggTill(false)
+                // Knappen kommer tillbaka när formuläret stängs, och får fokus igen.
+                requestAnimationFrame(() => document.getElementById(`lagg-i-skafferiet-${pase.id}`)?.focus())
+              }}
+            />
+          )}
           <div className="flex flex-wrap items-center gap-2">
-            <Button disabled={sparar || !egna} onClick={() => gor(() => laggISkafferi(pase.id, rad))}>
-              {rad ? 'Lägg en till i skafferiet' : 'Lägg i skafferiet'}
-            </Button>
+            {!laggTill && (
+              <Button id={`lagg-i-skafferiet-${pase.id}`} disabled={sparar || !egna} onClick={() => setLaggTill(true)}>
+                Lägg i skafferiet
+              </Button>
+            )}
             <Button variant="outline" aria-pressed={favorit} disabled={sparar || !egna} onClick={() => gor(() => sattFavorit(pase.id, !favorit))}>
               <Star className={cn('size-4', favorit && 'fill-primary text-primary')} aria-hidden />
               Favorit

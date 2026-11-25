@@ -9,6 +9,7 @@ import { Kostbehov } from '@/components/mat/Kostbehov'
 import { Matdag } from '@/components/mat/Matdag'
 import { Matsummering } from '@/components/mat/Matsummering'
 import { NastaAttPlanera } from '@/components/mat/NastaAttPlanera'
+import { RadPanel } from '@/components/mat/RadPanel'
 import { TurMatHuvud } from '@/components/mat/TurMatHuvud'
 import { ValjRatt } from '@/components/mat/ValjRatt'
 import { VemTarMedVad } from '@/components/mat/VemTarMedVad'
@@ -16,14 +17,16 @@ import { TurFlikar } from '@/components/tur/TurHuvud'
 import { useTur } from '@/components/tur/turKontext'
 import { knappStil } from '@/components/ui/knappStil'
 import { sparaRecept, useRecept } from '@/hooks/useRecept'
-import { useAndraTurer, useSkafferi } from '@/hooks/useSkafferi'
-import { andraInkopsrad, laggIMaltid, laggTillPase, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, useMatplan, type Matplan } from '@/hooks/useMatplan'
+import { laggISkafferi, useAndraTurer, useSkafferi } from '@/hooks/useSkafferi'
+import { bockaInkop, laggIMaltid, laggTillPase, sattAtare, sattAvdelning, sattBarare, slappRader, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, taRader, useMatplan, type Matplan } from '@/hooks/useMatplan'
 import type { Behov } from '@/lib/kost'
-import { dagssummor, dubblettText, inkopslista, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, matviktTotalt, rattPerPortion, rattPlatser, ratterSomSaknar, vemTarMedVad, type Ansvarsratt, type Matdag as Dag, type Matstatus } from '@/lib/mat'
+import { dagssummor, dubblettText, inkopslista, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, matviktTotalt, atareFor, barsAvPerson, fordela, platsText, rattPerPortion, rattPlatser, ratterSomSaknar, saknadeMaltider, saknasPerPerson, vemBarVad, type Barrad, type Matdag as Dag, type Matstatus } from '@/lib/mat'
 import { dagensDatum } from '@/lib/datum'
+import { handlingslista } from '@/lib/handlingslista'
+import { personfarger } from '@/lib/personfarg'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import { receptbesked, receptMedNamn, receptTillRader, valForRecept } from '@/lib/recept'
-import { bokade, hemma, ledigaHemma, senastAnvanda, turerFore } from '@/lib/skafferi'
+import { bokade, garUtFore, hemma, jamforDatum, ledigaHemma, senastAnvanda, turerFore } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import { turdelAdress } from '@/lib/turdelar'
 import type { DeltagareRad, Maltid, Maltidsrad } from '@/lib/typer'
@@ -108,7 +111,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
   const [besked, setBesked] = useState<string | null>(null)
   const { recept, laddaOm: laddaOmRecept } = useRecept()
   // Ens eget skafferi. Om det inte går att hämta visas matplanen ändå, utan uppgifterna om vad man har hemma.
-  const { skafferi } = useSkafferi()
+  const { skafferi, laddaOm: laddaOmSkafferi } = useSkafferi()
   const egnaRader = useMemo(() => (skafferi && skafferi !== 'fel' ? skafferi.rader : []), [skafferi])
   const mittDeltagareId = deltagare.find((d) => d.user_id === mittUserId)?.id ?? null
   // Påsarna i ens andra turer: det man har hemma och som går till en tur som börjar före den här är bokat.
@@ -119,12 +122,21 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
     return {
       favoriter: skafferi && skafferi !== 'fel' ? skafferi.favoriter : new Set<string>(),
       hemma: ledigaHemma(hemma(egnaRader, lokaltDatum()), bokat),
+      // Påsar hemma som går ut före turens första dag går att välja, men märks.
+      garUt: new Set(egnaRader.filter((r) => garUtFore(r.bast_fore, jamforDatum(tur.avresa, lokaltDatum()))).map((r) => r.matprodukt_id)),
       bokade: bokat,
       senast: senastAnvanda([...denna, ...andra.pasar], andra.turer, tur.id),
     }
-  }, [skafferi, egnaRader, bokat, plan.ratter, andra, tur.id])
+  }, [skafferi, egnaRader, bokat, plan.ratter, andra, tur.id, tur.avresa])
 
   const personer = plan.matdeltagare.filter((d) => d.typ === 'person').length
+  // Personerna i turens ordning, med en färg var. Bara personer bär och äter rätterna.
+  const folk = useMemo(() => {
+    const lista = deltagare.filter((d) => d.typ === 'person').map((d) => ({ id: d.id, namn: d.namn }))
+    return { personer: lista, farger: personfarger(lista.map((p) => p.id)), atare: plan.atare }
+  }, [deltagare, plan.atare])
+  const personIds = folk.personer.map((p) => p.id)
+  const [andrar, setAndrar] = useState<readonly Maltidsrad[] | null>(null)
   const behov = useMemo(() => behovMedNamn(plan, deltagare), [plan, deltagare])
 
   const perPortion = useMemo(() => new Map(plan.ratter.map((r) => [r.id, rattPerPortion(r, plan)])), [plan])
@@ -162,16 +174,22 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
     if (ok) fokusera(rad.dag, rad.maltid)
   }
 
-  /** Jag tar den: påsen, eller den egna rättens varor som saknar ansvarig. Samma fält som inköpslistan. */
-  async function taAnsvar(r: Ansvarsratt): Promise<boolean> {
-    if (!mittDeltagareId) return false
-    const svar =
-      r.typ === 'pase'
-        ? [await andraInkopsrad('pase', r.rattId, { ansvarig: mittDeltagareId })]
-        : await Promise.all(r.varorUtanAnsvarig.map((v) => andraInkopsrad('vara', v, { ansvarig: mittDeltagareId })))
-    // Gick bara en del igenom syns det som gick, och resten står kvar under Saknar ansvarig.
+  /** Efter en ändring av vem som bär: hämta om även när bara en del gick igenom, så att det som gick syns. */
+  async function ochLaddaOm(ok: boolean): Promise<boolean> {
     await laddaOm()
-    return svar.every(Boolean)
+    return ok
+  }
+
+  /** Delar ut raderna som ingen bär till personerna, så att vikten blir så jämn som möjligt. */
+  async function fordelaRader(): Promise<boolean> {
+    const lediga = vemBar
+      .filter((r) => r.barsAv === null)
+      .flatMap((r) => r.maltidIds.map((id) => ({ id, gram: (perPortion.get(r.rattId)?.gram ?? 0) * atareFor(id, plan.atare, personIds).length })))
+    const till = fordela(lediga, personIds, burenVikt)
+    const perPerson = new Map<string, string[]>()
+    for (const [rad, person] of till) perPerson.set(person, [...(perPerson.get(person) ?? []), rad])
+    const svar = await Promise.all([...perPerson].map(([person, rader]) => sattBarare(rader, person)))
+    return ochLaddaOm(svar.every(Boolean))
   }
 
   /** Efter att en rätt har lagts till: stäng väljaren, hämta om och stanna på samma måltid. */
@@ -182,7 +200,13 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
   }
 
   const maltidsnamn = (m: Maltid) => MALTIDER.find((x) => x.nyckel === m)!.etikett
-  const vemTar = vemTarMedVad(plan, dagar)
+  const vemBar = vemBarVad(plan, dagar)
+  const burenVikt = barsAvPerson(plan, dagar, perPortion, personIds)
+  // Det som bara vissa personer saknar. Det som saknas för alla står redan i summeringen.
+  const forAlla = new Set(saknadeMaltider(dagar, plan.maltider).map((p) => `${p.dag.dag}:${p.maltid}`))
+  const saknasPerson = [...saknasPerPerson(plan, dagar, personIds)]
+    .map(([id, platser]) => ({ namn: folk.personer.find((p) => p.id === id)!.namn, platser: platser.filter((p) => !forAlla.has(`${p.dag.dag}:${p.maltid}`)) }))
+    .filter((x) => x.platser.length > 0)
   const forstaDatum = status.forsta && !status.forsta.dag.reserv ? dagensDatum(tur.avresa, status.forsta.dag.dag) : null
 
   return (
@@ -200,7 +224,22 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
             setValjer({ dag: plats.dag, maltid: plats.maltid })
           }}
         />
-        <VemTarMedVad rader={vemTar} deltagare={deltagare} mittDeltagareId={mittDeltagareId} kanAndra={kanAndra} onTa={taAnsvar} />
+        <VemTarMedVad
+          rader={vemBar}
+          personer={folk.personer}
+          farger={folk.farger}
+          vikter={burenVikt}
+          mittDeltagareId={mittDeltagareId}
+          kanAndra={kanAndra}
+          onTa={async (r: Barrad) => ochLaddaOm(await taRader(r.maltidIds))}
+          onSlapp={async (r: Barrad) => ochLaddaOm(await slappRader(r.maltidIds))}
+          onFordela={fordelaRader}
+          pasFor={(rattId) => {
+            const mp = plan.ratter.find((r) => r.id === rattId)?.matprodukt_id
+            const p = mp ? plan.pasar.get(mp) : undefined
+            return p ? { marke: p.marke, namn: p.namn } : undefined
+          }}
+        />
       </div>
 
       <Gasbehov personer={personer} dagar={dagar.length} />
@@ -239,8 +278,10 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
             datum={summa.dag.reserv ? null : dagensDatum(tur.avresa, summa.dag.dag)}
             maltider={plan.maltider.filter((m) => m.dag === summa.dag.dag)}
             ratter={ratter}
+            folk={folk}
             behov={behov}
             kanAndra={kanAndra}
+            onVem={setAndrar}
             onLaggTill={(maltid) => {
               setBesked(null)
               setValjer({ dag: summa.dag, maltid })
@@ -250,23 +291,48 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
         ))}
       </div>
 
-      <Matsummering summering={matsummering(summor)} saknade={ratterSomSaknar(plan, dagar)} totaltG={totaltG} perPerson={perPerson} />
+      <Matsummering summering={matsummering(summor)} saknade={ratterSomSaknar(plan, dagar)} saknasPerson={saknasPerson} totaltG={totaltG} perPerson={perPerson} />
 
       <div id="inkopslista" tabIndex={-1} className="scroll-mt-6 focus:outline-none">
         <Inkopslista
-        rader={inkop}
-        deltagare={deltagare}
-        kanAndra={kanAndra}
-        mittDeltagareId={mittDeltagareId}
-        skafferi={egnaRader}
-        bokade={bokat}
-        onAndra={async (rad, andring) => {
-          const ok = await andraInkopsrad(rad.typ, rad.id, andring)
-          if (ok) await laddaOm()
-          return ok
-        }}
-      />
+          rader={handlingslista(plan, dagar, personIds)}
+          personer={folk.personer}
+          farger={folk.farger}
+          kanAndra={kanAndra}
+          mittDeltagareId={mittDeltagareId}
+          skafferi={egnaRader}
+          bokade={bokat}
+          avresa={tur.avresa}
+          utskrift={`${turdelAdress(tur.id, 'mat')}/inkopslista`}
+          onBocka={async (rad, klart) => {
+            if (!rad.kopare) return false
+            return ochLaddaOm(await bockaInkop(tur.id, rad.kopare, rad.typ, rad.id, klart))
+          }}
+          onAvdelning={async (varaId, avdelning) => ochLaddaOm(await sattAvdelning(varaId, avdelning))}
+        />
       </div>
+
+      {andrar && andrar.length > 0 && (
+        <RadPanel
+          rubrik={plan.ratter.find((r) => r.id === andrar[0].ratt_id)?.namn ?? 'Rätten'}
+          undertext={(() => {
+            const dag = dagar.find((d) => d.dag === andrar[0].dag)
+            const plats = dag ? platsText({ dag, maltid: andrar[0].maltid }) : ''
+            return andrar.length > 1 ? `${plats}, ${andrar.length} st` : plats
+          })()}
+          personer={folk.personer}
+          farger={folk.farger}
+          barsAv={andrar[0].bars_av ?? null}
+          atare={plan.atare.filter((a) => a.maltid_id === andrar[0].id).map((a) => a.deltagare_id)}
+          onStang={() => setAndrar(null)}
+          onSpara={async (barsAv, atare) => {
+            const ids = andrar.map((r) => r.id)
+            const ok = (await sattBarare(ids, barsAv)) && (await sattAtare(tur.id, ids, atare))
+            await laddaOm()
+            return ok
+          }}
+        />
+      )}
 
       {valjer && (
         <ValjRatt
@@ -280,6 +346,11 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
           skafferi={egetSkafferi}
           recept={recept}
           finnsRedan={(rattId) => dubblettText(rattPlatser(plan.maltider, dagar, rattId))}
+          laggISkafferi={async (pase, antal, bastFore) => {
+            const ny = await laggISkafferi(pase.id, egnaRader.find((r) => r.matprodukt_id === pase.id), antal, bastFore)
+            if (ny) await laddaOmSkafferi()
+            return ny
+          }}
           onValjRecept={async (r) => {
             const rader = receptTillRader(r)
             const val = valForRecept(r.namn, rader, plan.ratter, plan.ingredienser, plan.varor)

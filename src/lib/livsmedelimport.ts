@@ -2,6 +2,7 @@
 // Rena funktioner: från API:ets svar till CSV-rader, och från CSV:n till kontrollerade rader och seed-SQL.
 // Skriptet scripts/livsmedel.mjs hämtar och skriver filerna. Formatet beskrivs i docs/katalog/livsmedel.md.
 import { lasCsv } from './katalogimport'
+import { allergenerForLivsmedel } from './livsmedelsgrupper'
 import { tillstandFranNamn, type Livsmedel, type Tillstand } from './livsmedel'
 
 /**
@@ -137,20 +138,29 @@ export function godkandaLivsmedel(resultat: Livsmedelsresultat): Livsmedelsrad[]
 const sql = (v: string | number | null) => (v === null ? 'null' : typeof v === 'number' ? String(v) : `'${v.replaceAll("'", "''")}'`)
 const DB_KOLUMNER = ['nummer', 'namn', 'grupp', 'tillstand', ...NARINGSVARDEN.map((n) => n.db), 'version'] as const
 
+/** Allergenerna som SQL: en lista, en tom lista eller null för okänt. Räknas ut ur namn och grupp. */
+function allergenSql(r: Livsmedelsrad): string {
+  const a = allergenerForLivsmedel(r.namn, r.grupp)
+  if (a === null) return 'null'
+  return a.length === 0 ? "'{}'" : `array[${a.map((x) => `'${x}'`).join(', ')}]`
+}
+
 /** Seed-SQL för livsmedlen. Ett livsmedel som redan finns (samma nummer) uppdateras, så filen kan köras om. */
 export function livsmedelSeedSql(rader: readonly Livsmedelsrad[], kallfil: string): string {
   const huvud = [
     `-- Baslivsmedel från Livsmedelsverkets livsmedelsdatabas (CC BY 4.0), ur ${kallfil}.`,
     '-- Skapad med "npm run livsmedel". Ändra inte filen för hand: hämta om CSV:n och skapa en ny migrering.',
+    '-- Allergenerna räknas ut ur namn och grupp med reglerna i src/lib/livsmedelsgrupper.ts, bara för enkla råvaror.',
     '',
   ]
   if (rader.length === 0) return [...huvud, '-- Inga livsmedel.', ''].join('\n')
   return [
     ...huvud,
-    `insert into public.livsmedel (${DB_KOLUMNER.join(', ')}) values`,
-    rader.map((r) => `  (${DB_KOLUMNER.map((k) => sql(r[k])).join(', ')})`).join(',\n'),
+    `insert into public.livsmedel (${[...DB_KOLUMNER, 'allergener'].join(', ')}) values`,
+    rader.map((r) => `  (${[...DB_KOLUMNER.map((k) => sql(r[k])), allergenSql(r)].join(', ')})`).join(',\n'),
     'on conflict (nummer) do update set',
-    `${DB_KOLUMNER.filter((k) => k !== 'nummer')
+    `${[...DB_KOLUMNER, 'allergener']
+      .filter((k) => k !== 'nummer')
       .map((k) => `  ${k} = excluded.${k}`)
       .join(',\n')};`,
     '',
@@ -167,5 +177,6 @@ export function livsmedelRapport(resultat: Livsmedelsresultat): string {
     `${godkanda.length} livsmedel godkända av ${resultat.rader.length}.`,
     `Tillstånd: ${antal((r) => r.tillstand === 'torr')} torra, ${antal((r) => r.tillstand === 'ra')} råa, ${antal((r) => r.tillstand === 'tillagad')} tillagade och ${antal((r) => !r.tillstand)} okända.`,
     `Saknar värde: ${NARINGSVARDEN.map((n) => `${n.csv} ${antal((r) => r[n.db] === null)}`).join(', ')}.`,
+    `Allergener: ${antal((r) => (allergenerForLivsmedel(r.namn, r.grupp)?.length ?? 0) > 0)} med, ${antal((r) => allergenerForLivsmedel(r.namn, r.grupp)?.length === 0)} utan och ${antal((r) => allergenerForLivsmedel(r.namn, r.grupp) === null)} okända.`,
   ].join('\n')
 }
