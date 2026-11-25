@@ -9,6 +9,7 @@ import {
   ratterSomSaknar,
   saknasMeningar,
   portionText,
+  ensamAtareText,
   dagensText,
   kcalPer100g,
   matdagar,
@@ -665,5 +666,24 @@ describe('portionText', () => {
   it('skriver att energin saknas i stället för 0 kcal', () => {
     expect(portionText({ kcal: 0, gram: 1 })).toBe('Energi saknas, 1 g')
     expect(portionText({ kcal: 0, gram: 0 })).toBe('Energi och vikt saknas')
+  })
+})
+
+describe('ensamAtareText', () => {
+  const atare = [
+    { maltid_id: 'm1', deltagare_id: 'anna' },
+    { maltid_id: 'm2', deltagare_id: 'anna' },
+    { maltid_id: 'm3', deltagare_id: 'anna' },
+    { maltid_id: 'm3', deltagare_id: 'erik' },
+  ]
+
+  it('varnar när personen är den enda som äter några rader, utan pronomen', () => {
+    expect(ensamAtareText(atare, 'anna', 'Anna')).toBe('Anna är den enda som äter 2 rätter. Tas Anna bort äter alla dem.')
+    expect(ensamAtareText(atare.slice(1), 'anna', 'Anna')).toBe('Anna är den enda som äter 1 rätt. Tas Anna bort äter alla den.')
+  })
+
+  it('är tom när personen inte är ensam ätare på någon rad', () => {
+    expect(ensamAtareText(atare, 'erik', 'Erik')).toBeNull()
+    expect(ensamAtareText([], 'anna', 'Anna')).toBeNull()
   })
 })
