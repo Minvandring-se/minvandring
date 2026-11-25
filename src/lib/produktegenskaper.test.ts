@@ -154,7 +154,7 @@ describe('tolkaEgenskap', () => {
 
 describe('underkategorier utan egna egenskaper', () => {
   it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar, kök och kokkärl har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa'])
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa', 'isolering', 'regnklader'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
@@ -874,5 +874,27 @@ describe('egenskaper för vandringsstavar', () => {
     expect(rader.find((r) => r.nyckel === 'lasning')?.varde).toBe('Klämlås')
     expect(rader.find((r) => r.nyckel === 'grepp')?.varde).toBe('Kork och skum')
     expect(rader.find((r) => r.nyckel === 'fjadring')?.varde).toBe('Nej')
+  })
+})
+
+describe('egenskaper för kläder', () => {
+  const dunjacka = { kon: 'herr', viktstorlek: 'M', fyllning: 'dun', fillpower: 800, fyllnadsvikt_g: 90, huva: true, tyg: 'Pertex Quantum' }
+  const regnjacka = { kon: 'dam', viktstorlek: 'S', plagg: 'jacka', membran: 'GORE-TEX Paclite Plus', lager: '2,5', vattenpelare_mm: 28000, huva: true, ventilation: false }
+
+  it('godkänner en komplett dunjacka och regnjacka', () => {
+    expect(valideraEgenskaper('isolering', dunjacka)).toEqual({ fel: [], varningar: [] })
+    expect(valideraEgenskaper('regnklader', regnjacka)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('ger fel när en syntetjacka har fillpower', () => {
+    expect(valideraEgenskaper('isolering', { ...dunjacka, fyllning: 'syntet' }).fel.map((f) => f.split(':')[0])).toEqual(['fillpower'])
+  })
+
+  it('läser 2,5 lager som ett val', () => {
+    expect(tolkaEgenskap(egenskaperFor('regnklader').find((e) => e.nyckel === 'lager')!, '2,5')).toEqual({ varde: '2,5' })
+  })
+
+  it('visar vilken storlek vikten gäller', () => {
+    expect(visaEgenskaper('isolering', dunjacka).find((r) => r.nyckel === 'viktstorlek')).toMatchObject({ etikett: 'Vikten gäller storlek', varde: 'M', viktig: true })
   })
 })
