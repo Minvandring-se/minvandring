@@ -27,13 +27,6 @@ export const RESAN = [
   { riktning: 'hem' as const, rubrik: 'Hem: buss från Nikkaluokta', nar: 'Ons 18 aug, eftermiddag' },
 ]
 
-export const ETAPPER: { fran: string; till: string; dag: string; natt: string; bokad?: boolean; km: number }[] = [
-  { fran: 'Abisko', till: 'Abiskojaure', dag: 'Tor 12 aug', natt: 'Abiskojaure fjällstuga', bokad: true, km: 15 },
-  { fran: 'Abiskojaure', till: 'Alesjaure', dag: 'Fre 13 aug', natt: 'Alesjaure fjällstuga', bokad: false, km: 20 },
-  { fran: 'Alesjaure', till: 'Tjäktja', dag: 'Lör 14 aug', natt: 'tält vid Tjäktja', km: 13 },
-  { fran: 'Tjäktja', till: 'Sälka', dag: 'Sön 15 aug', natt: 'Sälka fjällstuga', bokad: false, km: 12 },
-]
-
 /** Vikten per kategori i kg. Färgen är en färgvariabel, så att stapeln följer ljust och mörkt läge. */
 export const DIN_VIKT = {
   total: '12,1 kg',

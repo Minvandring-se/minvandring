@@ -17,7 +17,7 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 |---|---|
 | Skapa, ändra och se turer | Finns |
 | Bjud in med länk och roller | Finns |
-| Dagsetapper med övernattning | Nästa (P1) |
+| Dagsetapper med övernattning | Finns (`/tur/:id/etapper`): från, till, km, var ni sover, bokad och anteckning per dag, med summering och i översikten |
 | Bokad eller ej bokad stuga | Senare |
 | Resan dit och hem, biljetter | Senare |
 | Väder från SMHI före avfärd | Senare |

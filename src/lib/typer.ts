@@ -84,6 +84,24 @@ export interface Tur {
   reservdagar: number
 }
 
+export type Boende = 'stuga' | 'talt' | 'annat'
+
+/** En dag i turen, som den står i etapper. */
+export interface Etapp {
+  id: string
+  tur_id: string
+  dag: number
+  fran: string | null
+  till: string | null
+  /** Kilometer med en decimal. Supabase skickar numeric som text eller tal, så det tolkas med kmFran. */
+  km: number | string | null
+  /** Var man sover efter dagens etapp. */
+  natt: string | null
+  boende: Boende | null
+  bokad: boolean
+  notering: string | null
+}
+
 export interface DeltagareRad {
   id: string
   namn: string

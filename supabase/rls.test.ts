@@ -3397,3 +3397,103 @@ describe('packlistans migrering mot befintliga rader', () => {
     expect(bockar.rows).toEqual([{ tur_id: T1 }])
   })
 })
+
+describe('dagsetapper', () => {
+  // Egna användare, så att försöken att gå med i de andra testerna inte räknas mot spärren här.
+  const EA = '00000000-0000-0000-0000-0000000000e1'
+  const EB = '00000000-0000-0000-0000-0000000000e2'
+  const EC = '00000000-0000-0000-0000-0000000000e3'
+  const ED = '00000000-0000-0000-0000-0000000000e4'
+  let tur: string
+  let annanTur: string
+  let dag1: string
+  let davidsRad: string
+
+  const etapp = (vem: string, turId: string, dag: number, ovrigt = `'Abisko', 'Abiskojaure', 15`) =>
+    som(vem, (tx) =>
+      tx.query<{ id: string }>(`insert into public.etapper (tur_id, dag, fran, till, km) values ($1, $2, ${ovrigt}) returning id`, [turId, dag]),
+    ).then((r) => r.rows[0].id)
+  const synliga = (vem: string, turId: string) => som(vem, (tx) => tx.query('select id from public.etapper where tur_id = $1', [turId])).then((r) => r.rows.length)
+
+  beforeAll(async () => {
+    await db.exec(
+      `insert into auth.users (id, email) values ('${EA}', 'ea@exempel.se'), ('${EB}', 'eb@exempel.se'), ('${EC}', 'ec@exempel.se'), ('${ED}', 'ed@exempel.se');`,
+    )
+    tur = await skapaTur(EA, 'Etapptur')
+    const kod = await kodFor(tur)
+    await som(EC, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(ED, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const d = await db.query<{ id: string; user_id: string }>('select id, user_id from public.deltagare where tur_id = $1 and user_id = $2', [tur, ED])
+    davidsRad = d.rows[0].id
+    await som(EA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [davidsRad]))
+    annanTur = await skapaTur(EB, 'Någon annans etapper')
+    dag1 = await etapp(EA, tur, 1)
+  })
+
+  it('ägaren och redigeraren lägger till och ändrar etapper', async () => {
+    const dag2 = await etapp(EC, tur, 2, `'Abiskojaure', 'Alesjaure', 20.5`)
+    const r = await som(EC, (tx) => tx.query(`update public.etapper set natt = 'Alesjaure fjällstuga', boende = 'stuga', bokad = true where id = $1`, [dag2]))
+    expect(r.affectedRows).toBe(1)
+    const ny = await db.query<{ km: string; bokad: boolean }>('select km, bokad from public.etapper where id = $1', [dag2])
+    expect(ny.rows[0]).toEqual({ km: '20.5', bokad: true })
+  })
+
+  it('läsaren ser etapperna men kan inte ändra dem', async () => {
+    expect(await synliga(ED, tur)).toBeGreaterThan(0)
+    await forvantaFel(etapp(ED, tur, 3))
+    const andrad = await som(ED, (tx) => tx.query(`update public.etapper set km = 1 where id = $1`, [dag1]))
+    expect(andrad.affectedRows).toBe(0)
+    const borta = await som(ED, (tx) => tx.query('delete from public.etapper where id = $1', [dag1]))
+    expect(borta.affectedRows).toBe(0)
+  })
+
+  it('den som inte är med i turen ser och ändrar ingenting', async () => {
+    expect(await synliga(EB, tur)).toBe(0)
+    await forvantaFel(etapp(EB, tur, 4))
+    const andrad = await som(EB, (tx) => tx.query(`update public.etapper set km = 1 where id = $1`, [dag1]))
+    expect(andrad.affectedRows).toBe(0)
+    const borta = await som(EB, (tx) => tx.query('delete from public.etapper where id = $1', [dag1]))
+    expect(borta.affectedRows).toBe(0)
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.etapper')))
+    await forvantaFel(somAnon((tx) => tx.query(`insert into public.etapper (tur_id, dag) values ($1, 9)`, [tur])))
+    await forvantaFel(somAnon((tx) => tx.query('delete from public.etapper')))
+  })
+
+  it('ingen kan flytta en etapp till en tur där hen inte får ändra', async () => {
+    await forvantaFel(som(EA, (tx) => tx.query('update public.etapper set tur_id = $1 where id = $2', [annanTur, dag1])))
+  })
+
+  it('en dag har bara en etapp, och dagen ligger mellan 1 och 30', async () => {
+    await forvantaFel(etapp(EA, tur, 1))
+    await forvantaFel(etapp(EA, tur, 0))
+    await forvantaFel(etapp(EA, tur, 31))
+  })
+
+  it('fälten har gränser, och bara stugor och annat boende kan vara bokade', async () => {
+    await forvantaFel(etapp(EA, tur, 5, `'  ', 'Till', 10`))
+    await forvantaFel(etapp(EA, tur, 5, `'Från', 'Till', 0`))
+    await forvantaFel(etapp(EA, tur, 5, `'Från', 'Till', 100`))
+    await forvantaFel(etapp(EA, tur, 5, `'${'x'.repeat(81)}', 'Till', 10`))
+    await forvantaFel(som(EA, (tx) => tx.query(`insert into public.etapper (tur_id, dag, boende, bokad) values ($1, 6, 'talt', true)`, [tur])))
+    await forvantaFel(som(EA, (tx) => tx.query(`insert into public.etapper (tur_id, dag, boende) values ($1, 6, 'hotell')`, [tur])))
+    await forvantaFel(som(EA, (tx) => tx.query(`insert into public.etapper (tur_id, dag, bokad) values ($1, 7, true)`, [tur])))
+    await som(EA, (tx) => tx.query(`insert into public.etapper (tur_id, dag, boende, bokad) values ($1, 6, 'annat', true)`, [tur]))
+  })
+
+  it('en borttagen deltagare ser inte längre etapperna, och en borttagen redigerare ändrar dem inte', async () => {
+    await som(EA, (tx) => tx.query('delete from public.deltagare where id = $1', [davidsRad]))
+    expect(await synliga(ED, tur)).toBe(0)
+    const ecRad = (await db.query<{ id: string }>('select id from public.deltagare where tur_id = $1 and user_id = $2', [tur, EC])).rows[0].id
+    await som(EA, (tx) => tx.query('delete from public.deltagare where id = $1', [ecRad]))
+    expect(await synliga(EC, tur)).toBe(0)
+    await forvantaFel(etapp(EC, tur, 8))
+    expect((await som(EC, (tx) => tx.query('update public.etapper set km = 1 where id = $1', [dag1]))).affectedRows).toBe(0)
+    expect((await som(EC, (tx) => tx.query('delete from public.etapper where id = $1', [dag1]))).affectedRows).toBe(0)
+  })
+
+  it('etapperna försvinner med turen', async () => {
+    await som(EA, (tx) => tx.query('delete from public.turer where id = $1', [tur]))
+    const r = await db.query('select 1 from public.etapper where tur_id = $1', [tur])
+    expect(r.rows).toHaveLength(0)
+  })
+})
