@@ -3,13 +3,19 @@ import { useId, useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { IngrediensSok } from '@/components/mat/IngrediensSok'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import { formateraVikt } from '@/lib/forrad'
+import { ENHETER } from '@/lib/handla'
 import { formateraKcal, MAX_RATTNAMN, naringForRader, orimligPortion, tolkaRattformular, type Ingrediensfalt, type TolkadIngrediens } from '@/lib/mat'
 import { faltFranLivsmedel } from '@/lib/livsmedel'
 import { raderTillFalt } from '@/lib/recept'
 import type { Vara } from '@/lib/typer'
 
-const TOM_RAD: Ingrediensfalt = { vara: '', gram: '', kcal: '', protein: '' }
+// Gram är förvalt, eftersom det är det vanligaste för friluftsmat och ger energin direkt.
+const TOM_RAD: Ingrediensfalt = { vara: '', mangd: '', enhet: 'g', gram: '', kcal: '', protein: '' }
+
+/** Vikten skrivs för sig bara när enheten inte är en vikt. */
+const behoverVikt = (enhet: string) => enhet !== 'g' && enhet !== 'kg'
 
 /** En vara som föreslås, med kcal och protein som fylls i när man väljer den. */
 type Forslag = Pick<Vara, 'namn' | 'kcal_per_100g' | 'protein_per_100g'>
@@ -39,18 +45,18 @@ const TEXTER = {
 } as const
 
 /** Fälten för en vara som föreslås, så att kcal och protein fylls i när man väljer den. */
-function faltForVara(vara: Forslag, gram = ''): Ingrediensfalt {
+function faltForVara(vara: Forslag): Pick<Ingrediensfalt, 'vara' | 'kcal' | 'protein'> {
   return {
     vara: vara.namn,
-    gram,
     kcal: vara.kcal_per_100g?.toString() ?? '',
     protein: vara.protein_per_100g?.toString().replace('.', ',') ?? '',
   }
 }
 
 /**
- * Formuläret för en egen rätt eller ett eget recept: namn och ingredienser med gram per portion, kcal och protein
- * per 100 g. Visar energin och vikten per portion medan man skriver. Varor som redan finns föreslås.
+ * Formuläret för en egen rätt eller ett eget recept: namn och ingredienser med mängd och enhet per portion, kcal och
+ * protein per 100 g. För andra enheter än g och kg kan vikten skrivas för sig, så att energin räknas. En rätt får
+ * sakna ingredienser. Visar energin och vikten per portion medan man skriver. Varor som redan finns föreslås.
  * Formuläret ligger i en Panel: ram får fälten och knapparna, och knapparna läggs i panelens fot.
  */
 export function EgenRattFormular({
@@ -150,6 +156,9 @@ export function EgenRattFormular({
 
       <fieldset className="space-y-3">
         <legend className="text-sm font-medium">Ingredienser per portion</legend>
+        <p className="text-sm text-muted-foreground">
+          {typ === 'ratt' ? 'Du kan också spara utan ingredienser, till exempel för en måltid som någon annan bjuder på.' : 'Du kan också spara receptet utan ingredienser.'}
+        </p>
         {falt.map((rad, i) => (
           <div key={i} className="space-y-2 rounded-ruta border border-border p-3">
             <div className="flex items-start gap-2">
@@ -162,7 +171,7 @@ export function EgenRattFormular({
                   varde={rad.vara}
                   varor={varor}
                   onAndra={(text) => andra(i, { vara: text })}
-                  onValjVara={(v) => andra(i, { ...faltForVara(v), gram: rad.gram })}
+                  onValjVara={(v) => andra(i, faltForVara(v))}
                   // Värdena kopieras och går att ändra. Raden pekar inte på livsmedlet efteråt.
                   onValjLivsmedel={(l) => andra(i, { vara: l.namn, ...faltFranLivsmedel(l) })}
                 />
@@ -174,21 +183,28 @@ export function EgenRattFormular({
               )}
             </div>
             <div className="grid grid-cols-3 gap-2">
-              {(
-                [
-                  ['gram', 'Gram'],
-                  ['kcal', 'Kcal per 100 g'],
-                  ['protein', 'Protein per 100 g'],
-                ] as const
-              ).map(([nyckel, etikett]) => (
-                <div key={nyckel} className="min-w-0 space-y-1">
-                  <label htmlFor={`${id}-${nyckel}-${i}`} className="block text-xs leading-tight text-muted-foreground">
-                    {etikett}
-                  </label>
-                  <Input id={`${id}-${nyckel}-${i}`} inputMode="decimal" className="px-3 tabular-nums" value={rad[nyckel]} onChange={(e) => andra(i, { [nyckel]: e.target.value })} />
-                </div>
-              ))}
+              <Tal id={`${id}-mangd-${i}`} etikett="Mängd" varde={rad.mangd} onAndra={(v) => andra(i, { mangd: v })} />
+              <div className="min-w-0 space-y-1">
+                <label htmlFor={`${id}-enhet-${i}`} className="block text-xs leading-tight text-muted-foreground">
+                  Enhet
+                </label>
+                <Select id={`${id}-enhet-${i}`} value={rad.enhet} onChange={(e) => andra(i, { enhet: e.target.value })}>
+                  {ENHETER.map((e) => (
+                    <option key={e} value={e}>
+                      {e}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+              {behoverVikt(rad.enhet) && <Tal id={`${id}-gram-${i}`} etikett="Vikt i gram" varde={rad.gram} onAndra={(v) => andra(i, { gram: v })} />}
             </div>
+            <div className="grid grid-cols-2 gap-2">
+              <Tal id={`${id}-kcal-${i}`} etikett="Kcal per 100 g" varde={rad.kcal} onAndra={(v) => andra(i, { kcal: v })} />
+              <Tal id={`${id}-protein-${i}`} etikett="Protein per 100 g" varde={rad.protein} onAndra={(v) => andra(i, { protein: v })} />
+            </div>
+            {behoverVikt(rad.enhet) && rad.mangd.trim() !== '' && rad.gram.trim() === '' && (
+              <p className="text-xs text-muted-foreground">Skriv vikten i gram om energin ska räknas med.</p>
+            )}
           </div>
         ))}
         <Button type="button" variant="outline" onClick={() => setFalt((f) => [...f, { ...TOM_RAD }])}>
@@ -198,7 +214,7 @@ export function EgenRattFormular({
       </fieldset>
 
       <p aria-live="polite" className="text-sm tabular-nums">
-        {portion && (
+        {portion && tolkat.ok && tolkat.rader.length > 0 && (
           <>
             Per portion: {formateraKcal(portion.kcal)}, {Math.round(portion.proteinG)} g protein och {formateraVikt(portion.gram)}.
             {portion.ofullstandig && <span className="text-muted-foreground"> Några varor saknar kcal eller protein.</span>}
@@ -232,5 +248,17 @@ export function EgenRattFormular({
       )}
     </form>,
     knappar,
+  )
+}
+
+/** Ett fält för ett tal i en ingrediensrad, med etiketten ovanför. */
+function Tal({ id, etikett, varde, onAndra }: { id: string; etikett: string; varde: string; onAndra: (v: string) => void }) {
+  return (
+    <div className="min-w-0 space-y-1">
+      <label htmlFor={id} className="block text-xs leading-tight text-muted-foreground">
+        {etikett}
+      </label>
+      <Input id={id} inputMode="decimal" className="px-3 tabular-nums" value={varde} onChange={(e) => onAndra(e.target.value)} />
+    </div>
   )
 }

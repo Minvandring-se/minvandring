@@ -51,6 +51,23 @@ const PAR: [text: string, yta: string, krav: number][] = [
   ['accent', 'background', 3],
   ['ring', 'background', 3],
   ['ring', 'card', 3],
+  // Initialen i deltagarens färg, och färgen som syns mot ytan.
+  ['person-foreground', 'person-a', 4.5],
+  ['person-a', 'card', 3],
+  ['person-foreground', 'person-b', 4.5],
+  ['person-b', 'card', 3],
+  ['person-foreground', 'person-c', 4.5],
+  ['person-c', 'card', 3],
+  ['person-foreground', 'person-d', 4.5],
+  ['person-d', 'card', 3],
+  ['person-foreground', 'person-e', 4.5],
+  ['person-e', 'card', 3],
+  ['person-foreground', 'person-f', 4.5],
+  ['person-f', 'card', 3],
+  ['person-foreground', 'person-g', 4.5],
+  ['person-g', 'card', 3],
+  ['person-foreground', 'person-h', 4.5],
+  ['person-h', 'card', 3],
 ]
 
 describe('färgerna i index.css', () => {

@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { antalPasar } from '@/lib/mat'
-import { MAX_ANTAL, type Bokning, type Bokningstur } from '@/lib/skafferi'
+import { bokningarFranRader, nyttAntal, tidigasteDatum, type Bokning, type Bokningstur } from '@/lib/skafferi'
 import { lage, lokaltDatum } from '@/lib/turlista'
 import { supabase } from '@/lib/supabase'
 import type { Skafferirad } from '@/lib/typer'
@@ -53,7 +52,7 @@ export interface AndraTurer {
   turer: Bokningstur[]
   /** Påsarna i de andra turerna. */
   pasar: { turId: string; matproduktId: string }[]
-  /** Påsarna man själv ansvarar för i andra turer som inte är avslutade, med antal påsar som turen behöver. */
+  /** Påsarna man själv bär i andra turer som inte är avslutade (maltider.bars_av), med antal påsar. */
   bokningar: Bokning[]
 }
 
@@ -66,37 +65,45 @@ async function hamtaAndraTurer(turId: string, userId: string): Promise<AndraTure
   // RLS (ar_medlem) gör att bara turer man är med i kommer med.
   const [turer, ratter, deltagare] = await Promise.all([
     supabase.from('turer').select('id, avresa, hemkomst, dagar, reservdagar, skapad'),
-    supabase.from('ratter').select('id, tur_id, matprodukt_id, ansvarig').neq('tur_id', turId).not('matprodukt_id', 'is', null),
+    supabase.from('ratter').select('id, tur_id, matprodukt_id').neq('tur_id', turId).not('matprodukt_id', 'is', null),
     supabase.from('deltagare').select('id, tur_id, typ, user_id').neq('tur_id', turId),
   ])
   if (turer.error || ratter.error || deltagare.error) return INGA_ANDRA
   const turrader = turer.data as Turrad[]
-  const rattrader = ratter.data as { id: string; tur_id: string; matprodukt_id: string; ansvarig: string | null }[]
+  const rattrader = ratter.data as { id: string; tur_id: string; matprodukt_id: string }[]
   const deltagarrader = deltagare.data as { id: string; tur_id: string; typ: string; user_id: string | null }[]
+  const pasar = rattrader.map((r) => ({ turId: r.tur_id, matproduktId: r.matprodukt_id }))
 
   const idag = lokaltDatum()
   const aktiva = new Map(turrader.filter((t) => t.id !== turId && lage(t, idag) !== 'tidigare').map((t) => [t.id, t]))
-  const mina = new Set(deltagarrader.filter((d) => d.user_id === userId).map((d) => d.id))
-  const ansvarar = rattrader.filter((r) => r.ansvarig && mina.has(r.ansvarig) && aktiva.has(r.tur_id))
+  const mina = deltagarrader.filter((d) => d.user_id === userId && aktiva.has(d.tur_id)).map((d) => d.id)
+  if (mina.length === 0) return { turer: turrader, pasar, bokningar: [] }
 
-  let bokningar: Bokning[] = []
-  if (ansvarar.length > 0) {
-    const [maltider, pasar] = await Promise.all([
-      supabase.from('maltider').select('ratt_id, dag').in('ratt_id', ansvarar.map((r) => r.id)),
-      supabase.from('matprodukter').select('id, portioner').in('id', [...new Set(ansvarar.map((r) => r.matprodukt_id))]),
-    ])
-    if (!maltider.error && !pasar.error) {
-      const portioner = new Map((pasar.data as { id: string; portioner: number }[]).map((p) => [p.id, p.portioner]))
-      bokningar = ansvarar.map((r) => {
-        const tur = aktiva.get(r.tur_id)!
-        const sista = (tur.dagar ?? 0) + tur.reservdagar
-        const ganger = (maltider.data as { ratt_id: string; dag: number }[]).filter((m) => m.ratt_id === r.id && m.dag <= sista).length
-        const personer = deltagarrader.filter((d) => d.tur_id === r.tur_id && d.typ === 'person').length
-        return { turId: r.tur_id, matproduktId: r.matprodukt_id, pasar: antalPasar(ganger, personer, portioner.get(r.matprodukt_id) ?? 1) }
-      })
-    }
-  }
-  return { turer: turrader, pasar: rattrader.map((r) => ({ turId: r.tur_id, matproduktId: r.matprodukt_id })), bokningar }
+  // Raderna man själv bär i de andra turerna. Bara påsar kan ligga i skafferiet.
+  const burna = await supabase.from('maltider').select('id, tur_id, dag, ratt_id').in('bars_av', mina)
+  if (burna.error) return { turer: turrader, pasar, bokningar: [] }
+  const pasratt = new Map(rattrader.map((r) => [r.id, r.matprodukt_id]))
+  const rader = (burna.data as { id: string; tur_id: string; dag: number; ratt_id: string }[]).filter((m) => {
+    const tur = aktiva.get(m.tur_id)
+    return tur && pasratt.has(m.ratt_id) && m.dag <= (tur.dagar ?? 0) + tur.reservdagar
+  })
+  if (rader.length === 0) return { turer: turrader, pasar, bokningar: [] }
+
+  const [atare, portioner] = await Promise.all([
+    supabase.from('maltid_atare').select('maltid_id').in('maltid_id', rader.map((m) => m.id)),
+    supabase.from('matprodukter').select('id, portioner').in('id', [...new Set(rader.map((m) => pasratt.get(m.ratt_id)!))]),
+  ])
+  if (atare.error || portioner.error) return { turer: turrader, pasar, bokningar: [] }
+  const antalAtare = new Map<string, number>()
+  for (const a of atare.data as { maltid_id: string }[]) antalAtare.set(a.maltid_id, (antalAtare.get(a.maltid_id) ?? 0) + 1)
+  const burnaRader = rader.map((m) => ({
+    turId: m.tur_id,
+    matproduktId: pasratt.get(m.ratt_id)!,
+    // Utan ätare äter alla personer i turen.
+    portioner: antalAtare.get(m.id) ?? deltagarrader.filter((d) => d.tur_id === m.tur_id && d.typ === 'person').length,
+  }))
+  const perPase = new Map((portioner.data as { id: string; portioner: number }[]).map((p) => [p.id, p.portioner]))
+  return { turer: turrader, pasar, bokningar: bokningarFranRader(burnaRader, perPase) }
 }
 
 /**
@@ -122,12 +129,24 @@ export function useAndraTurer(turId: string, userId: string | null): AndraTurer 
 // Funktionerna svarar true när det gick. En ändring som RLS stoppar ger inget fel, bara noll rader,
 // så de läser tillbaka raden och räknar.
 
-/** Lägger en påse i skafferiet, eller en till om den redan finns där. */
-export async function laggISkafferi(matproduktId: string, befintlig: Skafferirad | undefined): Promise<boolean> {
-  if (!supabase) return false
-  if (befintlig) return andraSkafferirad(befintlig.id, { antal: Math.min(MAX_ANTAL, befintlig.antal + 1) })
-  const { error } = await supabase.from('skafferi').insert({ matprodukt_id: matproduktId })
-  return !error
+/**
+ * Lägger påsar i skafferiet. Finns påsen redan hemma läggs antalet till (högst 999) och det tidigaste bäst före
+ * behålls. Svarar med raden som den blev, eller null när det inte gick.
+ */
+export async function laggISkafferi(
+  matproduktId: string,
+  befintlig: Skafferirad | undefined,
+  antal = 1,
+  bastFore: string | null = null,
+): Promise<{ antal: number; bast_fore: string | null } | null> {
+  if (!supabase) return null
+  if (befintlig) {
+    const rad = { antal: nyttAntal(befintlig.antal, antal), bast_fore: tidigasteDatum(befintlig.bast_fore, bastFore) }
+    return (await andraSkafferirad(befintlig.id, rad)) ? rad : null
+  }
+  const rad = { antal: nyttAntal(0, antal), bast_fore: bastFore }
+  const { error } = await supabase.from('skafferi').insert({ matprodukt_id: matproduktId, ...rad })
+  return error ? null : rad
 }
 
 /** Ändrar antalet eller bäst-före-datumet. null tar bort datumet. */
