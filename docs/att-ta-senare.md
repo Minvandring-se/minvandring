@@ -142,6 +142,8 @@ Oscars idé: en tunn färgring runt profilbilden i namnbrickan, så att bilden l
 
 ## Mitt förråd: förslag efter genomgång av designförslaget
 
+Status 2026-11-25: punkt 1, 2, 3 och 5 löstes när förrådet gjordes om, och punkt 4 är rättad (träfflistan följer rutans scroll i mobilen). Avsnittet kan tas bort när vi har sett sidan i mobilen.
+
 Genomgången gjordes 2026-11-22 mot `docs/designforslag.md`, `docs/skisser/design-forrad.png` och sidan i 390 och 1272 px. Det mesta i designförslaget är redan byggt. Tryckytorna är minst 44 px, det finns ingen sidscroll och appen ger inga konsolfel. Fem saker återstår, i den ordning vi föreslår:
 
 1. **Ta bort underkategorin ur radens undertext.** Raden visar "Tält · Lilla tältet. Köpt juli 2025." under rubriken "Tält och vindskydd". Skissen har bara anteckningen, och ordet Tält upprepar kategorin. Där anteckningen saknas kan underkategorin vara kvar.

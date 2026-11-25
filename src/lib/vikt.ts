@@ -23,6 +23,8 @@ export interface Packrad {
   alla: boolean
   /** Bara när alla = true: vikten på var och ens egen modell, per deltagare. Saknas den gäller radens vikt. */
   egenVikt?: ReadonlyMap<string, number | null>
+  /** Kategorin i förrådet, till exempel talt eller kok. Behövs bara för vikten per kategori. */
+  kategori?: string
 }
 
 export interface Vikter {
@@ -122,3 +124,26 @@ export function startvikter(rader: Packrad[], deltagare: Deltagare[], mat: Reado
   return ut
 }
 
+
+export interface Kategorivikt {
+  kategori: string
+  /** Gram. */
+  vikt: number
+}
+
+/**
+ * Basvikten per kategori för en deltagare, tyngst först. Bara det som bärs i ryggsäcken räknas, alltså inte
+ * förbrukning eller det man har på sig. Kategorier som väger 0 g tas inte med.
+ */
+export function basPerKategori(rader: readonly Packrad[], d: Deltagare): Kategorivikt[] {
+  const summa = new Map<string, number>()
+  for (const rad of rader) {
+    if (rad.typ !== 'ryggsack' || !barRaden(rad, d)) continue
+    const k = rad.kategori ?? 'ovrigt'
+    summa.set(k, (summa.get(k) ?? 0) + radvikt(rad, d.id))
+  }
+  return [...summa]
+    .filter(([, vikt]) => vikt > 0)
+    .map(([kategori, vikt]) => ({ kategori, vikt }))
+    .sort((a, b) => b.vikt - a.vikt || a.kategori.localeCompare(b.kategori, 'sv'))
+}

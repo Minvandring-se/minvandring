@@ -303,6 +303,65 @@ const PANNLAMPA: Egenskap[] = [
   { nyckel: 'vattentalighet', etikett: 'Vattentålighet', sort: 'val', val: LAMPTALIGHET },
 ]
 
+/** Vem plagget är skuret för. */
+export const PLAGGKON = ['herr', 'dam', 'unisex'] as const
+export const FYLLNINGAR = ['dun', 'syntet', 'blandat'] as const
+export const REGNPLAGG = ['jacka', 'byxor', 'overall', 'poncho'] as const
+/** Hur membranet är byggt: 2, 2,5 eller 3 lager. */
+export const MEMBRANLAGER = ['2', '2,5', '3'] as const
+
+/**
+ * Gemensamt för kläder. Tillverkarna anger oftast en vikt för en storlek, och den står i viktstorlek, till exempel
+ * "M". En rad per modell och kön.
+ */
+const PLAGG: Egenskap[] = [
+  { nyckel: 'kon', etikett: 'Modell', sort: 'val', val: PLAGGKON, forJamforelse: true, viktig: true },
+  { nyckel: 'viktstorlek', etikett: 'Vikten gäller storlek', sort: 'text', forJamforelse: true, viktig: true },
+]
+
+/** Dun- och syntetjackor. */
+const ISOLERING: Egenskap[] = [
+  ...PLAGG,
+  { nyckel: 'fyllning', etikett: 'Fyllning', sort: 'val', val: FYLLNINGAR, forJamforelse: true, viktig: true },
+  { nyckel: 'fillpower', etikett: 'Fillpower', sort: 'heltal', min: 300, max: 1000, enhet: 'cuin', forJamforelse: true, viktig: true },
+  { nyckel: 'fyllnadsvikt_g', etikett: 'Fyllnadsvikt', sort: 'heltal', min: 10, max: 600, enhet: 'g', forJamforelse: true },
+  { nyckel: 'huva', etikett: 'Huva', sort: 'janej', forJamforelse: true },
+  // Fri text, till exempel "Pertex Quantum".
+  { nyckel: 'tyg', etikett: 'Tyg', sort: 'text' },
+]
+
+/** Regnjackor, regnbyxor och ponchos. */
+const REGNKLADER: Egenskap[] = [
+  ...PLAGG,
+  { nyckel: 'plagg', etikett: 'Plagg', sort: 'val', val: REGNPLAGG, forJamforelse: true, viktig: true },
+  // Fri text, till exempel "GORE-TEX Paclite Plus".
+  { nyckel: 'membran', etikett: 'Membran', sort: 'text', forJamforelse: true, viktig: true },
+  { nyckel: 'lager', etikett: 'Lager', sort: 'val', val: MEMBRANLAGER },
+  { nyckel: 'vattenpelare_mm', etikett: 'Vattenpelare', sort: 'heltal', min: 1000, max: 100_000, enhet: 'mm', forJamforelse: true },
+  { nyckel: 'huva', etikett: 'Huva', sort: 'janej' },
+  { nyckel: 'ventilation', etikett: 'Ventilationsöppningar', sort: 'janej' },
+]
+
+/** Underkategorier med kläder, där vikten gäller en viss storlek. */
+const KLADER: readonly string[] = ['isolering', 'regnklader']
+
+/**
+ * Kön och storleken vikten gäller för ett klädesplagg, kort, till exempel "Herr, vikt i storlek M". Saknar
+ * tillverkaren storlek står det att storleken inte anges. null för allt som inte är kläder.
+ */
+export function viktstorlekText(underkategori: string, egenskaper: Record<string, unknown> | null | undefined): string | null {
+  if (!KLADER.includes(underkategori)) return null
+  const e = egenskaper ?? {}
+  const kon = typeof e.kon === 'string' && e.kon ? e.kon[0].toUpperCase() + e.kon.slice(1) : null
+  const storlek = typeof e.viktstorlek === 'string' && e.viktstorlek.trim() ? `vikt i storlek ${e.viktstorlek.trim()}` : 'storleken för vikten anges inte'
+  return kon ? `${kon}, ${storlek}` : storlek[0].toUpperCase() + storlek.slice(1)
+}
+
+/** Fillpower anges bara för dun. */
+function isoleringsregler(e: Record<string, unknown>): string[] {
+  return !saknas(e.fillpower) && e.fyllning === 'syntet' ? ['fillpower: anges bara för dun'] : []
+}
+
 /** Brinntiden på högsta läget kan inte vara längre än på det svagaste. */
 function lampregler(e: Record<string, unknown>): string[] {
   return typeof e.brinntid_hogsta_h === 'number' && typeof e.brinntid_max_h === 'number' && e.brinntid_hogsta_h > e.brinntid_max_h
@@ -388,6 +447,8 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   rening: VATTENRENING,
   stavar: STAVAR,
   pannlampa: PANNLAMPA,
+  isolering: ISOLERING,
+  regnklader: REGNKLADER,
 }
 
 const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, unknown>) => string[]>> = {
@@ -402,6 +463,7 @@ const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, un
   bransle: bransleregler,
   stavar: stavregler,
   pannlampa: lampregler,
+  isolering: isoleringsregler,
 }
 
 /** Alla nycklar som finns som egenskap i någon underkategori. */
