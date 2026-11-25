@@ -71,7 +71,7 @@ export function Matsummering({
       {(perPerson.length > 0 || inteFordelat > 0) && totaltG > 0 && (
         <div className="space-y-2">
           <h3 className="text-base">Matvikt per person vid start</h3>
-          <p className="text-sm text-muted-foreground">Det var och en bär, i hela påsar, som i inköpslistan.</p>
+          <p className="text-sm text-muted-foreground">Räknat i hela påsar, som i inköpslistan.</p>
           <ul className="divide-y divide-border">
             {perPerson.map((p) => (
               <li key={p.id} className="flex items-center justify-between gap-3 py-2">
