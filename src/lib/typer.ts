@@ -61,6 +61,8 @@ export interface Produkt {
   /** Dagen vikten jämfördes med tillverkarens sida. */
   granskad: string | null
   kalla_typ: KallaTyp
+  /** Egenskaperna för underkategorin. Hämtas när sökningen behöver dem, till exempel storleken vikten gäller. */
+  egenskaper?: Record<string, unknown>
 }
 
 /** En produkt i Utrustningskatalogen, med det som visas när kortet fälls ut. */

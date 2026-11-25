@@ -342,6 +342,21 @@ const REGNKLADER: Egenskap[] = [
   { nyckel: 'ventilation', etikett: 'Ventilationsöppningar', sort: 'janej' },
 ]
 
+/** Underkategorier med kläder, där vikten gäller en viss storlek. */
+const KLADER: readonly string[] = ['isolering', 'regnklader']
+
+/**
+ * Kön och storleken vikten gäller för ett klädesplagg, kort, till exempel "Herr, vikt i storlek M". Saknar
+ * tillverkaren storlek står det att storleken inte anges. null för allt som inte är kläder.
+ */
+export function viktstorlekText(underkategori: string, egenskaper: Record<string, unknown> | null | undefined): string | null {
+  if (!KLADER.includes(underkategori)) return null
+  const e = egenskaper ?? {}
+  const kon = typeof e.kon === 'string' && e.kon ? e.kon[0].toUpperCase() + e.kon.slice(1) : null
+  const storlek = typeof e.viktstorlek === 'string' && e.viktstorlek.trim() ? `vikt i storlek ${e.viktstorlek.trim()}` : 'storleken för vikten anges inte'
+  return kon ? `${kon}, ${storlek}` : storlek[0].toUpperCase() + storlek.slice(1)
+}
+
 /** Fillpower anges bara för dun. */
 function isoleringsregler(e: Record<string, unknown>): string[] {
   return !saknas(e.fillpower) && e.fyllning === 'syntet' ? ['fillpower: anges bara för dun'] : []

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ALLA_EGENSKAPSNYCKLAR, EGENSKAPER, egenskaperFor, tolkaEgenskap, valideraEgenskaper, visaEgenskaper, type Egenskap } from './produktegenskaper'
+import { ALLA_EGENSKAPSNYCKLAR, EGENSKAPER, egenskaperFor, tolkaEgenskap, valideraEgenskaper, visaEgenskaper, viktstorlekText, type Egenskap } from './produktegenskaper'
 
 const talt = {
   personer: 2,
@@ -896,5 +896,18 @@ describe('egenskaper för kläder', () => {
 
   it('visar vilken storlek vikten gäller', () => {
     expect(visaEgenskaper('isolering', dunjacka).find((r) => r.nyckel === 'viktstorlek')).toMatchObject({ etikett: 'Vikten gäller storlek', varde: 'M', viktig: true })
+  })
+})
+
+describe('viktstorlekText', () => {
+  it('visar kön och storleken vikten gäller för kläder', () => {
+    expect(viktstorlekText('isolering', { kon: 'herr', viktstorlek: 'M' })).toBe('Herr, vikt i storlek M')
+    expect(viktstorlekText('regnklader', { kon: 'dam', viktstorlek: '10 (UK)' })).toBe('Dam, vikt i storlek 10 (UK)')
+  })
+
+  it('säger när storleken saknas, och ger null för annat än kläder', () => {
+    expect(viktstorlekText('regnklader', { kon: 'unisex' })).toBe('Unisex, storleken för vikten anges inte')
+    expect(viktstorlekText('isolering', null)).toBe('Storleken för vikten anges inte')
+    expect(viktstorlekText('talt', { kon: 'herr', viktstorlek: 'M' })).toBeNull()
   })
 })
