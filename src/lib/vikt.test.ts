@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { barRaden, matandelar, matvikter, packvikter, radvikt, startvikter, type Deltagare, type Packrad } from './vikt'
+import { barRaden, basPerKategori, matandelar, matvikter, packvikter, radvikt, startvikter, type Deltagare, type Packrad } from './vikt'
 
 const oscar: Deltagare = { id: 'o', typ: 'person', matandel: null }
 const andreas: Deltagare = { id: 'a', typ: 'person', matandel: null }
@@ -135,3 +135,31 @@ describe('startvikter', () => {
   })
 })
 
+
+describe('basPerKategori', () => {
+  const rader = [
+    rad({ kategori: 'talt', viktG: 1400, barsAv: 'a' }),
+    rad({ kategori: 'kok', viktG: 300, barsAv: 'a' }),
+    rad({ kategori: 'kok', viktG: 2, antal: 150, barsAv: 'a' }),
+    rad({ kategori: 'sov', viktG: 900, alla: true, egenVikt: new Map([['o', 1200]]) }),
+    rad({ kategori: 'klader', viktG: 500, typ: 'kropp', barsAv: 'a' }),
+    rad({ kategori: 'kok', viktG: 450, typ: 'forbrukas', barsAv: 'a' }),
+    rad({ kategori: 'talt', viktG: 800, barsAv: 'a', med: false }),
+    rad({ viktG: 100, barsAv: 'a' }),
+    rad({ kategori: 'sakerhet', viktG: null, barsAv: 'a' }),
+  ]
+
+  it('summerar basvikten per kategori, tyngst först', () => {
+    expect(basPerKategori(rader, andreas)).toEqual([
+      { kategori: 'talt', vikt: 1400 },
+      { kategori: 'sov', vikt: 900 },
+      { kategori: 'kok', vikt: 600 },
+      { kategori: 'ovrigt', vikt: 100 },
+    ])
+  })
+
+  it('räknar var och ens egen modell och bara det deltagaren bär', () => {
+    expect(basPerKategori(rader, oscar)).toEqual([{ kategori: 'sov', vikt: 1200 }])
+    expect(basPerKategori(rader, bamse)).toEqual([])
+  })
+})

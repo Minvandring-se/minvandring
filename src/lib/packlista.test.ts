@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest'
 import { KATEGORIER } from './forrad'
 import {
+  medGas,
   dubbletter,
   dubblettSvar,
   dubblettText,
@@ -240,5 +241,26 @@ describe('frågan om dubbletter', () => {
   it('svarar med samma antal som frågan', () => {
     expect(dubblettSvar(forsta([rad({ underkategori: 'talt', antal: 2 })]))).toBe('Ja, båda behövs')
     expect(dubblettSvar(forsta([rad({ underkategori: 'talt', antal: 2 }), rad({ underkategori: 'talt' })]))).toBe('Ja, alla behövs')
+  })
+})
+
+describe('medGas', () => {
+  const gas = FORSLAG_GEMENSAMT.find((f) => f.underkategori === 'bransle')!
+  it('sätter patronerna som räcker på sommaren i gasförslaget', () => {
+    // Två personer i sju dagar: 2 × 460 g = 920 g. Två 450 g räcker inte, så det blir tre patroner med minst överskott.
+    const r = medGas([gas], 2, 7)
+    expect(r[0].namn).toBe('Gas, 2 × 450 g + 100 g')
+    expect(r[0].hjalp).toMatch(/Primus/)
+  })
+
+  it('en person i två dagar behöver en 230-grammare', () => {
+    expect(medGas([gas], 1, 2)[0].namn).toBe('Gas, 230 g')
+  })
+
+  it('rör inte de andra förslagen och lämnar gasen som den är utan dagar', () => {
+    const talt = FORSLAG_GEMENSAMT[0]
+    expect(medGas([talt, gas], 3, 4)[0]).toEqual(talt)
+    expect(medGas([gas], 3, 0)[0]).toEqual(gas)
+    expect(medGas([gas], 0, 4)[0]).toEqual(gas)
   })
 })

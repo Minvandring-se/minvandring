@@ -64,7 +64,7 @@ export function useMittForrad(): { saker: Forradssak[] | null | 'fel'; forsokIge
     let aktuell = true
     supabase
       ?.from('forradssaker')
-      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering')
+      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, kok_id')
       .order('namn')
       .then(({ data, error }) => {
         if (aktuell) setSaker(error ? 'fel' : ((data as Forradssak[] | null) ?? []))

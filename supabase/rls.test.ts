@@ -136,6 +136,7 @@ describe('funktionerna i public', () => {
     'public.bara_personer_ater()',
     'public.hund_ater_inte()',
     'public.bara_personer_koper()',
+    'public.skydda_forradskok()',
   ]
   const forInloggade = [
     'public.ar_medlem(uuid)',
@@ -980,10 +981,13 @@ describe('startutbudet i katalogen', () => {
     return fs.readFileSync(path.join(mapp, senaste), 'utf8')
   }
   // Så många produkter som CSV-filerna i supabase/katalog ger.
-  const iKatalogen = (() => {
+  const katalograder = (() => {
     const mapp = path.join(import.meta.dirname, 'katalog')
-    return fs.readdirSync(mapp).filter((f) => f.endsWith('.csv')).flatMap((f) => godkanda(importera(fs.readFileSync(path.join(mapp, f), 'utf8')))).length
+    return fs.readdirSync(mapp).filter((f) => f.endsWith('.csv')).flatMap((f) => godkanda(importera(fs.readFileSync(path.join(mapp, f), 'utf8'))))
   })()
+  const iKatalogen = katalograder.length
+  // De rader en grundare har godkänt efter stickprov.
+  const kontrolleradeIKatalogen = katalograder.filter((r) => r.kontrollerad).length
   const antal = async () => (await db.query<{ n: number }>(`select count(*)::int as n from public.produkter where marke <> 'Testmärke' and marke <> 'M'`)).rows[0].n
 
   it('ligger i katalogen efter migreringarna, och inloggade hittar produkterna', async () => {
@@ -1000,14 +1004,15 @@ describe('startutbudet i katalogen', () => {
 
   it('inloggade kan läsa även produkter som inte är granskade, men ingen kan skriva eller markera dem som granskade', async () => {
     const ogranskade = await som(A, (tx) => tx.query<{ id: string }>('select id from public.produkter where kontrollerad is null'))
-    expect(ogranskade.rows.length).toBeGreaterThanOrEqual(iKatalogen)
+    expect(ogranskade.rows.length).toBeGreaterThanOrEqual(iKatalogen - kontrolleradeIKatalogen)
     const id = ogranskade.rows[0].id
     await forvantaFel(som(A, (tx) => tx.query(`update public.produkter set kontrollerad = '2026-11-20' where id = $1`, [id])))
     await forvantaFel(som(A, (tx) => tx.query('update public.produkter set packvikt_g = 1 where id = $1', [id])))
     await forvantaFel(som(A, (tx) => tx.query('delete from public.produkter where id = $1', [id])))
     await forvantaFel(somAnon((tx) => tx.query('select id from public.produkter where kontrollerad is null')))
     const kvar = await db.query<{ n: number }>('select count(*)::int as n from public.produkter where kontrollerad is not null and marke <> $1 and marke <> $2', ['Testmärke', 'M'])
-    expect(kvar.rows[0].n).toBe(0)
+    // Bara det grundarna har godkänt är kontrollerat, inget annat.
+    expect(kvar.rows[0].n).toBe(kontrolleradeIKatalogen)
   })
 
   it('en produkt får sakna kontrollerad, och den går att sätta senare när den är granskad', async () => {
@@ -1247,6 +1252,112 @@ describe('Mitt förråd', () => {
     await db.query('delete from auth.users where id = $1', [H])
     const r = await db.query('select 1 from public.forradssaker where user_id = $1', [H])
     expect(r.rows).toHaveLength(0)
+  })
+})
+
+describe('köket i förrådet', () => {
+  const ny = (vem: string, namn: string, underkategori: string, kok: string | null = null) =>
+    som(vem, (tx) =>
+      tx.query<{ id: string }>(`insert into public.forradssaker (namn, kategori, underkategori, kok_id) values ($1, 'kok', $2, $3) returning id`, [
+        namn,
+        underkategori,
+        kok,
+      ]),
+    ).then((r) => r.rows[0].id)
+  const kokFor = (id: string) => db.query<{ kok_id: string | null }>('select kok_id from public.forradssaker where id = $1', [id]).then((r) => r.rows[0]?.kok_id)
+
+  it('kokkärl och bränsle kopplas till ens egen brännare', async () => {
+    const brannare = await ny(A, 'Annas brännare', 'brannare')
+    const kastrull = await ny(A, 'Annas kastrull', 'kastrull', brannare)
+    const gas = await ny(A, 'Annas gas', 'bransle')
+    await som(A, (tx) => tx.query('update public.forradssaker set kok_id = $1 where id = $2', [brannare, gas]))
+    expect(await kokFor(kastrull)).toBe(brannare)
+    expect(await kokFor(gas)).toBe(brannare)
+    await som(A, (tx) => tx.query('update public.forradssaker set kok_id = null where id = $1', [gas]))
+    expect(await kokFor(gas)).toBeNull()
+  })
+
+  it('går också att bygga kring ett komplett kök', async () => {
+    const kok = await ny(A, 'Annas stormkök', 'komplett_kok')
+    const gas = await ny(A, 'Gas till stormköket', 'bransle', kok)
+    expect(await kokFor(gas)).toBe(kok)
+  })
+
+  it('ingen kan koppla sin sak till någon annans brännare', async () => {
+    const annas = await ny(A, 'Annas andra brännare', 'brannare')
+    await expect(ny(B, 'Bertils kastrull', 'kastrull', annas)).rejects.toThrow()
+    const bertils = await ny(B, 'Bertils kastrull', 'kastrull')
+    await forvantaFel(som(B, (tx) => tx.query('update public.forradssaker set kok_id = $1 where id = $2', [annas, bertils])))
+    expect(await kokFor(bertils)).toBeNull()
+  })
+
+  it('bara kokkärl och bränsle är delar, och bara brännare och kompletta kök har delar', async () => {
+    const brannare = await ny(A, 'Brännare för fel delar', 'brannare')
+    const talt = som(A, (tx) => tx.query(`insert into public.forradssaker (namn, kategori, underkategori, kok_id) values ('Tält', 'talt', 'talt', $1)`, [brannare]))
+    await expect(talt).rejects.toThrow(/Bara kokkärl och bränsle/)
+    await expect(ny(A, 'Kåsa i köket', 'kasa', brannare)).rejects.toThrow(/Bara kokkärl och bränsle/)
+    const kastrull = await ny(A, 'Kastrull utan kök', 'kastrull')
+    await expect(ny(A, 'Gas till kastrullen', 'bransle', kastrull)).rejects.toThrow(/brännare eller ett komplett kök/)
+  })
+
+  it('en sak kan inte vara sitt eget kök, inte ens förbi triggern', async () => {
+    const gas = await ny(A, 'Ensam gas', 'bransle')
+    await forvantaFel(som(A, (tx) => tx.query('update public.forradssaker set kok_id = id where id = $1', [gas])))
+    // Triggrarna stängs av, så att det är checken som prövas.
+    const id = crypto.randomUUID()
+    await db.query(`set session_replication_role = replica`)
+    try {
+      await expect(
+        db.query(`insert into public.forradssaker (id, user_id, namn, kategori, kok_id) values ($1, $2, 'Själv', 'ovrigt', $1)`, [id, A]),
+      ).rejects.toThrow(/forradssaker_kok_inte_sig_sjalv/)
+    } finally {
+      await db.query(`set session_replication_role = origin`)
+    }
+  })
+
+  it('en brännare med delar kan bli ett komplett kök, men inte något annat', async () => {
+    const brannare = await ny(A, 'Brännare med delar', 'brannare')
+    await ny(A, 'Delen', 'kastrull', brannare)
+    await expect(som(A, (tx) => tx.query(`update public.forradssaker set underkategori = 'kastrull' where id = $1`, [brannare]))).rejects.toThrow(/Ta bort delarna/)
+    await som(A, (tx) => tx.query(`update public.forradssaker set underkategori = 'komplett_kok' where id = $1`, [brannare]))
+  })
+
+  it('en del i ett kök kan inte byta till en annan sorts sak', async () => {
+    const brannare = await ny(A, 'Brännare med kastrull', 'brannare')
+    const kastrull = await ny(A, 'Kastrull i köket', 'kastrull', brannare)
+    for (const u of ['kasa', 'brannare'])
+      await expect(som(A, (tx) => tx.query('update public.forradssaker set underkategori = $2 where id = $1', [kastrull, u]))).rejects.toThrow(/Bara kokkärl och bränsle/)
+    await expect(som(A, (tx) => tx.query('update public.forradssaker set underkategori = null where id = $1', [kastrull]))).rejects.toThrow(/Bara kokkärl och bränsle/)
+  })
+
+  it('samma fel för någon annans brännare som för en som inte finns', async () => {
+    const annas = await ny(A, 'Annas tredje brännare', 'brannare')
+    await expect(ny(B, 'K1', 'kastrull', annas)).rejects.toThrow(/brännare eller ett komplett kök/)
+    await expect(ny(B, 'K2', 'kastrull', crypto.randomUUID())).rejects.toThrow(/brännare eller ett komplett kök/)
+  })
+
+  it('nyckeln stoppar en koppling mellan två ägare även förbi RLS', async () => {
+    const annas = await ny(A, 'Annas fjärde brännare', 'brannare')
+    await expect(
+      db.query(`insert into public.forradssaker (user_id, namn, kategori, underkategori, kok_id) values ($1, 'Smuggel', 'kok', 'kastrull', $2)`, [B, annas]),
+    ).rejects.toThrow(/forradssaker_kok_samma_agare/)
+  })
+
+  it('ett konto med kök och delar går att ta bort', async () => {
+    const K = '00000000-0000-0000-0000-0000000000c1'
+    await db.query(`insert into auth.users (id, email) values ('${K}', 'kok@exempel.se')`)
+    const brannare = await ny(K, 'Brännare', 'brannare')
+    await ny(K, 'Kastrull', 'kastrull', brannare)
+    await ny(K, 'Gas', 'bransle', brannare)
+    await db.query('delete from auth.users where id = $1', [K])
+    expect((await db.query('select 1 from public.forradssaker where user_id = $1', [K])).rows).toHaveLength(0)
+  })
+
+  it('delarna finns kvar utan koppling när brännaren tas bort', async () => {
+    const brannare = await ny(A, 'Brännare som tas bort', 'brannare')
+    const kastrull = await ny(A, 'Kastrull som blir kvar', 'kastrull', brannare)
+    await som(A, (tx) => tx.query('delete from public.forradssaker where id = $1', [brannare]))
+    expect(await kokFor(kastrull)).toBeNull()
   })
 })
 
@@ -3284,5 +3395,105 @@ describe('packlistans migrering mot befintliga rader', () => {
     expect((await rad('Kök')).bars_av).toBeNull()
     const bockar = await gammal.query<{ tur_id: string }>('select tur_id from public.packstatus')
     expect(bockar.rows).toEqual([{ tur_id: T1 }])
+  })
+})
+
+describe('dagsetapper', () => {
+  // Egna användare, så att försöken att gå med i de andra testerna inte räknas mot spärren här.
+  const EA = '00000000-0000-0000-0000-0000000000e1'
+  const EB = '00000000-0000-0000-0000-0000000000e2'
+  const EC = '00000000-0000-0000-0000-0000000000e3'
+  const ED = '00000000-0000-0000-0000-0000000000e4'
+  let tur: string
+  let annanTur: string
+  let dag1: string
+  let davidsRad: string
+
+  const etapp = (vem: string, turId: string, dag: number, ovrigt = `'Abisko', 'Abiskojaure', 15`) =>
+    som(vem, (tx) =>
+      tx.query<{ id: string }>(`insert into public.etapper (tur_id, dag, fran, till, km) values ($1, $2, ${ovrigt}) returning id`, [turId, dag]),
+    ).then((r) => r.rows[0].id)
+  const synliga = (vem: string, turId: string) => som(vem, (tx) => tx.query('select id from public.etapper where tur_id = $1', [turId])).then((r) => r.rows.length)
+
+  beforeAll(async () => {
+    await db.exec(
+      `insert into auth.users (id, email) values ('${EA}', 'ea@exempel.se'), ('${EB}', 'eb@exempel.se'), ('${EC}', 'ec@exempel.se'), ('${ED}', 'ed@exempel.se');`,
+    )
+    tur = await skapaTur(EA, 'Etapptur')
+    const kod = await kodFor(tur)
+    await som(EC, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(ED, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const d = await db.query<{ id: string; user_id: string }>('select id, user_id from public.deltagare where tur_id = $1 and user_id = $2', [tur, ED])
+    davidsRad = d.rows[0].id
+    await som(EA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [davidsRad]))
+    annanTur = await skapaTur(EB, 'Någon annans etapper')
+    dag1 = await etapp(EA, tur, 1)
+  })
+
+  it('ägaren och redigeraren lägger till och ändrar etapper', async () => {
+    const dag2 = await etapp(EC, tur, 2, `'Abiskojaure', 'Alesjaure', 20.5`)
+    const r = await som(EC, (tx) => tx.query(`update public.etapper set natt = 'Alesjaure fjällstuga', boende = 'stuga', bokad = true where id = $1`, [dag2]))
+    expect(r.affectedRows).toBe(1)
+    const ny = await db.query<{ km: string; bokad: boolean }>('select km, bokad from public.etapper where id = $1', [dag2])
+    expect(ny.rows[0]).toEqual({ km: '20.5', bokad: true })
+  })
+
+  it('läsaren ser etapperna men kan inte ändra dem', async () => {
+    expect(await synliga(ED, tur)).toBeGreaterThan(0)
+    await forvantaFel(etapp(ED, tur, 3))
+    const andrad = await som(ED, (tx) => tx.query(`update public.etapper set km = 1 where id = $1`, [dag1]))
+    expect(andrad.affectedRows).toBe(0)
+    const borta = await som(ED, (tx) => tx.query('delete from public.etapper where id = $1', [dag1]))
+    expect(borta.affectedRows).toBe(0)
+  })
+
+  it('den som inte är med i turen ser och ändrar ingenting', async () => {
+    expect(await synliga(EB, tur)).toBe(0)
+    await forvantaFel(etapp(EB, tur, 4))
+    const andrad = await som(EB, (tx) => tx.query(`update public.etapper set km = 1 where id = $1`, [dag1]))
+    expect(andrad.affectedRows).toBe(0)
+    const borta = await som(EB, (tx) => tx.query('delete from public.etapper where id = $1', [dag1]))
+    expect(borta.affectedRows).toBe(0)
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.etapper')))
+    await forvantaFel(somAnon((tx) => tx.query(`insert into public.etapper (tur_id, dag) values ($1, 9)`, [tur])))
+    await forvantaFel(somAnon((tx) => tx.query('delete from public.etapper')))
+  })
+
+  it('ingen kan flytta en etapp till en tur där hen inte får ändra', async () => {
+    await forvantaFel(som(EA, (tx) => tx.query('update public.etapper set tur_id = $1 where id = $2', [annanTur, dag1])))
+  })
+
+  it('en dag har bara en etapp, och dagen ligger mellan 1 och 30', async () => {
+    await forvantaFel(etapp(EA, tur, 1))
+    await forvantaFel(etapp(EA, tur, 0))
+    await forvantaFel(etapp(EA, tur, 31))
+  })
+
+  it('fälten har gränser, och bara stugor och annat boende kan vara bokade', async () => {
+    await forvantaFel(etapp(EA, tur, 5, `'  ', 'Till', 10`))
+    await forvantaFel(etapp(EA, tur, 5, `'Från', 'Till', 0`))
+    await forvantaFel(etapp(EA, tur, 5, `'Från', 'Till', 100`))
+    await forvantaFel(etapp(EA, tur, 5, `'${'x'.repeat(81)}', 'Till', 10`))
+    await forvantaFel(som(EA, (tx) => tx.query(`insert into public.etapper (tur_id, dag, boende, bokad) values ($1, 6, 'talt', true)`, [tur])))
+    await forvantaFel(som(EA, (tx) => tx.query(`insert into public.etapper (tur_id, dag, boende) values ($1, 6, 'hotell')`, [tur])))
+    await forvantaFel(som(EA, (tx) => tx.query(`insert into public.etapper (tur_id, dag, bokad) values ($1, 7, true)`, [tur])))
+    await som(EA, (tx) => tx.query(`insert into public.etapper (tur_id, dag, boende, bokad) values ($1, 6, 'annat', true)`, [tur]))
+  })
+
+  it('en borttagen deltagare ser inte längre etapperna, och en borttagen redigerare ändrar dem inte', async () => {
+    await som(EA, (tx) => tx.query('delete from public.deltagare where id = $1', [davidsRad]))
+    expect(await synliga(ED, tur)).toBe(0)
+    const ecRad = (await db.query<{ id: string }>('select id from public.deltagare where tur_id = $1 and user_id = $2', [tur, EC])).rows[0].id
+    await som(EA, (tx) => tx.query('delete from public.deltagare where id = $1', [ecRad]))
+    expect(await synliga(EC, tur)).toBe(0)
+    await forvantaFel(etapp(EC, tur, 8))
+    expect((await som(EC, (tx) => tx.query('update public.etapper set km = 1 where id = $1', [dag1]))).affectedRows).toBe(0)
+    expect((await som(EC, (tx) => tx.query('delete from public.etapper where id = $1', [dag1]))).affectedRows).toBe(0)
+  })
+
+  it('etapperna försvinner med turen', async () => {
+    await som(EA, (tx) => tx.query('delete from public.turer where id = $1', [tur]))
+    const r = await db.query('select 1 from public.etapper where tur_id = $1', [tur])
+    expect(r.rows).toHaveLength(0)
   })
 })

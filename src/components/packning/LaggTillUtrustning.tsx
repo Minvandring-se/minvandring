@@ -6,7 +6,8 @@ import { Input } from '@/components/ui/input'
 import { Panel } from '@/components/ui/panel'
 import { Select } from '@/components/ui/select'
 import { useId, useState } from 'react'
-import { faltFran, formateraVikt, KATEGORIER, medKategori, tolkaSak, type SakVarden } from '@/lib/forrad'
+import { faltFran, formateraVikt, KATEGORIER, kategoriFor, medKategori, medUnderkategori, tolkaSak, underkategorierFor, type SakVarden } from '@/lib/forrad'
+import { medKoket } from '@/lib/forradskok'
 import type { Bars } from '@/lib/packlista'
 import type { Forradssak } from '@/lib/typer'
 
@@ -47,6 +48,8 @@ export function LaggTillUtrustning({
   const id = useId()
   const bars: Bars = vem === 'alla' ? { som: 'alla' } : { som: vem, id: mittId }
 
+  const allaSaker = Array.isArray(saker) ? saker : []
+  const antalDelar = (kokId: string) => medKoket(kokId, allaSaker).length - 1
   const lista = Array.isArray(saker) ? saker.filter((s) => s.namn.toLowerCase().includes(sok.trim().toLowerCase())) : []
 
   async function spara() {
@@ -131,15 +134,23 @@ export function LaggTillUtrustning({
                         checked={valda.has(s.id)}
                         onChange={(e) =>
                           setValda((v) => {
+                            // Ett kök i förrådet väljs med sina kokkärl och sitt bränsle.
                             const ny = new Set(v)
-                            if (e.target.checked) ny.add(s.id)
-                            else ny.delete(s.id)
+                            for (const sakId of medKoket(s.id, allaSaker)) {
+                              if (e.target.checked) ny.add(sakId)
+                              else ny.delete(sakId)
+                            }
                             return ny
                           })
                         }
                         className="size-5 shrink-0 accent-primary"
                       />
-                      <span className="min-w-0 flex-1 break-words">{s.namn}</span>
+                      <span className="min-w-0 flex-1 break-words">
+                        {s.namn}
+                        {antalDelar(s.id) > 0 && (
+                          <span className="block text-sm text-muted-foreground">Med {antalDelar(s.id) === 1 ? '1 del' : `${antalDelar(s.id)} delar`} ur ditt kök</span>
+                        )}
+                      </span>
                       <span className="shrink-0 text-sm tabular-nums">{s.vikt_g === null ? 'Ingen vikt' : formateraVikt(s.vikt_g * s.antal)}</span>
                     </label>
                   </li>
@@ -171,6 +182,25 @@ export function LaggTillUtrustning({
                 ))}
               </Select>
             </div>
+            {underkategorierFor(falt.kategori).length > 1 && (
+              <div className="space-y-1">
+                <label htmlFor={`${id}-underkategori`} className="block font-semibold">
+                  Sort <span className="font-normal text-muted-foreground">(frivilligt)</span>
+                </label>
+                <Select
+                  id={`${id}-underkategori`}
+                  value={falt.underkategori}
+                  onChange={(e) => setFalt(medUnderkategori(falt, e.target.value))}
+                >
+                  <option value="">Annat i {kategoriFor(falt.kategori).etikett.toLowerCase()}</option>
+                  {underkategorierFor(falt.kategori).map((u) => (
+                    <option key={u.nyckel} value={u.nyckel}>
+                      {u.etikett}
+                    </option>
+                  ))}
+                </Select>
+              </div>
+            )}
             <div className="grid grid-cols-2 gap-3">
               <div className="space-y-1">
                 <label htmlFor={`${id}-vikt`} className="block font-semibold">
