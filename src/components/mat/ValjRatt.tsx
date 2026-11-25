@@ -391,7 +391,7 @@ export function Pasar({
         <>
           <p aria-live="polite" className="text-sm text-muted-foreground">
             {traffar.length === 0 ? 'Ingen påse passar sökningen och filtret.' : traffar.length === 1 ? 'En påse' : `${traffar.length} påsar`}
-            {dolda > 0 && `. ${dolda === 1 ? 'En påse till döljs' : `${dolda} påsar till döljs`} av filtret.`}
+            {dolda > 0 && `${traffar.length === 0 ? ' ' : '. '}${dolda === 1 ? 'En påse' : `${dolda} påsar`}${traffar.length === 0 ? '' : ' till'} döljs av filtret.`}
           </p>
           {dolda > 0 && (
             <Button
