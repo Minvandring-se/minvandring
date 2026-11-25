@@ -58,6 +58,7 @@ import {
 import { arKok, arKokdel, kokdelar, kokForDel } from '@/lib/forradskok'
 import { granskning } from '@/lib/granskning'
 import { felrapportLank } from '@/lib/kontakt'
+import { viktstorlekText } from '@/lib/produktegenskaper'
 import { supabase } from '@/lib/supabase'
 import type { Forradssak } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -501,9 +502,11 @@ const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-med
 /** Versionen och underkategorin under namnet, som var sin liten etikett, till exempel Regular och Sovsäck. */
 function Underrad({ sak, kok }: { sak: Forradssak; kok?: string | null }) {
   const under = underkategoriFor(sak.kategori, sak.underkategori)?.etikett ?? kategoriFor(sak.kategori).etikett
+  // Kön och storleken katalogens vikt gäller, för kläder ur katalogen.
+  const storlek = sak.produkter && !viktjamforelse(sak).egen ? viktstorlekText(sak.produkter.underkategori, sak.produkter.egenskaper) : null
   return (
     <span className="mt-1 flex flex-wrap gap-1.5">
-      {[sak.produkter?.version, under, kok].filter(Boolean).map((text) => (
+      {[sak.produkter?.version, under, storlek, kok].filter(Boolean).map((text) => (
         <Bricka key={text}>{text}</Bricka>
       ))}
     </span>

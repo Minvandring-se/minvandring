@@ -20,6 +20,7 @@ import { Specrutor } from '@/components/ui/specrutor'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, underkategoriFor, underkategorierFor, type KategoriNyckel } from '@/lib/forrad'
 import { forradsadress } from '@/lib/forradslista'
+import { viktstorlekText } from '@/lib/produktegenskaper'
 import {
   forvalFranProdukt,
   gArAttSoka,
@@ -353,7 +354,9 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
           <span className="min-w-0 flex-1">
             <span className="block font-semibold break-words">{produktnamn(modell)}</span>
             <span className="block text-sm text-muted-foreground">
-              {flera ? `${etikett}, ${modell.varianter.length} storlekar` : [etikett, forsta.version].filter(Boolean).join(', ')}
+              {flera
+                ? `${etikett}, ${modell.varianter.length} storlekar`
+                : [etikett, forsta.version, viktstorlekText(forsta.underkategori, forsta.egenskaper)].filter(Boolean).join(', ')}
             </span>
           </span>
           <span className="shrink-0 font-heading text-lg font-semibold tabular-nums">
@@ -434,6 +437,9 @@ function Produktpanel({
           <h2 className="text-2xl break-words">{produktnamn(modell)}</h2>
           <p className="font-heading text-3xl font-semibold tabular-nums">{formateraVikt(vald.packvikt_g)}</p>
           {vald.version && <p className="text-sm text-muted-foreground">{vald.version}</p>}
+          {viktstorlekText(vald.underkategori, vald.egenskaper) && (
+            <p className="text-sm text-muted-foreground">{viktstorlekText(vald.underkategori, vald.egenskaper)}</p>
+          )}
           {finns && <IForradet finns={finns} />}
         </div>
       }

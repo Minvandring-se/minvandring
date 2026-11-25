@@ -4,6 +4,7 @@ import { Laddfel } from '@/components/app/Laddfel'
 import { Granskad } from '@/components/forrad/Granskad'
 import { KokSteg } from '@/components/forrad/KokSteg'
 import { granskning } from '@/lib/granskning'
+import { viktstorlekText } from '@/lib/produktegenskaper'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { KATEGORIER, arKategori, arUnderkategori, formateraVikt, kategoriFor, underkategoriFor, underkategorierFor, type KategoriNyckel, type UnderkategoriNyckel } from '@/lib/forrad'
@@ -99,7 +100,7 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
     const klient = supabase
     let avbruten = false
     const timer = window.setTimeout(async () => {
-      let fraga = klient.from('produkter').select('id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad, granskad, kalla_typ').limit(MAX_PRODUKTER)
+      let fraga = klient.from('produkter').select('id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad, granskad, kalla_typ, egenskaper').limit(MAX_PRODUKTER)
       if (kategori) fraga = fraga.eq('kategori', kategori)
       if (kategori && underkategori) fraga = fraga.eq('underkategori', underkategori)
       if (marke) fraga = fraga.eq('marke', marke)
@@ -354,6 +355,7 @@ function Produktrad({
   onValj: (p: Produkt) => void
 }) {
   const Ikon = kategoriFor(produkt.kategori).ikon
+  const storlek = viktstorlekText(produkt.underkategori, produkt.egenskaper)
   return (
     <>
       <button type="button" disabled={upptagen} onClick={() => onValj(produkt)} className={cn(radKlass, granskning(produkt).marke ? 'pt-2 pb-1' : 'py-2', indragen && 'pl-11')}>
@@ -364,6 +366,7 @@ function Produktrad({
             {rubrik}
           </span>
           {underrad && <span className="block text-sm break-words text-muted-foreground">{underrad}</span>}
+          {storlek && <span className="block text-sm break-words text-muted-foreground">{storlek}</span>}
           {finnsRedan && <span className="block text-sm text-muted-foreground">Finns redan i ditt förråd</span>}
         </span>
         <span className="shrink-0 text-sm font-medium">{formateraVikt(produkt.packvikt_g)}</span>
