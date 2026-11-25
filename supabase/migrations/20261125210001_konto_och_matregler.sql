@@ -1,5 +1,5 @@
 -- Rättningar från felsökningen av matdelen (Claude outputs/felsokning/matdelen.md): B5, B6, B7, B13 och K10.
--- Bygger inte på 20261125100000_inkop_klart_mangd.sql (PR 2), men har datumet direkt efter den, så att den körs efter den.
+-- Bygger inte på 20261125210000_inkop_klart_mangd.sql (PR 2), men har datumet direkt efter den, så att den körs efter den.
 
 -- ─── B6: ett konto som raderas ───────────────────────────────────────────────
 -- Förut stoppade turer.skapad_av raderingen av ett konto som hade skapat en tur, och deltagare.user_id (on delete

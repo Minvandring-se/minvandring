@@ -21,6 +21,7 @@ const Profil = lazy(() => import('@/pages/Profil').then((m) => ({ default: m.Pro
 const TurRam = lazy(() => import('@/pages/tur/TurRam').then((m) => ({ default: m.TurRam })))
 const TurOversikt = lazy(() => import('@/pages/tur/TurOversikt').then((m) => ({ default: m.TurOversikt })))
 const TurMat = lazy(() => import('@/pages/tur/TurMat').then((m) => ({ default: m.TurMat })))
+const TurEtapper = lazy(() => import('@/pages/tur/TurEtapper').then((m) => ({ default: m.TurEtapper })))
 const TurPackning = lazy(() => import('@/pages/tur/TurPackning').then((m) => ({ default: m.TurPackning })))
 const TurInkopslista = lazy(() => import('@/pages/tur/TurInkopslista').then((m) => ({ default: m.TurInkopslista })))
 const TurKommerSnart = lazy(() => import('@/pages/tur/TurKommerSnart').then((m) => ({ default: m.TurKommerSnart })))
@@ -76,6 +77,7 @@ export default function App() {
           <Route path="/tur/:id" element={<TurRam />}>
             <Route index element={<TurOversikt />} />
             <Route path="mat" element={<TurMat />} />
+            <Route path="etapper" element={<TurEtapper />} />
             <Route path="packning" element={<TurPackning />} />
             <Route path="mat/inkopslista" element={<TurInkopslista />} />
             {/* Flikarna som inte är byggda än. Okända delar visar översikten. */}

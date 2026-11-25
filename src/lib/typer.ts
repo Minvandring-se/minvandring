@@ -23,6 +23,8 @@ export interface Forradssak {
   skapad?: string
   /** Produkten saken kommer från, när listan hämtas med den. Saknas för saker man har skrivit in själv. */
   produkter?: ForradsProdukt | null
+  /** Brännaren eller det kompletta köket ett kokkärl eller bränsle hör till i ens kök, när listan hämtas med det. */
+  kok_id?: string | null
 }
 
 /** Det som förrådet visar om produkten en sak kommer från. */
@@ -59,6 +61,8 @@ export interface Produkt {
   /** Dagen vikten jämfördes med tillverkarens sida. */
   granskad: string | null
   kalla_typ: KallaTyp
+  /** Egenskaperna för underkategorin. Hämtas när sökningen behöver dem, till exempel storleken vikten gäller. */
+  egenskaper?: Record<string, unknown>
 }
 
 /** En produkt i Utrustningskatalogen, med det som visas när kortet fälls ut. */
@@ -80,6 +84,24 @@ export interface Tur {
   /** Antal vandringsdagar. null tills någon har angett det. */
   dagar: number | null
   reservdagar: number
+}
+
+export type Boende = 'stuga' | 'talt' | 'annat'
+
+/** En dag i turen, som den står i etapper. */
+export interface Etapp {
+  id: string
+  tur_id: string
+  dag: number
+  fran: string | null
+  till: string | null
+  /** Kilometer med en decimal. Supabase skickar numeric som text eller tal, så det tolkas med kmFran. */
+  km: number | string | null
+  /** Var man sover efter dagens etapp. */
+  natt: string | null
+  boende: Boende | null
+  bokad: boolean
+  notering: string | null
 }
 
 export interface DeltagareRad {
