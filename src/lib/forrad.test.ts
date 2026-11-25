@@ -3,6 +3,7 @@ import {
   KATEGORIER,
   antalGranskade,
   arKategori,
+  arUnderkategori,
   storstaVinsten,
   faltFran,
   flerKategorier,
@@ -74,6 +75,13 @@ describe('kategorier', () => {
     expect(arKategori('sovsack')).toBe(false)
     expect(kategoriFor('talt').etikett).toBe('Tält och vindskydd')
     expect(kategoriFor('finns-inte').nyckel).toBe('ovrigt')
+  })
+
+  it('känner igen en underkategori bara i sin egen huvudkategori', () => {
+    expect(arUnderkategori('kok', 'brannare')).toBe(true)
+    expect(arUnderkategori('kok', 'kastrull')).toBe(true)
+    expect(arUnderkategori('talt', 'brannare')).toBe(false)
+    expect(arUnderkategori('kok', '')).toBe(false)
   })
 
   it('hittar bara en underkategori i sin egen huvudkategori', () => {

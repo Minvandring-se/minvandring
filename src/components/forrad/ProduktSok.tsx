@@ -5,7 +5,7 @@ import { Granskad } from '@/components/forrad/Granskad'
 import { granskning } from '@/lib/granskning'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
-import { KATEGORIER, arKategori, formateraVikt, kategoriFor, type KategoriNyckel, type UnderkategoriNyckel } from '@/lib/forrad'
+import { KATEGORIER, arKategori, arUnderkategori, formateraVikt, kategoriFor, underkategoriFor, underkategorierFor, type KategoriNyckel, type UnderkategoriNyckel } from '@/lib/forrad'
 import {
   antalText,
   gArAttSoka,
@@ -30,7 +30,7 @@ interface Props {
   onTillagd: (sakId: string, namn: string) => void
   /** Kategorin som är vald när rutan öppnas, till exempel från en uppmaning i De fyra tunga. */
   startKategori?: KategoriNyckel
-  /** Underkategorin som följer med till Lägg till egen sak, så länge startkategorin är vald. */
+  /** Underkategorin som är vald när rutan öppnas, och som följer med till Lägg till egen sak. */
   startUnderkategori?: UnderkategoriNyckel
   /** Användaren vill skriva in saken själv. Söktexten följer med som namn, och den valda kategorin som förval. */
   onEgen: (soktext: string, kategori?: KategoriNyckel, underkategori?: UnderkategoriNyckel) => void
@@ -41,7 +41,7 @@ const MAX_PRODUKTER = 500
 /** Väntan efter senaste tangenttryckningen innan sökningen skickas. */
 const FORDROJNING_MS = 250
 
-/** Resultatet av en sökning. nyckel säger vilken kategori, vilket märke och vilken söktext det hör till. */
+/** Resultatet av en sökning. nyckel säger vilken kategori, underkategori, vilket märke och vilken söktext det hör till. */
 type Lage = { nyckel: string; modeller: Modell[]; avkortad: boolean } | { nyckel: string; fel: true } | null
 
 const radKlass =
@@ -56,8 +56,9 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
   const falt = useRef<HTMLInputElement>(null)
   const [text, setText] = useState('')
   const [kategori, setKategori] = useState<KategoriNyckel | ''>(startKategori ?? '')
+  const [underkategori, setUnderkategori] = useState<UnderkategoriNyckel | ''>(startKategori && startUnderkategori ? startUnderkategori : '')
   const [marke, setMarke] = useState('')
-  // Märkena i den valda kategorin. Hör till kategorin i `for`, så att en gammal lista inte visas för en ny kategori.
+  // Märkena i den valda kategorin och underkategorin. Hör till valet i `for`, så att en gammal lista inte visas för ett nytt val.
   const [marken, setMarken] = useState<{ for: string; lista: Marke[] } | null>(null)
   const [lage, setLage] = useState<Lage>(null)
   const [utfalld, setUtfalld] = useState<string | null>(null)
@@ -66,27 +67,28 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
 
   useEffect(() => falt.current?.focus(), [])
 
-  // Märkena hämtas en gång per kategori.
+  // Märkena hämtas en gång per kategori och underkategori.
+  const valt = `${kategori}|${underkategori}`
   useEffect(() => {
     if (!supabase || !kategori) return
     let avbruten = false
-    supabase
+    let fraga = supabase
       .from('produkter')
       .select('id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad, granskad, kalla_typ')
       .eq('kategori', kategori)
-      .limit(MAX_PRODUKTER)
-      .then(({ data }) => {
-        if (!avbruten) setMarken({ for: kategori, lista: markenMedAntal(grupperaModeller((data as Produkt[] | null) ?? [])) })
-      })
+    if (underkategori) fraga = fraga.eq('underkategori', underkategori)
+    fraga.limit(MAX_PRODUKTER).then(({ data }) => {
+      if (!avbruten) setMarken({ for: `${kategori}|${underkategori}`, lista: markenMedAntal(grupperaModeller((data as Produkt[] | null) ?? [])) })
+    })
     return () => {
       avbruten = true
     }
-  }, [kategori])
+  }, [kategori, underkategori])
 
   // Det går att söka när en kategori är vald eller när texten är lång nog.
   const harText = gArAttSoka(text)
   const sokbar = harText || kategori !== ''
-  const nyckel = `${kategori}|${marke}|${text}`
+  const nyckel = `${kategori}|${underkategori}|${marke}|${text}`
 
   useEffect(() => {
     if (!supabase || !sokbar) return
@@ -95,6 +97,7 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
     const timer = window.setTimeout(async () => {
       let fraga = klient.from('produkter').select('id, marke, modell, version, kategori, underkategori, packvikt_g, kontrollerad, granskad, kalla_typ').limit(MAX_PRODUKTER)
       if (kategori) fraga = fraga.eq('kategori', kategori)
+      if (kategori && underkategori) fraga = fraga.eq('underkategori', underkategori)
       if (marke) fraga = fraga.eq('marke', marke)
       if (harText) for (const ord of sokord(text)) fraga = fraga.or(sokfilter(ord))
       const { data, error } = await fraga.order('marke').order('modell')
@@ -110,11 +113,12 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
       avbruten = true
       window.clearTimeout(timer)
     }
-  }, [text, kategori, marke, harText, sokbar, nyckel])
+  }, [text, kategori, underkategori, marke, harText, sokbar, nyckel])
 
   function bytKategori(varde: string) {
     setKategori(arKategori(varde) ? varde : '')
-    // Märket hör till kategorin, så det nollställs.
+    // Underkategorin och märket hör till kategorin, så de nollställs.
+    setUnderkategori('')
     setMarke('')
     setUtfalld(null)
   }
@@ -136,7 +140,9 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
   // Resultatet gäller bara om det hör till det som är valt just nu.
   const aktuellt = sokbar && lage?.nyckel === nyckel ? lage : null
   const modeller = aktuellt && 'modeller' in aktuellt ? aktuellt.modeller : null
-  const markeslista = kategori && marken?.for === kategori ? marken.lista : []
+  const markeslista = kategori && marken?.for === valt ? marken.lista : []
+  const underkategorier = kategori ? underkategorierFor(kategori) : []
+  const valdEtikett = (kategori && underkategoriFor(kategori, underkategori)?.etikett) || (kategori ? kategoriFor(kategori).etikett : '')
   const upptagen = laggerTill !== null
 
   return (
@@ -161,6 +167,31 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
             ))}
           </Select>
         </div>
+
+        {underkategorier.length > 1 && (
+          <div className="space-y-1">
+            <label htmlFor={`${id}-underkategori`} className="block text-sm font-medium">
+              Sort
+            </label>
+            <Select
+              id={`${id}-underkategori`}
+              value={underkategori}
+              onChange={(e) => {
+                setUnderkategori(arUnderkategori(kategori, e.target.value) ? e.target.value : '')
+                // Märket hör till sorten, så det nollställs.
+                setMarke('')
+                setUtfalld(null)
+              }}
+            >
+              <option value="">Alla i {kategoriFor(kategori).etikett.toLowerCase()}</option>
+              {underkategorier.map((u) => (
+                <option key={u.nyckel} value={u.nyckel}>
+                  {u.etikett}
+                </option>
+              ))}
+            </Select>
+          </div>
+        )}
 
         {/* Visas bara när kategorin har produkter i katalogen. */}
         {markeslista.length > 0 && (
@@ -220,7 +251,7 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
           {modeller?.length === 0 && (
             <p>
               {/* "Inga produkter matchar" sägs bara när man har sökt. En kategori utan produkter är något annat. */}
-              {harText ? 'Inga produkter matchar din sökning.' : `Katalogen har inga produkter i ${kategoriFor(kategori).etikett} än.`}
+              {harText ? 'Inga produkter matchar din sökning.' : `Katalogen har inga produkter i ${valdEtikett} än.`}
             </p>
           )}
           {modeller && modeller.length > 0 && (
@@ -282,7 +313,7 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
         <span className="text-muted-foreground">Hittar du den inte?</span>
         <button
           type="button"
-          onClick={() => onEgen(text, kategori || undefined, kategori && kategori === startKategori ? startUnderkategori : undefined)}
+          onClick={() => onEgen(text, kategori || undefined, (kategori && underkategori) || undefined)}
           className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
         >
           <Plus className="size-4" aria-hidden />
