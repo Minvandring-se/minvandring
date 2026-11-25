@@ -31,6 +31,7 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 |---|---|
 | Mitt förråd med produktkatalog | Finns |
 | Förrådet: Grunden, översikt, sök, kategori, sortering, lista och rutnät | Finns |
+| Ditt kök i förrådet: kokkärl och bränsle kopplade till brännaren, vikten för hela köket, och hela köket i packlistan i ett steg | Finns |
 | Önskelista, utlånat och pensionerat i förrådet | Senare |
 | Köpt, skick, turer och pris per natt för en sak | Senare |
 | Utrustningskatalog: sök och kategorifilter (`/utrustning`) | Finns |

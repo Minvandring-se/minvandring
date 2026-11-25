@@ -7,6 +7,7 @@ import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { HelaForradet, Onskelista, StorstaVinsten, ViktPerKategori } from '@/components/forrad/Forradsoversikt'
 import { Detaljlista } from '@/components/forrad/Detaljlista'
+import { DittKok } from '@/components/forrad/DittKok'
 import { Granskad } from '@/components/forrad/Granskad'
 import { Kategorifilter } from '@/components/forrad/Kategorifilter'
 import { ProduktSok } from '@/components/forrad/ProduktSok'
@@ -54,6 +55,7 @@ import {
   type Listval,
   type Vy,
 } from '@/lib/forradslista'
+import { arKok, arKokdel, kokdelar, kokForDel } from '@/lib/forradskok'
 import { granskning } from '@/lib/granskning'
 import { felrapportLank } from '@/lib/kontakt'
 import { supabase } from '@/lib/supabase'
@@ -93,7 +95,7 @@ export function Forrad() {
   useEffect(() => {
     supabase
       ?.from('forradssaker')
-      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, skapad, produkter(id, marke, modell, packvikt_g, kontrollerad, granskad, kalla_typ, version, underkategori, minvikt_g, kalla, egenskaper)')
+      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, skapad, kok_id, produkter(id, marke, modell, packvikt_g, kontrollerad, granskad, kalla_typ, version, underkategori, minvikt_g, kalla, egenskaper)')
       .then(({ data, error }) => {
         setLaddfel(!!error)
         if (!error) setSaker((data as unknown as Forradssak[] | null) ?? [])
@@ -120,7 +122,7 @@ export function Forrad() {
   const setVal = (nytt: Listval) => setParametrar(adressFranVal(nytt), { replace: true })
   const visade = filtrera(alla, val)
   const oppenSak = oppet !== null && 'sakId' in oppet ? oppet.sakId : null
-  const radhjalp: Radhjalp = { vy: val.vy, oppenSak, onOppna: (sakId) => setOppet({ sakId }), onKlar: klar, onAndrad: hamtaOm, onAvbryt: () => setOppet(null) }
+  const radhjalp: Radhjalp = { vy: val.vy, alla, oppenSak, onOppna: (sakId) => setOppet({ sakId }), onKlar: klar, onAndrad: hamtaOm, onAvbryt: () => setOppet(null) }
   const ny = oppet !== null && 'ny' in oppet ? oppet.ny : null
   // En sak som just sparats men som sök eller filter döljer. Då går formuläret för att ändra den inte att öppna i listan.
   const dold = tillagd !== null && doljsAvFiltret(tillagd.sakId, alla, visade)
@@ -331,6 +333,8 @@ function Forradsdelar({ antal }: { antal: number }) {
 
 interface Radhjalp {
   vy: Vy
+  /** Hela förrådet, för köket: delarna och det som kan läggas till. */
+  alla: Forradssak[]
   oppenSak: string | null
   onOppna: (sakId: string) => void
   onKlar: () => void
@@ -467,7 +471,7 @@ function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; 
               {oppen ? (
                 <SakFormular sak={sak} onKlar={radhjalp.onKlar} onAvbryt={radhjalp.onAvbryt} />
               ) : (
-                <Sakrad sak={sak} vy={radhjalp.vy} onAndra={() => radhjalp.onOppna(sak.id)} onAndrad={radhjalp.onAndrad} />
+                <Sakrad sak={sak} alla={radhjalp.alla} vy={radhjalp.vy} onAndra={() => radhjalp.onOppna(sak.id)} onAndrad={radhjalp.onAndrad} />
               )}
             </li>
           )
@@ -495,11 +499,11 @@ function Prick() {
 const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4', fokus)
 
 /** Versionen och underkategorin under namnet, som var sin liten etikett, till exempel Regular och Sovsäck. */
-function Underrad({ sak }: { sak: Forradssak }) {
+function Underrad({ sak, kok }: { sak: Forradssak; kok?: string | null }) {
   const under = underkategoriFor(sak.kategori, sak.underkategori)?.etikett ?? kategoriFor(sak.kategori).etikett
   return (
     <span className="mt-1 flex flex-wrap gap-1.5">
-      {[sak.produkter?.version, under].filter(Boolean).map((text) => (
+      {[sak.produkter?.version, under, kok].filter(Boolean).map((text) => (
         <Bricka key={text}>{text}</Bricka>
       ))}
     </span>
@@ -510,11 +514,13 @@ function Underrad({ sak }: { sak: Forradssak }) {
  * En sak i listan eller rutnätet: ikonen för kategorin, namnet, version och kategori, vikten stort till höger och
  * anteckningen på en egen rad. Ett tryck fäller ut katalogens uppgifter, anteckningen och knappen Ändra.
  */
-function Sakrad({ sak, vy, onAndra, onAndrad }: { sak: Forradssak; vy: Vy; onAndra: () => void; onAndrad: () => void }) {
+function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: Forradssak[]; vy: Vy; onAndra: () => void; onAndrad: () => void }) {
   const id = useId()
   const [utfalld, setUtfalld] = useState(false)
   const Ikon = kategoriFor(sak.kategori).ikon
   const { egen } = viktjamforelse(sak)
+  const antalDelar = arKok(sak) ? kokdelar(sak, alla).length : 0
+  const kokText = antalDelar > 0 ? `Kök med ${antalDelar} ${antalDelar === 1 ? 'del' : 'delar'}` : kokForDel(sak, alla) ? 'I ditt kök' : null
   const vikt =
     sak.vikt_g === null ? (
       <span className="text-sm text-muted-foreground italic">
@@ -562,7 +568,7 @@ function Sakrad({ sak, vy, onAndra, onAndrad }: { sak: Forradssak; vy: Vy; onAnd
             {ikon}
             <span className="min-w-0 flex-1">
               {namn}
-              <Underrad sak={sak} />
+              <Underrad sak={sak} kok={kokText} />
               {anteckning}
             </span>
             <span className="shrink-0">{vikt}</span>
@@ -576,21 +582,21 @@ function Sakrad({ sak, vy, onAndra, onAndrad }: { sak: Forradssak; vy: Vy; onAnd
             </span>
             <span className="min-w-0">
               {namn}
-              <Underrad sak={sak} />
+              <Underrad sak={sak} kok={kokText} />
               {anteckning}
             </span>
           </>
         )}
       </button>
       <div id={id} hidden={!utfalld} className="border-t border-border bg-muted/40 px-4 py-4">
-        {utfalld && <Utfalld sak={sak} onAndra={onAndra} onAndrad={onAndrad} />}
+        {utfalld && <Utfalld sak={sak} alla={alla} onAndra={onAndra} onAndrad={onAndrad} />}
       </div>
     </>
   )
 }
 
 /** Den utfällda delen av en sak: katalogens uppgifter med granskningsnivån, din sak och anteckning, Ändra, och det som kommer. */
-function Utfalld({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => void; onAndrad: () => void }) {
+function Utfalld({ sak, alla, onAndra, onAndrad }: { sak: Forradssak; alla: Forradssak[]; onAndra: () => void; onAndrad: () => void }) {
   const id = useId()
   const [visaAlla, setVisaAlla] = useState(false)
   const [aterstaller, setAterstaller] = useState(false)
@@ -677,6 +683,8 @@ function Utfalld({ sak, onAndra, onAndrad }: { sak: Forradssak; onAndra: () => v
           {fel}
         </p>
       )}
+
+      {(arKok(sak) || arKokdel(sak)) && <DittKok sak={sak} alla={alla} onAndrad={onAndrad} />}
 
       <Kommande />
 
