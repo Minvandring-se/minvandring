@@ -63,6 +63,15 @@ describe('rangordnaLivsmedel', () => {
     ])
   })
 
+  it('sätter råvaror före maträtter, även när maträtten träffar bättre', () => {
+    const lista = [
+      { namn: 'Pasta m. köttfärssås', tillstand: null, grupp: 'Pastarätter' },
+      { namn: 'Pasta okokt', tillstand: 'torr' as const, grupp: 'Pasta och liknande produkter' },
+      { namn: 'Pasta', tillstand: null, grupp: 'Pastarätter' },
+    ]
+    expect(rangordnaLivsmedel(lista, 'pasta').map((x) => x.namn)).toEqual(['Pasta okokt', 'Pasta', 'Pasta m. köttfärssås'])
+  })
+
   it('kräver att alla sökord finns i namnet', () => {
     expect(rangordnaLivsmedel(kandidater, 'pasta okokt').map((x) => x.namn)).toEqual(['Pasta okokt', 'Pasta fullkorn okokt', 'Fullkornspasta okokt'])
   })

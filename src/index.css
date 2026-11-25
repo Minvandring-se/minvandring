@@ -50,6 +50,19 @@
   --color-pa-bild: #ffffff;
   /* Slöjan bakom ett blad eller en dialog. */
   --color-sloja: rgb(20 30 25 / 0.35);
+  /*
+   * En färg per deltagare i matplanen, i deltagarnas ordning (a, b, c …), så att man ser vem som bär vad.
+   * Dova naturfärger: skog, fjällsjö, lingon, mossa, ljung, hav, bark och granit. Initialen står i person-foreground.
+   */
+  --color-person-a: #2e5945;
+  --color-person-b: #3b5f86;
+  --color-person-c: #8c3b54;
+  --color-person-d: #5f5424;
+  --color-person-e: #5b4b7a;
+  --color-person-f: #2a6464;
+  --color-person-g: #74492a;
+  --color-person-h: #4a5a63;
+  --color-person-foreground: #ffffff;
 
   /* Skärmar från 1920 px, utöver Tailwinds egna brytpunkter (2xl är 1536 px). */
   --breakpoint-3xl: 120rem;
@@ -96,6 +109,15 @@
 }
 html[data-tema='mork'] {
   color-scheme: dark;
+  --color-person-a: #9fcbb3;
+  --color-person-b: #a9c3e3;
+  --color-person-c: #e3a9bc;
+  --color-person-d: #d4c58f;
+  --color-person-e: #c4b5e3;
+  --color-person-f: #9fd3d3;
+  --color-person-g: #dfb991;
+  --color-person-h: #b9c6cd;
+  --color-person-foreground: #122019;
   --color-background: #0e1512;
   --color-foreground: #e8efe9;
   --color-card: #1b2620;
@@ -129,6 +151,15 @@ html[data-tema='mork'] {
 @media (prefers-color-scheme: dark) {
   html:not([data-tema]) {
     color-scheme: dark;
+    --color-person-a: #9fcbb3;
+    --color-person-b: #a9c3e3;
+    --color-person-c: #e3a9bc;
+    --color-person-d: #d4c58f;
+    --color-person-e: #c4b5e3;
+    --color-person-f: #9fd3d3;
+    --color-person-g: #dfb991;
+    --color-person-h: #b9c6cd;
+    --color-person-foreground: #122019;
     --color-background: #0e1512;
     --color-foreground: #e8efe9;
     --color-card: #1b2620;

@@ -9,6 +9,7 @@ import type { Katalogmaltid, Matprodukt } from './typer'
 export const MATKOLUMNER = [
   'marke',
   'namn',
+  'andra_namn',
   'maltid',
   'torkning',
   'vikt_torr_g',
@@ -91,6 +92,46 @@ function val<T extends string>(text: string, kolumn: string, tillatna: readonly 
   return { ok: false, fel: `${kolumn}: ${tillatna.join(', ')} eller tom cell, inte "${text}"` }
 }
 
+/** Butikernas storleksord, som inte är en del av namnet: "- Stort format", "– Dubbelportion", "Big Portion", "1-port". */
+const STORLEKSORD = [
+  // "- Stort format", "- Storformat", "- Stor portion", "– Dubbelportion", "- Dubbelportionsformat" och felstavningar som "Dubbelporton".
+  /\s*[-–]\s*(stort?\s*format|litet?\s*format|(stor|liten|dubbel|enkel|doppel|einzel)\s*port\w*)\s*$/i,
+  /\s*\b(big|small|double|single) portion\b/i,
+  /\s*\b\d+\s*-\s*port(ion(er)?)?\b\.?/i,
+  /\s*\(\d+\s*port(ion(er)?)?\)/i,
+  // En tom parentes som blev kvar efter att storleken togs bort.
+  /\s*\(\s*\)\s*$/,
+]
+
+/** Namn som är för allmänna för att hjälpa någon att hitta en viss påse, till exempel "Laks". */
+const FOR_ALLMANNA = new Set(['laks', 'lax', 'gryta', 'gryte', 'soppa', 'suppe', 'pasta', 'curry', 'gröt', 'porridge', 'müsli', 'muesli', 'granola', 'dessert'])
+
+/**
+ * Andra namn på en påse, till exempel det svenska, separerade med semikolon. Namn som bara är siffror ("8021") eller
+ * för allmänna ("Laks") tas bort, liksom butikernas storleksord ("- Stort format", "1-port") och dubbletter och namn
+ * som är samma som påsens eget namn. Ordningen behålls, så det första som blir kvar är det som visas.
+ * Andra namn används bara för sökningen, aldrig för allergener eller kost, även när de säger glutenfri eller vegan.
+ */
+export function rensaAndraNamn(namn: string, text: string): { namn: string[]; borttagna: string[] } {
+  const ut: string[] = []
+  const borttagna: string[] = []
+  const sedda = new Set([namn.trim().toLowerCase()])
+  for (const ratt of text.split(';')) {
+    let n = ratt.trim()
+    if (!n) continue
+    for (const re of STORLEKSORD) n = n.replace(re, '').trim()
+    const nyckel = n.toLowerCase()
+    if (!n || /^\d+$/.test(n) || FOR_ALLMANNA.has(nyckel)) {
+      borttagna.push(ratt.trim())
+      continue
+    }
+    if (sedda.has(nyckel)) continue
+    sedda.add(nyckel)
+    ut.push(n.slice(0, 200))
+  }
+  return { namn: ut, borttagna }
+}
+
 /** Kommaseparerade nycklar. Tom cell är okänt (null), "inga" är en tom lista. */
 export function tolkaAllergener(text: string, kolumn: string): Tolkat<Allergen[] | null> {
   const t = text.trim().toLowerCase()
@@ -143,6 +184,8 @@ export function tolkaMatrad(rad: number, falt: Record<string, string>): Matradre
   if (prisKalla && !ADRESS.test(prisKalla)) fel.push('pris_kalla: ska börja med http:// eller https://')
   if (prisKalla && pris === null) fel.push('pris_kalla: får bara vara ifylld när pris_sek_ca är ifyllt')
   const kalla = falt.kalla ?? ''
+  const andraNamn = rensaAndraNamn(produktnamn, falt.andra_namn ?? '')
+  if (andraNamn.borttagna.length) varningar.push(`andra_namn: tog bort ${andraNamn.borttagna.map((b) => `"${b}"`).join(', ')}`)
   if (!ADRESS.test(kalla)) fel.push('kalla: tillverkarens sida, ska börja med http:// eller https://')
   // Astras datum är när hon hämtade uppgifterna. Det sparas inte: kontrollerad sätts bara av grundarna efter
   // ett stickprov, så kolumnen läses inte alls.
@@ -150,6 +193,7 @@ export function tolkaMatrad(rad: number, falt: Record<string, string>): Matradre
   const produkt: Matkatalograd = {
     marke,
     namn: produktnamn,
+    andra_namn: andraNamn.namn,
     maltid: maltid ?? 'frukost',
     torkning: ta(val(falt.torkning, 'torkning', TORKNING), null),
     vikt_torr_g: vikt ?? 0,
