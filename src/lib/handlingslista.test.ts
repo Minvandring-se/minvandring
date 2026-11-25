@@ -10,6 +10,13 @@ describe('summeraMangder', () => {
     expect(summeraMangder([{ mangd: 3, enhet: 'dl' }, { mangd: 300, enhet: 'ml' }])).toBe('6 dl')
     expect(summeraMangder([{ mangd: 8, enhet: 'dl' }, { mangd: 4, enhet: 'dl' }])).toBe('1,2 l')
     expect(summeraMangder([{ mangd: 50, enhet: 'ml' }])).toBe('50 ml')
+    // Avrundas före jämförelsen, så att 999,6 g blir 1 kg och inte 1000 g.
+    expect(summeraMangder([{ mangd: 999.6, enhet: 'g' }])).toBe('1 kg')
+    expect(summeraMangder([{ mangd: 99.996, enhet: 'ml' }])).toBe('1 dl')
+    expect(summeraMangder([{ mangd: 999.996, enhet: 'ml' }])).toBe('1 l')
+    // Mindre än det som går att visa blir aldrig 0.
+    expect(summeraMangder([{ mangd: 0.4, enhet: 'g' }])).toBe('1 g')
+    expect(summeraMangder([{ mangd: 0.004, enhet: 'ml' }])).toBe('0,01 ml')
   })
 
   it('lämnar msk, tsk, krm och st som de är, och räknar ihop dem var för sig', () => {
@@ -98,6 +105,32 @@ describe('handlingslista', () => {
     expect(hitta(rader, 'Kaffe', 'erik')).toMatchObject({ mangd: '200 g', avdelning: 'dryck' })
   })
 
+  it('visar en rad som oavbockad när mängden har ändrats sedan den bockades av', () => {
+    // Anna bockade av havregryn vid 90 g. Sedan lades gröten i en måltid till, så nu ska hon köpa 270 g.
+    const klart = [{ deltagare_id: 'anna', vara_id: 'Havregryn', ratt_id: null, mangd: '90 g' }]
+    const en = handlingslista(data([rad('m1', 1, 'Gröt', 'anna')], { klart }), dagar, ['anna'])
+    expect(hitta(en, 'Havregryn', 'anna')).toMatchObject({ mangd: '90 g', klart: true, andradFran: null })
+    const tre = handlingslista(data([rad('m1', 1, 'Gröt', 'anna'), rad('m2', 2, 'Gröt', 'anna'), { ...rad('m3', 2, 'Gröt', 'anna'), maltid: 'frukost' }], { klart }), dagar, ['anna'])
+    expect(hitta(tre, 'Havregryn', 'anna')).toMatchObject({ mangd: '270 g', klart: false, andradFran: '90 g' })
+  })
+
+  it('räknar en gammal bock utan sparad mängd som avbockad', () => {
+    const rader = handlingslista(data([rad('m1', 1, 'Gröt', 'anna')], { klart: [{ deltagare_id: 'anna', vara_id: 'Havregryn', ratt_id: null, mangd: null }] }), dagar, ['anna'])
+    expect(hitta(rader, 'Havregryn', 'anna')).toMatchObject({ klart: true, andradFran: null })
+  })
+
+  it('visar en påse som oavbockad när antalet påsar har ändrats', () => {
+    const klart = [{ deltagare_id: 'lisa', vara_id: null, ratt_id: 'Påse', mangd: '1 påse' }]
+    const rader = handlingslista(data([rad('m1', 1, 'Påse', 'lisa')], { klart }), dagar, personer)
+    expect(hitta(rader, 'Påse', 'lisa')).toMatchObject({ mangd: '2 påsar', klart: false, andradFran: '1 påse' })
+  })
+
+  it('säger om avdelningen är vald eller gissad', () => {
+    const vald = data([rad('m1', 1, 'Gröt', 'anna')], { varor: [{ id: 'Havregryn', namn: 'Havregryn', kcal_per_100g: null, protein_per_100g: null, extra_g: 0, varifran: 'kopa', ansvarig: null, klart: false, avdelning: 'fryst' }] })
+    expect(hitta(handlingslista(vald, dagar, personer), 'Havregryn', 'anna')).toMatchObject({ avdelning: 'fryst', avdelningVald: true })
+    expect(hitta(handlingslista(data([rad('m1', 1, 'Gröt', 'anna')]), dagar, personer), 'Havregryn', 'anna')).toMatchObject({ avdelning: 'torrvaror', avdelningVald: false })
+  })
+
   it('räknar bara rader inom turens dagar', () => {
     expect(handlingslista(data([rad('m1', 9, 'Gröt', 'anna')]), dagar, personer).filter((r) => r.namn !== 'Kaffe')).toEqual([])
   })
@@ -111,10 +144,12 @@ describe('handlagrupper', () => {
     namn,
     kopare,
     avdelning,
+    avdelningVald: false,
     mangd: '',
     gram: 0,
     hemifran: false,
     klart: false,
+    andradFran: null,
   })
 
   it('grupperar per köpare i deltagarnas ordning med ingen sist, och per avdelning i butikens ordning', () => {

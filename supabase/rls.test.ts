@@ -2209,6 +2209,20 @@ describe('matplanen', () => {
       expect((await db.query('select 1 from public.inkop_klart where ratt_id = $1', [r])).rows).toHaveLength(0)
     })
 
+    it('sparar mängden som bockades av, och en ny bock med ny mängd läggs genom att den gamla tas bort', async () => {
+      const v = await nyVara(AGARE, tur, 'Mängdvara')
+      await som(LASARE, (tx) => tx.query("insert into public.inkop_klart (tur_id, deltagare_id, vara_id, mangd) values ($1, $2, $3, '1 dl')", [tur, lasarensDeltagare, v]))
+      // En bock ändras inte, inte heller mängden.
+      const andrad = await som(LASARE, (tx) => tx.query("update public.inkop_klart set mangd = '3 dl' where vara_id = $1", [v])).catch(() => null)
+      expect(andrad?.affectedRows ?? 0).toBe(0)
+      await som(LASARE, (tx) => tx.query('delete from public.inkop_klart where vara_id = $1 and deltagare_id = $2', [v, lasarensDeltagare]))
+      await som(LASARE, (tx) => tx.query("insert into public.inkop_klart (tur_id, deltagare_id, vara_id, mangd) values ($1, $2, $3, '3 dl')", [tur, lasarensDeltagare, v]))
+      expect((await db.query('select mangd from public.inkop_klart where vara_id = $1', [v])).rows).toEqual([{ mangd: '3 dl' }])
+      // Högst 200 tecken.
+      await forvantaFel(som(AGARE, (tx) => tx.query('insert into public.inkop_klart (tur_id, deltagare_id, vara_id, mangd) values ($1, $2, $3, $4)', [tur, lisa, v, 'x'.repeat(201)])))
+      await som(AGARE, (tx) => tx.query('delete from public.varor where id = $1', [v]))
+    })
+
     it('bockarna försvinner med deltagaren och med varan', async () => {
       const p = await som(AGARE, (tx) => tx.query<{ id: string }>("insert into public.deltagare (tur_id, namn) values ($1, 'Tillfällig köpare') returning id", [tur]))
       const v = await nyVara(AGARE, tur, 'Tillfällig bockvara')

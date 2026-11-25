@@ -24,19 +24,58 @@ export type Avdelning = (typeof AVDELNINGAR)[number]['nyckel']
 
 export const arAvdelning = (v: string): v is Avdelning => AVDELNINGAR.some((a) => a.nyckel === v)
 
-// Ord i varans namn som avgör avdelningen, i den ordning de prövas. Det första som passar gäller, så mer
-// precisa ord står före allmänna ("kokosmjölk" före "mjölk", "knäckebröd" före "bröd").
-const ORD: readonly [Avdelning, readonly string[]][] = [
-  ['kryddor_konserver', ['kokosmjölk', 'buljong', 'fond', 'salt', 'peppar', 'krydd', 'olja', 'olivolja', 'vinäger', 'soja', 'ketchup', 'senap', 'tomatpuré', 'krossade tomater', 'konserv', 'bönor', 'linser', 'kikärt', 'tonfisk', 'sylt', 'honung', 'socker', 'pesto', 'ajvar', 'buljongtärning', 'curry', 'chili', 'kanel', 'mjöl ', 'vetemjöl']],
-  ['snacks', ['choklad', 'godis', 'nötter', 'nötmix', 'cashew', 'mandel', 'jordnöt', 'chips', 'russin', 'torkad frukt', 'dadlar', 'bar ', 'proteinbar', 'kex', 'kakor', 'studentmix']],
-  ['dryck', ['kaffe', 'te ', 'tepåse', 'kakao', 'saft', 'juice', 'läsk', 'vatten', 'sportdryck', 'buljongdryck']],
-  ['brod', ['knäckebröd', 'tunnbröd', 'bröd', 'tortilla', 'wrap', 'polarbröd', 'bulle', 'kanelbulle']],
-  ['kott_fisk', ['korv', 'salami', 'skinka', 'bacon', 'kött', 'färs', 'kyckling', 'lax', 'fisk', 'renskav', 'chark', 'pålägg', 'fläsk']],
-  ['mejeri', ['mjölk', 'grädde', 'smör', 'ost', 'yoghurt', 'fil', 'kvarg', 'crème fraiche', 'ägg', 'mjölkpulver']],
-  ['torrvaror', ['pasta', 'spagetti', 'makaroner', 'nudlar', 'ris', 'couscous', 'bulgur', 'quinoa', 'havregryn', 'gryn', 'müsli', 'flingor', 'potatismos', 'pulver']],
-  ['frukt_gront', ['potatis', 'lök', 'vitlök', 'morot', 'gurka', 'tomat', 'paprika', 'äpple', 'banan', 'apelsin', 'citron', 'avokado', 'sallad', 'kål', 'svamp', 'frukt', 'grönsak', 'bär']],
-  ['fryst', ['fryst', 'frysta', 'glass']],
-]
+// Ord i varans namn som avgör avdelningen. Det längsta ord som passar gäller, oavsett avdelning, så att
+// "kanelbulle" går före "kanel" och "pepparkakor" före "peppar". Ord på högst fyra bokstäver ("ost", "te", "ris",
+// "salt") räknas bara som hela ord, så att "frukost" inte blir ost och "baguette" inte blir te.
+const ORD: Record<Exclude<Avdelning, 'friluft' | 'ovrigt'>, readonly string[]> = {
+  kryddor_konserver: [
+    'kokosmjölk', 'buljong', 'buljongtärning', 'fond', 'salt', 'peppar', 'krydda', 'kryddor', 'kryddmix', 'olja', 'olivolja', 'rapsolja',
+    'vinäger', 'soja', 'sojasås', 'ketchup', 'senap', 'tomatpuré', 'krossade tomater', 'konserv', 'bönor', 'linser', 'kikärtor',
+    'tonfisk', 'sylt', 'honung', 'socker', 'pesto', 'ajvar', 'curry', 'chili', 'kanel', 'soppa', 'tomatsoppa', 'varma koppen',
+    'rostad lök', 'jordnötssmör', 'nutella', 'sirap', 'buljongpulver', 'lingonsylt', 'hallonsylt', 'jordgubbssylt',
+  ],
+  snacks: [
+    'choklad', 'godis', 'nötter', 'nötmix', 'cashew', 'cashewnötter', 'mandel', 'mandlar', 'jordnöt', 'jordnötter', 'chips', 'russin',
+    'torkad frukt', 'dadlar', 'proteinbar', 'müslibar', 'energibar', 'snickers', 'kex', 'kakor', 'pepparkakor', 'studentmix',
+    'ostbågar', 'pinnar', 'salta pinnar', 'lökringar', 'popcorn', 'lakrits', 'mintkola', 'digestivekex', 'havrekex', 'mariekex',
+  ],
+  dryck: [
+    'kaffe', 'snabbkaffe', 'pulverkaffe', 'te', 'tepåse', 'tepåsar', 'kakao', 'oboy', 'saft', 'juice', 'läsk', 'vatten', 'dryck',
+    'sportdryck', 'buljongdryck', 'latte', 'cappuccino', 'blåbärssoppa', 'nyponsoppa', 'havredryck', 'mjölkdryck',
+  ],
+  brod: ['knäckebröd', 'tunnbröd', 'bröd', 'tortilla', 'tortillabröd', 'wrap', 'wraps', 'polarbröd', 'bulle', 'kanelbulle', 'baguette', 'krisprolls', 'grissini', 'skorpor', 'pitabröd'],
+  kott_fisk: [
+    'korv', 'salami', 'skinka', 'bacon', 'kött', 'köttfärs', 'färs', 'kyckling', 'lax', 'fisk', 'torsk', 'renskav', 'chark', 'pålägg',
+    'fläsk', 'rostbiff', 'leverpastej', 'pastej', 'kaviar', 'makrill', 'sill', 'räkor', 'laxfilé', 'gravlax',
+  ],
+  mejeri: [
+    'mjölk', 'grädde', 'smör', 'ost', 'mjukost', 'hushållsost', 'västerbottensost', 'smältost', 'parmesan', 'halloumi', 'fetaost',
+    'yoghurt', 'fil', 'filmjölk', 'kvarg', 'crème fraiche', 'ägg', 'mjölkpulver', 'risifrutti', 'kesella', 'keso',
+  ],
+  torrvaror: [
+    'pasta', 'spagetti', 'makaroner', 'nudlar', 'ris', 'couscous', 'bulgur', 'quinoa', 'havregryn', 'gryn', 'müsli', 'flingor',
+    'potatismos', 'pulver', 'mjöl', 'vetemjöl', 'gröt', 'tortellini', 'granola', 'basmatiris', 'jasminris', 'fullkornsris', 'risgryn',
+  ],
+  frukt_gront: [
+    'potatis', 'lök', 'vitlök', 'morot', 'morötter', 'gurka', 'tomat', 'tomater', 'paprika', 'äpple', 'äpplen', 'banan', 'bananer',
+    'apelsin', 'citron', 'avokado', 'sallad', 'kål', 'svamp', 'frukt', 'grönsak', 'grönsaker', 'bär', 'melon', 'vattenmelon',
+    'honungsmelon', 'blåbär', 'lingon', 'zucchini', 'broccoli', 'vitkål', 'rödkål',
+  ],
+  fryst: ['fryst', 'frysta', 'glass'],
+}
+
+/** Högst så här många bokstäver: då räknas ordet bara som ett helt ord. */
+const KORT = 4
+
+const ALLA_ORD = Object.entries(ORD)
+  .flatMap(([avdelning, ord]) => ord.map((o) => ({ ord: o, avdelning: avdelning as Avdelning })))
+  .sort((a, b) => b.ord.length - a.ord.length)
+
+/** Sant när ordet finns i namnet: som ett helt ord för korta ord, annars var som helst. */
+function finns(namn: string, ord: string): boolean {
+  if (ord.length > KORT) return namn.includes(ord)
+  return namn.split(/[^\p{L}]+/u).includes(ord)
+}
 
 /**
  * Avdelningen för en vara: den som är vald, eller en gissning utifrån namnet. Friluftsmat är för påsar ur
@@ -44,7 +83,6 @@ const ORD: readonly [Avdelning, readonly string[]][] = [
  */
 export function avdelningFor(namn: string, vald: string | null | undefined): Avdelning {
   if (vald && arAvdelning(vald)) return vald
-  const n = ` ${namn.toLowerCase()} `
-  for (const [avdelning, ord] of ORD) if (ord.some((o) => n.includes(o))) return avdelning
-  return 'ovrigt'
+  const n = namn.toLowerCase()
+  return ALLA_ORD.find(({ ord }) => finns(n, ord))?.avdelning ?? 'ovrigt'
 }
