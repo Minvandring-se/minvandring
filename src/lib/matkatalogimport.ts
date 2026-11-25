@@ -159,6 +159,8 @@ export function tolkaMatrad(rad: number, falt: Record<string, string>): Matradre
   const produktnamn = falt.namn ?? ''
   if (!marke) fel.push('marke: saknas')
   if (!produktnamn) fel.push('namn: saknas')
+  // Påsen sparas som en rätt med namnet "Märke Namn", och en rätt har högst 80 tecken.
+  if (marke && produktnamn && marke.length + 1 + produktnamn.length > 80) fel.push('marke och namn: högst 80 tecken tillsammans')
   const maltid = ta(val(falt.maltid, 'maltid', MALTIDER), null)
   if (falt.maltid === '') fel.push('maltid: saknas')
   const vikt = ta(heltal(falt.vikt_torr_g, 'vikt_torr_g', 1, 5000), null)

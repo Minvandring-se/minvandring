@@ -3899,3 +3899,85 @@ describe('dagsetapper', () => {
     expect(r.rows).toHaveLength(0)
   })
 })
+
+describe('längdgränser på textkolumnerna', () => {
+  // Egna användare, så att namnen och turerna inte påverkar de andra testerna.
+  const LA = '00000000-0000-0000-0000-00000000aa01'
+  const LB = '00000000-0000-0000-0000-00000000aa02'
+  const LC = '00000000-0000-0000-0000-00000000aa03'
+  const LD = '00000000-0000-0000-0000-00000000aa04'
+  const LE = '00000000-0000-0000-0000-00000000aa05'
+  let tur: string
+  const text = (n: number) => 'x'.repeat(n)
+  /** Stoppas av en längdgräns, och inte av något annat. Gränserna heter <tabell>_<kolumn>_langd. */
+  const forvantaLangd = (p: Promise<unknown>) => expect(p).rejects.toThrow(/_langd/)
+  const profilnamn = async (id: string) => (await db.query<{ namn: string }>('select namn from public.profiler where id = $1', [id])).rows[0]?.namn
+
+  beforeAll(async () => {
+    await db.exec(`insert into auth.users (id, email, raw_user_meta_data) values ('${LA}', 'la@exempel.se', '{"namn": "Lova"}')`)
+    tur = await skapaTur(LA, 'Tur med gränser')
+  })
+
+  it('turens namn, destination och startpunkt får vara högst 80 tecken', async () => {
+    await som(LA, (tx) => tx.query('update public.turer set namn = $2, destination = $2, startpunkt = $2 where id = $1', [tur, text(80)]))
+    for (const kolumn of ['namn', 'destination', 'startpunkt']) {
+      await forvantaLangd(som(LA, (tx) => tx.query(`update public.turer set ${kolumn} = $2 where id = $1`, [tur, text(81)])))
+    }
+    await forvantaLangd(som(LA, (tx) => tx.query('insert into public.turer (id, namn) values ($1, $2)', [crypto.randomUUID(), text(81)])))
+  })
+
+  it('profilens och deltagarens namn får vara högst 40 tecken', async () => {
+    await forvantaLangd(som(LA, (tx) => tx.query('update public.profiler set namn = $2 where id = $1', [LA, text(41)])))
+    await som(LA, (tx) => tx.query(`insert into public.deltagare (tur_id, namn, typ) values ($1, $2, 'person')`, [tur, text(40)]))
+    await forvantaLangd(som(LA, (tx) => tx.query(`insert into public.deltagare (tur_id, namn, typ) values ($1, $2, 'person')`, [tur, text(41)])))
+  })
+
+  it('ett profilnamn på 40 tecken följer med till deltagaren, både när profilen ändras och vid ga_med', async () => {
+    await som(LA, (tx) => tx.query('update public.profiler set namn = $2 where id = $1', [LA, 'L'.repeat(40)]))
+    const egen = await db.query<{ namn: string }>('select namn from public.deltagare where user_id = $1 and tur_id = $2', [LA, tur])
+    expect(egen.rows).toEqual([{ namn: 'L'.repeat(40) }])
+
+    await db.query('insert into auth.users (id, email, raw_user_meta_data) values ($1, $2, $3)', [LE, 'le@exempel.se', JSON.stringify({ namn: 'E'.repeat(40) })])
+    const kod = await kodFor(tur)
+    await som(LE, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const ny = await db.query<{ namn: string }>('select namn from public.deltagare where user_id = $1 and tur_id = $2', [LE, tur])
+    expect(ny.rows).toEqual([{ namn: 'E'.repeat(40) }])
+  })
+
+  it('ett nytt konto får ett kortat namn i stället för att stoppas, från mejladressen och från formuläret', async () => {
+    await db.query('insert into auth.users (id, email) values ($1, $2)', [LB, `${'a'.repeat(60)}@exempel.se`])
+    expect(await profilnamn(LB)).toBe('a'.repeat(40))
+    // Mellanslag före och efter tas bort, också där namnet kortas.
+    await db.query('insert into auth.users (id, email, raw_user_meta_data) values ($1, $2, $3)', [LC, 'lc@exempel.se', JSON.stringify({ namn: `  ${'b'.repeat(39)} ccc` })])
+    expect(await profilnamn(LC)).toBe('b'.repeat(39))
+    await db.query('insert into auth.users (id, email, raw_user_meta_data) values ($1, $2, $3)', [LD, 'ld@exempel.se', JSON.stringify({ namn: '  Doris  ' })])
+    expect(await profilnamn(LD)).toBe('Doris')
+  })
+
+  it('rättens och varans namn och varans kategori får vara högst 80 tecken, varans anteckning högst 300', async () => {
+    await som(LA, (tx) => tx.query('insert into public.ratter (tur_id, namn) values ($1, $2)', [tur, text(80)]))
+    await forvantaLangd(som(LA, (tx) => tx.query('insert into public.ratter (tur_id, namn) values ($1, $2)', [tur, text(81)])))
+    await som(LA, (tx) => tx.query('insert into public.varor (tur_id, namn, kategori, notering) values ($1, $2, $2, $3)', [tur, text(80), text(300)]))
+    await forvantaLangd(som(LA, (tx) => tx.query('insert into public.varor (tur_id, namn) values ($1, $2)', [tur, text(81)])))
+    await forvantaLangd(som(LA, (tx) => tx.query(`insert into public.varor (tur_id, namn, kategori) values ($1, 'Vara 2', $2)`, [tur, text(81)])))
+    await forvantaLangd(som(LA, (tx) => tx.query(`insert into public.varor (tur_id, namn, notering) values ($1, 'Vara 3', $2)`, [tur, text(301)])))
+  })
+
+  it('anteckningen på en packrad och namnet och anteckningen på en sak i förrådet har sina gränser', async () => {
+    await som(LA, (tx) => tx.query(`insert into public.packrader (tur_id, namn, notering) values ($1, 'Kåsa', $2)`, [tur, text(300)]))
+    await forvantaLangd(som(LA, (tx) => tx.query(`insert into public.packrader (tur_id, namn, notering) values ($1, 'Kåsa 2', $2)`, [tur, text(301)])))
+    await som(LA, (tx) => tx.query(`insert into public.forradssaker (namn, kategori, notering) values ($1, 'ovrigt', $2)`, [text(80), text(300)]))
+    await forvantaLangd(som(LA, (tx) => tx.query(`insert into public.forradssaker (namn, kategori) values ($1, 'ovrigt')`, [text(81)])))
+    await forvantaLangd(som(LA, (tx) => tx.query(`insert into public.forradssaker (namn, kategori, notering) values ('Spork', 'ovrigt', $1)`, [text(301)])))
+  })
+
+  it('en påse i katalogen har märke och namn på högst 80 tecken tillsammans, så att den ryms som rätt', async () => {
+    expect((await db.query('select 1 from public.matprodukter where char_length(marke) + 1 + char_length(namn) > 80')).rows).toHaveLength(0)
+    await forvantaLangd(
+      db.query(`insert into public.matprodukter (marke, namn, maltid, vikt_torr_g, kcal, kalla) values ($1, $2, 'lunch_middag', 150, 600, 'https://exempel.se')`, [
+        'M'.repeat(20),
+        'N'.repeat(60),
+      ]),
+    )
+  })
+})
