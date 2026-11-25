@@ -265,6 +265,11 @@ export function arKategori(varde: unknown): varde is KategoriNyckel {
   return ALLA.some((k) => k.nyckel === varde)
 }
 
+/** Om värdet är en underkategori i huvudkategorin. */
+export function arUnderkategori(kategori: string, varde: unknown): varde is UnderkategoriNyckel {
+  return ALLA.some((k) => k.nyckel === kategori && k.under.some((u) => u.nyckel === varde))
+}
+
 /** Kategorin för en nyckel. En okänd nyckel räknas som Övrigt, så att saken ändå syns. */
 export function kategoriFor(nyckel: string): Kategori {
   return ALLA.find((k) => k.nyckel === nyckel) ?? ALLA[ALLA.length - 1]
