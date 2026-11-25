@@ -263,7 +263,7 @@ export function ValjRatt({
                 Ny egen rätt
               </Button>
               {behov.length > 0 && (
-                <p className="text-sm text-muted-foreground">Egna rätter kontrolleras mot kostbehoven för varor ur varukatalogen. Andra ingredienser räknas som okända.</p>
+                <p className="text-sm text-muted-foreground">Egna rätter kontrolleras mot kostbehoven bara för ingredienser som du väljer som märkesvara bland förslagen. Andra ingredienser räknas som okända.</p>
               )}
               {egna.length === 0 ? (
                 <p className="text-muted-foreground">Turen har inga egna rätter än.</p>

@@ -2277,6 +2277,27 @@ describe('matplanen', () => {
       expect(await rad()).toBeNull()
     })
 
+    it('bara ägare och redigerare kopplar en vara i turen, och ingen kopplar någon annans receptrad', async () => {
+      const v = await nyVara(AGARE, tur, 'Kopplingsvara')
+      for (const vem of [LASARE, UTOMSTAENDE]) {
+        const u = await som(vem, (tx) => tx.query('update public.varor set varukatalog_id = $1 where id = $2', [vk, v]))
+        expect(u.affectedRows, vem).toBe(0)
+      }
+      await forvantaFel(som(LASARE, (tx) => tx.query('select public.spara_egen_ratt($1, null, $2, $3::jsonb)', [tur, 'Läsarens rätt', JSON.stringify([{ vara: 'Y', gram: 10, varukatalog: vk }])])))
+      const ok = await som(REDIGERARE, (tx) => tx.query('update public.varor set varukatalog_id = $1 where id = $2', [vk, v]))
+      expect(ok.affectedRows).toBe(1)
+      // Lisas recept går inte att koppla för någon annan.
+      const recept = (await som(LASARE, (tx) => tx.query<{ id: string }>('select public.spara_recept(null, $1, $2::jsonb) as id', ['Läsarens recept', JSON.stringify([{ vara: 'X', mangd: 10, enhet: 'g' }])]))).rows[0].id
+      const annan = await som(UTOMSTAENDE, (tx) => tx.query('update public.receptrader set varukatalog_id = $1 where recept_id = $2', [vk, recept]))
+      expect(annan.affectedRows).toBe(0)
+    })
+
+    it('spara_egen_ratt sparar kopplingen, så att den inte försvinner om en äldre version av funktionen körs efteråt', async () => {
+      const def = await db.query<{ prosrc: string }>("select prosrc from pg_proc where proname = 'spara_egen_ratt'")
+      expect(def.rows).toHaveLength(1)
+      expect(def.rows[0].prosrc).toContain('varukatalog_id')
+    })
+
     it('en koppling till en vara som inte finns stoppas', async () => {
       await forvantaFel(
         som(REDIGERARE, (tx) =>
