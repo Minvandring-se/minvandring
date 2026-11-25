@@ -161,3 +161,20 @@ marke;modell;version;underkategori;packvikt_g;typ;packmatt_cm;system;volym_l;mat
 - `varmevaxlare` och `lock`: `ja` eller `nej`, tomt om det inte framgår
 - `antal_delar`: heltal, kastruller, lock och stekpannor räknade för sig
 - `bara_system`: `ja` bara när tillverkaren säger att kokkärlet enbart fungerar med sitt eget kök (MSR skriver till exempel att Reactor-kastrullerna bara passar Reactor). Kräver `system`. Annars tomt
+
+### Bränsle
+
+Gaspatroner, sprit, bensin, fotogen och fast bränsle går i samma fil som köken (`kok.csv`) med `underkategori` `bransle`. Kolumnerna `bransle_g`, `tomvikt_g` och `gasblandning` läggs till i `kok.csv` vid den första bränslegenomgången. Bränsle kopplas till brännarna i katalogen efter `typ` här och `bransle` och `patronfaste` på brännaren.
+
+```
+marke;modell;version;underkategori;packvikt_g;typ;bransle_g;tomvikt_g;volym_l;gasblandning;pris_sek_ca;ean;kalla;kontrollerad_datum;kommentar
+```
+
+- `underkategori`: alltid `bransle`
+- `packvikt_g`: förpackningen full, i gram. Anger tillverkaren bara bränslets vikt och den tomma förpackningens vikt, skriv summan och förklara den i kommentaren
+- `typ`: `skruvpatron` (gänga EN 417), `sprit`, `bensin`, `fotogen`, `fast_bransle` eller `annat` (till exempel stickpatroner, som inte kopplas till någon brännare)
+- `bransle_g`: mängden bränsle i gram, till exempel 100, 230 eller 450 för en patron
+- `tomvikt_g`: den tomma förpackningens vikt, tomt om det inte framgår
+- `volym_l`: bara för sprit, bensin och fotogen, med komma
+- `gasblandning`: bara för skruvpatroner, fri text som tillverkaren skriver, till exempel `propan, butan och isobutan`
+- En storlek per rad. Version är storleken, till exempel `230 g`

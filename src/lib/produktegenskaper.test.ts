@@ -154,7 +154,7 @@ describe('tolkaEgenskap', () => {
 
 describe('underkategorier utan egna egenskaper', () => {
   it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar, kök och kokkärl har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'filter', 'rening', 'stavar', 'pannlampa'])
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
@@ -728,6 +728,29 @@ describe('egenskaper för kokkärl', () => {
   it('visar system och material med svenska namn', () => {
     const rader = visaEgenskaper('kastrull', { material: 'hardanodiserad_aluminium', system: 'trangia_28' })
     expect(rader.map((r) => r.varde)).toEqual(['Hårdanodiserad aluminium', 'Trangia 28 (Mini)'])
+  })
+})
+
+describe('egenskaper för bränsle', () => {
+  const patron = { typ: 'skruvpatron', bransle_g: 230, tomvikt_g: 145, gasblandning: 'propan, butan och isobutan' }
+
+  it('har fem egenskaper, varav två behövs för jämförelser', () => {
+    expect(egenskaperFor('bransle').map((e) => e.nyckel)).toEqual(['typ', 'bransle_g', 'tomvikt_g', 'volym_l', 'gasblandning'])
+    expect(egenskaperFor('bransle').filter((e) => e.forJamforelse).map((e) => e.nyckel)).toEqual(['typ', 'bransle_g'])
+  })
+
+  it('godkänner en gaspatron och en flaska sprit', () => {
+    expect(valideraEgenskaper('bransle', patron)).toEqual({ fel: [], varningar: [] })
+    expect(valideraEgenskaper('bransle', { typ: 'sprit', bransle_g: 800, volym_l: 1 })).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('ger fel för volym på en patron och gasblandning på sprit', () => {
+    expect(valideraEgenskaper('bransle', { ...patron, volym_l: 0.5 }).fel.map((f) => f.split(':')[0])).toEqual(['volym_l'])
+    expect(valideraEgenskaper('bransle', { typ: 'sprit', gasblandning: 'butan' }).fel.map((f) => f.split(':')[0])).toEqual(['gasblandning'])
+  })
+
+  it('visar typen med svenskt namn', () => {
+    expect(visaEgenskaper('bransle', patron).map((r) => r.varde)).toEqual(['Skruvpatron (EN 417)', '230 g', '145 g', 'propan, butan och isobutan'])
   })
 })
 

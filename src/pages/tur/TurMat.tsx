@@ -3,6 +3,7 @@ import { Link, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
+import { Gasbehov } from '@/components/mat/Gasbehov'
 import { Inkopslista } from '@/components/mat/Inkopslista'
 import { Kostbehov } from '@/components/mat/Kostbehov'
 import { Matdag } from '@/components/mat/Matdag'
@@ -240,6 +241,8 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
           }}
         />
       </div>
+
+      <Gasbehov personer={personer} dagar={dagar.length} />
 
       <Kostbehov
         deltagare={deltagare}

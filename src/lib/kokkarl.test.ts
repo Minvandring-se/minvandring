@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { gemensamtSystem, kokvikt, passarIhop, passarMed, passarMedRubrik, sakerForKok } from './kokkarl'
+import { bransleMed, bransleRubrik, gemensamtSystem, kokvikt, passarBransle, passarIhop, passarMed, passarMedRubrik, sakerForKok } from './kokkarl'
 import type { Produkt } from './typer'
 
 describe('vilka kokkärl som passar vilka brännare', () => {
@@ -93,5 +93,67 @@ describe('ditt kök', () => {
 
   it('tar inte med brännaren när den redan finns i förrådet', () => {
     expect(sakerForKok(crux, [billy], true).map((s) => s.produkt_id)).toEqual(['Billy'])
+  })
+})
+
+describe('bränsle som passar', () => {
+  const patron = { typ: 'skruvpatron' }
+  const pocketRocket = { bransle: 'gas', patronfaste: 'EN 417' }
+  const utanFaste = { bransle: 'gas' }
+  const stickpatron = { bransle: 'gas', patronfaste: 'Stickpatron' }
+  const whisperlite = { bransle: 'multibransle', patronfaste: 'EN 417 och bränsleflaska' }
+  const bensinkok = { bransle: 'multibransle' }
+  const trangia = { bransle: 'sprit' }
+
+  it('ger gaspatroner till gasbrännare med EN 417 eller utan angivet fäste', () => {
+    expect(passarBransle(pocketRocket, patron)).toBe(true)
+    expect(passarBransle(utanFaste, patron)).toBe(true)
+    expect(passarBransle(stickpatron, patron)).toBe(false)
+  })
+
+  it('ger gaspatroner till multibränsle bara med EN 417, men bensin och fotogen alltid', () => {
+    expect(passarBransle(whisperlite, patron)).toBe(true)
+    expect(passarBransle(bensinkok, patron)).toBe(false)
+    expect(passarBransle(bensinkok, { typ: 'bensin' })).toBe(true)
+    expect(passarBransle(whisperlite, { typ: 'fotogen' })).toBe(true)
+    expect(passarBransle(pocketRocket, { typ: 'bensin' })).toBe(false)
+  })
+
+  it('ger sprit till spritkök och fast bränsle till kök för fast bränsle', () => {
+    expect(passarBransle(trangia, { typ: 'sprit' })).toBe(true)
+    expect(passarBransle(trangia, patron)).toBe(false)
+    expect(passarBransle({ bransle: 'fast_bransle' }, { typ: 'fast_bransle' })).toBe(true)
+  })
+
+  it('kopplar inte ved, annat eller saknade uppgifter', () => {
+    expect(passarBransle({ bransle: 'ved' }, { typ: 'annat' })).toBe(false)
+    expect(passarBransle(pocketRocket, { typ: 'annat' })).toBe(false)
+    expect(passarBransle(null, patron)).toBe(false)
+    expect(passarBransle(pocketRocket, undefined)).toBe(false)
+  })
+
+  const brannare = { id: 'pr', underkategori: 'brannare', egenskaper: pocketRocket, packvikt_g: 73 }
+  const t27 = { id: 't27', underkategori: 'komplett_kok', egenskaper: { ...trangia, typ: 'stormkok' }, packvikt_g: 690 }
+  const stor = { id: 'p450', underkategori: 'bransle', egenskaper: patron, packvikt_g: 650 }
+  const liten = { id: 'p100', underkategori: 'bransle', egenskaper: patron, packvikt_g: 190 }
+  const sprit = { id: 's', underkategori: 'bransle', egenskaper: { typ: 'sprit' }, packvikt_g: 900 }
+  const billy = { id: 'b', underkategori: 'kastrull', egenskaper: { typ: 'kastrull' }, packvikt_g: 300 }
+  const alla = [brannare, t27, stor, liten, sprit, billy]
+
+  it('ger en brännare bränslet som passar, lättast först', () => {
+    expect(bransleMed(brannare, alla).map((p) => p.id)).toEqual(['p100', 'p450'])
+    expect(bransleMed(t27, alla).map((p) => p.id)).toEqual(['s'])
+  })
+
+  it('ger ett bränsle brännarna och köken det passar till', () => {
+    expect(bransleMed(liten, alla).map((p) => p.id)).toEqual(['pr'])
+    expect(bransleMed(sprit, alla).map((p) => p.id)).toEqual(['t27'])
+    expect(bransleMed(billy, alla)).toEqual([])
+  })
+
+  it('har rubriker för brännare och bränsle, men inte för kokkärl', () => {
+    expect(bransleRubrik('brannare')).toBe('Bränsle som passar')
+    expect(bransleRubrik('bransle')).toBe('Brännare och kök det passar till')
+    expect(bransleRubrik('kastrull')).toBeNull()
   })
 })

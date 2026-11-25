@@ -92,7 +92,7 @@ export const KATEGORIER = [
       { nyckel: 'komplett_kok', etikett: 'Kompletta kök' },
       { nyckel: 'brannare', etikett: 'Brännare' },
       { nyckel: 'bransle', etikett: 'Bränsle', typ: 'forbrukas' },
-      { nyckel: 'kastrull', etikett: 'Kastrull och stekpanna' },
+      { nyckel: 'kastrull', etikett: 'Kokkärl och stekpannor' },
       { nyckel: 'kasa', etikett: 'Kåsa och mugg' },
       { nyckel: 'bestick', etikett: 'Bestick' },
       { nyckel: 'kaffe', etikett: 'Kaffe och te' },
