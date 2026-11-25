@@ -222,7 +222,7 @@ function Rattrad({
     // Namnet får hela rutans bredd. Energin och Ta bort står på raden under, så att långa namn går att läsa i smala rutor.
     <li className="space-y-0.5 rounded-knapp bg-muted/60 pt-2 pl-3">
       <p className="flex flex-wrap items-baseline gap-x-2 pr-3 text-[0.9375rem] leading-snug font-medium">
-        {pase ? <PasNamn marke={pase.marke} namn={pase.namn} /> : <span className="min-w-0 break-words hyphens-auto">{ratt.namn}</span>}
+        {pase ? <PasNamn marke={pase.marke} namn={pase.namn} /> : <span className="min-w-0 break-words">{ratt.namn}</span>}
         {antal > 1 && <Bricka className="tabular-nums">{antal} st</Bricka>}
       </p>
       {ingredienser.length > 0 && <Ingredienser namn={ingredienser} />}
@@ -257,7 +257,7 @@ function Rattrad({
           )}
         </p>
         {kanAndra && (
-          <Button variant="ghost" size="ikon" onClick={() => onTaBort(grupp.rader.at(-1)!)} aria-label={antal > 1 ? `Ta bort en portion ${ratt.namn} från ${vad}` : `Ta bort ${ratt.namn} från ${vad}`}>
+          <Button variant="ghost" size="ikon" onClick={() => onTaBort(grupp.rader.at(-1)!)} aria-label={antal > 1 ? `Ta bort en av ${antal} ${ratt.namn} från ${vad}` : `Ta bort ${ratt.namn} från ${vad}`}>
             <X className="size-4" aria-hidden />
           </Button>
         )}

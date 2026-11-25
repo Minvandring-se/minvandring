@@ -53,7 +53,7 @@ export const GUIDER: readonly Guide[] = [
       {
         rubrik: 'I kyla',
         stycken: [
-          'Amerikanska försvaret räknar med minst 4 500 kcal per dag för den som arbetar i kyla, mot omkring 3 200 kcal i tempererat klimat. Tunga kläder och kängor och att ta sig fram i snö gör att man gör av med mer.',
+          'Amerikanska försvaret räknar med minst 4 500 kcal per dag för den som arbetar i kyla, mot omkring 3 200 kcal i tempererat klimat. Tunga kläder och kängor och att ta sig fram i snö gör att man förbrukar mer energi.',
         ],
       },
     ],
@@ -99,7 +99,7 @@ export const GUIDER: readonly Guide[] = [
   {
     nyckel: 'packa',
     rubrik: 'Packa maten smart',
-    ingress: 'Mat är det tyngsta som blir lättare för varje dag. Med lite planering väger den mindre från början.',
+    ingress: 'Maten blir lättare för varje dag. Med lite planering väger den mindre redan från början.',
     avsnitt: [
       {
         rubrik: 'Välj energität mat',
@@ -129,7 +129,7 @@ export const GUIDER: readonly Guide[] = [
       {
         rubrik: 'Räkna ut det själv',
         stycken: [
-          'Dela påsens kcal med vikten i gram och gånga med 100. En påse som väger 150 g och ger 600 kcal har 400 kcal per 100 g.',
+          'Dela påsens kcal med vikten i gram och multiplicera med 100. En påse som väger 150 g och ger 600 kcal har 400 kcal per 100 g.',
           'Real Turmats Chili Stew har till exempel ungefär 430 kcal per 100 g torrvikt. Ett högre tal betyder mer energi att bära på samma vikt.',
         ],
       },

@@ -1,5 +1,5 @@
 import { Plus, X } from 'lucide-react'
-import { useId, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { IngrediensSok } from '@/components/mat/IngrediensSok'
 import { Input } from '@/components/ui/input'
@@ -92,6 +92,11 @@ export function EgenRattFormular({
   const [sparar, setSparar] = useState(false)
   // Borttagningen kräver två tryck: först frågar knappen, sedan tar den bort.
   const [sakerPa, setSakerPa] = useState(false)
+  const fraga = useRef<HTMLDivElement>(null)
+  // Frågan och knapparna ligger längst ner i panelen, så de skrollas fram när de visas.
+  useEffect(() => {
+    if (sakerPa) fraga.current?.scrollIntoView({ block: 'nearest' })
+  }, [sakerPa])
 
   async function taBort() {
     if (!onTaBort) return
@@ -174,6 +179,7 @@ export function EgenRattFormular({
                   onValjVara={(v) => andra(i, faltForVara(v))}
                   // Värdena kopieras och går att ändra. Raden pekar inte på livsmedlet efteråt.
                   onValjLivsmedel={(l) => andra(i, { vara: l.namn, ...faltFranLivsmedel(l) })}
+                  varuetikett={typ === 'recept' ? 'I dina recept' : 'I turen'}
                 />
               </div>
               {falt.length > 1 && (
@@ -217,7 +223,7 @@ export function EgenRattFormular({
         {portion && tolkat.ok && tolkat.rader.length > 0 && (
           <>
             Per portion: {formateraKcal(portion.kcal)}, {Math.round(portion.proteinG)} g protein och {formateraVikt(portion.gram)}.
-            {portion.ofullstandig && <span className="text-muted-foreground"> Några varor saknar kcal eller protein.</span>}
+            {portion.ofullstandig && <span className="text-muted-foreground"> Några varor saknar vikt, kcal eller protein, så energin kan bli för låg.</span>}
             {orimligPortion(portion) && <span className="font-medium text-accent-strong"> Ovanligt stor portion. Kontrollera mängderna.</span>}
           </>
         )}
@@ -230,7 +236,7 @@ export function EgenRattFormular({
       )}
 
       {onTaBort && (
-        <div className="space-y-2 border-t border-border pt-4">
+        <div ref={fraga} className="space-y-2 border-t border-border pt-4">
           {sakerPa && (
             <p className="text-sm">{t.raderaFraga}</p>
           )}

@@ -2,7 +2,7 @@
 //
 // Varje person äter en portion av varje rad hen äter (maltid_atare, inga rader betyder alla). Hundar äter egen mat,
 // som räknas i vikt.ts (hundmat_per_dag_g).
-import { allergenetikett, uppraknade } from './kost'
+import { allergenetikett, filterText, uppraknade, type Kostfilter } from './kost'
 import { formateraVikt } from './forrad'
 import { arEnhet, type Enhet } from './handla'
 import type { Ingrediens, Katalogmaltid, Maltid, Maltidsrad, Matatare, Matprodukt, Ratt, Vara } from './typer'
@@ -516,6 +516,15 @@ export const PASAR_TILL: Record<Maltid, readonly Katalogmaltid[]> = {
   mellanmal: ['mellanmal', 'dessert'],
 }
 
+/**
+ * Filterknappen i Välj rätt: "Filter: mellanmål, glutenfri". Måltiden står med när påsarna filtreras på den, så att
+ * det syns varför en påse inte kommer med i sökningen.
+ */
+export function filterknappText(maltid: Maltid | null, allaMaltider: boolean, filter: Kostfilter): string {
+  const delar = [maltid && !allaMaltider ? maltidsord(maltid) : null, filterText(filter)?.toLowerCase() ?? null].filter(Boolean)
+  return `Filter: ${delar.length ? delar.join(', ') : 'Inga'}`
+}
+
 /** Namnet på en påse som det visas och som rätten i turen heter: märke och namn. */
 export function pasnamn(p: Pick<Matprodukt, 'marke' | 'namn'>): string {
   return `${p.marke} ${p.namn}`
@@ -556,7 +565,8 @@ export function pasdetaljer(p: Matprodukt): string[] {
   if (p.allergener === null) ut.push('Allergenerna är okända')
   else if (p.allergener.length === 0) ut.push('Ingen av de 14 allergenerna')
   else ut.push(`Innehåller ${uppraknade(p.allergener.map((a) => allergenetikett(a).toLowerCase()))}`)
-  if (p.spar?.length) ut.push(`Kan innehålla spår av ${uppraknade(p.spar.map((a) => allergenetikett(a).toLowerCase()))}`)
+  if (p.spar === null) ut.push('Spår: okänt')
+  else if (p.spar.length) ut.push(`Kan innehålla spår av ${uppraknade(p.spar.map((a) => allergenetikett(a).toLowerCase()))}`)
   return ut
 }
 
@@ -607,7 +617,7 @@ export const MAX_VARUNAMN = 80
 /** Kontrollerar formuläret för en egen rätt. Helt tomma rader hoppas över, och en rätt får sakna ingredienser. */
 export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[]): Rattformular {
   const n = namn.trim()
-  if (!n) return { ok: false, fel: 'Skriv vad rätten heter.' }
+  if (!n) return { ok: false, fel: 'Skriv ett namn.' }
   if (n.length > MAX_RATTNAMN) return { ok: false, fel: `Namnet får vara högst ${MAX_RATTNAMN} tecken.` }
   const rader: TolkadIngrediens[] = []
   const varor = new Set<string>()
@@ -628,14 +638,16 @@ export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[])
     if (mangd !== null && enhet === null) return { ok: false, fel: `${rad}: välj en enhet.` }
     const skriven = enhet === 'g' || enhet === 'kg' ? null : tolkaTal(f.gram)
     if (skriven !== null && !(Number.isInteger(skriven) && skriven >= 1 && skriven <= 5000))
-      return { ok: false, fel: `${rad}: skriv vikten som ett heltal mellan 1 och 5000 gram.` }
+      return { ok: false, fel: `${rad}: skriv vikten som ett heltal mellan 1 och 5 000 gram.` }
     const gram = gramFor(mangd, enhet) ?? skriven
     if (gram !== null && (gram < 1 || gram > 5000)) return { ok: false, fel: `${rad}: mängden ska vara mellan 1 g och 5 kg per portion.` }
     const kcal = tolkaTal(f.kcal)
     if (kcal !== null && !(kcal <= 900)) return { ok: false, fel: `${rad}: skriv kcal per 100 g som ett tal mellan 0 och 900.` }
     const protein = tolkaTal(f.protein)
     if (protein !== null && !(protein <= 100)) return { ok: false, fel: `${rad}: skriv protein per 100 g som ett tal mellan 0 och 100.` }
-    rader.push({ vara, mangd, enhet, gram, kcalPer100g: kcal === null ? null : Math.round(kcal), proteinPer100g: protein })
+    // En vikt utan mängd blir mängden i gram. Annars sparas vikten med en enhet som inte syns när rätten öppnas igen.
+    const utanMangd = mangd === null && gram !== null
+    rader.push({ vara, mangd: utanMangd ? gram : mangd, enhet: utanMangd ? 'g' : enhet, gram, kcalPer100g: kcal === null ? null : Math.round(kcal), proteinPer100g: protein })
   }
   return { ok: true, namn: n, rader }
 }

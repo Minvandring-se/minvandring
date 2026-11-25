@@ -7,7 +7,7 @@ import { formateraVikt } from '@/lib/forrad'
 import { platserText, type Barrad } from '@/lib/mat'
 
 /**
- * Vem tar med vad, per person: det som ingen bär överst i en kompakt lista, med Jag tar den och Fördela, och sedan
+ * Vem bär vad, per person: det som ingen bär överst i en kompakt lista, med Jag tar den och Fördela, och sedan
  * varje person med sin färg, sin matvikt och det hen bär. Alla som är med i turen, även läsare, kan ta en rätt
  * själva och släppa det de bär. Fördela är för ägare och redigerare.
  */
@@ -53,7 +53,7 @@ export function VemTarMedVad({
   return (
     <section aria-labelledby={id} className="space-y-3">
       <h2 id={id} className="text-xl lg:text-2xl">
-        Vem tar med vad
+        Vem bär vad
       </h2>
       {rader.length === 0 ? (
         <p className="rounded-ruta border border-dashed border-border p-4 text-sm text-muted-foreground">När ni har lagt rätter i planen syns här vem som tar med vad.</p>
@@ -67,7 +67,7 @@ export function VemTarMedVad({
           {saknar.length > 0 && (
             <div className="space-y-1 bg-accent-soft px-4 py-3 sm:px-5">
               <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-1">
-                <h3 className="font-sans text-sm font-semibold text-accent-strong">Saknar ansvarig ({saknar.length})</h3>
+                <h3 className="font-sans text-sm font-semibold text-accent-strong">Ingen bär än ({saknar.length})</h3>
                 {kanAndra && personer.length > 0 && (
                   <Button variant="outline" disabled={sparar !== null} onClick={() => gor('fordela', onFordela)}>
                     {sparar === 'fordela' ? 'Fördelar …' : 'Fördela'}

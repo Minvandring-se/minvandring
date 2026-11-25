@@ -61,7 +61,7 @@ describe('Matdag', () => {
     expect(html.match(/>Pasta med vete</g)?.length).toBe(1)
     expect(html.indexOf('>Test<')).toBeLessThan(html.indexOf('>Pasta med vete<'))
     expect(html).toContain('6 st')
-    expect(html).toContain('aria-label="Ta bort en portion Test Pasta med vete från lunch dag 1"')
+    expect(html).toContain('aria-label="Ta bort en av 6 Test Pasta med vete från lunch dag 1"')
   })
 
   it('visar ingredienserna i en egen rätt, och fäller ihop dem när de är många', () => {

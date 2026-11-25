@@ -9,6 +9,7 @@ import {
   ratterSomSaknar,
   saknasMeningar,
   portionText,
+  filterknappText,
   dagensText,
   kcalPer100g,
   matdagar,
@@ -288,7 +289,7 @@ describe('tolkaRattformular', () => {
   })
 
   it('kräver ett namn, men en rätt får sakna ingredienser', () => {
-    expect(tolkaRattformular('', [rad('Havregryn', '90')])).toEqual({ ok: false, fel: 'Skriv vad rätten heter.' })
+    expect(tolkaRattformular('', [rad('Havregryn', '90')])).toEqual({ ok: false, fel: 'Skriv ett namn.' })
     expect(tolkaRattformular('Fika hos mormor', [rad('', '')])).toEqual({ ok: true, namn: 'Fika hos mormor', rader: [] })
     expect(tolkaRattformular('x'.repeat(81), [rad('Havregryn', '90')]).ok).toBe(false)
   })
@@ -388,8 +389,14 @@ describe('pasdetaljer', () => {
 
   it('skiljer på okända allergener och inga', () => {
     const bara = { ...pase, torkning: null, tillagning_vatten: null, spar: null }
-    expect(pasdetaljer({ ...bara, allergener: null })).toEqual(['Allergenerna är okända'])
-    expect(pasdetaljer({ ...bara, allergener: [] })).toEqual(['Ingen av de 14 allergenerna'])
+    expect(pasdetaljer({ ...bara, allergener: null })).toEqual(['Allergenerna är okända', 'Spår: okänt'])
+    expect(pasdetaljer({ ...bara, allergener: [] })).toEqual(['Ingen av de 14 allergenerna', 'Spår: okänt'])
+  })
+
+  it('skriver att spåren är okända, men inget när påsen saknar spår', () => {
+    const bara = { ...pase, torkning: null, tillagning_vatten: null }
+    expect(pasdetaljer({ ...bara, allergener: [], spar: null })).toContain('Spår: okänt')
+    expect(pasdetaljer({ ...bara, allergener: [], spar: [] })).toEqual(['Ingen av de 14 allergenerna'])
   })
 })
 
@@ -665,5 +672,20 @@ describe('portionText', () => {
   it('skriver att energin saknas i stället för 0 kcal', () => {
     expect(portionText({ kcal: 0, gram: 1 })).toBe('Energi saknas, 1 g')
     expect(portionText({ kcal: 0, gram: 0 })).toBe('Energi och vikt saknas')
+  })
+})
+
+describe('filterknappText', () => {
+  it('nämner måltiden när påsarna filtreras på den, och kostfiltret', () => {
+    expect(filterknappText('mellanmal', false, { val: ['glutenfri'], utan: [] })).toBe('Filter: mellanmål, glutenfri')
+    expect(filterknappText('mellanmal', true, { val: [], utan: [] })).toBe('Filter: Inga')
+    expect(filterknappText(null, false, { val: [], utan: ['notter'] })).toBe('Filter: utan nötter')
+  })
+})
+
+describe('tolkaRattformular med vikt utan mängd', () => {
+  it('gör vikten till mängden i gram, så att den syns när rätten öppnas igen', () => {
+    const svar = tolkaRattformular('Rätt', [{ vara: 'Mjölk', mangd: '', enhet: 'dl', gram: '200', kcal: '', protein: '' }])
+    expect(svar).toEqual({ ok: true, namn: 'Rätt', rader: [{ vara: 'Mjölk', mangd: 200, enhet: 'g', gram: 200, kcalPer100g: null, proteinPer100g: null }] })
   })
 })

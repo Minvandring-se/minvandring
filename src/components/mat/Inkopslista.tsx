@@ -19,7 +19,7 @@ const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 
 /**
  * Inköpslistan: det var och en köper, grupperat per person och butiksavdelning, och det som ingen köper än sist.
- * Var och en köper det hen bär i Vem tar med vad. Ägare och redigerare bockar av åt alla och väljer avdelning för
+ * Var och en köper det hen bär i Vem bär vad. Ägare och redigerare bockar av åt alla och väljer avdelning för
  * varorna. Var och en, även en läsare, bockar av sitt eget. Det man har hemma i sitt skafferi står bara i ens egen
  * lista, eftersom skafferiet är privat.
  */
@@ -127,7 +127,7 @@ export function Inkopslista({
               Det gick inte att spara. Kontrollera uppkopplingen och försök igen.
             </p>
           )}
-          {grupper.length === 0 && <p className="text-muted-foreground">Du köper inget än. Välj en rätt som du bär i ”Vem tar med vad”.</p>}
+          {grupper.length === 0 && <p className="text-muted-foreground">Du köper inget än. Ta en rätt i ”Vem bär vad”, så hamnar varorna i din lista.</p>}
           {grupper.map((g) => {
             const person = personer.find((p) => p.id === g.kopare)
             const namn = g.kopare === null ? 'Ingen köper än' : (person?.namn ?? 'Inte längre med i turen')
@@ -137,7 +137,7 @@ export function Inkopslista({
                   {g.kopare !== null && <Initial namn={namn} farg={farger.get(g.kopare)} className="size-8 text-sm" />}
                   <span className="min-w-0 wrap-anywhere">{g.kopare === mittDeltagareId ? `${namn} (du)` : namn}</span>
                 </h3>
-                {g.kopare === null && <p className="-mt-2 text-sm text-muted-foreground">Välj vem som bär rätterna i ”Vem tar med vad”, så hamnar varorna i hens lista.</p>}
+                {g.kopare === null && <p className="-mt-2 text-sm text-muted-foreground">Välj vem som bär rätterna i ”Vem bär vad”, så hamnar varorna i hens lista.</p>}
                 {g.avdelningar.map((a) => (
                   <div key={a.avdelning} className="space-y-0.5">
                     <h4 className="font-sans text-sm font-semibold text-muted-foreground">{AVDELNINGAR.find((x) => x.nyckel === a.avdelning)!.etikett}</h4>
