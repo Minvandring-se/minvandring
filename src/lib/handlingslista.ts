@@ -4,6 +4,7 @@ import { AVDELNINGAR, avdelningFor, type Avdelning, type Enhet } from './handla'
 import { uppraknade } from './kost'
 import { antalPasar, atareFor, type Matdag, type Matdata } from './mat'
 import type { InkopKlart } from './typer'
+import { matvikter, type Deltagare } from './vikt'
 
 // ─── Mängder ─────────────────────────────────────────────────────────────────
 
@@ -189,4 +190,42 @@ export function handlagrupper(rader: readonly Handlarad[], ordning: readonly str
       return { kopare: k, avdelningar }
     })
     .filter((g) => g.avdelningar.length > 0)
+}
+
+// ─── Matvikten ───────────────────────────────────────────────────────────────
+
+export interface Matvikt {
+  /** Det varje deltagare bär, i gram. Samma som det hen köper: hela påsar och varornas vikt. */
+  perBarare: Map<string, number>
+  /** Det som ingen bär än, i gram. */
+  inteFordelat: number
+  /** All mat till personerna, i gram. Hundarnas egen mat räknas inte. */
+  totalt: number
+}
+
+/**
+ * Matvikten per bärare, räknad på samma sätt som handlingslistan: var och en bär det hen köper, i hela påsar och
+ * i så många portioner som det är personer som äter. Det som ingen bär står för sig. Varor utan vikt väger noll.
+ */
+export function matviktPerBarare(data: Matdata, dagar: readonly Matdag[], personer: readonly string[]): Matvikt {
+  const perBarare = new Map<string, number>()
+  let inteFordelat = 0
+  for (const r of handlingslista({ ...data, klart: [] }, dagar, personer)) {
+    if (r.gram <= 0) continue
+    if (r.kopare === null) inteFordelat += r.gram
+    else perBarare.set(r.kopare, (perBarare.get(r.kopare) ?? 0) + r.gram)
+  }
+  const buret = [...perBarare.values()].reduce((s, g) => s + g, 0)
+  return { perBarare, inteFordelat, totalt: buret + inteFordelat }
+}
+
+/**
+ * Matvikten varje deltagare bär vid start, för startvikten i packlistan: det hen bär enligt matplanen, plus en andel
+ * av det som ingen bär ännu, efter deltagarnas matandelar. Hundarnas egen mat räknas som i matvikter.
+ */
+export function matviktPerDeltagare(data: Matdata, matdeltagare: Deltagare[], dagar: readonly Matdag[]): Map<string, number> {
+  const personIds = matdeltagare.filter((d) => d.typ === 'person').map((d) => d.id)
+  const { perBarare, inteFordelat } = matviktPerBarare(data, dagar, personIds)
+  const rest = matvikter(inteFordelat, matdeltagare, dagar.length)
+  return new Map(matdeltagare.map((d) => [d.id, (perBarare.get(d.id) ?? 0) + (rest.get(d.id) ?? 0)]))
 }

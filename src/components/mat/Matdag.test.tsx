@@ -36,7 +36,7 @@ const oscar: Behov = { namn: 'Oscar', vegetarisk: false, vegansk: false, glutenf
 function rita(maltider: Maltidsrad[]) {
   return renderToStaticMarkup(
     <Matdag
-      summa={{ dag: dag1, naring: portion(0, 0), saknas: [] }}
+      summa={{ dag: dag1, perPerson: new Map(), naring: portion(0, 0), saknas: [] }}
       datum={null}
       maltider={maltider}
       ratter={ratter}
@@ -78,7 +78,7 @@ describe('Matdag', () => {
     }
     const html = renderToStaticMarkup(
       <Matdag
-        summa={{ dag: dag1, naring: portion(0, 0), saknas: [] }}
+        summa={{ dag: dag1, perPerson: new Map(), naring: portion(0, 0), saknas: [] }}
         datum={null}
         maltider={[{ ...rad('m1', 'gryta'), bars_av: 'o' }, { ...rad('m2', 'gryta'), bars_av: 'o' }]}
         ratter={ratter}
@@ -99,5 +99,21 @@ describe('Matdag', () => {
   it('ber en att kontrollera mängderna när portionen verkar orimlig', () => {
     expect(rita([rad('m1', 'jatte')])).toContain('Kontrollera mängderna')
     expect(rita([rad('m1', 'gryta')])).not.toContain('Kontrollera mängderna')
+  })
+
+  it('visar ett spann per person i dagens rubrik när personerna äter olika mycket', () => {
+    const html = renderToStaticMarkup(
+      <Matdag
+        summa={{ dag: dag1, perPerson: new Map([['o', portion(600, 150)], ['l', portion(700, 160)]]), naring: portion(650, 155), saknas: [] }}
+        datum={null}
+        maltider={[]}
+        ratter={ratter}
+        behov={[]}
+        kanAndra
+        onLaggTill={() => {}}
+        onTaBort={() => {}}
+      />,
+    )
+    expect(html.replace(/\s/g, ' ')).toContain('600–700 kcal och 150–160 g per person')
   })
 })

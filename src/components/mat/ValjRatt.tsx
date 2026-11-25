@@ -15,7 +15,7 @@ import { useMatkatalog } from '@/hooks/useMatplan'
 import type { Receptlage } from '@/hooks/useRecept'
 import { formateraVikt } from '@/lib/forrad'
 import { filterForGruppen, filterText, passarFilter, varningar, type Behov, type Kostfilter } from '@/lib/kost'
-import { forstaAndraNamn, formateraKcal, kcalPer100g, naringForRader, PASAR_TILL, pasdetaljer, paseMatchar, pasnamn, type Naring, type TolkadIngrediens } from '@/lib/mat'
+import { forstaAndraNamn, formateraKcal, kcalPer100g, naringForRader, PASAR_TILL, pasdetaljer, paseMatchar, pasnamn, portionText, type Naring, type TolkadIngrediens } from '@/lib/mat'
 import { rattTillRader, receptMedNamn, receptTillRader } from '@/lib/recept'
 import { bokadText, skafferietForst } from '@/lib/skafferi'
 import type { Ingrediens, Maltid, Matprodukt, Ratt, Recept, Vara } from '@/lib/typer'
@@ -272,7 +272,7 @@ export function ValjRatt({
                       <li key={r.id} className="flex items-center gap-2 py-1">
                         <button type="button" disabled={valjer} onClick={() => valj(() => onValjRatt(r.id), r.id)} className={cn('min-h-11 min-w-0 flex-1 rounded-md px-2 py-2 text-left hover:bg-muted', fokus)}>
                           <span className="block font-medium break-words">{r.namn}</span>
-                          {portion && <span className="block text-sm text-muted-foreground tabular-nums">{formateraKcal(portion.kcal)} per portion, {formateraVikt(portion.gram)}</span>}
+                          {portion && <span className="block text-sm text-muted-foreground tabular-nums">{portionText(portion)}</span>}
                         </button>
                         <Button variant="ghost" size="ikon" aria-label={`Ändra ${r.namn}`} onClick={() => setVy({ typ: 'andra', ratt: r })}>
                           <Pencil className="size-4" aria-hidden />
@@ -558,7 +558,7 @@ function Receptlista({ recept, valjer, onValj }: { recept: Receptlage; valjer: b
               >
                 <span className="block font-medium break-words">{r.namn}</span>
                 <span className="block text-sm text-muted-foreground tabular-nums">
-                  {formateraKcal(portion.kcal)} per portion, {formateraVikt(portion.gram)}
+                  {portionText(portion)}
                 </span>
               </button>
             </li>

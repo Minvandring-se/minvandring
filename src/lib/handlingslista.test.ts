@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { handlagrupper, handlingslista, summeraMangder } from './handlingslista'
+import { handlagrupper, handlingslista, matviktPerBarare, matviktPerDeltagare, summeraMangder } from './handlingslista'
 import { matdagar, type Matdata, type Pase } from './mat'
 import type { Ingrediens, InkopKlart, Maltidsrad, Ratt, Vara } from './typer'
 
@@ -128,5 +128,69 @@ describe('handlagrupper', () => {
       ['mejeri', ['Grädde', 'Mjölk']],
       ['torrvaror', ['Ris']],
     ])
+  })
+})
+
+describe('matvikten per bärare', () => {
+  const dagar = matdagar(2, 0)
+  const ratt = (id: string, extra: Partial<Ratt> = {}): Ratt => ({ id, namn: id, matprodukt_id: null, ansvarig: null, klart: false, ...extra })
+  const vara: Vara = { id: 'Havregryn', namn: 'Havregryn', kcal_per_100g: 370, protein_per_100g: 13, extra_g: 0, varifran: 'kopa', ansvarig: null, klart: false }
+  const rad = (id: string, dag: number, ratt_id: string, bars_av: string | null): Maltidsrad => ({ id, dag, maltid: 'middag', ratt_id, sortering: 0, bars_av })
+  // En påse med två portioner på 300 g, och gröt med 100 g havregryn per portion.
+  const pase: Pase = { id: 'mp', vikt_torr_g: 300, portioner: 2, kcal: 1200, protein_g: 40 }
+  const data = (maltider: Maltidsrad[], atare: Matdata['atare'] = []): Matdata => ({
+    ratter: [ratt('Gröt'), ratt('Gryta', { matprodukt_id: 'mp' })],
+    varor: [vara],
+    ingredienser: [{ id: 'i1', ratt_id: 'Gröt', vara_id: 'Havregryn', mangd: 100, enhet: 'g', gram_per_portion: 100 }],
+    pasar: new Map([['mp', pase]]),
+    maltider,
+    atare,
+  })
+
+  it('räknar hela påsar, samma som inköpslistan', () => {
+    // Tre personer äter en påse med två portioner: två hela påsar, 600 g, inte tre portioner på 450 g.
+    const vikt = matviktPerBarare(data([rad('m1', 1, 'Gryta', 'anna')]), dagar, ['anna', 'erik', 'lisa'])
+    expect(vikt).toEqual({ perBarare: new Map([['anna', 600]]), inteFordelat: 0, totalt: 600 })
+  })
+
+  it('visar det som ingen bär för sig', () => {
+    const vikt = matviktPerBarare(data([rad('m1', 1, 'Gröt', 'anna'), rad('m2', 2, 'Gryta', null)]), dagar, ['anna', 'erik'])
+    expect(vikt).toEqual({ perBarare: new Map([['anna', 200]]), inteFordelat: 300, totalt: 500 })
+  })
+
+  it('räknar bara dem som äter, så att en rätt som bara Anna äter inte väger hos någon annan', () => {
+    const vikt = matviktPerBarare(data([rad('m1', 1, 'Gröt', 'anna')], [{ maltid_id: 'm1', deltagare_id: 'anna' }]), dagar, ['anna', 'erik'])
+    expect(vikt.perBarare).toEqual(new Map([['anna', 100]]))
+    expect(vikt.totalt).toBe(100)
+  })
+
+  it('räknar påsar för sig per bärare, eftersom var och en köper sina', () => {
+    // Anna och Erik bär en portion var av en påse med två portioner: en påse var.
+    const vikt = matviktPerBarare(data([rad('m1', 1, 'Gryta', 'anna'), rad('m2', 2, 'Gryta', 'erik')], [{ maltid_id: 'm1', deltagare_id: 'anna' }, { maltid_id: 'm2', deltagare_id: 'erik' }]), dagar, ['anna', 'erik'])
+    expect(vikt.perBarare).toEqual(new Map([['anna', 300], ['erik', 300]]))
+  })
+
+  it('räknar extra mängd hos den som köper den, som i inköpslistan, och en hund som bärare för sig', () => {
+    const med = { ...data([rad('m1', 1, 'Gröt', 'hund')]), varor: [{ ...vara, extra_g: 50, ansvarig: 'erik' }] }
+    const vikt = matviktPerBarare(med, dagar, ['anna', 'erik'])
+    expect(vikt.perBarare).toEqual(new Map([['hund', 200], ['erik', 50]]))
+    expect(vikt.totalt).toBe(250)
+  })
+
+  describe('matviktPerDeltagare, för startvikten i packlistan', () => {
+    const anna = { id: 'anna', typ: 'person' as const, matandel: null }
+    const erik = { id: 'erik', typ: 'person' as const, matandel: null }
+    const hund = { id: 'hund', typ: 'hund' as const, matandel: null, hundmatPerDagG: 300 }
+
+    it('räknar det var och en bär och delar det som ingen bär ännu efter matandelarna', () => {
+      const vikt = matviktPerDeltagare(data([rad('m1', 1, 'Gröt', 'anna'), rad('m2', 2, 'Gryta', null)]), [anna, erik], dagar)
+      expect(vikt).toEqual(new Map([['anna', 200 + 150], ['erik', 150]]))
+    })
+
+    it('lägger till hundens egen mat', () => {
+      const vikt = matviktPerDeltagare(data([rad('m1', 1, 'Gröt', 'anna')]), [anna, erik, hund], dagar)
+      expect(vikt.get('hund')).toBe(300 * 2)
+      expect(vikt.get('anna')).toBe(200)
+    })
   })
 })

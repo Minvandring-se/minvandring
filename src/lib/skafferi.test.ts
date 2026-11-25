@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { garUtFore, jamforDatum, manadOchAr, nyttAntal, skafferibesked, skafferistatus, tidigasteDatum, tillatnaAr, tolkaBastFore, valFranDatum, bastForeStatus, bokade, bokadText, bokningarFranRader, enManadEfter, formateraDatum, hemma, kopText, ledigaHemma, senastAnvanda, skafferietForst, sorteraSkafferi, turerFore, type Bokningstur } from './skafferi'
+import { garUtFore, jamforDatum, manadOchAr, nyttAntal, skafferibesked, skafferistatus, tidigasteDatum, tillatnaAr, tolkaBastFore, valFranDatum, bastForeStatus, bokade, bokadText, bokningarFranRader, enManadEfter, formateraDatum, hemma, kopText, ledigaHemma, senastAnvanda, skafferietForst, sorteraSkafferi, turerFore, taPaseSjalv, type Bokningstur } from './skafferi'
 import type { Skafferirad } from './typer'
 
 const rad = (matprodukt_id: string, antal: number, bast_fore: string | null = null): Skafferirad => ({ id: `r-${matprodukt_id}`, matprodukt_id, antal, bast_fore })
@@ -216,5 +216,26 @@ describe('bäst före jämfört med turen', () => {
     expect(skafferistatus('2027-02-24', idag)).toBe('snart')
     expect(skafferistatus('2027-02-28', idag)).toBeNull()
     expect(skafferistatus(null, idag)).toBeNull()
+  })
+})
+
+describe('taPaseSjalv', () => {
+  it('tar raden när en påse hemma inte redan går till turen', () => {
+    // En påse hemma, inget buret än: ta raden, även om fler påsar behövs (resten köps).
+    expect(taPaseSjalv(1, 0, 3, 1)).toBe(true)
+    // Två hemma och en redan buren: en påse kvar.
+    expect(taPaseSjalv(2, 1, 1, 1)).toBe(true)
+  })
+
+  it('tar inte raden när alla påsar hemma redan går till rader man bär', () => {
+    expect(taPaseSjalv(1, 1, 1, 1)).toBe(false)
+    expect(taPaseSjalv(2, 2, 1, 1)).toBe(false)
+    expect(taPaseSjalv(0, 0, 1, 1)).toBe(false)
+  })
+
+  it('tar raden när den ryms i en påse man redan bär', () => {
+    // En påse med två portioner hemma, en portion buren: nästa portion ryms i samma påse.
+    expect(taPaseSjalv(1, 1, 1, 2)).toBe(true)
+    expect(taPaseSjalv(1, 2, 1, 2)).toBe(false)
   })
 })
