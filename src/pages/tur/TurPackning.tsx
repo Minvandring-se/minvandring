@@ -30,6 +30,7 @@ import {
   egenModell,
   filtrera,
   forslagSomSaknas,
+  medGas,
   packat,
   packradFranForslag,
   packradFranSak,
@@ -124,7 +125,7 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
       <Gruppbehov
         dubbletter={dubbletter(rader)}
         utanBarare={utanBarare(rader)}
-        forslag={forslagSomSaknas(rader)}
+        forslag={medGas(forslagSomSaknas(rader), deltagare.filter((d) => d.typ === 'person').length, matdagar(tur.dagar, tur.reservdagar).length)}
         namn={namn}
         kanAndra={kanAndra}
         kanTaMed={mittId !== null}

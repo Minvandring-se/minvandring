@@ -1,4 +1,5 @@
 // Packlistan i en tur: det gruppen behöver gemensamt, vem som tar med vad och dubbletter. Rena funktioner utan databas.
+import { formateraPatroner, gasbehov, patronforslag } from './bransle'
 import { KATEGORIER, type SakVarden } from './forrad'
 import type { Forradssak, PackradRad, PackstatusRad } from './typer'
 import type { Packrad, Typ } from './vikt'
@@ -51,6 +52,8 @@ export interface Forslag {
   kategori: string
   underkategori: string
   typ: Typ
+  /** En rad under förslaget, till exempel varför gasen räcker. */
+  hjalp?: string
 }
 
 /** Det en grupp brukar behöva gemensamt. Det man väljer blir gemensamma rader utan bärare. */
@@ -68,6 +71,19 @@ export const FORSLAG_GEMENSAMT: readonly Forslag[] = [
 export function forslagSomSaknas(rader: readonly PackradRad[]): Forslag[] {
   const finns = new Set(rader.filter((r) => r.med && r.underkategori).map((r) => sortFor(r.underkategori!)))
   return FORSLAG_GEMENSAMT.filter((f) => !finns.has(sortFor(f.underkategori)))
+}
+
+/**
+ * Gasförslaget med patronerna som räcker till turen på sommaren enligt Primus, till exempel "Gas, 2 × 230 g".
+ * Samma räkning som Gas till köket i matplanen. Utan personer eller dagar, eller med fler än åtta patroner, står
+ * förslaget kvar som Gas.
+ */
+export function medGas(forslag: readonly Forslag[], personer: number, dagar: number): Forslag[] {
+  const patroner = patronforslag(gasbehov(personer, dagar))
+  if (!patroner || patroner.length === 0) return [...forslag]
+  const namn = `Gas, ${formateraPatroner(patroner)}`
+  const hjalp = 'Räcker på sommaren enligt Primus. Med snösmältning behövs mer, se Gas till köket i matplanen.'
+  return forslag.map((f) => (f.underkategori === 'bransle' ? { ...f, namn, hjalp } : f))
 }
 
 function sortFor(underkategori: string): string {
