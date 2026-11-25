@@ -154,7 +154,7 @@ describe('tolkaEgenskap', () => {
 
 describe('underkategorier utan egna egenskaper', () => {
   it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar, kök och kokkärl har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa', 'isolering', 'regnklader'])
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa', 'mellanlager', 'isolering', 'regnklader'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
@@ -884,6 +884,19 @@ describe('egenskaper för kläder', () => {
   it('godkänner en komplett dunjacka och regnjacka', () => {
     expect(valideraEgenskaper('isolering', dunjacka)).toEqual({ fel: [], varningar: [] })
     expect(valideraEgenskaper('regnklader', regnjacka)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('godkänner en fleecetröja och visar plagget på svenska', () => {
+    const fleece = { kon: 'herr', viktstorlek: 'M', material: 'fleece', plagg: 'troja', tygvikt_gm2: 100, huva: false, tyg: 'Polartec Power Grid' }
+    expect(valideraEgenskaper('mellanlager', fleece)).toEqual({ fel: [], varningar: [] })
+    const rader = visaEgenskaper('mellanlager', fleece)
+    expect(rader.find((r) => r.nyckel === 'plagg')?.varde).toBe('Tröja')
+    expect(rader.find((r) => r.nyckel === 'tygvikt_gm2')?.varde).toBe('100 g/m²')
+    expect(viktstorlekText('mellanlager', fleece)).toBe('Herr, vikt i storlek M')
+  })
+
+  it('ger fel när en regnjacka har ett plagg som bara finns för mellanlager', () => {
+    expect(valideraEgenskaper('regnklader', { ...regnjacka, plagg: 'vast' }).fel.map((f) => f.split(':')[0])).toEqual(['plagg'])
   })
 
   it('ger fel när en syntetjacka har fillpower', () => {
