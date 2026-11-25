@@ -271,6 +271,18 @@ export function antalPasar(ganger: number, personer: number, portioner: number):
   return Math.ceil((ganger * personer) / Math.max(1, portioner))
 }
 
+/**
+ * Varningen innan en deltagare tas bort ur turen: på rader där personen är den enda som äter betyder inga ätare
+ * efteråt att alla äter. Namnet skrivs ut i stället för ett pronomen. null när personen inte är ensam ätare någonstans.
+ */
+export function ensamAtareText(atare: readonly Matatare[], deltagareId: string, namn: string): string | null {
+  const perRad = new Map<string, string[]>()
+  for (const a of atare) perRad.set(a.maltid_id, [...(perRad.get(a.maltid_id) ?? []), a.deltagare_id])
+  const antal = [...perRad.values()].filter((d) => d.length === 1 && d[0] === deltagareId).length
+  if (antal === 0) return null
+  return `${namn} är den enda som äter ${antal} ${antal === 1 ? 'rätt' : 'rätter'}. Tas ${namn} bort äter alla ${antal === 1 ? 'den' : 'dem'}.`
+}
+
 /** De som äter en rad i matplanen: raderna i maltid_atare, eller alla personer när det inte finns några. */
 export function atareFor(maltidId: string, atare: readonly Matatare[] | undefined, personer: readonly string[]): string[] {
   const egna = (atare ?? []).filter((a) => a.maltid_id === maltidId).map((a) => a.deltagare_id)
