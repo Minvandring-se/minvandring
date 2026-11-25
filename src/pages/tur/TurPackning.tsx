@@ -24,7 +24,8 @@ import {
   usePacklista,
   type Packlista,
 } from '@/hooks/usePacklista'
-import { matdagar, matviktPerDeltagare } from '@/lib/mat'
+import { matdagar } from '@/lib/mat'
+import { matviktPerDeltagare } from '@/lib/handlingslista'
 import {
   dubbletter,
   egenModell,
