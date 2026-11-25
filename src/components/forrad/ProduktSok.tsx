@@ -270,13 +270,16 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
           )}
         </div>
 
-        {/* Fast höjd för ungefär fem rader. Resten nås genom att scrolla i listan, med finger, mus eller tangentbord. */}
+        {/*
+          I en smal ruta, som i mobilen, följer listan rutans egen scroll, så att fler träffar syns samtidigt. När rutan
+          är bred har listan en fast höjd för ungefär fem rader och scrollar för sig, med finger, mus eller tangentbord.
+        */}
         {modeller && modeller.length > 0 && (
           <div
             role="group"
             tabIndex={0}
             aria-labelledby={`${id}-antal`}
-            className="max-h-96 overflow-y-auto overscroll-contain rounded-lg border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+            className="rounded-lg border border-border focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring @2xl:max-h-96 @2xl:overflow-y-auto @2xl:overscroll-contain"
           >
             <ul className="divide-y divide-border">
               {modeller.map((m) => (
