@@ -221,17 +221,20 @@ export async function sparaEgenRatt(
 
 /**
  * Bockar av, eller tar bort bocken för, en vara eller en påse som en deltagare köper, med mängden som den står i
- * listan. Ägare och redigerare bockar åt alla, och var och en, även en läsare, åt sig själv (RLS). En bock ändras inte,
- * så en gammal bock med en annan mängd tas bort innan den nya läggs.
+ * listan. Ägare och redigerare bockar åt alla, och var och en, även en läsare, åt sig själv (RLS). Görs av funktionen
+ * bocka_inkop i databasen, som tar bort en gammal bock och lägger den nya i en transaktion.
  */
 export async function bockaInkop(turId: string, deltagareId: string, typ: 'vara' | 'pase', id: string, klart: boolean, mangd: string): Promise<boolean> {
   if (!supabase) return false
-  const kolumn = typ === 'vara' ? 'vara_id' : 'ratt_id'
-  const bort = await supabase.from('inkop_klart').delete().eq('deltagare_id', deltagareId).eq(kolumn, id)
-  if (bort.error || !klart) return !bort.error
-  const { error } = await supabase.from('inkop_klart').insert({ tur_id: turId, deltagare_id: deltagareId, [kolumn]: id, mangd })
-  // En bock som någon annan hann lägga under tiden räknas som att det gick.
-  return !error || error.code === '23505'
+  const { error } = await supabase.rpc('bocka_inkop', {
+    t: turId,
+    deltagare: deltagareId,
+    vara: typ === 'vara' ? id : null,
+    ratt: typ === 'pase' ? id : null,
+    klart,
+    ny_mangd: mangd,
+  })
+  return !error
 }
 
 /** Väljer butiksavdelning för en vara. Bara ägare och redigerare (RLS). */
