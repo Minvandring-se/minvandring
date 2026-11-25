@@ -13,10 +13,12 @@ const rad = (namn: string, kopare: string | null, klart = false): Handlarad => (
   namn,
   kopare,
   avdelning: 'mejeri',
+  avdelningVald: false,
   mangd: '6 dl',
   gram: 600,
   hemifran: false,
   klart,
+  andradFran: null,
 })
 
 const personer = [
@@ -58,5 +60,27 @@ describe('Inkopslista', () => {
     // Bara Oscars rad har en ruta, och läsaren har ingen ruta för att ändra avdelningar.
     expect(html.match(/type="checkbox"/g)?.length).toBe(1)
     expect(html).not.toContain('Ändra butiksavdelning')
+  })
+})
+
+describe('Inkopslista, ändrad mängd', () => {
+  it('visar att mängden har ändrats sedan raden bockades av, och raden som oavbockad', () => {
+    const html = renderToStaticMarkup(
+      <MemoryRouter>
+        <Inkopslista
+          rader={[{ ...rad('Havregryn', 'oscar'), mangd: '3 dl', andradFran: '1 dl' }]}
+          personer={personer}
+          farger={new Map()}
+          kanAndra
+          mittDeltagareId="oscar"
+          skafferi={[]}
+          utskrift="/tur/t/mat/inkopslista"
+          onBocka={async () => true}
+          onAvdelning={async () => true}
+        />
+      </MemoryRouter>,
+    )
+    expect(html).toContain('Mängden har ändrats sedan du bockade av (var 1 dl)')
+    expect(html).not.toContain('checked')
   })
 })
