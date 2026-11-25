@@ -59,7 +59,8 @@ describe('allergenerForLivsmedel', () => {
 
   it('räknar raffinerade oljor som fria från allergener, utom sesam- och jordnötsolja', () => {
     expect(a('Sojaolja', 'Vegetabiliskt fett och olja')).toEqual([])
-    expect(a('Vetegroddsolja', 'Vegetabiliskt fett och olja')).toEqual([])
+    // Vetegroddsolja är oftast kallpressad, så undantaget för raffinerade oljor gäller inte.
+    expect(a('Vetegroddsolja', 'Vegetabiliskt fett och olja')).toEqual(['gluten'])
   })
 
   it('ger tom lista för enkla råvaror utan allergener', () => {
@@ -76,5 +77,70 @@ describe('allergenerForLivsmedel', () => {
     expect(a('Köttbullar', 'Kötträtt')).toBeNull()
     expect(a('Chips', 'Snacks')).toBeNull()
     expect(a('Okänt', null)).toBeNull()
+  })
+})
+
+// De 34 livsmedlen i felsökningen 26 november (Claude outputs/livsmedel/misstankta.md) som räknades som "inga
+// allergener". De sju säkra får sina allergener, resten blir okända.
+describe('allergenerForLivsmedel, de misstänkta livsmedlen', () => {
+  const misstankta: readonly [number, string, string, readonly string[] | null][] = [
+    [3140, 'Nötter blandade naturella', 'Nöt, frö eller kärna', ['jordnotter', 'notter']],
+    [3139, 'Nötter blandade rostade m. salt', 'Nöt, frö eller kärna', ['jordnotter', 'notter']],
+    [1642, 'Deg filodeg kylvara el. frysvara', 'Spannmål och spannmålsprodukter', ['gluten']],
+    [6346, 'Lasagne nötfärs', 'Spannmål och spannmålsprodukter', ['gluten', 'agg', 'mjolk', 'selleri']],
+    [1471, 'Leverpalt', 'Innanmat och inälvsmat', ['gluten']],
+    [1472, 'Njurpalt', 'Innanmat och inälvsmat', ['gluten']],
+    [530, 'Grönsakssufflé', 'Grönsaker, rotfrukter och svamp', ['gluten', 'agg', 'mjolk']],
+    [1479, 'Leverbiff mald lever stekt hemlagad', 'Innanmat och inälvsmat', null],
+    [1473, 'Leverbiff mald lever rå frysvara', 'Innanmat och inälvsmat', null],
+    [1467, 'Leverbiff mald lever stekt frysvara', 'Innanmat och inälvsmat', null],
+    [1465, 'Gryta levergryta nöt', 'Innanmat och inälvsmat', null],
+    [1464, 'Leversauté kyckling', 'Innanmat och inälvsmat', null],
+    [1466, 'Njursauté', 'Innanmat och inälvsmat', null],
+    [6391, 'Gryta kyckling tikka masala', 'Fågel', null],
+    [478, 'Gryta kikärtsgryta grönsaksgryta veg.', 'Grönsaker, rotfrukter och svamp', null],
+    [306, 'Morot stuvad', 'Grönsaker och svamp', null],
+    [458, 'Champinjon stuvad', 'Grönsaker, rotfrukter och svamp', null],
+    [2081, 'Kantarell stuvad', 'Grönsaker, rotfrukter och svamp', null],
+    [6438, 'Grönsaksbas grönsakspasta', 'Grönsaker och svamp', null],
+    [6399, 'Grönsaksbiff rödbetsbiff stekt veg.', 'Potatis och stärkelserika rötter', null],
+    [4128, 'Potatis Hasselbackspotatis bakad', 'Potatis och stärkelserika rötter', null],
+    [2758, 'Sushi veg.', 'Ris eller annat spannmål', null],
+    [5305, 'Saffransris', 'Ris eller annat spannmål', null],
+    [6870, 'Våffelmix glutenfri', 'Cerealier eller cerealielika mjölprodukter och derivat', null],
+    [1099, 'Kycklingburgare rå fett ca 7% frysvara', 'Fågel', null],
+    [5973, 'Kryddblandning taco', 'Krydda', null],
+    [6865, 'Mjölblandning ljus glutenfri', 'Cerealier eller cerealielika mjölprodukter och derivat', null],
+    [4011, 'Majskrokar', 'Spannmål och spannmålsprodukter', null],
+    [41, 'Vetegroddsolja', 'Vegetabiliskt fett och olja', ['gluten']],
+    [3522, 'Bananchips', 'Frukt och bär', null],
+    [1010, 'Gris skinka skivad rökt fett 1-3%', 'Rött kött', null],
+    [6009, 'Kalkon rökt tunna skivor', 'Fågel', null],
+    [1101, 'Hamburgare nöt rå frysvara', 'Rött kött', null],
+    [453, 'Rödkål tillagad', 'Grönsaker och svamp', null],
+  ]
+
+  it('har alla 34', () => {
+    expect(new Set(misstankta.map(([nr]) => nr)).size).toBe(34)
+  })
+
+  it.each(misstankta)('%i %s', (_nr, namn, grupp, vantat) => {
+    expect(allergenerForLivsmedel(namn, grupp)).toEqual(vantat)
+  })
+
+  it('låter rena råvaror med liknande ord vara som förut', () => {
+    const a = allergenerForLivsmedel
+    expect(a('Nöt ryggbiff rå', 'Rött kött')).toEqual([])
+    expect(a('Nöt rostbiff rå', 'Rött kött')).toEqual([])
+    expect(a('Champinjon skivad frysvara', 'Grönsaker och svamp')).toEqual([])
+    expect(a('Sellerikål pak choi', 'Grönsaker och svamp')).toEqual([])
+    expect(a('Hasselnötter', 'Nöt, frö eller kärna')).toEqual(['notter'])
+    expect(a('Rapsolja kallpressad', 'Vegetabiliskt fett och olja')).toEqual([])
+    expect(a('Sojaolja', 'Vegetabiliskt fett och olja')).toEqual([])
+    expect(a('Ris sushiris kokt', 'Ris eller annat spannmål')).toEqual([])
+    expect(a('Pasta fusilli lasagneplattor okokt glutenfri', 'Pasta och liknande produkter')).toEqual([])
+    // En blandning som räknar upp sina sädesslag har kända allergener.
+    expect(a('Grynblandning havre råg vete korn kokt m. salt', 'Ris eller annat spannmål')).toEqual(['gluten'])
+    expect(a('Mjölblandning rågsikt', 'Cerealier eller cerealielika mjölprodukter och derivat')).toEqual(['gluten'])
   })
 })
