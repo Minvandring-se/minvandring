@@ -6,7 +6,7 @@
 -- med varans allergener och kostval för egna rätter. Utan koppling är allergenerna okända, och okänt räknas aldrig
 -- som att något passar.
 --
--- Datumet ligger efter de okörda migreringarna i PR 2–4 (20261125100000–03).
+-- Datumet ligger efter de okörda migreringarna i PR 2–4 (20261125210000–03).
 
 create table public.varukatalog (
   id uuid primary key default gen_random_uuid(),
@@ -58,7 +58,7 @@ create index varor_varukatalog on public.varor (varukatalog_id) where varukatalo
 create index receptrader_varukatalog on public.receptrader (varukatalog_id) where varukatalog_id is not null;
 
 -- ─── Egen rätt ───────────────────────────────────────────────────────────────
--- Samma som i 20261125100001_konto_och_matregler.sql (där ett tömt fält tömmer kcal och protein), med en skillnad:
+-- Samma som i 20261125210001_konto_och_matregler.sql (där ett tömt fält tömmer kcal och protein), med en skillnad:
 -- en rad kan ha "varukatalog", varan i katalogen som den valdes från. Den sparas på varan i turen när nyckeln
 -- finns, även som null (då tas kopplingen bort).
 create or replace function public.spara_egen_ratt(
