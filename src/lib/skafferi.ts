@@ -159,6 +159,16 @@ export function bokningarFranRader(rader: readonly BurenRad[], portionerPerPase:
   return [...summa.values()].map((r) => ({ turId: r.turId, matproduktId: r.matproduktId, pasar: antalPasar(r.portioner, 1, portionerPerPase.get(r.matproduktId) ?? 1) }))
 }
 
+/**
+ * Ska man själv bära en ny rad med en påse man har hemma? Ja när raden ryms i påsarna hemma, eller när minst en påse
+ * hemma inte redan går till raderna man bär i turen (resten köps). ledigt är påsarna hemma som är kvar vid turens
+ * början, utan dem som går till tidigare turer.
+ */
+export function taPaseSjalv(ledigt: number, portionerRedan: number, nyaPortioner: number, portionerPerPase: number): boolean {
+  if (ledigt <= 0) return false
+  return antalPasar(portionerRedan + nyaPortioner, 1, portionerPerPase) <= ledigt || ledigt > antalPasar(portionerRedan, 1, portionerPerPase)
+}
+
 // ─── Lägga i skafferiet och bäst före som månad och år ─────────────────────────
 
 export const MANADER = ['januari', 'februari', 'mars', 'april', 'maj', 'juni', 'juli', 'augusti', 'september', 'oktober', 'november', 'december'] as const

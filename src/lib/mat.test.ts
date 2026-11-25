@@ -8,8 +8,8 @@ import {
   orimligPortion,
   ratterSomSaknar,
   saknasMeningar,
-  inkopsgrupper,
-  inkopslista,
+  portionText,
+  dagensText,
   kcalPer100g,
   matdagar,
   maltidsAdress,
@@ -19,8 +19,6 @@ import {
   matsummering,
   saknadeMaltider,
   saknasText,
-  matviktPerDeltagare,
-  matviktTotalt,
   naringForRader,
   PASAR_TILL,
   pasdetaljer,
@@ -38,8 +36,8 @@ import {
   vemBarVad,
   atareFor,
   saknasPerPerson,
-  barsAvPerson,
   fordela,
+  portionerSomBars,
   type Ingrediensfalt,
   type Matdata,
   type Pase,
@@ -143,9 +141,10 @@ describe('dagssummor', () => {
 
   it('summerar alla rätter per person och dag, även flera i samma måltid', () => {
     const data = plan([maltid(1, 'frukost', 'Gröt'), maltid(1, 'middag', 'Gryta'), maltid(1, 'middag', 'Gröt')])
-    const [dag1, dag2] = dagssummor(data, dagar)
+    const [dag1, dag2] = dagssummor(data, dagar, ['anna', 'erik'])
     expect(dag1.naring.kcal).toBeCloseTo(423 * 2 + 700)
     expect(dag1.naring.gram).toBe(120 * 2 + 150)
+    expect(dag1.perPerson.get('erik')!.kcal).toBeCloseTo(423 * 2 + 700)
     expect(dag1.saknas).toEqual(['lunch'])
     expect(dag2.naring.kcal).toBe(0)
     expect(dag2.saknas).toEqual(['frukost', 'lunch', 'middag'])
@@ -153,95 +152,76 @@ describe('dagssummor', () => {
 
   it('räknar inte mellanmål som saknade', () => {
     const data = plan([maltid(1, 'frukost', 'Gröt'), maltid(1, 'lunch', 'Gröt'), maltid(1, 'middag', 'Gryta')])
-    expect(dagssummor(data, dagar)[0].saknas).toEqual([])
+    expect(dagssummor(data, dagar, ['anna'])[0].saknas).toEqual([])
+  })
+
+  it('räknar varje rätt bara för dem som äter den', () => {
+    // Middag: Anna äter gröten (423 kcal, 120 g), Erik och Lisa grytan (700 kcal, 150 g). Ingen äter båda.
+    const data = plan([maltid(1, 'middag', 'Gröt'), maltid(1, 'middag', 'Gryta')])
+    const [gröt, gryta] = data.maltider
+    data.atare = [
+      { maltid_id: gröt.id, deltagare_id: 'anna' },
+      { maltid_id: gryta.id, deltagare_id: 'erik' },
+      { maltid_id: gryta.id, deltagare_id: 'lisa' },
+    ]
+    const [dag1] = dagssummor(data, dagar, ['anna', 'erik', 'lisa'])
+    expect(dag1.perPerson.get('anna')!.kcal).toBeCloseTo(423)
+    expect(dag1.perPerson.get('erik')!.kcal).toBeCloseTo(700)
+    expect(dag1.perPerson.get('lisa')!.gram).toBe(150)
+    // Snittet är per person, inte summan av rätterna.
+    expect(dag1.naring.kcal).toBeCloseTo((423 + 700 + 700) / 3)
+  })
+
+  it('räknar som en person när turen inte har några personer', () => {
+    const data = plan([maltid(1, 'frukost', 'Gröt')])
+    expect(dagssummor(data, dagar, [])[0].naring.gram).toBe(120)
   })
 })
 
-describe('inkopslista', () => {
-  const dagar = matdagar(3, 1)
+describe('dagensText', () => {
+  const dagar = matdagar(1, 0)
 
-  it('räknar varorna för alla personer och alla gånger rätten äts', () => {
-    const data = plan([maltid(1, 'frukost', 'Gröt'), maltid(2, 'frukost', 'Gröt')])
-    const rader = inkopslista(data, dagar, 3)
-    expect(rader.find((r) => r.id === 'Havregryn')?.gram).toBe(90 * 2 * 3)
-    expect(rader.find((r) => r.id === 'Russin')).toMatchObject({ gram: 30 * 2 * 3, ansvarig: 'lisa', typ: 'vara' })
+  it('visar ett värde när alla får lika mycket', () => {
+    const data = plan([maltid(1, 'middag', 'Gryta')])
+    expect(dagensText(dagssummor(data, dagar, ['anna', 'erik'])[0])).toBe('700 kcal och 150 g per person')
   })
 
-  it('avrundar påsarna uppåt till hela påsar', () => {
-    // Tre personer två kvällar är sex portioner: tre påsar med två portioner.
-    const data = plan([maltid(1, 'middag', 'Gryta'), maltid(2, 'middag', 'Gryta')])
-    expect(inkopslista(data, dagar, 3).find((r) => r.typ === 'pase')).toEqual({
-      typ: 'pase',
-      id: 'Gryta',
-      namn: 'Gryta',
-      gram: 900,
-      pasar: 3,
-      matproduktId: 'p-gryta',
-      varifran: 'kopa',
-      ansvarig: 'erik',
-      klart: false,
-    })
-    // En kväll är tre portioner: två påsar.
-    expect(inkopslista(plan([maltid(1, 'middag', 'Gryta')]), dagar, 3).find((r) => r.typ === 'pase')?.pasar).toBe(2)
+  it('visar ett spann när personerna får olika mycket', () => {
+    const data = plan([maltid(1, 'middag', 'Gröt'), maltid(1, 'middag', 'Gryta')])
+    data.atare = [{ maltid_id: data.maltider[0].id, deltagare_id: 'anna' }, { maltid_id: data.maltider[1].id, deltagare_id: 'erik' }]
+    expect(dagensText(dagssummor(data, dagar, ['anna', 'erik'])[0])).toBe('423–700 kcal och 120–150 g per person')
   })
 
-  it('tar med extra mängd även när varan inte används i någon rätt, men inte oanvända varor', () => {
-    const data = plan([], { varor: [vara('Kaffe', { extra_g: 200, varifran: 'hemifran' }), vara('Oanvänd')] })
-    expect(inkopslista(data, dagar, 2)).toEqual([
-      { typ: 'vara', id: 'Kaffe', namn: 'Kaffe', gram: 200, varifran: 'hemifran', ansvarig: null, klart: false },
-    ])
-  })
-
-  it('räknar inte måltider på dagar som inte längre finns i turen', () => {
-    const data = plan([maltid(1, 'frukost', 'Gröt'), maltid(9, 'frukost', 'Gröt')])
-    expect(inkopslista(data, dagar, 1).find((r) => r.id === 'Havregryn')?.gram).toBe(90)
-  })
-
-  it('är tom utan personer', () => {
-    expect(inkopslista(plan([maltid(1, 'middag', 'Gryta'), maltid(1, 'frukost', 'Gröt')]), dagar, 0)).toEqual([])
-  })
-
-  it('sorterar efter namn på svenska', () => {
-    const data = plan([], { varor: [vara('Ägg', { extra_g: 1 }), vara('Bröd', { extra_g: 1 }), vara('Ost', { extra_g: 1 })] })
-    expect(inkopslista(data, dagar, 1).map((r) => r.namn)).toEqual(['Bröd', 'Ost', 'Ägg'])
-  })
-})
-
-describe('inkopsgrupper', () => {
-  it('grupperar det som ska köpas per ansvarig med det som ingen ansvarar för först', () => {
-    const data = plan([maltid(1, 'frukost', 'Gröt'), maltid(1, 'middag', 'Gryta')], {
-      varor: [vara('Havregryn'), vara('Russin', { ansvarig: 'lisa' }), vara('Kaffe', { extra_g: 100, varifran: 'hemifran' })],
-    })
-    const { attKopa, hemifran } = inkopsgrupper(inkopslista(data, matdagar(1, 0), 2), ['lisa', 'erik'])
-    expect(attKopa.map((g) => [g.ansvarig, g.rader.map((r) => r.id)])).toEqual([
-      [null, ['Havregryn']],
-      ['lisa', ['Russin']],
-      ['erik', ['Gryta']],
-    ])
-    expect(hemifran.map((r) => r.id)).toEqual(['Kaffe'])
-  })
-
-  it('behåller rader vars ansvariga inte finns bland deltagarna, sist', () => {
-    const data = plan([], { varor: [vara('Havregryn', { extra_g: 1, ansvarig: 'borta' })] })
-    expect(inkopsgrupper(inkopslista(data, matdagar(1, 0), 1), ['lisa']).attKopa.map((g) => g.ansvarig)).toEqual(['borta'])
+  it('är tom en dag utan mat', () => {
+    expect(dagensText(dagssummor(plan([]), dagar, ['anna'])[0])).toBeNull()
   })
 })
 
 describe('summeringen', () => {
-  it('ger total matvikt, snitt, lägsta dag och antal saknade måltider', () => {
-    const dagar = matdagar(2, 0)
+  const dagar = matdagar(2, 0)
+
+  it('ger snitt, lägsta dag och antal saknade måltider', () => {
     const data = plan([maltid(1, 'frukost', 'Gröt'), maltid(1, 'middag', 'Gryta'), maltid(2, 'frukost', 'Gröt')])
-    const s = matsummering(dagssummor(data, dagar))
+    const s = matsummering(dagssummor(data, dagar, ['anna', 'erik']))
     expect(s.snittKcal).toBeCloseTo((423 + 700 + 423) / 2)
-    expect(s.lagstaKcal).toBeCloseTo(423)
+    expect(s.lagsta).toMatchObject({ person: 'anna', dag: { dag: 2 } })
+    expect(s.lagsta!.kcal).toBeCloseTo(423)
     expect(s.saknadeMaltider).toBe(1 + 2)
     expect(s.ofullstandig).toBe(false)
-    // Två personer: gröt 2 × 2 × 120 g och en kväll med gryta, två portioner i en påse på 300 g.
-    expect(matviktTotalt(inkopslista(data, dagar, 2))).toBe(480 + 300)
+  })
+
+  it('räknar snittet och lägsta per person, efter vem som äter', () => {
+    // Dag 1: Anna äter gröt, Erik gryta. Dag 2: båda äter gryta.
+    const data = plan([maltid(1, 'middag', 'Gröt'), maltid(1, 'middag', 'Gryta'), maltid(2, 'middag', 'Gryta')])
+    data.atare = [{ maltid_id: data.maltider[0].id, deltagare_id: 'anna' }, { maltid_id: data.maltider[1].id, deltagare_id: 'erik' }]
+    const s = matsummering(dagssummor(data, dagar, ['anna', 'erik']))
+    expect(s.snittKcal).toBeCloseTo((423 + 700 + 700 + 700) / 4)
+    expect(s.lagsta).toMatchObject({ person: 'anna', dag: { dag: 1 } })
+    expect(s.lagsta!.kcal).toBeCloseTo(423)
   })
 
   it('är noll utan dagar', () => {
-    expect(matsummering([])).toEqual({ snittKcal: 0, lagstaKcal: 0, snittProteinG: 0, saknadeMaltider: 0, ofullstandig: false })
+    expect(matsummering([])).toEqual({ snittKcal: 0, lagsta: null, snittProteinG: 0, saknadeMaltider: 0, ofullstandig: false })
   })
 })
 
@@ -441,7 +421,7 @@ describe('saknadeMaltider och matstatus', () => {
 
   it('ger samma saknade som dagssummor', () => {
     const data: Matdata = { ratter: [ratt('r1')], ingredienser: [], varor: [], pasar: new Map(), maltider: [maltid(1, 'lunch', 'r1')] }
-    const perDag = dagssummor(data, dagar).flatMap((s) => s.saknas.map((m) => `${s.dag.dag}:${m}`))
+    const perDag = dagssummor(data, dagar, []).flatMap((s) => s.saknas.map((m) => `${s.dag.dag}:${m}`))
     expect(saknadeMaltider(dagar, data.maltider).map((p) => `${p.dag.dag}:${p.maltid}`)).toEqual(perDag)
   })
 })
@@ -542,19 +522,11 @@ describe('vem som äter', () => {
     expect(saknasPerPerson({ maltider }, dagar, personer).size).toBe(0)
   })
 
-  it('räknar portionerna i inköpslistan efter dem som äter', () => {
-    const data = plan([rad('f', 'frukost'), rad('m', 'middag', 'Gryta')], { atare: [{ maltid_id: 'f', deltagare_id: 'lisa' }] })
-    const lista = inkopslista(data, dagar, 3)
-    // Gröten äts av en person: 90 g havregryn. Grytan av alla tre: 3 portioner, två per påse, blir 2 påsar.
-    expect(lista.find((r) => r.namn === 'Havregryn')?.gram).toBe(90)
-    expect(lista.find((r) => r.typ === 'pase')?.pasar).toBe(2)
-  })
-
-  it('räknar vikten varje deltagare bär', () => {
-    const maltider = [rad('f', 'frukost', 'Gröt', 'anna'), rad('l', 'lunch', 'Gröt', 'anna'), rad('m', 'middag', 'Gryta', 'erik'), rad('x', 'mellanmal', 'Gryta')]
-    const perPortion = new Map([['Gröt', { gram: 120 }], ['Gryta', { gram: 150 }]])
-    const vikt = barsAvPerson({ maltider, atare: [{ maltid_id: 'l', deltagare_id: 'anna' }] }, dagar, perPortion, personer)
-    expect(vikt).toEqual(new Map([['anna', 120 * 3 + 120], ['erik', 450]]))
+  it('räknar portionerna som en deltagare bär av en rätt, efter dem som äter', () => {
+    const maltider = [rad('f', 'frukost', 'Gröt', 'anna'), rad('l', 'lunch', 'Gröt', 'anna'), rad('m', 'middag', 'Gryta', 'erik'), rad('x', 'mellanmal', 'Gröt')]
+    const atare = [{ maltid_id: 'l', deltagare_id: 'anna' }]
+    expect(portionerSomBars({ maltider, atare }, dagar, personer, 'anna', 'Gröt')).toBe(3 + 1)
+    expect(portionerSomBars({ maltider, atare }, dagar, personer, 'erik', 'Gröt')).toBe(0)
   })
 })
 
@@ -666,19 +638,13 @@ describe('antalPasar', () => {
   })
 })
 
-describe('matviktPerDeltagare', () => {
-  const dagar = matdagar(1, 0)
-  const anna = { id: 'anna', typ: 'person' as const, matandel: null }
-  const erik = { id: 'erik', typ: 'person' as const, matandel: null }
-
-  it('räknar det var och en bär och delar det som ingen bär ännu', () => {
-    // Gröten till två är 2 × 120 g och bärs av Anna. Grytan är en påse på 300 g som ingen bär, och delas lika.
-    const data = plan([{ ...maltid(1, 'frukost', 'Gröt'), bars_av: 'anna' }, maltid(1, 'middag', 'Gryta')])
-    expect(matviktPerDeltagare(data, [anna, erik], dagar)).toEqual(new Map([['anna', 240 + 150], ['erik', 150]]))
+describe('portionText', () => {
+  it('visar energi och vikt per portion', () => {
+    expect(portionText({ kcal: 423, gram: 120 })).toBe('423 kcal per portion, 120 g')
   })
 
-  it('delar allt lika när ingen bär något', () => {
-    const data = plan([maltid(1, 'frukost', 'Gröt'), maltid(1, 'middag', 'Gryta')])
-    expect(matviktPerDeltagare(data, [anna, erik], dagar)).toEqual(new Map([['anna', 270], ['erik', 270]]))
+  it('skriver att energin saknas i stället för 0 kcal', () => {
+    expect(portionText({ kcal: 0, gram: 1 })).toBe('Energi saknas, 1 g')
+    expect(portionText({ kcal: 0, gram: 0 })).toBe('Energi och vikt saknas')
   })
 })
