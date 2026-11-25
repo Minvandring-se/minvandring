@@ -528,9 +528,25 @@ function IForradet({ finns }: { finns: { produkt: Katalogprodukt; text: string }
 }
 
 /**
+ * Sparar köket i förrådet: brännaren, om den inte redan finns, och delarna kopplade till den med kok_id.
+ * Finns brännaren redan används den första som inte själv hör till ett annat kök. Ger true om något gick fel.
+ */
+async function sparaKok(produkt: Katalogprodukt, saker: ReturnType<typeof sakerForKok>, brannarenFinns: boolean): Promise<boolean> {
+  if (!supabase) return true
+  const delar = brannarenFinns ? saker : saker.slice(1)
+  const kok = brannarenFinns
+    ? await supabase.from('forradssaker').select('id').eq('produkt_id', produkt.id).is('kok_id', null).order('skapad').limit(1).maybeSingle()
+    : await supabase.from('forradssaker').insert(saker[0]).select('id').single()
+  if (kok.error) return true
+  if (delar.length === 0) return false
+  const { error } = await supabase.from('forradssaker').insert(delar.map((d) => ({ ...d, kok_id: kok.data?.id ?? null })))
+  return Boolean(error)
+}
+
+/**
  * Det som passar ihop med produkten i köket: kokkärl, stekpannor och bränsle till en brännare eller ett komplett kök,
  * och brännare och kompletta kök till ett kokkärl eller ett bränsle. På en brännare kan man lägga till kokkärl och
- * bränsle i "Ditt kök", som visar den sammanlagda vikten och lägger delarna i förrådet var för sig.
+ * bränsle i "Ditt kök", som visar den sammanlagda vikten och lägger delarna i förrådet kopplade till brännaren.
  */
 function PassarMed({
   produkt,
@@ -605,7 +621,7 @@ function PassarMed({
     setSparar(true)
     setBesked(null)
     const saker = sakerForKok(produkt, valda, brannarenFinns)
-    const { error } = await supabase.from('forradssaker').insert(saker)
+    const error = await sparaKok(produkt, saker, brannarenFinns)
     setSparar(false)
     if (error) {
       setBesked({ fel: true, text: 'Det gick inte att spara. Kontrollera uppkopplingen och försök igen.' })

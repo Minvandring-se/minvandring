@@ -23,6 +23,8 @@ export interface Forradssak {
   skapad?: string
   /** Produkten saken kommer från, när listan hämtas med den. Saknas för saker man har skrivit in själv. */
   produkter?: ForradsProdukt | null
+  /** Brännaren eller det kompletta köket ett kokkärl eller bränsle hör till i ens kök, när listan hämtas med det. */
+  kok_id?: string | null
 }
 
 /** Det som förrådet visar om produkten en sak kommer från. */

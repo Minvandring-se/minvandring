@@ -136,6 +136,7 @@ describe('funktionerna i public', () => {
     'public.bara_personer_ater()',
     'public.hund_ater_inte()',
     'public.bara_personer_koper()',
+    'public.skydda_forradskok()',
   ]
   const forInloggade = [
     'public.ar_medlem(uuid)',
@@ -1247,6 +1248,112 @@ describe('Mitt förråd', () => {
     await db.query('delete from auth.users where id = $1', [H])
     const r = await db.query('select 1 from public.forradssaker where user_id = $1', [H])
     expect(r.rows).toHaveLength(0)
+  })
+})
+
+describe('köket i förrådet', () => {
+  const ny = (vem: string, namn: string, underkategori: string, kok: string | null = null) =>
+    som(vem, (tx) =>
+      tx.query<{ id: string }>(`insert into public.forradssaker (namn, kategori, underkategori, kok_id) values ($1, 'kok', $2, $3) returning id`, [
+        namn,
+        underkategori,
+        kok,
+      ]),
+    ).then((r) => r.rows[0].id)
+  const kokFor = (id: string) => db.query<{ kok_id: string | null }>('select kok_id from public.forradssaker where id = $1', [id]).then((r) => r.rows[0]?.kok_id)
+
+  it('kokkärl och bränsle kopplas till ens egen brännare', async () => {
+    const brannare = await ny(A, 'Annas brännare', 'brannare')
+    const kastrull = await ny(A, 'Annas kastrull', 'kastrull', brannare)
+    const gas = await ny(A, 'Annas gas', 'bransle')
+    await som(A, (tx) => tx.query('update public.forradssaker set kok_id = $1 where id = $2', [brannare, gas]))
+    expect(await kokFor(kastrull)).toBe(brannare)
+    expect(await kokFor(gas)).toBe(brannare)
+    await som(A, (tx) => tx.query('update public.forradssaker set kok_id = null where id = $1', [gas]))
+    expect(await kokFor(gas)).toBeNull()
+  })
+
+  it('går också att bygga kring ett komplett kök', async () => {
+    const kok = await ny(A, 'Annas stormkök', 'komplett_kok')
+    const gas = await ny(A, 'Gas till stormköket', 'bransle', kok)
+    expect(await kokFor(gas)).toBe(kok)
+  })
+
+  it('ingen kan koppla sin sak till någon annans brännare', async () => {
+    const annas = await ny(A, 'Annas andra brännare', 'brannare')
+    await expect(ny(B, 'Bertils kastrull', 'kastrull', annas)).rejects.toThrow()
+    const bertils = await ny(B, 'Bertils kastrull', 'kastrull')
+    await forvantaFel(som(B, (tx) => tx.query('update public.forradssaker set kok_id = $1 where id = $2', [annas, bertils])))
+    expect(await kokFor(bertils)).toBeNull()
+  })
+
+  it('bara kokkärl och bränsle är delar, och bara brännare och kompletta kök har delar', async () => {
+    const brannare = await ny(A, 'Brännare för fel delar', 'brannare')
+    const talt = som(A, (tx) => tx.query(`insert into public.forradssaker (namn, kategori, underkategori, kok_id) values ('Tält', 'talt', 'talt', $1)`, [brannare]))
+    await expect(talt).rejects.toThrow(/Bara kokkärl och bränsle/)
+    await expect(ny(A, 'Kåsa i köket', 'kasa', brannare)).rejects.toThrow(/Bara kokkärl och bränsle/)
+    const kastrull = await ny(A, 'Kastrull utan kök', 'kastrull')
+    await expect(ny(A, 'Gas till kastrullen', 'bransle', kastrull)).rejects.toThrow(/brännare eller ett komplett kök/)
+  })
+
+  it('en sak kan inte vara sitt eget kök, inte ens förbi triggern', async () => {
+    const gas = await ny(A, 'Ensam gas', 'bransle')
+    await forvantaFel(som(A, (tx) => tx.query('update public.forradssaker set kok_id = id where id = $1', [gas])))
+    // Triggrarna stängs av, så att det är checken som prövas.
+    const id = crypto.randomUUID()
+    await db.query(`set session_replication_role = replica`)
+    try {
+      await expect(
+        db.query(`insert into public.forradssaker (id, user_id, namn, kategori, kok_id) values ($1, $2, 'Själv', 'ovrigt', $1)`, [id, A]),
+      ).rejects.toThrow(/forradssaker_kok_inte_sig_sjalv/)
+    } finally {
+      await db.query(`set session_replication_role = origin`)
+    }
+  })
+
+  it('en brännare med delar kan bli ett komplett kök, men inte något annat', async () => {
+    const brannare = await ny(A, 'Brännare med delar', 'brannare')
+    await ny(A, 'Delen', 'kastrull', brannare)
+    await expect(som(A, (tx) => tx.query(`update public.forradssaker set underkategori = 'kastrull' where id = $1`, [brannare]))).rejects.toThrow(/Ta bort delarna/)
+    await som(A, (tx) => tx.query(`update public.forradssaker set underkategori = 'komplett_kok' where id = $1`, [brannare]))
+  })
+
+  it('en del i ett kök kan inte byta till en annan sorts sak', async () => {
+    const brannare = await ny(A, 'Brännare med kastrull', 'brannare')
+    const kastrull = await ny(A, 'Kastrull i köket', 'kastrull', brannare)
+    for (const u of ['kasa', 'brannare'])
+      await expect(som(A, (tx) => tx.query('update public.forradssaker set underkategori = $2 where id = $1', [kastrull, u]))).rejects.toThrow(/Bara kokkärl och bränsle/)
+    await expect(som(A, (tx) => tx.query('update public.forradssaker set underkategori = null where id = $1', [kastrull]))).rejects.toThrow(/Bara kokkärl och bränsle/)
+  })
+
+  it('samma fel för någon annans brännare som för en som inte finns', async () => {
+    const annas = await ny(A, 'Annas tredje brännare', 'brannare')
+    await expect(ny(B, 'K1', 'kastrull', annas)).rejects.toThrow(/brännare eller ett komplett kök/)
+    await expect(ny(B, 'K2', 'kastrull', crypto.randomUUID())).rejects.toThrow(/brännare eller ett komplett kök/)
+  })
+
+  it('nyckeln stoppar en koppling mellan två ägare även förbi RLS', async () => {
+    const annas = await ny(A, 'Annas fjärde brännare', 'brannare')
+    await expect(
+      db.query(`insert into public.forradssaker (user_id, namn, kategori, underkategori, kok_id) values ($1, 'Smuggel', 'kok', 'kastrull', $2)`, [B, annas]),
+    ).rejects.toThrow(/forradssaker_kok_samma_agare/)
+  })
+
+  it('ett konto med kök och delar går att ta bort', async () => {
+    const K = '00000000-0000-0000-0000-0000000000c1'
+    await db.query(`insert into auth.users (id, email) values ('${K}', 'kok@exempel.se')`)
+    const brannare = await ny(K, 'Brännare', 'brannare')
+    await ny(K, 'Kastrull', 'kastrull', brannare)
+    await ny(K, 'Gas', 'bransle', brannare)
+    await db.query('delete from auth.users where id = $1', [K])
+    expect((await db.query('select 1 from public.forradssaker where user_id = $1', [K])).rows).toHaveLength(0)
+  })
+
+  it('delarna finns kvar utan koppling när brännaren tas bort', async () => {
+    const brannare = await ny(A, 'Brännare som tas bort', 'brannare')
+    const kastrull = await ny(A, 'Kastrull som blir kvar', 'kastrull', brannare)
+    await som(A, (tx) => tx.query('delete from public.forradssaker where id = $1', [brannare]))
+    expect(await kokFor(kastrull)).toBeNull()
   })
 })
 
