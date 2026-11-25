@@ -19,6 +19,7 @@ import {
   matsummering,
   saknadeMaltider,
   saknasText,
+  matviktPerDeltagare,
   matviktTotalt,
   naringForRader,
   PASAR_TILL,
@@ -662,5 +663,22 @@ describe('antalPasar', () => {
     expect(antalPasar(3, 2, 2)).toBe(3)
     expect(antalPasar(1, 3, 2)).toBe(2)
     expect(antalPasar(2, 1, 0)).toBe(2)
+  })
+})
+
+describe('matviktPerDeltagare', () => {
+  const dagar = matdagar(1, 0)
+  const anna = { id: 'anna', typ: 'person' as const, matandel: null }
+  const erik = { id: 'erik', typ: 'person' as const, matandel: null }
+
+  it('räknar det var och en bär och delar det som ingen bär ännu', () => {
+    // Gröten till två är 2 × 120 g och bärs av Anna. Grytan är en påse på 300 g som ingen bär, och delas lika.
+    const data = plan([{ ...maltid(1, 'frukost', 'Gröt'), bars_av: 'anna' }, maltid(1, 'middag', 'Gryta')])
+    expect(matviktPerDeltagare(data, [anna, erik], dagar)).toEqual(new Map([['anna', 240 + 150], ['erik', 150]]))
+  })
+
+  it('delar allt lika när ingen bär något', () => {
+    const data = plan([maltid(1, 'frukost', 'Gröt'), maltid(1, 'middag', 'Gryta')])
+    expect(matviktPerDeltagare(data, [anna, erik], dagar)).toEqual(new Map([['anna', 270], ['erik', 270]]))
   })
 })

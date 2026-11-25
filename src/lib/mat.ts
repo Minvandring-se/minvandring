@@ -3,6 +3,7 @@
 // I första versionen äter alla personer i turen en portion av varje rätt i en måltid. Hundar äter egen mat,
 // som räknas i vikt.ts (hundmat_per_dag_g).
 import { allergenetikett, uppraknade } from './kost'
+import { matvikter, type Deltagare } from './vikt'
 import { arEnhet, type Enhet } from './handla'
 import type { Ingrediens, Katalogmaltid, Maltid, Maltidsrad, Matatare, Matprodukt, Ratt, Vara } from './typer'
 
@@ -515,6 +516,20 @@ export function ratterSomSaknar(data: Matdata, dagar: readonly Matdag[]): Saknad
 /** All mat till personerna i gram, för vikten per person i vikt.ts (matvikter). */
 export function matviktTotalt(rader: readonly Inkopsrad[]): number {
   return rader.reduce((s, r) => s + r.gram, 0)
+}
+
+/**
+ * Matvikten varje deltagare bär vid start: det hen bär enligt Vem bär i matplanen, plus en andel av maten som ingen
+ * bär ännu, efter deltagarnas matandelar. Hundarnas egen mat räknas som i matvikter.
+ */
+export function matviktPerDeltagare(data: Matdata, matdeltagare: Deltagare[], dagar: readonly Matdag[]): Map<string, number> {
+  const personIds = matdeltagare.filter((d) => d.typ === 'person').map((d) => d.id)
+  const totalt = matviktTotalt(inkopslista(data, dagar, personIds.length))
+  const perPortion = new Map(data.ratter.map((r) => [r.id, rattPerPortion(r, data)]))
+  const buren = barsAvPerson(data, dagar, perPortion, personIds)
+  const burenTotalt = [...buren.values()].reduce((a, g) => a + g, 0)
+  const rest = matvikter(Math.max(0, totalt - burenTotalt), matdeltagare, dagar.length)
+  return new Map(matdeltagare.map((d) => [d.id, (buren.get(d.id) ?? 0) + (rest.get(d.id) ?? 0)]))
 }
 
 export interface Matsummering {

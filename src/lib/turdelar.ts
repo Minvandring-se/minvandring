@@ -22,7 +22,7 @@ export const TURDELAR: readonly TurdelInfo[] = [
     del: 'packning',
     namn: 'Packning',
     sokvag: 'packning',
-    byggd: false,
+    byggd: true,
     blir: 'Gruppens packlista: vem som bär vad, vikten per ryggsäck och bockar för det som är packat.',
   },
   { del: 'mat', namn: 'Mat', sokvag: 'mat', byggd: true, blir: 'Matplanen dag för dag och en inköpslista som går att bocka av.' },

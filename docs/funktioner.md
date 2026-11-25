@@ -35,10 +35,10 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Köpt, skick, turer och pris per natt för en sak | Senare |
 | Utrustningskatalog: sök och kategorifilter (`/utrustning`) | Finns |
 | Jämför produkter sida vid sida | Senare |
-| Packlista per person | Nästa (P1) |
-| Basvikt, förbrukning och startvikt | Nästa (P1) |
+| Packlista per person | Finns (`/tur/:id/packning`): ur förrådet eller som egen sak, bockar per person, Alla har var sin med egen modell |
+| Basvikt, förbrukning och startvikt | Finns, startvikt per person med mat från matplanen |
 | Vikt per kategori och person | Nästa (P1) |
-| Gemensam utrustning och vem som bär | Nästa (P1) |
+| Gemensam utrustning och vem som bär | Finns: gemensamma rader, Jag tar med den (även läsare), förslag på det gruppen behöver och frågor om dubbletter |
 | Viktmål för turen | Senare |
 | Buren vikt | Senare |
 | Packläge att bocka av | Senare |
