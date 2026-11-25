@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { glomTurlistan } from '@/components/app/turlistaMinne'
 import { Deltagarlista } from '@/components/tur/Deltagarlista'
+import { EtapperIOversikten } from '@/components/tur/EtapperIOversikten'
 import {
   AttGora,
-  Dagsetapper,
   DelaOchSpara,
   DeladeKostnader,
   DinVikt,
@@ -81,7 +81,7 @@ export function TurOversikt() {
         <RedoForAvfard className={BRED} />
         <AttGora className={BRED} />
         <ResanDitOchHem />
-        <Dagsetapper className={BRED} />
+        <EtapperIOversikten tur={tur} kanAndra={kanAndra(minRoll)} className={BRED} />
         <DinVikt />
         <MatPerDag className={BRED} />
         <ViktPerPerson />
