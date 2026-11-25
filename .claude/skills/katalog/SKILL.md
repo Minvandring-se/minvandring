@@ -39,7 +39,7 @@ CSV-filerna i `supabase/katalog/` är huvudlistan. Tabellen `produkter` fylls ba
 
 ## Namn
 
-- **Modellnamn följer tillverkarens namn**, inte butikens. Lägg inte till ord som bara butiken använder (till exempel "Ultralight", "DWN", "SYN", "RC" eller "Sleeping Bag" när det inte ingår i tillverkarens namn), och skriv namnet utan produkttyp ("Brenta 30", inte "Brenta 30 Liters Hiking Backpack"). Skriv i samma stil som befintliga rader av samma märke. Marmots sovsäckar har gradtalet med °F i namnet, till exempel "Hibernest 15°F".
+- **Modellnamn följer tillverkarens namn**, inte butikens. Lägg inte till ord som bara butiken använder (till exempel "Ultralight", "DWN", "SYN", "RC" eller "Sleeping Bag" när det inte ingår i tillverkarens namn), och skriv namnet utan produkttyp ("Brenta 30", inte "Brenta 30 Liters Hiking Backpack"). Skriv i samma stil som befintliga rader av samma märke. Marmots sovsäckar har gradtalet med °F i namnet, till exempel "Hibernest 15°F". Sea to Summits Frontier-serie skrivs "Frontier Ultralight" på alla rader, också där tillverkaren skriver "UL" i rubriken (beslut av grundarna 2026-11-25). Det räknas inte som en avvikelse i granskningen.
 - **Märkesnamn som i resten av katalogen:** `Deuter`, `Exped`, `NEMO`, `NOMAD`, `Pajak`, `Sea to Summit`, `VAUDE`. För nya märken: skriv som tillverkaren själv skriver det i löptext. Stavas ett märke olika i olika filer: visa det för användaren och vänta på beslut innan något ändras.
 - En seed känner igen en produkt på märke, modell och version utan hänsyn till stora och små bokstäver, och skriver över alla kolumner vid träff. En rättad stavning slår alltså igenom på en befintlig rad.
 
