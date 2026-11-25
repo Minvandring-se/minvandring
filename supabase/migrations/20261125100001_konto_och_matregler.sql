@@ -6,7 +6,8 @@
 -- set null) krockade med skydda_deltagare, som inte låter någon flytta en deltagare. Nu gäller:
 --   - Personens deltagarrader tas bort, och med dem kostbehoven, ätarna och bockarna (deras främmande nycklar
 --     har redan on delete cascade). Raderna hen bar blir utan bärare.
---   - Var personen ensam ägare blir nästa deltagare med konto ägare, den som kom med först.
+--   - Var personen den enda ägaren med konto blir nästa deltagare med konto ägare: redigerare före läsare, och
+--     bland dem den som kom med först.
 --   - Finns ingen annan med konto raderas turen.
 --   - Turen som personen skapade finns kvar utan skapare.
 
@@ -22,14 +23,21 @@ alter table public.deltagare
   drop constraint deltagare_user_id_fkey,
   add constraint deltagare_user_id_fkey foreign key (user_id) references auth.users (id) on delete cascade;
 
--- Samma som i 20261116000000_ta_over_deltagare.sql, med ett undantag: när ett konto raderas byter
--- konto_raderas ägare. Det sker utan inloggning (auth.uid() är tom) och utan API:ts roller anon och authenticated,
--- alltså bara när Supabase själv raderar kontot eller någon med åtkomst till databasen gör det.
+-- Samma som i 20261116000000_ta_over_deltagare.sql, med ett undantag: när ett konto raderas får konto_raderas göra
+-- en deltagare till ägare. Undantaget gäller bara när
+--   - ingen är inloggad (auth.uid() är tom) och rollen inte är API:ts anon eller authenticated,
+--   - anslutningen inte kommer från API:t (session_user är authenticator för alla anrop via PostgREST, även med
+--     secret-nyckeln, och går inte att byta med set role),
+--   - konto_raderas har satt minvandring.konto_raderas i transaktionen,
+--   - och rollen blir owner. Ingen ägare kan tas bort eller nedgraderas den vägen.
 create or replace function public.skydda_deltagare() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare
   andra_agare int;
-  systemet boolean := auth.uid() is null and coalesce(current_setting('role', true), 'none') not in ('anon', 'authenticated');
+  systemet boolean := auth.uid() is null
+    and coalesce(current_setting('role', true), 'none') not in ('anon', 'authenticated')
+    and session_user <> 'authenticator'
+    and coalesce(current_setting('minvandring.konto_raderas', true), '') <> '';
 begin
   if tg_op = 'UPDATE' then
     if new.tur_id <> old.tur_id then
@@ -39,7 +47,7 @@ begin
        and not (old.user_id is null and old.typ = 'person' and new.user_id = auth.uid()) then
       raise exception 'Det går inte att flytta en deltagare';
     end if;
-    if new.roll <> old.roll and not public.ar_agare(old.tur_id) and not systemet then
+    if new.roll <> old.roll and not public.ar_agare(old.tur_id) and not (systemet and new.roll = 'owner') then
       raise exception 'Bara ägaren kan ändra roller';
     end if;
   end if;
@@ -68,11 +76,14 @@ declare
   d record;
   nasta uuid;
 begin
+  -- Släpper fram ägarbytet i skydda_deltagare, bara i den här transaktionen.
+  perform set_config('minvandring.konto_raderas', old.id::text, true);
   for d in select x.id, x.tur_id from public.deltagare x where x.user_id = old.id and x.roll = 'owner' loop
-    continue when exists (select 1 from public.deltagare y where y.tur_id = d.tur_id and y.roll = 'owner' and y.id <> d.id);
+    -- En annan ägare med konto finns redan. En ägarrad utan konto räknas inte, eftersom ingen kan logga in som den.
+    continue when exists (select 1 from public.deltagare y where y.tur_id = d.tur_id and y.roll = 'owner' and y.id <> d.id and y.user_id is not null);
     select y.id into nasta from public.deltagare y
       where y.tur_id = d.tur_id and y.id <> d.id and y.user_id is not null
-      order by y.skapad, y.sortering, y.id
+      order by (y.roll = 'viewer'), y.skapad, y.sortering, y.id
       limit 1;
     if nasta is null then
       delete from public.turer where id = d.tur_id;

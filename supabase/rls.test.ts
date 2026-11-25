@@ -2511,6 +2511,10 @@ describe('ett konto som raderas', () => {
   let ensam: string
   let somRedigerare: string
   let kimsRad: string
+  let platshallare: string
+  let tvaAgare: string
+  let lasareForst: string
+  let kimsMaltid: string
 
   const deltagare = async (t: string) =>
     (await db.query<{ user_id: string | null; roll: string; namn: string }>('select user_id, roll, namn from public.deltagare where tur_id = $1 order by namn', [t])).rows
@@ -2532,6 +2536,34 @@ describe('ett konto som raderas', () => {
     somRedigerare = await skapaTur(JON, 'Jons tur')
     const jonsKod = await kodFor(somRedigerare)
     await som(KIM, (tx) => tx.query('select public.ga_med($1)', [jonsKod]))
+    // Kim bär en rad, äter den ensam och har bockat av den i den första turen.
+    const r = await som(KIM, (tx) => tx.query<{ id: string }>(`insert into public.ratter (tur_id, namn) values ($1, 'Kims gröt') returning id`, [medAndra]))
+    kimsMaltid = (
+      await som(KIM, (tx) =>
+        tx.query<{ id: string }>(`insert into public.maltider (tur_id, dag, maltid, ratt_id, bars_av) values ($1, 1, 'frukost', $2, $3) returning id`, [medAndra, r.rows[0].id, kimsRad]),
+      )
+    ).rows[0].id
+    await som(KIM, (tx) => tx.query('insert into public.maltid_atare (tur_id, maltid_id, deltagare_id) values ($1, $2, $3)', [medAndra, kimsMaltid, kimsRad]))
+    const v = await som(KIM, (tx) => tx.query<{ id: string }>(`insert into public.varor (tur_id, namn) values ($1, 'Kims havregryn') returning id`, [medAndra]))
+    await som(KIM, (tx) => tx.query('insert into public.inkop_klart (tur_id, deltagare_id, vara_id) values ($1, $2, $3)', [medAndra, kimsRad, v.rows[0].id]))
+    // En tur där Kim har gjort en platshållare utan konto till ägare, och Jon är redigerare.
+    platshallare = await skapaTur(KIM, 'Kims tur med platshållare')
+    const p = await som(KIM, (tx) => tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn) values ($1, 'Pelle') returning id`, [platshallare]))
+    await som(KIM, (tx) => tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [p.rows[0].id]))
+    const pk = await kodFor(platshallare)
+    await som(JON, (tx) => tx.query('select public.ga_med($1)', [pk]))
+    // En tur där Kim och Jon båda är ägare, och Mia redigerare.
+    tvaAgare = await skapaTur(KIM, 'Kims och Jons tur')
+    const tk = await kodFor(tvaAgare)
+    await som(JON, (tx) => tx.query('select public.ga_med($1)', [tk]))
+    await som(MIA, (tx) => tx.query('select public.ga_med($1)', [tk]))
+    await som(KIM, (tx) => tx.query(`update public.deltagare set roll = 'owner' where tur_id = $1 and user_id = $2`, [tvaAgare, JON]))
+    // En tur där Jon gick med först men är läsare, och Mia är redigerare.
+    lasareForst = await skapaTur(KIM, 'Kims tur med läsare först')
+    const lk = await kodFor(lasareForst)
+    await som(JON, (tx) => tx.query('select public.ga_med($1)', [lk]))
+    await som(MIA, (tx) => tx.query('select public.ga_med($1)', [lk]))
+    await som(KIM, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where tur_id = $1 and user_id = $2`, [lasareForst, JON]))
   })
 
   it('tar bort personen och kostbehoven, gör nästa med konto till ägare och raderar turen där ingen annan har konto', async () => {
@@ -2557,6 +2589,49 @@ describe('ett konto som raderas', () => {
     expect(await turnamn(somRedigerare)).toBe('Jons tur')
     // Turen som Kim skapade finns kvar utan skapare.
     expect((await db.query('select skapad_av from public.turer where id = $1', [medAndra])).rows).toEqual([{ skapad_av: null }])
+    // Ätarna och bockarna försvinner med Kims rad. Raden Kim bar blir utan bärare och ligger kvar i turen.
+    expect((await db.query('select 1 from public.maltid_atare where deltagare_id = $1', [kimsRad])).rows).toHaveLength(0)
+    expect((await db.query('select 1 from public.inkop_klart where deltagare_id = $1', [kimsRad])).rows).toHaveLength(0)
+    expect((await db.query('select tur_id, bars_av from public.maltider where id = $1', [kimsMaltid])).rows).toEqual([{ tur_id: medAndra, bars_av: null }])
+    // Profilen försvinner med kontot.
+    expect((await db.query('select 1 from public.profiler where id = $1', [KIM])).rows).toHaveLength(0)
+  })
+
+  it('en ägare utan konto räknas inte, en annan ägare med konto behålls, och en redigerare går före en läsare', async () => {
+    // Platshållaren Pelle var ägare, men utan konto. Jon blir ägare.
+    expect((await deltagare(platshallare)).map((d) => [d.user_id, d.roll]).sort()).toEqual([
+      [JON, 'owner'],
+      [null, 'owner'],
+    ].sort())
+    // Jon var redan ägare. Mia förblir redigerare.
+    expect((await deltagare(tvaAgare)).map((d) => [d.user_id, d.roll]).sort()).toEqual([
+      [JON, 'owner'],
+      [MIA, 'editor'],
+    ].sort())
+    // Jon gick med först men är läsare, så Mia, som är redigerare, blir ägare.
+    expect((await deltagare(lasareForst)).map((d) => [d.user_id, d.roll]).sort()).toEqual([
+      [JON, 'viewer'],
+      [MIA, 'owner'],
+    ].sort())
+  })
+
+  it('undantaget för ägarbyte gäller bara när en ny ägare utses vid en kontoradering', async () => {
+    const t = await skapaTur(JON, 'Jons tur med två ägare')
+    const kod = await kodFor(t)
+    await som(MIA, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const mia = (await db.query<{ id: string }>('select id from public.deltagare where tur_id = $1 and user_id = $2', [t, MIA])).rows[0].id
+    await som(JON, (tx) => tx.query(`update public.deltagare set roll = 'owner' where id = $1`, [mia]))
+    // Även med inställningen satt går det inte att nedgradera en ägare utan att vara ägare.
+    await forvantaFel(
+      db.transaction(async (tx) => {
+        await tx.query(`select set_config('minvandring.konto_raderas', 'x', true)`)
+        return tx.query(`update public.deltagare set roll = 'editor' where id = $1`, [mia])
+      }),
+    )
+    // En redigerare får ändra en rad utan konto, men inte dess roll.
+    const p = await som(JON, (tx) => tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn) values ($1, 'Platshållare') returning id`, [t]))
+    await som(JON, (tx) => tx.query(`update public.deltagare set roll = 'editor' where id = $1`, [mia]))
+    await forvantaFel(som(MIA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [p.rows[0].id])))
   })
 
   it('ingen inloggad kan själv göra någon till ägare utan att vara ägare', async () => {
