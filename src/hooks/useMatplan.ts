@@ -2,7 +2,7 @@ import { useCallback, useEffect, useState } from 'react'
 import type { Deltagare as Matdeltagare } from '@/lib/vikt'
 import { ingredienserTillDatabasen, pasnamn, type TolkadIngrediens } from '@/lib/mat'
 import { supabase } from '@/lib/supabase'
-import type { Ingrediens, InkopKlart, Kostbehov, Maltid, Maltidsrad, Matatare, Matprodukt, Ratt, Vara } from '@/lib/typer'
+import type { Ingrediens, InkopKlart, Kostbehov, Maltid, Maltidsrad, Matatare, Matprodukt, Ratt, Vara, Varukatalogvara } from '@/lib/typer'
 
 /** Allt i turens matplan. Påsarna är de som turens rätter pekar på. */
 export interface Matplan {
@@ -15,6 +15,8 @@ export interface Matplan {
   /** Bockarna i inköpslistan: vem som har köpt vad. */
   klart: InkopKlart[]
   pasar: Map<string, Matprodukt>
+  /** Varorna i varukatalogen som turens varor valdes från, för allergenerna i egna rätter. */
+  varukatalog: Map<string, Varukatalogvara>
   kostbehov: Kostbehov[]
   /** Deltagarna med matandel och hundmat, för vikten per person. */
   matdeltagare: Matdeltagare[]
@@ -29,7 +31,7 @@ async function hamtaMatplan(turId: string): Promise<Matplan | null> {
   const [ratter, ingredienser, varor, maltider, deltagare, atare, klart] = await Promise.all([
     supabase.from('ratter').select('id, namn, matprodukt_id, ansvarig, klart').eq('tur_id', turId).order('namn'),
     supabase.from('ingredienser').select('id, ratt_id, vara_id, mangd, enhet, gram_per_portion').eq('tur_id', turId),
-    supabase.from('varor').select('id, namn, kcal_per_100g, protein_per_100g, extra_g, varifran, ansvarig, klart, avdelning').eq('tur_id', turId).order('namn'),
+    supabase.from('varor').select('id, namn, kcal_per_100g, protein_per_100g, extra_g, varifran, ansvarig, klart, avdelning, varukatalog_id').eq('tur_id', turId).order('namn'),
     supabase.from('maltider').select('id, dag, maltid, ratt_id, sortering, bars_av').eq('tur_id', turId).order('sortering'),
     supabase.from('deltagare').select('id, typ, matandel, hundmat_per_dag_g').eq('tur_id', turId),
     supabase.from('maltid_atare').select('maltid_id, deltagare_id').eq('tur_id', turId),
@@ -40,14 +42,16 @@ async function hamtaMatplan(turId: string): Promise<Matplan | null> {
   const rattrader = ratter.data as Ratt[]
   const deltagarrader = deltagare.data as { id: string; typ: 'person' | 'hund'; matandel: number | null; hundmat_per_dag_g: number | null }[]
   const pasIds = [...new Set(rattrader.map((r) => r.matprodukt_id).filter((id): id is string => id !== null))]
-  const [pasar, kostbehov] = await Promise.all([
+  const varukatalogIds = [...new Set((varor.data as Vara[]).map((v) => v.varukatalog_id).filter((id): id is string => !!id))]
+  const [pasar, kostbehov, katalogvaror] = await Promise.all([
     pasIds.length ? supabase.from('matprodukter').select(MATPRODUKT).in('id', pasIds) : Promise.resolve({ data: [], error: null }),
     supabase.from('kostbehov').select('deltagare_id, vegetarisk, vegansk, glutenfri, laktosfri, utan, samtycke_tid').in(
       'deltagare_id',
       deltagarrader.map((d) => d.id),
     ),
+    varukatalogIds.length ? supabase.from('varukatalog').select('*').in('id', varukatalogIds) : Promise.resolve({ data: [], error: null }),
   ])
-  if (pasar.error || kostbehov.error) return null
+  if (pasar.error || kostbehov.error || katalogvaror.error) return null
 
   return {
     ratter: rattrader,
@@ -58,6 +62,7 @@ async function hamtaMatplan(turId: string): Promise<Matplan | null> {
     atare: atare.data as Matatare[],
     klart: klart.data as InkopKlart[],
     pasar: new Map((pasar.data as Matprodukt[]).map((p) => [p.id, p])),
+    varukatalog: new Map((katalogvaror.data as Varukatalogvara[]).map((v) => [v.id, v])),
     kostbehov: kostbehov.data as Kostbehov[],
     matdeltagare: deltagarrader.map((d) => ({ id: d.id, typ: d.typ, matandel: d.matandel, hundmatPerDagG: d.hundmat_per_dag_g })),
   }

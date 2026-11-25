@@ -2368,6 +2368,93 @@ describe('matplanen', () => {
     })
   })
 
+  describe('varukatalogen', () => {
+    let vk: string
+    const nyVaruKatalograd = async (namn: string, allergener = "array['gluten']::text[]") =>
+      (
+        await db.query<{ id: string }>(
+          `insert into public.varukatalog (marke, namn, kategori, forpackning_g, kcal_per_100g, allergener, kalla) values ('Testbröd', $1, 'brod', 375, 280, ${allergener}, 'https://exempel.se') returning id`,
+          [namn],
+        )
+      ).rows[0].id
+
+    beforeAll(async () => {
+      vk = await nyVaruKatalograd('Sarek')
+    })
+
+    it('inloggade läser, ingen ändrar via API:t och anon når ingenting', async () => {
+      const r = await som(LASARE, (tx) => tx.query('select namn from public.varukatalog where id = $1', [vk]))
+      expect(r.rows).toEqual([{ namn: 'Sarek' }])
+      await forvantaFel(som(AGARE, (tx) => tx.query(`insert into public.varukatalog (marke, namn, kategori, forpackning_g, kcal_per_100g, kalla) values ('X', 'Y', 'brod', 1, 1, 'https://x.se')`)))
+      const u = await som(AGARE, (tx) => tx.query("update public.varukatalog set namn = 'Ändrad' where id = $1", [vk])).catch(() => null)
+      expect(u?.affectedRows ?? 0).toBe(0)
+      await forvantaFel(somAnon((tx) => tx.query('select 1 from public.varukatalog')))
+      const har = async (roll: string, r: string) =>
+        (await db.query<{ ok: boolean }>("select has_table_privilege($1, 'public.varukatalog', $2) as ok", [roll, r])).rows[0].ok
+      for (const r of ['insert', 'update', 'delete', 'truncate']) expect(await har('authenticated', r), r).toBe(false)
+      for (const r of ['select', 'insert', 'update', 'delete']) expect(await har('anon', r), r).toBe(false)
+      const rls = await db.query("select relrowsecurity from pg_class where oid = 'public.varukatalog'::regclass")
+      expect(rls.rows).toEqual([{ relrowsecurity: true }])
+      // Samma märke och namn två gånger går inte, oavsett stora och små bokstäver.
+      await forvantaFel(nyVaruKatalograd('SAREK'))
+    })
+
+    it('spara_egen_ratt sparar kopplingen på varan, och null tar bort den', async () => {
+      const spara = (rader: object[]) =>
+        som(REDIGERARE, (tx) => tx.query<{ id: string }>('select public.spara_egen_ratt($1, null, $2, $3::jsonb) as id', [tur, `Rätt ${crypto.randomUUID().slice(0, 6)}`, JSON.stringify(rader)]))
+      await spara([{ vara: 'Testbröd Sarek', gram: 60, kcal: 280, protein: 9.8, varukatalog: vk }])
+      const koppling = async () => (await db.query<{ varukatalog_id: string | null }>("select varukatalog_id from public.varor where tur_id = $1 and namn = 'Testbröd Sarek'", [tur])).rows[0].varukatalog_id
+      expect(await koppling()).toBe(vk)
+      // Utan nyckeln behålls kopplingen.
+      await spara([{ vara: 'Testbröd Sarek', gram: 60, kcal: 280, protein: 9.8 }])
+      expect(await koppling()).toBe(vk)
+      await spara([{ vara: 'Testbröd Sarek', gram: 60, kcal: 280, protein: 9.8, varukatalog: null }])
+      expect(await koppling()).toBeNull()
+    })
+
+    it('spara_recept sparar kopplingen på raden, och kopplingen blir tom när varan försvinner ur katalogen', async () => {
+      const borta = await nyVaruKatalograd('Försvinner')
+      const id = (
+        await som(LASARE, (tx) =>
+          tx.query<{ id: string }>('select public.spara_recept(null, $1, $2::jsonb) as id', ['Recept med katalogvara', JSON.stringify([{ vara: 'Testbröd Försvinner', mangd: 60, enhet: 'g', kcal: 280, varukatalog: borta }])]),
+        )
+      ).rows[0].id
+      const rad = async () => (await db.query<{ varukatalog_id: string | null }>('select varukatalog_id from public.receptrader where recept_id = $1', [id])).rows[0].varukatalog_id
+      expect(await rad()).toBe(borta)
+      await db.query('delete from public.varukatalog where id = $1', [borta])
+      expect(await rad()).toBeNull()
+    })
+
+    it('bara ägare och redigerare kopplar en vara i turen, och ingen kopplar någon annans receptrad', async () => {
+      const v = await nyVara(AGARE, tur, 'Kopplingsvara')
+      for (const vem of [LASARE, UTOMSTAENDE]) {
+        const u = await som(vem, (tx) => tx.query('update public.varor set varukatalog_id = $1 where id = $2', [vk, v]))
+        expect(u.affectedRows, vem).toBe(0)
+      }
+      await forvantaFel(som(LASARE, (tx) => tx.query('select public.spara_egen_ratt($1, null, $2, $3::jsonb)', [tur, 'Läsarens rätt', JSON.stringify([{ vara: 'Y', gram: 10, varukatalog: vk }])])))
+      const ok = await som(REDIGERARE, (tx) => tx.query('update public.varor set varukatalog_id = $1 where id = $2', [vk, v]))
+      expect(ok.affectedRows).toBe(1)
+      // Lisas recept går inte att koppla för någon annan.
+      const recept = (await som(LASARE, (tx) => tx.query<{ id: string }>('select public.spara_recept(null, $1, $2::jsonb) as id', ['Läsarens recept', JSON.stringify([{ vara: 'X', mangd: 10, enhet: 'g' }])]))).rows[0].id
+      const annan = await som(UTOMSTAENDE, (tx) => tx.query('update public.receptrader set varukatalog_id = $1 where recept_id = $2', [vk, recept]))
+      expect(annan.affectedRows).toBe(0)
+    })
+
+    it('spara_egen_ratt sparar kopplingen, så att den inte försvinner om en äldre version av funktionen körs efteråt', async () => {
+      const def = await db.query<{ prosrc: string }>("select prosrc from pg_proc where proname = 'spara_egen_ratt'")
+      expect(def.rows).toHaveLength(1)
+      expect(def.rows[0].prosrc).toContain('varukatalog_id')
+    })
+
+    it('en koppling till en vara som inte finns stoppas', async () => {
+      await forvantaFel(
+        som(REDIGERARE, (tx) =>
+          tx.query('select public.spara_egen_ratt($1, null, $2, $3::jsonb)', [tur, 'Rätt med okänd vara', JSON.stringify([{ vara: 'Okänd', gram: 10, varukatalog: crypto.randomUUID() }])]),
+        ),
+      )
+    })
+  })
+
   describe('reglerna från felsökningen av matdelen', () => {
     let egen: string
     let paseRatt: string

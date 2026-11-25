@@ -19,7 +19,8 @@ import { knappStil } from '@/components/ui/knappStil'
 import { sparaRecept, useRecept } from '@/hooks/useRecept'
 import { laggISkafferi, useAndraTurer, useSkafferi } from '@/hooks/useSkafferi'
 import { bockaInkop, laggIMaltid, laggTillPase, sattAtare, sattAvdelning, sattBarare, slappRader, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, taRader, useMatplan, type Matplan } from '@/hooks/useMatplan'
-import type { Behov } from '@/lib/kost'
+import type { Behov, Kostinfo } from '@/lib/kost'
+import { kostinfoForVara } from '@/lib/varukatalog'
 import { dagssummor, dubblettText, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, atareFor, fordela, platsText, portionerSomBars, rattPerPortion, rattPlatser, ratterSomSaknar, saknadeMaltider, saknasPerPerson, vemBarVad, type Barrad, type Matdag as Dag, type Matstatus } from '@/lib/mat'
 import { dagensDatum } from '@/lib/datum'
 import { handlingslista, matviktPerBarare } from '@/lib/handlingslista'
@@ -141,13 +142,18 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
 
   const perPortion = useMemo(() => new Map(plan.ratter.map((r) => [r.id, rattPerPortion(r, plan)])), [plan])
   const ratter = useMemo(() => {
-    const varunamn = new Map(plan.varor.map((v) => [v.id, v.namn]))
+    const varor = new Map(plan.varor.map((v) => [v.id, v]))
     const ingredienser = new Map<string, string[]>()
+    const kost = new Map<string, (Kostinfo | null)[]>()
     for (const i of plan.ingredienser) {
-      const namn = varunamn.get(i.vara_id)
-      if (namn) ingredienser.set(i.ratt_id, [...(ingredienser.get(i.ratt_id) ?? []), namn])
+      const vara = varor.get(i.vara_id)
+      if (!vara) continue
+      ingredienser.set(i.ratt_id, [...(ingredienser.get(i.ratt_id) ?? []), vara.namn])
+      // En vara ur varukatalogen har kända allergener. Andra ingredienser är okända.
+      const katalog = vara.varukatalog_id ? plan.varukatalog.get(vara.varukatalog_id) : undefined
+      kost.set(i.ratt_id, [...(kost.get(i.ratt_id) ?? []), katalog ? kostinfoForVara(katalog) : null])
     }
-    return { ratter: new Map(plan.ratter.map((r) => [r.id, r])), perPortion, pasar: plan.pasar, ingredienser }
+    return { ratter: new Map(plan.ratter.map((r) => [r.id, r])), perPortion, pasar: plan.pasar, ingredienser, kost }
   }, [plan, perPortion])
   const summor = dagssummor(plan, dagar, personIds)
   // Matvikten räknas som inköpslistan: var och en bär det hen köper, i hela påsar. Hundarna bär sin egen mat.

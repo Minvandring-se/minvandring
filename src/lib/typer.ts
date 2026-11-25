@@ -187,6 +187,40 @@ export interface Matprodukt {
   kontrollerad: string | null
 }
 
+/** Kategorierna i varukatalogen. Nycklarna står också i migreringen varukatalog. */
+export type Varukategori = 'brod' | 'frukost' | 'ost_mejeri' | 'korv_chark' | 'snabbmat' | 'tuber_smaksattning' | 'mellanmal' | 'drycker'
+
+/** En märkesvara i varukatalogen, med näring per 100 g. Tomma kostval och allergener betyder okänt. */
+export interface Varukatalogvara {
+  id: string
+  marke: string
+  namn: string
+  kategori: Varukategori
+  forpackning_g: number
+  portion_g: number | null
+  kcal_per_100g: number
+  protein_per_100g: number | null
+  fett_per_100g: number | null
+  kolhydrater_per_100g: number | null
+  fiber_per_100g: number | null
+  socker_per_100g: number | null
+  salt_per_100g: number | null
+  vatten_ml: number | null
+  tillagning: string | null
+  vegetarisk: boolean | null
+  vegansk: boolean | null
+  glutenfri: boolean | null
+  laktosfri: boolean | null
+  allergener: Allergen[] | null
+  /** Kan innehålla spår av. */
+  spar: Allergen[] | null
+  haller_utan_kyl: boolean | null
+  ean: string | null
+  pris_sek_ca: number | null
+  pris_kalla: string | null
+  kalla: string
+}
+
 /** En påse man har hemma, i ens eget skafferi. bast_fore är ÅÅÅÅ-MM-DD. */
 export interface Skafferirad {
   id: string
@@ -208,6 +242,8 @@ export interface Receptrad {
   kcal_per_100g: number | null
   protein_per_100g: number | null
   sortering: number
+  /** Varan i varukatalogen som raden valdes från. */
+  varukatalog_id?: string | null
 }
 
 /** Ett eget recept på kontot. Kopieras till turens rätter när det läggs i en tur. */
@@ -240,6 +276,8 @@ export interface Vara {
   klart: boolean
   /** Butiksavdelningen. Tom: appen gissar utifrån namnet (avdelningFor i handla.ts). */
   avdelning?: string | null
+  /** Varan i varukatalogen som den valdes från. Då är allergenerna och kostvalen kända. */
+  varukatalog_id?: string | null
 }
 
 export interface Ingrediens {

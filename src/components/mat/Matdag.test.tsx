@@ -116,4 +116,15 @@ describe('Matdag', () => {
     )
     expect(html.replace(/\s/g, ' ')).toContain('600–700 kcal och 150–160 g per person')
   })
+
+  it('varnar för en egen rätt utifrån varorna ur varukatalogen, och okänt räknas inte som att den passar', () => {
+    const medKost: Ratter = {
+      ...ratter,
+      kost: new Map([['gryta', [{ vegetarisk: true, vegansk: false, glutenfri: false, laktosfri: true, allergener: ['gluten'], spar: [] }, null]]]),
+    }
+    const html = renderToStaticMarkup(
+      <Matdag summa={{ dag: dag1, perPerson: new Map(), naring: portion(0, 0), saknas: [] }} datum={null} maltider={[rad('m1', 'gryta')]} ratter={medKost} behov={[oscar]} kanAndra onLaggTill={() => {}} onTaBort={() => {}} />,
+    )
+    expect(html).toContain('Inte glutenfri, passar inte Oscar')
+  })
 })

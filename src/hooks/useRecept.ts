@@ -6,7 +6,7 @@ import type { Recept } from '@/lib/typer'
 /** Ens egna recept. null medan de hämtas, 'fel' om det inte gick. */
 export type Receptlage = Recept[] | null | 'fel'
 
-const KOLUMNER = 'id, namn, rader:receptrader(id, recept_id, vara, mangd, enhet, gram_per_portion, kcal_per_100g, protein_per_100g, sortering)'
+const KOLUMNER = 'id, namn, rader:receptrader(id, recept_id, vara, mangd, enhet, gram_per_portion, kcal_per_100g, protein_per_100g, sortering, varukatalog_id)'
 
 async function hamtaRecept(): Promise<Recept[] | 'fel'> {
   if (!supabase) return 'fel'
