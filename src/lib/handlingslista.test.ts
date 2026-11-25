@@ -170,6 +170,13 @@ describe('matvikten per bärare', () => {
     expect(vikt.perBarare).toEqual(new Map([['anna', 300], ['erik', 300]]))
   })
 
+  it('räknar extra mängd hos den som köper den, som i inköpslistan, och en hund som bärare för sig', () => {
+    const med = { ...data([rad('m1', 1, 'Gröt', 'hund')]), varor: [{ ...vara, extra_g: 50, ansvarig: 'erik' }] }
+    const vikt = matviktPerBarare(med, dagar, ['anna', 'erik'])
+    expect(vikt.perBarare).toEqual(new Map([['hund', 200], ['erik', 50]]))
+    expect(vikt.totalt).toBe(250)
+  })
+
   describe('matviktPerDeltagare, för startvikten i packlistan', () => {
     const anna = { id: 'anna', typ: 'person' as const, matandel: null }
     const erik = { id: 'erik', typ: 'person' as const, matandel: null }

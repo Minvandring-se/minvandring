@@ -192,6 +192,16 @@ describe('dagensText', () => {
     expect(dagensText(dagssummor(data, dagar, ['anna', 'erik'])[0])).toBe('423–700 kcal och 120–150 g per person')
   })
 
+  it('skriver tusental med mellanslag i spannet', () => {
+    const text = dagensText({
+      perPerson: new Map([
+        ['anna', { kcal: 423, proteinG: 0, gram: 640, ofullstandig: false }],
+        ['erik', { kcal: 1250, proteinG: 0, gram: 1200, ofullstandig: false }],
+      ]),
+    })
+    expect(text?.replace(/\s/g, ' ')).toBe('423–1 250 kcal och 640 g–1,2 kg per person')
+  })
+
   it('är tom en dag utan mat', () => {
     expect(dagensText(dagssummor(plan([]), dagar, ['anna'])[0])).toBeNull()
   })
@@ -218,6 +228,15 @@ describe('summeringen', () => {
     expect(s.snittKcal).toBeCloseTo((423 + 700 + 700 + 700) / 4)
     expect(s.lagsta).toMatchObject({ person: 'anna', dag: { dag: 1 } })
     expect(s.lagsta!.kcal).toBeCloseTo(423)
+  })
+
+  it('räknar lägsta bara bland dagar med mat, och pekar ut en person bara när personerna äter olika', () => {
+    // Dag 2 saknar mat och räknas inte. Dag 1 äter båda lika.
+    const lika = matsummering(dagssummor(plan([maltid(1, 'middag', 'Gryta')]), dagar, ['anna', 'erik']))
+    expect(lika.lagsta).toMatchObject({ kcal: 700, dag: { dag: 1 }, olika: false })
+    const data = plan([maltid(1, 'middag', 'Gröt'), maltid(1, 'middag', 'Gryta')])
+    data.atare = [{ maltid_id: data.maltider[0].id, deltagare_id: 'anna' }, { maltid_id: data.maltider[1].id, deltagare_id: 'erik' }]
+    expect(matsummering(dagssummor(data, dagar, ['anna', 'erik'])).lagsta).toMatchObject({ person: 'anna', olika: true })
   })
 
   it('är noll utan dagar', () => {

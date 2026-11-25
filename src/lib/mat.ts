@@ -478,8 +478,11 @@ export function ratterSomSaknar(data: Matdata, dagar: readonly Matdag[]): Saknad
 export interface Matsummering {
   /** Snittet per person och dag, för dagar som har någon mat. */
   snittKcal: number
-  /** Den person och dag som får minst energi, bland alla dagar. null utan dagar. */
-  lagsta: { kcal: number; person: string; dag: Matdag } | null
+  /**
+   * Den person och dag som får minst energi, bland dagar med mat. olika är sant när personerna den dagen äter olika
+   * mycket, så att det är värt att visa vem. null utan mat.
+   */
+  lagsta: { kcal: number; person: string; dag: Matdag; olika: boolean } | null
   snittProteinG: number
   saknadeMaltider: number
   ofullstandig: boolean
@@ -491,8 +494,10 @@ export function matsummering(summor: readonly Dagssumma[]): Matsummering {
   const varden = medMat.flatMap((s) => [...s.perPerson.values()])
   const medel = (f: (n: Naring) => number) => (varden.length ? varden.reduce((t, n) => t + f(n), 0) / varden.length : 0)
   let lagsta: Matsummering['lagsta'] = null
-  for (const s of summor) {
-    for (const [person, n] of s.perPerson) if (!lagsta || n.kcal < lagsta.kcal) lagsta = { kcal: n.kcal, person, dag: s.dag }
+  for (const s of medMat) {
+    const kcal = [...s.perPerson.values()].map((n) => Math.round(n.kcal))
+    const olika = Math.min(...kcal) < Math.max(...kcal)
+    for (const [person, n] of s.perPerson) if (!lagsta || n.kcal < lagsta.kcal) lagsta = { kcal: n.kcal, person, dag: s.dag, olika }
   }
   return {
     snittKcal: medel((n) => n.kcal),

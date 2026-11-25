@@ -33,7 +33,7 @@ export function Matsummering({
 }) {
   const { snittKcal, lagsta, snittProteinG, saknadeMaltider } = summering
   const meningar = saknasMeningar(saknade)
-  const lagstaNamn = lagsta ? namnFor(lagsta.person) : undefined
+  const lagstaNamn = lagsta?.olika ? namnFor(lagsta.person) : undefined
   return (
     <Sektion rubrik="Summering">
       <Nyckeltal
