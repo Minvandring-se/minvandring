@@ -14,7 +14,6 @@ export const KATEGORIETIKETT: Record<Varukategori, string> = {
   tuber_smaksattning: 'Tuber och smaksättning',
   mellanmal: 'Mellanmål',
   drycker: 'Dryck',
-  glutenfritt: 'Glutenfritt',
 }
 
 export type Katalogforslag = Pick<

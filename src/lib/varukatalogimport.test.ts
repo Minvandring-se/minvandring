@@ -72,6 +72,19 @@ describe('importeraVarukatalog', () => {
     expect(r.rader[4].fel).toEqual(['samma märke och namn som rad 5'])
   })
 
+  it('stoppar samma EAN under ett annat namn, men inte två varor utan EAN', () => {
+    const r = importeraVarukatalog([huvud, rad(), rad({ namn: 'Sarek glutenfri' }), rad({ namn: 'Utan EAN', ean: '' }), rad({ namn: 'Också utan', ean: '' })].join('\n'))
+    expect(r.rader.map((x) => x.vara === null)).toEqual([false, true, false, false])
+    expect(r.rader[1].fel).toEqual(['samma EAN som rad 2'])
+  })
+
+  it('varnar när bröd, frukost eller mellanmål har så lite energi att det troligen är kcal per styck', () => {
+    const lag = importeraVarukatalog([huvud, rad({ kcal_100g: '19', protein_100g: '', fett_100g: '', kolhydrater_100g: '' })].join('\n'))
+    expect(lag.rader[0].varningar.some((v) => v.includes('kcal per styck'))).toBe(true)
+    const ketchup = importeraVarukatalog([huvud, rad({ kategori: 'tuber_smaksattning', kcal_100g: '80', protein_100g: '', fett_100g: '', kolhydrater_100g: '' })].join('\n'))
+    expect(ketchup.rader[0].varningar.some((v) => v.includes('kcal per styck'))).toBe(false)
+  })
+
   it('varnar när energin inte stämmer med fett, kolhydrater och protein', () => {
     const r = importeraVarukatalog([huvud, rad({ kcal_100g: '600' })].join('\n'))
     expect(r.rader[0].varningar.some((v) => v.startsWith('kcal_100g: 600 kcal'))).toBe(true)

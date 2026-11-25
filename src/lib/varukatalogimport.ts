@@ -45,7 +45,6 @@ export const VARUKATEGORIER: readonly { nyckel: Varukategori; etikett: string }[
   { nyckel: 'tuber_smaksattning', etikett: 'Tuber och smaksättning' },
   { nyckel: 'mellanmal', etikett: 'Mellanmål' },
   { nyckel: 'drycker', etikett: 'Drycker' },
-  { nyckel: 'glutenfritt', etikett: 'Glutenfritt' },
 ]
 
 /** En vara som den sparas i tabellen varukatalog. */
@@ -175,6 +174,9 @@ export function tolkaVarurad(rad: number, falt: Record<string, string>): Varurad
     if (bada.length) varningar.push(`spar: ${bada.join(', ')} står också under allergener`)
   }
   if (allergener && vara.glutenfri === true && allergener.includes('gluten')) varningar.push('glutenfri: ja men allergenerna innehåller gluten')
+  // Bröd, frukost och mellanmål har alltid mer än 100 kcal per 100 g. Lägre är troligen kcal per styck.
+  if (['brod', 'frukost', 'mellanmal'].includes(vara.kategori) && vara.kcal_per_100g < 100)
+    varningar.push(`kcal_100g: ${vara.kcal_per_100g} kcal är lågt för ${vara.kategori}, är det kcal per styck?`)
   // Energin räknad från fett, kolhydrater och protein ska ligga nära den angivna. Annars är något troligen fel.
   const { fett_per_100g: f, kolhydrater_per_100g: k, protein_per_100g: p } = vara
   if (f !== null && k !== null && p !== null) {
@@ -196,6 +198,7 @@ export function importeraVarukatalog(text: string): Varuimportresultat {
     return { filfel, rader: [] }
   }
   const sedda = new Map<string, number>()
+  const seddaEan = new Map<string, number>()
   const resultat = rader.map(({ rad, falt, antalFalt }): Varuradresultat => {
     if (antalFalt !== kolumner.length) {
       const namn = [falt.marke, falt.namn].filter(Boolean).join(' ') || '(utan namn)'
@@ -206,7 +209,10 @@ export function importeraVarukatalog(text: string): Varuimportresultat {
     const nyckel = `${r.vara.marke.toLowerCase()}|${r.vara.namn.toLowerCase()}`
     const forra = sedda.get(nyckel)
     if (forra !== undefined) return { ...r, vara: null, fel: [`samma märke och namn som rad ${forra}`] }
+    const forraEan = r.vara.ean ? seddaEan.get(r.vara.ean) : undefined
+    if (forraEan !== undefined) return { ...r, vara: null, fel: [`samma EAN som rad ${forraEan}`] }
     sedda.set(nyckel, rad)
+    if (r.vara.ean) seddaEan.set(r.vara.ean, rad)
     return r
   })
   return { filfel: [], rader: resultat }

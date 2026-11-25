@@ -31,15 +31,19 @@ try {
   }
 
   // Samma vara i två filer stoppar seeden, eftersom den annars skulle skrivas över av den sista filen.
+  // Samma EAN i två filer är samma vara under två namn, och stoppar också seeden.
   const sedda = new Map()
+  const seddaEan = new Map()
   const dubbletter = []
   const varor = []
   for (const [n, r] of resultat.entries()) {
     for (const p of godkandaVaror(r)) {
       const nyckel = `${p.marke.toLowerCase()}|${p.namn.toLowerCase()}`
       if (sedda.has(nyckel)) dubbletter.push(`${p.marke} ${p.namn} finns i både ${sedda.get(nyckel)} och ${filer[n]}`)
+      else if (p.ean && seddaEan.has(p.ean)) dubbletter.push(`${p.marke} ${p.namn} i ${filer[n]} har samma EAN (${p.ean}) som ${seddaEan.get(p.ean)}`)
       else {
         sedda.set(nyckel, filer[n])
+        if (p.ean) seddaEan.set(p.ean, `${p.marke} ${p.namn} i ${filer[n]}`)
         varor.push(p)
       }
     }

@@ -1,4 +1,4 @@
--- Varukatalogen: märkesvaror från butiken (bröd, ost, korv, snabbmat, tuber, mellanmål, drycker och glutenfritt)
+-- Varukatalogen: märkesvaror från butiken (bröd, ost, korv, snabbmat, tuber, mellanmål och drycker)
 -- med näring per 100 g och allergener. Den fylls bara via migreringar från CSV-filerna i supabase/katalog/varor
 -- (npm run varukatalog), som matkatalogen.
 --
@@ -12,7 +12,7 @@ create table public.varukatalog (
   id uuid primary key default gen_random_uuid(),
   marke text not null check (btrim(marke) <> '' and char_length(marke) <= 80),
   namn text not null check (btrim(namn) <> '' and char_length(namn) <= 120),
-  kategori text not null check (kategori in ('brod', 'frukost', 'ost_mejeri', 'korv_chark', 'snabbmat', 'tuber_smaksattning', 'mellanmal', 'drycker', 'glutenfritt')),
+  kategori text not null check (kategori in ('brod', 'frukost', 'ost_mejeri', 'korv_chark', 'snabbmat', 'tuber_smaksattning', 'mellanmal', 'drycker')),
   forpackning_g int not null check (forpackning_g between 1 and 20000),
   portion_g numeric(6, 2) check (portion_g between 0 and 5000),
   kcal_per_100g int not null check (kcal_per_100g between 0 and 900),

@@ -188,7 +188,7 @@ export interface Matprodukt {
 }
 
 /** Kategorierna i varukatalogen. Nycklarna står också i migreringen varukatalog. */
-export type Varukategori = 'brod' | 'frukost' | 'ost_mejeri' | 'korv_chark' | 'snabbmat' | 'tuber_smaksattning' | 'mellanmal' | 'drycker' | 'glutenfritt'
+export type Varukategori = 'brod' | 'frukost' | 'ost_mejeri' | 'korv_chark' | 'snabbmat' | 'tuber_smaksattning' | 'mellanmal' | 'drycker'
 
 /** En märkesvara i varukatalogen, med näring per 100 g. Tomma kostval och allergener betyder okänt. */
 export interface Varukatalogvara {
