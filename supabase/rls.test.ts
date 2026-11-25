@@ -2320,6 +2320,34 @@ describe('matplanen', () => {
       expect((await db.query('select 1 from public.inkop_klart where ratt_id = $1', [r])).rows).toHaveLength(0)
     })
 
+    it('sparar mängden som bockades av, och bocka_inkop byter bocken i en transaktion med samma rättigheter som tabellen', async () => {
+      const v = await nyVara(AGARE, tur, 'Mängdvara')
+      const bocka = (vem: string, deltagare: string, klart: boolean, mangd: string) =>
+        som(vem, (tx) => tx.query('select public.bocka_inkop($1, $2, $3, null, $4, $5)', [tur, deltagare, v, klart, mangd]))
+      const mangder = async () => (await db.query<{ deltagare_id: string; mangd: string }>('select deltagare_id, mangd from public.inkop_klart where vara_id = $1 order by deltagare_id', [v])).rows
+      // Läsaren bockar av åt sig själv, och en ny mängd byter ut den gamla bocken.
+      await bocka(LASARE, lasarensDeltagare, true, '1 dl')
+      await bocka(LASARE, lasarensDeltagare, true, '3 dl')
+      expect(await mangder()).toEqual([{ deltagare_id: lasarensDeltagare, mangd: '3 dl' }])
+      // En bock ändras inte direkt, inte heller mängden.
+      await forvantaFel(som(LASARE, (tx) => tx.query("update public.inkop_klart set mangd = '9 dl' where vara_id = $1", [v])))
+      // Läsaren bockar inte åt någon annan, och då blir ingenting borttaget heller.
+      await bocka(REDIGERARE, lisa, true, '2 dl')
+      await forvantaFel(bocka(LASARE, lisa, true, '5 dl'))
+      expect((await mangder()).find((r) => r.deltagare_id === lisa)?.mangd).toBe('2 dl')
+      // Redigeraren bockar åt vem som helst och tar bort bocken med klart = false.
+      await bocka(REDIGERARE, lasarensDeltagare, false, '')
+      expect(await mangder()).toEqual([{ deltagare_id: lisa, mangd: '2 dl' }])
+      // Den som inte är med når ingenting, och anon kan inte anropa funktionen.
+      await forvantaFel(bocka(UTOMSTAENDE, lisa, true, '1 dl'))
+      await forvantaFel(somAnon((tx) => tx.query('select public.bocka_inkop($1, $2, $3, null, true, $4)', [tur, lisa, v, '1 dl'])))
+      // Antingen en vara eller en påse, och högst 200 tecken.
+      await forvantaFel(som(AGARE, (tx) => tx.query('select public.bocka_inkop($1, $2, null, null, true, $3)', [tur, lisa, '1 dl'])))
+      await bocka(AGARE, lisa, true, 'x'.repeat(200))
+      await forvantaFel(bocka(AGARE, lisa, true, 'x'.repeat(201)))
+      await som(AGARE, (tx) => tx.query('delete from public.varor where id = $1', [v]))
+    })
+
     it('bockarna försvinner med deltagaren och med varan', async () => {
       const p = await som(AGARE, (tx) => tx.query<{ id: string }>("insert into public.deltagare (tur_id, namn) values ($1, 'Tillfällig köpare') returning id", [tur]))
       const v = await nyVara(AGARE, tur, 'Tillfällig bockvara')

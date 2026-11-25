@@ -33,7 +33,7 @@ async function hamtaMatplan(turId: string): Promise<Matplan | null> {
     supabase.from('maltider').select('id, dag, maltid, ratt_id, sortering, bars_av').eq('tur_id', turId).order('sortering'),
     supabase.from('deltagare').select('id, typ, matandel, hundmat_per_dag_g').eq('tur_id', turId),
     supabase.from('maltid_atare').select('maltid_id, deltagare_id').eq('tur_id', turId),
-    supabase.from('inkop_klart').select('deltagare_id, vara_id, ratt_id').eq('tur_id', turId),
+    supabase.from('inkop_klart').select('deltagare_id, vara_id, ratt_id, mangd').eq('tur_id', turId),
   ])
   if (ratter.error || ingredienser.error || varor.error || maltider.error || deltagare.error || atare.error || klart.error) return null
 
@@ -220,18 +220,20 @@ export async function sparaEgenRatt(
 }
 
 /**
- * Bockar av, eller tar bort bocken för, en vara eller en påse som en deltagare köper. Ägare och redigerare bockar åt
- * alla, och var och en, även en läsare, åt sig själv (RLS).
+ * Bockar av, eller tar bort bocken för, en vara eller en påse som en deltagare köper, med mängden som den står i
+ * listan. Ägare och redigerare bockar åt alla, och var och en, även en läsare, åt sig själv (RLS). Görs av funktionen
+ * bocka_inkop i databasen, som tar bort en gammal bock och lägger den nya i en transaktion.
  */
-export async function bockaInkop(turId: string, deltagareId: string, typ: 'vara' | 'pase', id: string, klart: boolean): Promise<boolean> {
+export async function bockaInkop(turId: string, deltagareId: string, typ: 'vara' | 'pase', id: string, klart: boolean, mangd: string): Promise<boolean> {
   if (!supabase) return false
-  const kolumn = typ === 'vara' ? 'vara_id' : 'ratt_id'
-  if (klart) {
-    const { error } = await supabase.from('inkop_klart').insert({ tur_id: turId, deltagare_id: deltagareId, [kolumn]: id })
-    // En bock som redan finns räknas som att det gick.
-    return !error || error.code === '23505'
-  }
-  const { error } = await supabase.from('inkop_klart').delete().eq('deltagare_id', deltagareId).eq(kolumn, id)
+  const { error } = await supabase.rpc('bocka_inkop', {
+    t: turId,
+    deltagare: deltagareId,
+    vara: typ === 'vara' ? id : null,
+    ratt: typ === 'pase' ? id : null,
+    klart,
+    ny_mangd: mangd,
+  })
   return !error
 }
 
