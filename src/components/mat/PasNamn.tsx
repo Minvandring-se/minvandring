@@ -23,7 +23,7 @@ export function PasNamn({
   return (
     <span className={cn('flex min-w-0 flex-col', className)}>
       <span className="text-xs font-normal text-muted-foreground break-words">{marke}</span>
-      <span className={cn('break-words hyphens-auto', namnKlass)}>{namn}</span>
+      <span className={cn('break-words', namnKlass)}>{namn}</span>
       {ettAnnat && <span className="text-sm font-normal text-muted-foreground break-words">{ettAnnat}</span>}
     </span>
   )

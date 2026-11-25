@@ -120,7 +120,7 @@ function Innehall({
         ) : (
           <ul className="divide-y divide-border">
             {hemma.map((r) => (
-              <Hemmarad key={r.id} rad={r} pase={pasar.get(r.matprodukt_id)!} idag={idag} gor={gor} />
+              <Hemmarad key={`${r.id}:${r.bast_fore ?? ''}`} rad={r} pase={pasar.get(r.matprodukt_id)!} idag={idag} gor={gor} />
             ))}
           </ul>
         )}

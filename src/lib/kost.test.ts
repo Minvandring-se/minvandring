@@ -42,6 +42,18 @@ describe('passarFilter', () => {
   })
 })
 
+describe('spår i varningarna', () => {
+  it('ger en dämpad rad när påsen kan innehålla spår av något en person inte tål', () => {
+    const p: Kostinfo = { ...kand, allergener: [], spar: ['notter'] }
+    expect(varningar(p, [behov('Anna', { utan: ['notter'] })])).toEqual([{ text: 'Kan innehålla spår av nötter, gäller Anna', okand: true }])
+  })
+
+  it('säger inget om spår när påsen innehåller allergenen, och inget utan spår', () => {
+    expect(varningar({ ...kand, allergener: ['notter'], spar: ['notter'] }, [behov('Anna', { utan: ['notter'] })]).map((v) => v.text)).toEqual(['Innehåller nötter, passar inte Anna'])
+    expect(varningar({ ...kand, allergener: [], spar: null }, [behov('Anna', { utan: ['notter'] })])).toEqual([])
+  })
+})
+
 describe('filterForGruppen', () => {
   it('samlar allas kostval och allergener, utan dubbletter och i fast ordning', () => {
     const f = filterForGruppen([behov('Lisa', { glutenfri: true, utan: ['notter'] }), behov('Erik', { vegetarisk: true, utan: ['notter', 'agg'] })])

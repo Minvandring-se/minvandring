@@ -14,8 +14,8 @@ import { Panel } from '@/components/ui/panel'
 import { useMatkatalog } from '@/hooks/useMatplan'
 import type { Receptlage } from '@/hooks/useRecept'
 import { formateraVikt } from '@/lib/forrad'
-import { filterForGruppen, filterText, passarFilter, varningar, type Behov, type Kostfilter } from '@/lib/kost'
-import { forstaAndraNamn, formateraKcal, kcalPer100g, naringForRader, PASAR_TILL, pasdetaljer, paseMatchar, pasnamn, portionText, type Naring, type TolkadIngrediens } from '@/lib/mat'
+import { filterForGruppen, passarFilter, TOMT_FILTER, varningar, type Behov, type Kostfilter } from '@/lib/kost'
+import { filterknappText, forstaAndraNamn, formateraKcal, kcalPer100g, naringForRader, PASAR_TILL, pasdetaljer, paseMatchar, pasnamn, portionText, type Naring, type TolkadIngrediens } from '@/lib/mat'
 import { rattTillRader, receptMedNamn, receptTillRader } from '@/lib/recept'
 import { bokadText, skafferietForst } from '@/lib/skafferi'
 import type { Ingrediens, Maltid, Matprodukt, Ratt, Recept, Vara } from '@/lib/typer'
@@ -262,6 +262,7 @@ export function ValjRatt({
               <Button variant="outline" onClick={() => setVy({ typ: 'ny' })}>
                 Ny egen rätt
               </Button>
+              {behov.length > 0 && <p className="text-sm text-muted-foreground">Egna rätter kontrolleras inte mot kostbehoven.</p>}
               {egna.length === 0 ? (
                 <p className="text-muted-foreground">Turen har inga egna rätter än.</p>
               ) : (
@@ -325,6 +326,8 @@ export function Pasar({
     )
     return skafferietForst(passar, skafferi.favoriter, skafferi.hemma)
   }, [katalog, s, filter, allaMaltider, maltid, skafferi])
+  // Påsar som passar sökningen men döljs av filtret eller måltiden, så att sökningen kan säga det.
+  const dolda = Array.isArray(katalog) && s ? katalog.filter((p) => paseMatchar(p, s)).length - traffar.length : 0
 
   const egna = useMemo(() => (Array.isArray(katalog) ? egnaListor(katalog, skafferi) : []), [katalog, skafferi])
 
@@ -332,7 +335,6 @@ export function Pasar({
   if (katalog === 'fel') return <Laddfel vad="katalogen" onForsokIgen={forsokIgen} />
   if (katalog.length === 0) return <TomtLage kompakt text="Det finns inga påsar i katalogen än. Lägg till en egen rätt i stället." />
 
-  const filtrerat = filterText(filter)
   const rad = (p: Matprodukt) => (
     <Pasrad
       key={p.id}
@@ -368,7 +370,7 @@ export function Pasar({
           onClick={() => setVisaFilter((v) => !v)}
           className={cn('inline-flex min-h-11 min-w-0 items-center gap-1.5 text-left text-sm font-medium text-primary', fokus)}
         >
-          <span className="min-w-0 break-words">Filter: {filtrerat ?? 'Inga'}</span>
+          <span className="min-w-0 break-words">{filterknappText(maltid, allaMaltider, filter)}</span>
           <ChevronDown className={cn('size-4 shrink-0 transition-transform', visaFilter && 'rotate-180')} aria-hidden />
         </button>
         <Link to="/matplanering/katalog" className={cn('inline-flex min-h-11 items-center text-sm font-medium text-primary underline underline-offset-4', fokus)}>
@@ -389,7 +391,19 @@ export function Pasar({
         <>
           <p aria-live="polite" className="text-sm text-muted-foreground">
             {traffar.length === 0 ? 'Ingen påse passar sökningen och filtret.' : traffar.length === 1 ? 'En påse' : `${traffar.length} påsar`}
+            {dolda > 0 && `${traffar.length === 0 ? ' ' : '. '}${dolda === 1 ? 'En påse' : `${dolda} påsar`}${traffar.length === 0 ? '' : ' till'} döljs av filtret.`}
           </p>
+          {dolda > 0 && (
+            <Button
+              variant="outline"
+              onClick={() => {
+                setFilter(TOMT_FILTER)
+                setAllaMaltider(true)
+              }}
+            >
+              Visa alla
+            </Button>
+          )}
           <ul className="divide-y divide-border">{traffar.map(rad)}</ul>
         </>
       ) : egna.length === 0 ? (

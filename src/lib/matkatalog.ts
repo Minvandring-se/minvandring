@@ -142,9 +142,10 @@ export function allergentext(p: Pick<Matprodukt, 'allergener'>): string {
   return uppraknade(p.allergener.map((a, i) => (i === 0 ? allergenetikett(a) : allergenetikett(a).toLowerCase())))
 }
 
-/** Spåren som de står i panelen. null när inga spår är angivna. */
+/** Spåren som de står i panelen: "Okänt" när uppgiften saknas, och null när påsen inte har några spår. */
 export function spartext(p: Pick<Matprodukt, 'spar'>): string | null {
-  if (!p.spar?.length) return null
+  if (p.spar === null) return 'Okänt'
+  if (!p.spar.length) return null
   return uppraknade(p.spar.map((a, i) => (i === 0 ? allergenetikett(a) : allergenetikett(a).toLowerCase())))
 }
 

@@ -55,6 +55,8 @@ export interface Kostinfo {
   glutenfri: boolean | null
   laktosfri: boolean | null
   allergener: readonly Allergen[] | null
+  /** Kan innehålla spår av. Påverkar inte filtret, men ger en dämpad rad i varningarna. null: okänt. */
+  spar?: readonly Allergen[] | null
 }
 
 /** Det man filtrerar på: kostval som måste stämma och allergener som påsen ska vara utan. */
@@ -96,6 +98,7 @@ export type Skal =
   | { typ: 'inte'; val: Kostval }
   | { typ: 'okand_allergen'; allergen: Allergen }
   | { typ: 'okant_val'; val: Kostval }
+  | { typ: 'spar'; allergen: Allergen }
 
 /** Varför påsen inte passar en person. Tom lista när den passar. */
 export function skalForPerson(p: Kostinfo, b: Behov): Skal[] {
@@ -108,6 +111,8 @@ export function skalForPerson(p: Kostinfo, b: Behov): Skal[] {
   for (const allergen of b.utan) {
     if (p.allergener === null) skal.push({ typ: 'okand_allergen', allergen })
     else if (p.allergener.includes(allergen)) skal.push({ typ: 'innehaller', allergen })
+    // Spår räknas inte som att påsen innehåller allergenen, men den som inte tål den ska se det.
+    else if (p.spar?.includes(allergen)) skal.push({ typ: 'spar', allergen })
   }
   // Är påsen inte glutenfri, eller okänd, för den som vill ha glutenfritt säger gluten samma sak en gång till.
   const glutenfri = skal.some((s) => (s.typ === 'inte' || s.typ === 'okant_val') && s.val === 'glutenfri')
@@ -130,6 +135,8 @@ function skaltext(s: Skal): string {
       return `Okänt om den innehåller ${allergenetikett(s.allergen).toLowerCase()}`
     case 'okant_val':
       return `Okänt om den är ${kostvalsetikett(s.val).toLowerCase()}`
+    case 'spar':
+      return `Kan innehålla spår av ${allergenetikett(s.allergen).toLowerCase()}`
   }
 }
 
@@ -148,7 +155,8 @@ export function varningar(p: Kostinfo, behov: readonly Behov[]): Varning[] {
   for (const b of behov) {
     for (const s of skalForPerson(p, b)) {
       const text = skaltext(s)
-      const rad = perSkal.get(text) ?? { okand: s.typ === 'okand_allergen' || s.typ === 'okant_val', namn: [] }
+      // Okänt och spår visas dämpat, efter det som säkert inte passar.
+      const rad = perSkal.get(text) ?? { okand: s.typ === 'okand_allergen' || s.typ === 'okant_val' || s.typ === 'spar', namn: [] }
       if (!rad.namn.includes(b.namn)) rad.namn.push(b.namn)
       perSkal.set(text, rad)
     }

@@ -35,7 +35,7 @@ import { matvikter } from '@/lib/vikt'
 
 /**
  * Turens flik Mat: ett kompakt mörkgrönt huvud med hur många måltider som är planerade, turens flikar, Nästa att
- * planera och Vem tar med vad, kostbehoven, en ruta per dag och måltid, och sist summeringen och inköpslistan.
+ * planera och Vem bär vad, kostbehoven, en ruta per dag och måltid, och sist summeringen och inköpslistan.
  * Ägare och redigerare ändrar, läsare ser.
  */
 export function TurMat() {
@@ -201,7 +201,6 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
     fokusera(dag, maltid)
   }
 
-  const maltidsnamn = (m: Maltid) => MALTIDER.find((x) => x.nyckel === m)!.etikett
   const vemBar = vemBarVad(plan, dagar)
   const burenVikt = matvikt.perBarare
   // Det som bara vissa personer saknar. Det som saknas för alla står redan i summeringen.
@@ -213,9 +212,13 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      {!kanAndra && <p className="text-muted-foreground">Du är läsare. Du kan se matplanen och ange dina egna kostbehov. Ägare och redigerare ändrar resten.</p>}
+      {!kanAndra && (
+        <p className="text-muted-foreground">
+          Du är läsare. Du kan se matplanen, ange dina kostbehov, ta och släppa rätter åt dig själv och bocka av det du köper. Ägare och redigerare ändrar resten.
+        </p>
+      )}
 
-      {/* När planen är klar är rutan till vänster bara en rad, så då ligger Vem tar med vad under i stället för bredvid. */}
+      {/* När planen är klar är rutan till vänster bara en rad, så då ligger Vem bär vad under i stället för bredvid. */}
       <div className={cn('grid grid-cols-1 items-start gap-6 lg:gap-8', status.forsta && 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]')}>
         <NastaAttPlanera
           status={status}
@@ -346,7 +349,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
 
       {valjer && (
         <ValjRatt
-          rubrik={`${maltidsnamn(valjer.maltid)}, ${valjer.dag.namn.toLowerCase()}`}
+          rubrik={platsText({ dag: valjer.dag, maltid: valjer.maltid })}
           maltid={valjer.maltid}
           ratter={plan.ratter}
           perPortion={perPortion}
