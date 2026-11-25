@@ -2,6 +2,7 @@ import { ChevronDown, Plus, Search } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Laddfel } from '@/components/app/Laddfel'
 import { Granskad } from '@/components/forrad/Granskad'
+import { KokSteg } from '@/components/forrad/KokSteg'
 import { granskning } from '@/lib/granskning'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
@@ -19,6 +20,7 @@ import {
   type Marke,
   type Modell,
 } from '@/lib/produktsok'
+import { KOKVARMARE } from '@/lib/kokkarl'
 import { supabase } from '@/lib/supabase'
 import type { Produkt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -64,6 +66,8 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
   const [utfalld, setUtfalld] = useState<string | null>(null)
   const [laggerTill, setLaggerTill] = useState<string | null>(null)
   const [fel, setFel] = useState('')
+  // En brännare eller ett komplett kök som just har lagts i förrådet. Då visas kokkärl och bränsle som passar.
+  const [kokSteg, setKokSteg] = useState<{ sakId: string; namn: string; produktId: string } | null>(null)
 
   useEffect(() => falt.current?.focus(), [])
 
@@ -134,7 +138,9 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
       setFel('Det gick inte att lägga till. Kontrollera uppkopplingen och försök igen.')
       return
     }
-    onTillagd((data as { id: string }).id, sak.namn)
+    const sakId = (data as { id: string }).id
+    if ((KOKVARMARE as readonly string[]).includes(p.underkategori)) setKokSteg({ sakId, namn: sak.namn, produktId: p.id })
+    else onTillagd(sakId, sak.namn)
   }
 
   // Resultatet gäller bara om det hör till det som är valt just nu.
@@ -144,6 +150,8 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
   const underkategorier = kategori ? underkategorierFor(kategori) : []
   const valdEtikett = (kategori && underkategoriFor(kategori, underkategori)?.etikett) || (kategori ? kategoriFor(kategori).etikett : '')
   const upptagen = laggerTill !== null
+
+  if (kokSteg) return <KokSteg {...kokSteg} onKlar={() => onTillagd(kokSteg.sakId, kokSteg.namn)} />
 
   return (
     // Ligger i en Panel, som har rubriken och stängknappen.
