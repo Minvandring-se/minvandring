@@ -17,7 +17,7 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 |---|---|
 | Skapa, ändra och se turer | Finns |
 | Bjud in med länk och roller | Finns |
-| Dagsetapper med övernattning | Nästa (P1) |
+| Dagsetapper med övernattning | Finns (`/tur/:id/etapper`): från, till, km, var ni sover, bokad och anteckning per dag, med summering och i översikten |
 | Bokad eller ej bokad stuga | Senare |
 | Resan dit och hem, biljetter | Senare |
 | Väder från SMHI före avfärd | Senare |
@@ -31,13 +31,14 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 |---|---|
 | Mitt förråd med produktkatalog | Finns |
 | Förrådet: Grunden, översikt, sök, kategori, sortering, lista och rutnät | Finns |
+| Ditt kök i förrådet: kokkärl och bränsle kopplade till brännaren, vikten för hela köket, och hela köket i packlistan i ett steg | Finns |
 | Önskelista, utlånat och pensionerat i förrådet | Senare |
 | Köpt, skick, turer och pris per natt för en sak | Senare |
 | Utrustningskatalog: sök och kategorifilter (`/utrustning`) | Finns |
 | Jämför produkter sida vid sida | Senare |
 | Packlista per person | Finns (`/tur/:id/packning`): ur förrådet eller som egen sak, bockar per person, Alla har var sin med egen modell |
 | Basvikt, förbrukning och startvikt | Finns, startvikt per person med mat från matplanen |
-| Vikt per kategori och person | Nästa (P1) |
+| Vikt per kategori och person | Finns: under Startvikt fälls basvikten per kategori ut för varje person, med en stapel per kategori |
 | Gemensam utrustning och vem som bär | Finns: gemensamma rader, Jag tar med den (även läsare), förslag på det gruppen behöver och frågor om dubbletter |
 | Viktmål för turen | Senare |
 | Buren vikt | Senare |
@@ -67,7 +68,7 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Egna recept på kontot, att lägga in i vilken tur som helst (kopieras till turen) | Finns (`/matplanering/recept`), personligt |
 | Spara en egen rätt i en tur som recept | Finns |
 | Tips om mat med källor: energi, vatten och bränsle, packning, kcal per 100 g | Finns (`/matplanering/tips`) |
-| Gas till köket: patroner som räcker på sommaren och med snösmältning, enligt Primus veckosiffror | Finns, i turens matplan |
+| Gas till köket: patroner som räcker på sommaren och med snösmältning, enligt Primus veckosiffror | Finns, i turens matplan och som förslaget Gas i packlistan |
 | Dela recept med andra användare | Senare |
 | Proviantering i STF-stugor | Senare |
 

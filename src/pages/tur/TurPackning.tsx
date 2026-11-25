@@ -31,6 +31,7 @@ import {
   egenModell,
   filtrera,
   forslagSomSaknas,
+  medGas,
   packat,
   packradFranForslag,
   packradFranSak,
@@ -44,7 +45,7 @@ import {
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import type { PackradRad } from '@/lib/typer'
 import { cn } from '@/lib/utils'
-import { startvikter } from '@/lib/vikt'
+import { basPerKategori, startvikter } from '@/lib/vikt'
 
 const FILTER: readonly { varde: Packfilter; text: string }[] = [
   { varde: 'min', text: 'Min packning' },
@@ -89,16 +90,20 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
   const personvikter = useMemo(() => {
     const dagar = matdagar(tur.dagar, tur.reservdagar)
     const matvikt = mat.lage.lage === 'klar' ? matviktPerDeltagare(mat.lage.plan, mat.lage.plan.matdeltagare, dagar) : new Map<string, number>()
-    const vikter = startvikter(
-      viktrader(rader, status),
-      deltagare.map((d) => ({ id: d.id, typ: d.typ, matandel: null })),
-      matvikt,
-    )
+    const vrader = viktrader(rader, status)
+    const viktdeltagare = deltagare.map((d) => ({ id: d.id, typ: d.typ, matandel: null }))
+    const vikter = startvikter(vrader, viktdeltagare, matvikt)
     // Den egna raden först, sedan gruppen i deltagarlistans ordning.
     return [...deltagare]
       .sort((a, b) => Number(b.id === mittId) - Number(a.id === mittId))
       .filter((d) => d.typ === 'person' || (vikter.get(d.id)?.start ?? 0) > 0)
-      .map((d) => ({ id: d.id, namn: d.id === mittId ? `${d.namn} (du)` : d.namn, vikt: vikter.get(d.id)!, packat: packat(rader, statusMap, d) }))
+      .map((d) => ({
+        id: d.id,
+        namn: d.id === mittId ? `${d.namn} (du)` : d.namn,
+        vikt: vikter.get(d.id)!,
+        kategorier: basPerKategori(vrader, viktdeltagare.find((v) => v.id === d.id)!),
+        packat: packat(rader, statusMap, d),
+      }))
   }, [rader, status, statusMap, deltagare, mat.lage, tur.dagar, tur.reservdagar, mittId])
 
   async function gor(atgard: () => Promise<boolean>, feltext = FELTEXT): Promise<boolean> {
@@ -125,7 +130,7 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
       <Gruppbehov
         dubbletter={dubbletter(rader)}
         utanBarare={utanBarare(rader)}
-        forslag={forslagSomSaknas(rader)}
+        forslag={medGas(forslagSomSaknas(rader), deltagare.filter((d) => d.typ === 'person').length, matdagar(tur.dagar, tur.reservdagar).length)}
         namn={namn}
         kanAndra={kanAndra}
         kanTaMed={mittId !== null}

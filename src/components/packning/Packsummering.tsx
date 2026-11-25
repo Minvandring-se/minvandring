@@ -1,14 +1,16 @@
 import { ChevronDown } from 'lucide-react'
 import { useState } from 'react'
 import { Sektion } from '@/components/ui/sektion'
-import { formateraVikt } from '@/lib/forrad'
-import type { Startvikt } from '@/lib/vikt'
+import { formateraVikt, kategoriFor } from '@/lib/forrad'
+import type { Kategorivikt, Startvikt } from '@/lib/vikt'
 import { cn } from '@/lib/utils'
 
 export interface Personvikt {
   id: string
   namn: string
   vikt: Startvikt
+  /** Basvikten per kategori, tyngst först. */
+  kategorier: readonly Kategorivikt[]
   packat: { packat: number; totalt: number }
 }
 
@@ -36,6 +38,7 @@ export function Packsummering({ personer, mat }: { personer: readonly Personvikt
               Bas {formateraVikt(p.vikt.bas)}, förbrukning {formateraVikt(p.vikt.forbrukas)}, {matText(p.vikt.mat)}
               {p.vikt.kropp > 0 && `. På kroppen ${formateraVikt(p.vikt.kropp)}`}
             </p>
+            {p.kategorier.length > 0 && <Kategorier namn={p.namn} kategorier={p.kategorier} />}
             {p.packat.totalt > 0 && (
               <p className="text-sm text-muted-foreground">
                 {p.packat.packat} av {p.packat.totalt} packat
@@ -61,5 +64,40 @@ export function Packsummering({ personer, mat }: { personer: readonly Personvikt
           : 'Startvikten är det som bärs i ryggsäcken vid start. Maten kommer från matplanen.'}
       </p>
     </Sektion>
+  )
+}
+
+/** Vad basvikten består av, per kategori med en stapel. Fälls ut per person, så att listan överst hålls kort. */
+function Kategorier({ namn, kategorier }: { namn: string; kategorier: readonly Kategorivikt[] }) {
+  const [oppen, setOppen] = useState(false)
+  const tyngst = kategorier[0]?.vikt ?? 0
+  return (
+    <div>
+      <button
+        type="button"
+        aria-expanded={oppen}
+        onClick={() => setOppen((o) => !o)}
+        className="inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
+      >
+        Basvikten per kategori
+        <span className="sr-only"> för {namn}</span>
+        <ChevronDown className={cn('size-4 transition-transform', oppen && 'rotate-180')} aria-hidden />
+      </button>
+      {oppen && (
+        <ul className="space-y-2 pb-1">
+          {kategorier.map((k) => (
+            <li key={k.kategori} className="space-y-1 text-sm">
+              <div className="flex items-baseline justify-between gap-3">
+                <span className="min-w-0 break-words">{kategoriFor(k.kategori).etikett}</span>
+                <span className="shrink-0 tabular-nums">{formateraVikt(k.vikt)}</span>
+              </div>
+              <div className="h-1.5 overflow-hidden rounded-full bg-muted" aria-hidden>
+                <div className="h-full rounded-full bg-primary" style={{ width: `${tyngst > 0 ? Math.max(2, (k.vikt / tyngst) * 100) : 0}%` }} />
+              </div>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   )
 }

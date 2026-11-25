@@ -16,7 +16,7 @@ export interface TurdelInfo {
 
 export const TURDELAR: readonly TurdelInfo[] = [
   { del: 'oversikt', namn: 'Översikt', sokvag: '', byggd: true, blir: '' },
-  { del: 'etapper', namn: 'Etapper', sokvag: 'etapper', byggd: false, blir: 'Dagsetapperna längs leden med sträcka och var ni sover varje natt.' },
+  { del: 'etapper', namn: 'Etapper', sokvag: 'etapper', byggd: true, blir: 'Dagsetapperna längs leden med sträcka och var ni sover varje natt.' },
   { del: 'karta', namn: 'Karta', sokvag: 'karta', byggd: false, blir: 'Leden på en karta med höjdprofil, stugor och vatten, från en GPX-fil.' },
   {
     del: 'packning',

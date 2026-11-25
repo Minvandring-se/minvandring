@@ -11,7 +11,6 @@ import {
   DELA_OCH_SPARA,
   DIN_VIKT,
   EFTER_TUREN,
-  ETAPPER,
   FARDPLAN,
   GEMENSAM_UTRUSTNING,
   HOJDPROFIL,
@@ -149,47 +148,6 @@ export function ResanDitOchHem({ className }: Props) {
           })}
           <Exempellank>Lägg till biljetter</Exempellank>
         </div>
-      </KommerSnart>
-    </Sektion>
-  )
-}
-
-export function Dagsetapper({ className }: Props) {
-  return (
-    <Sektion rubrik="Dagsetapper" kommerSnart atgard={<Exempellank>Alla etapper</Exempellank>} className={className}>
-      <KommerSnart text="Här kommer dagsetapperna längs leden, med sträcka och var ni sover varje natt.">
-        <ol>
-          {ETAPPER.map((e, i) => (
-            <li key={e.fran} className="grid grid-cols-[2.75rem_minmax(0,1fr)_auto] gap-3 py-2.5">
-              <div className="flex flex-col items-center">
-                <span
-                  className={cn(
-                    'flex size-8 items-center justify-center rounded-full text-sm font-semibold',
-                    i === 0 ? 'bg-primary text-primary-foreground' : 'bg-primary-soft text-primary',
-                  )}
-                >
-                  {i + 1}
-                </span>
-                {i < ETAPPER.length - 1 && <span className="mt-1.5 min-h-7 w-0.5 flex-1 bg-border" />}
-              </div>
-              <div className="min-w-0">
-                <p className="font-semibold">
-                  {e.fran} till {e.till}
-                </p>
-                <p className="mt-0.5 text-sm text-muted-foreground">
-                  {e.dag}. Natt: {e.natt}
-                  {e.bokad === true && '. Bokad'}
-                  {e.bokad === false && (
-                    <>
-                      . <span className="font-semibold text-accent-strong">Ej bokad</span>
-                    </>
-                  )}
-                </p>
-              </div>
-              <p className="font-semibold tabular-nums">{e.km} km</p>
-            </li>
-          ))}
-        </ol>
       </KommerSnart>
     </Sektion>
   )
