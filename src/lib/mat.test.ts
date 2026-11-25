@@ -267,8 +267,8 @@ describe('ingredienserTillDatabasen', () => {
         { vara: 'Salt', mangd: null, enhet: null, gram: null, kcalPer100g: null, proteinPer100g: null },
       ]),
     ).toEqual([
-      { vara: 'Havregryn', mangd: 90, enhet: 'g', gram: 90, kcal: 380, protein: 12.5 },
-      { vara: 'Salt', mangd: null, enhet: null, gram: null, kcal: null, protein: null },
+      { vara: 'Havregryn', mangd: 90, enhet: 'g', gram: 90, kcal: 380, protein: 12.5, varukatalog: null },
+      { vara: 'Salt', mangd: null, enhet: null, gram: null, kcal: null, protein: null, varukatalog: null },
     ])
   })
 })

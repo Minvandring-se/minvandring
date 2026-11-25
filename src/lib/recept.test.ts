@@ -143,3 +143,16 @@ describe('texterna', () => {
     expect(receptMedNamn(recept, 'Soppa')).toBeUndefined()
   })
 })
+
+describe('kopplingen till varukatalogen', () => {
+  it('följer med från receptet till formuläret och tillbaka', () => {
+    const recept = {
+      id: 'r',
+      namn: 'Smörgås',
+      rader: [{ id: 'x', recept_id: 'r', vara: 'Polarbröd Sarek 375 g', mangd: 60, enhet: 'g' as const, gram_per_portion: 60, kcal_per_100g: 280, protein_per_100g: 9.8, sortering: 0, varukatalog_id: 'vk1' }],
+    }
+    const rader = receptTillRader(recept)
+    expect(rader[0].varukatalogId).toBe('vk1')
+    expect(raderTillFalt(rader)[0].varukatalogId).toBe('vk1')
+  })
+})

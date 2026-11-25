@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arAllergen, behovstext, filterForGruppen, filterText, kostsvar, kostsvarText, passarFilter, skalForPerson, uppraknade, varningar, type Behov, type Kostinfo } from './kost'
+import { arAllergen, behovstext, filterForGruppen, filterText, kostsvar, kostsvarText, passarFilter, skalForPerson, uppraknade, varningar, varningarForRatt, type Behov, type Kostinfo } from './kost'
 
 const kand: Kostinfo = { vegetarisk: true, vegansk: false, glutenfri: true, laktosfri: true, allergener: ['soja', 'selleri'] }
 const okand: Kostinfo = { vegetarisk: null, vegansk: null, glutenfri: null, laktosfri: null, allergener: null }
@@ -182,5 +182,38 @@ describe('filterText', () => {
     expect(filterText({ val: ['laktosfri', 'vegetarisk'], utan: ['sesam'] })).toBe('Vegetarisk, laktosfri, utan sesam')
     expect(filterText({ val: [], utan: ['agg'] })).toBe('Utan ägg')
     expect(filterText({ val: ['glutenfri'], utan: ['gluten', 'sesam'] })).toBe('Glutenfri, utan sesam')
+  })
+})
+
+describe('varningarForRatt', () => {
+  const brod: Kostinfo = { vegetarisk: true, vegansk: true, glutenfri: false, laktosfri: true, allergener: ['gluten'], spar: [] }
+  const ost: Kostinfo = { vegetarisk: true, vegansk: false, glutenfri: true, laktosfri: false, allergener: ['mjolk'], spar: [] }
+
+  it('varnar för det som de kända ingredienserna innehåller', () => {
+    expect(varningarForRatt([brod, ost], [behov('Anna', { utan: ['mjolk'] }), behov('Erik', { glutenfri: true })])).toEqual([
+      { text: 'Innehåller mjölk, passar inte Anna', okand: false },
+      { text: 'Inte glutenfri, passar inte Erik', okand: false },
+    ])
+  })
+
+  it('räknar en ingrediens utan koppling som okänd, aldrig som att den passar', () => {
+    const v = varningarForRatt([ost, null], [behov('Anna', { utan: ['notter'] }), behov('Erik', { vegetarisk: true })])
+    expect(v).toEqual([
+      { text: 'Okänt om den är vegetarisk, gäller Erik', okand: true },
+      { text: 'Okänt om alla ingredienser är utan nötter, gäller Anna', okand: true },
+    ])
+  })
+
+  it('säger att allt är okänt när ingen ingrediens är känd', () => {
+    expect(varningarForRatt([null, null], [behov('Anna', { utan: ['notter'] })])).toEqual([{ text: 'Okänt om den innehåller nötter, gäller Anna', okand: true }])
+  })
+
+  it('säger inget för en rätt utan ingredienser eller utan kostbehov', () => {
+    expect(varningarForRatt([], [behov('Anna', { utan: ['notter'] })])).toEqual([])
+    expect(varningarForRatt([null], [behov('Anna')])).toEqual([])
+  })
+
+  it('tar med spår från de kända ingredienserna', () => {
+    expect(varningarForRatt([{ ...ost, spar: ['notter'] }], [behov('Anna', { utan: ['notter'] })])).toEqual([{ text: 'Kan innehålla spår av nötter, gäller Anna', okand: true }])
   })
 })

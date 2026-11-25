@@ -587,6 +587,8 @@ export interface Ingrediensfalt {
   gram: string
   kcal: string
   protein: string
+  /** Varan i varukatalogen som raden valdes från. Försvinner när namnet ändras. */
+  varukatalogId?: string | null
 }
 
 export interface TolkadIngrediens {
@@ -598,6 +600,8 @@ export interface TolkadIngrediens {
   gram: number | null
   kcalPer100g: number | null
   proteinPer100g: number | null
+  /** Varan i varukatalogen som raden valdes från. */
+  varukatalogId?: string | null
 }
 
 /** Vikten för en mängd i g eller kg. null för övriga enheter, där vikten skrivs för sig. */
@@ -647,7 +651,7 @@ export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[])
     if (protein !== null && !(protein <= 100)) return { ok: false, fel: `${rad}: skriv protein per 100 g som ett tal mellan 0 och 100.` }
     // En vikt utan mängd blir mängden i gram. Annars sparas vikten med en enhet som inte syns när rätten öppnas igen.
     const utanMangd = mangd === null && gram !== null
-    rader.push({ vara, mangd: utanMangd ? gram : mangd, enhet: utanMangd ? 'g' : enhet, gram, kcalPer100g: kcal === null ? null : Math.round(kcal), proteinPer100g: protein })
+    rader.push({ vara, mangd: utanMangd ? gram : mangd, enhet: utanMangd ? 'g' : enhet, gram, kcalPer100g: kcal === null ? null : Math.round(kcal), proteinPer100g: protein, ...(f.varukatalogId ? { varukatalogId: f.varukatalogId } : {}) })
   }
   return { ok: true, namn: n, rader }
 }
@@ -655,8 +659,9 @@ export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[])
 /** Ingredienserna som de skickas till spara_egen_ratt och spara_recept i databasen. */
 export function ingredienserTillDatabasen(
   rader: readonly TolkadIngrediens[],
-): { vara: string; mangd: number | null; enhet: Enhet | null; gram: number | null; kcal: number | null; protein: number | null }[] {
-  return rader.map((r) => ({ vara: r.vara.trim(), mangd: r.mangd, enhet: r.enhet, gram: r.gram, kcal: r.kcalPer100g, protein: r.proteinPer100g }))
+): { vara: string; mangd: number | null; enhet: Enhet | null; gram: number | null; kcal: number | null; protein: number | null; varukatalog: string | null }[] {
+  // varukatalog skickas alltid, så att en koppling som har tagits bort i formuläret också tas bort i databasen.
+  return rader.map((r) => ({ vara: r.vara.trim(), mangd: r.mangd, enhet: r.enhet, gram: r.gram, kcal: r.kcalPer100g, protein: r.proteinPer100g, varukatalog: r.varukatalogId ?? null }))
 }
 
 /** En portion av rätten i formuläret, för att visa medan man skriver. */

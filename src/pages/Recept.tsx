@@ -20,10 +20,10 @@ type Vy = { typ: 'ny' } | { typ: 'andra'; recept: ReceptTyp } | null
 
 /** Varorna i ens recept, en gång var, som förslag i formuläret med kcal och protein. */
 function varorIRecepten(recept: readonly ReceptTyp[]) {
-  const varor = new Map<string, { namn: string; kcal_per_100g: number | null; protein_per_100g: number | null }>()
+  const varor = new Map<string, { namn: string; kcal_per_100g: number | null; protein_per_100g: number | null; varukatalog_id: string | null }>()
   for (const r of recept)
     for (const x of r.rader)
-      if (!varor.has(x.vara.toLowerCase())) varor.set(x.vara.toLowerCase(), { namn: x.vara, kcal_per_100g: x.kcal_per_100g, protein_per_100g: x.protein_per_100g })
+      if (!varor.has(x.vara.toLowerCase())) varor.set(x.vara.toLowerCase(), { namn: x.vara, kcal_per_100g: x.kcal_per_100g, protein_per_100g: x.protein_per_100g, varukatalog_id: x.varukatalog_id ?? null })
   return [...varor.values()].sort((a, b) => a.namn.localeCompare(b.namn, 'sv'))
 }
 

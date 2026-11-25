@@ -168,6 +168,46 @@ export function varningar(p: Kostinfo, behov: readonly Behov[]): Varning[] {
   return [...ut.filter((v) => !v.okand), ...ut.filter((v) => v.okand)]
 }
 
+/**
+ * Varningarna för en egen rätt, utifrån det som är känt om varje ingrediens: en vara ur varukatalogen har kända
+ * allergener och kostval, och null betyder en ingrediens utan koppling, alltså okänd. Okänt räknas aldrig som att
+ * rätten passar.
+ * - Det de kända ingredienserna innehåller ger samma varningar som för en påse.
+ * - Ett kostval är känt bara när alla ingredienser är kända: nej om någon säger nej, ja om alla säger ja.
+ * - Är någon ingrediens okänd får den som inte tål något en dämpad rad: "Okänt om alla ingredienser är utan nötter".
+ * En rätt utan ingredienser ger inga varningar, eftersom det inte finns något att kontrollera.
+ */
+export function varningarForRatt(delar: readonly (Kostinfo | null)[], behov: readonly Behov[]): Varning[] {
+  if (delar.length === 0 || behov.length === 0) return []
+  const kanda = delar.filter((d): d is Kostinfo => d !== null && d.allergener !== null)
+  const okanda = delar.length - kanda.length
+  if (kanda.length === 0) return varningar({ vegetarisk: null, vegansk: null, glutenfri: null, laktosfri: null, allergener: null }, behov)
+  const val = (k: Kostval): boolean | null => (delar.some((d) => d?.[k] === false) ? false : okanda === 0 && kanda.every((d) => d[k] === true) ? true : null)
+  const samlad: Kostinfo = {
+    vegetarisk: val('vegetarisk'),
+    vegansk: val('vegansk'),
+    glutenfri: val('glutenfri'),
+    laktosfri: val('laktosfri'),
+    allergener: [...new Set(kanda.flatMap((d) => d.allergener!))],
+    spar: [...new Set(kanda.flatMap((d) => d.spar ?? []))],
+  }
+  const ut = varningar(samlad, behov)
+  if (okanda === 0) return ut
+  // Allergener som de kända ingredienserna inte innehåller, men som en okänd ingrediens kan innehålla.
+  const perAllergen = new Map<Allergen, string[]>()
+  for (const b of behov) {
+    for (const a of b.utan) {
+      if (samlad.allergener!.includes(a) || (a === 'gluten' && b.glutenfri)) continue
+      perAllergen.set(a, [...(perAllergen.get(a) ?? []), b.namn])
+    }
+  }
+  const okant = ALLERGENER.filter((a) => perAllergen.has(a.nyckel)).map((a) => ({
+    text: `Okänt om alla ingredienser är utan ${a.etikett.toLowerCase()}, gäller ${uppraknade(perAllergen.get(a.nyckel)!)}`,
+    okand: true,
+  }))
+  return [...ut, ...okant]
+}
+
 /** En persons kostbehov på en rad: "Vegetarisk, glutenfri, tål inte nötter och sesam". Tom text när inget är angivet. */
 export function behovstext(b: Omit<Behov, 'namn'>): string {
   const val = KOSTVAL.filter((k) => b[k.nyckel]).map((k) => k.etikett.toLowerCase())
