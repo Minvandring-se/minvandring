@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arKok, arKokdel, kokForDel, kokdelar, kokensVikt, kokkandidater, medKoket } from './forradskok'
+import { arKok, arKokdel, kokForDel, kokdelar, kokensVikt, kokkandidater, medKoket, taBortFraga } from './forradskok'
 import type { Forradssak } from './typer'
 
 function sak(id: string, underkategori: string, ovrigt: Partial<Forradssak> = {}, egenskaper?: Record<string, unknown>): Forradssak {
@@ -80,5 +80,26 @@ describe('medKoket', () => {
     const saker = [{ id: 'b', kok_id: null }, { id: 'k', kok_id: 'b' }, { id: 'g', kok_id: 'b' }, { id: 'z', kok_id: 'y' }]
     expect(medKoket('b', saker)).toEqual(['b', 'k', 'g'])
     expect(medKoket('z', saker)).toEqual(['z'])
+  })
+})
+
+describe('taBortFraga', () => {
+  const kok = sak('Primus', 'brannare')
+  const kastrull = sak('Kastrull', 'kokkarl', { kok_id: 'Primus' })
+  const gas = sak('Gas', 'bransle', { kok_id: 'Primus' })
+  const grundfraga = (namn: string) => `Ta bort ${namn} ur ditt förråd? Turer där den redan ligger i packlistan påverkas inte.`
+
+  it('en vanlig sak får bara frågan', () => {
+    expect(taBortFraga(sak('Kniv', 'ovrigt'), [])).toBe(grundfraga('Kniv'))
+  })
+
+  it('ett kök säger att delarna finns kvar', () => {
+    expect(taBortFraga(kok, [kok, kastrull, gas])).toBe(`${grundfraga('Primus')} De 2 delarna i köket finns kvar i förrådet.`)
+    expect(taBortFraga(kok, [kok, gas])).toBe(`${grundfraga('Primus')} Delen i köket finns kvar i förrådet.`)
+    expect(taBortFraga(kok, [kok])).toBe(grundfraga('Primus'))
+  })
+
+  it('en del säger vilket kök den lämnar', () => {
+    expect(taBortFraga(gas, [kok, gas])).toBe(`${grundfraga('Gas')} Den tas också bort ur köket Primus.`)
   })
 })

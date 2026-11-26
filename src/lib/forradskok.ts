@@ -59,3 +59,16 @@ export function kokensVikt(kok: Forradssak, delar: readonly Forradssak[]): { vik
 export function medKoket(id: string, saker: readonly Pick<Forradssak, 'id' | 'kok_id'>[]): string[] {
   return [id, ...saker.filter((s) => s.kok_id === id).map((s) => s.id)]
 }
+
+/**
+ * Frågan innan en sak tas bort ur förrådet. Ett kök med delar säger att delarna finns kvar, och en del säger vilket
+ * kök den lämnar.
+ */
+export function taBortFraga(sak: Forradssak, saker: readonly Forradssak[]): string {
+  const fraga = `Ta bort ${sak.namn} ur ditt förråd? Turer där den redan ligger i packlistan påverkas inte.`
+  const delar = arKok(sak) ? kokdelar(sak, saker).length : 0
+  if (delar > 0) return `${fraga} ${delar === 1 ? 'Delen' : `De ${delar} delarna`} i köket finns kvar i förrådet.`
+  const kok = kokForDel(sak, saker)
+  if (kok) return `${fraga} Den tas också bort ur köket ${kok.namn}.`
+  return fraga
+}
