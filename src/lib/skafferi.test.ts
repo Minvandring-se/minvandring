@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { garUtFore, jamforDatum, manadOchAr, nyttAntal, skafferibesked, skafferistatus, tidigasteDatum, tillatnaAr, tolkaBastFore, valFranDatum, bastForeStatus, bokade, bokadText, bokningarFranRader, enManadEfter, formateraDatum, hemma, kopText, ledigaHemma, senastAnvanda, skafferietForst, sorteraSkafferi, turerFore, taPaseSjalv, type Bokningstur } from './skafferi'
+import { datumrad, sorteraSkafferiEfter, garUtFore, jamforDatum, manadOchAr, nyttAntal, skafferibesked, skafferistatus, tidigasteDatum, tillatnaAr, tolkaBastFore, valFranDatum, bastForeStatus, bokade, bokadText, bokningarFranRader, enManadEfter, formateraDatum, hemma, kopText, ledigaHemma, senastAnvanda, skafferietForst, sorteraSkafferi, turerFore, taPaseSjalv, type Bokningstur } from './skafferi'
 import type { Skafferirad } from './typer'
 
 const rad = (matprodukt_id: string, antal: number, bast_fore: string | null = null): Skafferirad => ({ id: `r-${matprodukt_id}`, matprodukt_id, antal, bast_fore })
@@ -237,5 +237,30 @@ describe('taPaseSjalv', () => {
     // En påse med två portioner hemma, en portion buren: nästa portion ryms i samma påse.
     expect(taPaseSjalv(1, 1, 1, 2)).toBe(true)
     expect(taPaseSjalv(1, 2, 1, 2)).toBe(false)
+  })
+})
+
+describe('datumraden i skafferiet', () => {
+  it('visar bäst före med kort månad, och gått ut när datumet har passerat', () => {
+    expect(datumrad('2027-03-31', '2026-11-26')).toEqual({ text: 'Bäst före mar 2027', gattUt: false })
+    expect(datumrad('2026-08-31', '2026-11-26')).toEqual({ text: 'Gått ut, aug 2026', gattUt: true })
+    expect(datumrad(null, '2026-11-26')).toBeNull()
+  })
+})
+
+describe('sortera skafferiet', () => {
+  const pasar = {
+    a: { marke: 'Real Turmat', namn: 'Reindeer Stew', maltid: 'lunch_middag' as const },
+    b: { marke: 'Blå Band', namn: 'Havregröt', maltid: 'frukost' as const },
+    c: { marke: 'Adventure Food', namn: 'Pasta', maltid: 'lunch_middag' as const },
+  }
+  const rader = [rad('a', 1, '2027-01-31'), rad('b', 1, null), rad('c', 1, '2026-12-31')]
+  const pase = (r: Skafferirad) => pasar[r.matprodukt_id as keyof typeof pasar]
+  const ordning = (s: 'datum' | 'marke' | 'maltid') => sorteraSkafferiEfter(rader, s, pase).map((r) => r.matprodukt_id)
+
+  it('sorterar efter det som går ut först, märke eller måltid', () => {
+    expect(ordning('datum')).toEqual(['c', 'a', 'b'])
+    expect(ordning('marke')).toEqual(['c', 'b', 'a'])
+    expect(ordning('maltid')).toEqual(['b', 'c', 'a'])
   })
 })

@@ -10,7 +10,7 @@ import { cn } from '@/lib/utils'
 const FILER: Partial<Record<string, string>> = {}
 
 /** Ytan och formen i platshållaren. Väljs utifrån namnet, så att samma namn alltid ser likadant ut. */
-const YTOR = ['fill-primary-soft', 'fill-hjortron-soft', 'fill-accent-soft', 'fill-sand'] as const
+const YTOR = ['bg-primary-soft', 'bg-hjortron-soft', 'bg-accent-soft', 'bg-sand'] as const
 const FORMER = ['fill-illustration', 'fill-hjortron', 'fill-trail-marker', 'fill-primary'] as const
 
 function talFor(namn: string): number {
@@ -37,8 +37,8 @@ function Motiv({ typ, form }: { typ: number; form: string }) {
     )
   return (
     <>
-      <circle cx="66" cy="34" r="9" className="fill-hjortron" />
-      <path d="M8 80 L36 46 L52 64 L64 52 L92 80 Z" className={form} />
+      <circle cx="68" cy="38" r="9" className="fill-hjortron" />
+      <path d="M2 100 L34 58 L52 78 L66 64 L98 100 Z" className={form} />
     </>
   )
 }
@@ -51,8 +51,8 @@ export function Illustration({ namn, className }: { namn: string; className?: st
   // Solen är hjortron, så kullen får aldrig samma färg.
   const form = typ === 2 && FORMER[tal % FORMER.length] === 'fill-hjortron' ? 'fill-illustration' : FORMER[tal % FORMER.length]
   return (
-    <svg viewBox="0 0 100 100" aria-hidden focusable="false" className={cn('text-illustration', className)} preserveAspectRatio="xMidYMid slice">
-      <rect width="100" height="100" className={YTOR[tal % YTOR.length]} />
+    // Ytan är bakgrunden, så att motivet syns helt och ytan fyller hela rutan oavsett form.
+    <svg viewBox="0 0 100 100" aria-hidden focusable="false" className={cn('text-illustration', YTOR[tal % YTOR.length], className)} preserveAspectRatio="xMidYMax meet">
       <Motiv typ={typ} form={form} />
     </svg>
   )

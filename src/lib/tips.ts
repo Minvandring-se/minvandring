@@ -12,12 +12,21 @@ export interface Avsnitt {
   rubrik: string
   stycken: readonly string[]
   punkter?: readonly string[]
+  /** Visas som en del som fälls ut, till exempel I kyla. */
+  fallsUt?: boolean
+}
+
+/** En viktig siffra i en liten ruta överst i artikeln. Siffran måste stå i guidens text, med samma källa. */
+export interface Siffra {
+  varde: string
+  text: string
 }
 
 export interface Guide {
   nyckel: string
   rubrik: string
   ingress: string
+  siffror: readonly Siffra[]
   avsnitt: readonly Avsnitt[]
   kallor: readonly Kalla[]
 }
@@ -36,6 +45,11 @@ export const GUIDER: readonly Guide[] = [
     nyckel: 'energi',
     rubrik: 'Hur mycket energi behöver man?',
     ingress: 'En dag med ryggsäck kräver mycket mer energi än en vanlig dag hemma, och ännu mer i kyla.',
+    siffror: [
+      { varde: '2 150–2 700', text: 'kcal en vanlig dag' },
+      { varde: '4 300–5 000', text: 'kcal med ryggsäck' },
+      { varde: 'minst 4 500', text: 'kcal vid arbete i kyla' },
+    ],
     avsnitt: [
       {
         rubrik: 'En vanlig dag',
@@ -52,6 +66,7 @@ export const GUIDER: readonly Guide[] = [
       },
       {
         rubrik: 'I kyla',
+        fallsUt: true,
         stycken: [
           'Amerikanska försvaret räknar med minst 4 500 kcal per dag för den som arbetar i kyla, mot omkring 3 200 kcal i tempererat klimat. Tunga kläder och kängor och att ta sig fram i snö gör att man förbrukar mer energi.',
         ],
@@ -68,6 +83,10 @@ export const GUIDER: readonly Guide[] = [
     nyckel: 'vatten-och-bransle',
     rubrik: 'Vatten och bränsle till maten',
     ingress: 'Torkad mat är lätt att bära, men den behöver vatten och oftast bränsle för att bli mat.',
+    siffror: [
+      { varde: '2 liter', text: 'vätska per person och dygn' },
+      { varde: '100 g', text: 'gas per person och dag på sommaren' },
+    ],
     avsnitt: [
       {
         rubrik: 'Att dricka',
@@ -100,6 +119,10 @@ export const GUIDER: readonly Guide[] = [
     nyckel: 'packa',
     rubrik: 'Packa maten smart',
     ingress: 'Maten blir lättare för varje dag. Med lite planering väger den mindre redan från början.',
+    siffror: [
+      { varde: '9 kcal', text: 'per gram fett' },
+      { varde: '4 kcal', text: 'per gram kolhydrater och protein' },
+    ],
     avsnitt: [
       {
         rubrik: 'Välj energität mat',
@@ -125,6 +148,10 @@ export const GUIDER: readonly Guide[] = [
     nyckel: 'kcal-per-100-g',
     rubrik: 'Så läser du kcal per 100 g',
     ingress: 'Kcal per 100 g visar hur mycket energi maten ger för sin vikt. Det gör det lätt att jämföra påsar av olika storlek.',
+    siffror: [
+      { varde: '400 kcal', text: 'per 100 g i en påse på 150 g med 600 kcal' },
+      { varde: 'cirka 430 kcal', text: 'per 100 g i Real Turmats Chili Stew' },
+    ],
     avsnitt: [
       {
         rubrik: 'Räkna ut det själv',
@@ -147,3 +174,21 @@ export const GUIDER: readonly Guide[] = [
     kallor: [NNR, { namn: 'Real Turmat: Chili Stew (på norska)', url: 'https://realoutdoorfood.com/?p=186' }],
   },
 ]
+
+/** Ord per minut när man läser lästiden. */
+const ORD_PER_MINUT = 180
+
+/** Lästiden i hela minuter, minst en: ingressen, avsnitten och punkterna. */
+export function lastid(g: Pick<Guide, 'ingress' | 'avsnitt'>): number {
+  const text = [g.ingress, ...g.avsnitt.flatMap((a) => [a.rubrik, ...a.stycken, ...(a.punkter ?? [])])].join(' ')
+  const ord = text.split(/\s+/).filter(Boolean).length
+  return Math.max(1, Math.ceil(ord / ORD_PER_MINUT))
+}
+
+/** Guiden med en nyckel, för artikelns sida. */
+export function guideFor(nyckel: string | undefined): Guide | null {
+  return GUIDER.find((g) => g.nyckel === nyckel) ?? null
+}
+
+/** Adressen till en artikel, till exempel /matplanering/tips/energi. */
+export const tipsadress = (nyckel: string) => `/matplanering/tips/${nyckel}`
