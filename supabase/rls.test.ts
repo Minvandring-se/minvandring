@@ -4464,8 +4464,8 @@ describe('notiser', () => {
 
 describe('egna rätter hemma och favoritrecept', () => {
   // Egna användare: Siv och Tage delar en tur. Det ska inte ge Tage någon åtkomst till Sivs rader.
-  const SIV = '00000000-0000-0000-0000-000000000041'
-  const TAGE = '00000000-0000-0000-0000-000000000042'
+  const SIV = '00000000-0000-0000-0000-000000000051'
+  const TAGE = '00000000-0000-0000-0000-000000000052'
   let sivsRecept: string
   let tagesRecept: string
   let sivsRatt: string
