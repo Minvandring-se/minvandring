@@ -47,6 +47,26 @@ export function useReceptkatalog(): Katalogrecept[] | null | 'fel' {
   return recept
 }
 
+/** Bara namnen på MinVandrings recept, i namnordning, för skafferiet. null medan de hämtas, 'fel' om det inte gick. */
+export function useReceptkatalognamn(): { id: string; namn: string }[] | null | 'fel' {
+  const [namn, setNamn] = useState<{ id: string; namn: string }[] | null | 'fel'>(null)
+  useEffect(() => {
+    if (!supabase) return
+    let aktuell = true
+    supabase
+      .from('receptkatalog')
+      .select('id, namn')
+      .order('namn')
+      .then(({ data, error }) => {
+        if (aktuell) setNamn(error ? 'fel' : (data as { id: string; namn: string }[]))
+      })
+    return () => {
+      aktuell = false
+    }
+  }, [])
+  return namn
+}
+
 /** En tur man kan lägga ett recept i: man är ägare eller redigerare. */
 export interface RedigerbarTur {
   id: string
