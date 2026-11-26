@@ -10,6 +10,7 @@ import { KATEGORIER } from '../src/lib/forrad'
 import { AVDELNINGAR, ENHETER } from '../src/lib/handla'
 import { ALLERGENER } from '../src/lib/kost'
 import { AMNEN } from '../src/lib/lardomar'
+import { NOTISTYPER } from '../src/lib/notiser'
 import { godkanda, importera } from '../src/lib/katalogimport'
 import { godkandaLivsmedel, importeraLivsmedel, LIVSMEDELSKOLUMNER, livsmedelSeedSql } from '../src/lib/livsmedelimport'
 import { godkandaPasar, importeraMatkatalog, MATKOLUMNER, matSeedSql } from '../src/lib/matkatalogimport'
@@ -144,6 +145,8 @@ describe('funktionerna i public', () => {
     'public.anteckning_andrad()',
     'public.privata_anteckningar_bort()',
     'public.lardom_tur_namn()',
+    'public.notis_gick_med()',
+    'public.notiser_bort_med_deltagare()',
   ]
   const forInloggade = [
     'public.ar_medlem(uuid)',
@@ -4279,5 +4282,182 @@ describe('anteckningar och lärdomar', () => {
     expect((await db.query('select 1 from public.anteckningar where tur_id = $1', [tur])).rows).toHaveLength(0)
     const r = await db.query<{ tur_id: string | null; tur_namn: string }>(`select tur_id, tur_namn from public.lardomar where text = 'Ägarens lärdom'`)
     expect(r.rows[0]).toEqual({ tur_id: null, tur_namn: 'Anteckningstur' })
+  })
+})
+
+describe('notiser', () => {
+  // Egna användare, så att försöken att gå med i de andra testerna inte räknas mot spärren här.
+  // Ola äger turen, Rut är redigerare, Lis är läsare, Max går med via länken och Tim är inte med.
+  const OLA = '00000000-0000-0000-0000-0000000001a1'
+  const RUT = '00000000-0000-0000-0000-0000000001a2'
+  const LIS = '00000000-0000-0000-0000-0000000001a3'
+  const MAX = '00000000-0000-0000-0000-0000000001a4'
+  const TIM = '00000000-0000-0000-0000-0000000001a5'
+  let tur: string
+  let kod: string
+
+  interface Rad {
+    id: string
+    typ: string
+    text: string
+    lank: string
+    fran_user_id: string | null
+    last: string | null
+  }
+  const notiser = (vem: string, t = tur) =>
+    som(vem, (tx) =>
+      tx.query<Rad>('select id, typ, text, lank, fran_user_id, last from public.notiser where tur_id = $1 order by skapad', [t]),
+    ).then((r) => r.rows)
+  const mottagare = (t = tur) =>
+    db.query<{ user_id: string }>('select user_id from public.notiser where tur_id = $1', [t]).then((r) => r.rows.map((x) => x.user_id).sort())
+
+  beforeAll(async () => {
+    await db.query(`insert into auth.users (id, email) values
+      ('${OLA}', 'ola@exempel.se'), ('${RUT}', 'rut@exempel.se'), ('${LIS}', 'lis@exempel.se'), ('${MAX}', 'max@exempel.se'), ('${TIM}', 'tim@exempel.se')`)
+    await db.query(`update public.profiler set namn = 'Max' where id = '${MAX}'`)
+    tur = await skapaTur(OLA, 'Notistur')
+    kod = await kodFor(tur)
+    await som(RUT, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(LIS, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(OLA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where tur_id = $1 and user_id = $2`, [tur, LIS]))
+    await db.query('delete from public.notiser where tur_id = $1', [tur])
+  })
+
+  it('ägaren och redigeraren får en notis när någon går med via länken, inte läsaren eller den som går med', async () => {
+    await som(MAX, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    expect(await mottagare()).toEqual([OLA, RUT].sort())
+    const [n] = await notiser(OLA)
+    expect(n).toMatchObject({ typ: 'gick_med', text: 'Max gick med i Notistur', lank: `/tur/${tur}#deltagare`, fran_user_id: MAX, last: null })
+    expect(await notiser(LIS)).toEqual([])
+    expect(await notiser(MAX)).toEqual([])
+  })
+
+  it('ger ingen ny notis när samma person öppnar länken igen, och ingen när en tur skapas', async () => {
+    await som(MAX, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    expect(await mottagare()).toHaveLength(2)
+    const egen = await skapaTur(TIM, 'Tims egen tur')
+    expect(await mottagare(egen)).toEqual([])
+  })
+
+  it('den som lämnar och går med igen samma dygn ger ingen ny notis', async () => {
+    await som(MAX, (tx) => tx.query('delete from public.deltagare where tur_id = $1 and user_id = $2', [tur, MAX]))
+    await db.query(`update public.profiler set namn = 'Annat namn' where id = '${MAX}'`)
+    await som(MAX, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    expect(await mottagare()).toEqual([OLA, RUT].sort())
+    expect((await notiser(OLA)).map((n) => n.text)).toEqual(['Max gick med i Notistur'])
+    await db.query(`update public.profiler set namn = 'Max' where id = '${MAX}'`)
+  })
+
+  it('ger ingen notis när en redigerare lägger till en person utan konto eller när någon får en ny roll', async () => {
+    await som(RUT, (tx) => tx.query(`insert into public.deltagare (tur_id, namn, typ, sortering) values ($1, 'Utan konto', 'person', 9)`, [tur]))
+    await som(OLA, (tx) => tx.query(`update public.deltagare set roll = 'editor' where tur_id = $1 and user_id = $2`, [tur, LIS]))
+    await som(OLA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where tur_id = $1 and user_id = $2`, [tur, LIS]))
+    expect(await mottagare()).toEqual([OLA, RUT].sort())
+  })
+
+  it('ger en notis när någon tar över en person utan konto, men inte när ägaren lägger till en person utan konto', async () => {
+    const t = await skapaTur(OLA, 'Tur med platshållare för notiser')
+    const k = await kodFor(t)
+    const r = await som(OLA, (tx) =>
+      tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn, typ, sortering) values ($1, 'Tim', 'person', 1) returning id`, [t]),
+    )
+    expect(await mottagare(t)).toEqual([])
+    await db.query(`update public.profiler set namn = 'Tim' where id = '${TIM}'`)
+    await som(TIM, (tx) => tx.query('select public.ga_med($1, $2)', [k, r.rows[0].id]))
+    expect(await mottagare(t)).toEqual([OLA])
+    expect((await notiser(OLA, t))[0]).toMatchObject({ text: 'Tim gick med i Tur med platshållare för notiser', lank: `/tur/${t}#deltagare`, fran_user_id: TIM })
+  })
+
+  it('en annan användare ser, ändrar och tar inte bort notiserna', async () => {
+    const [n] = await notiser(OLA)
+    for (const vem of [RUT, TIM]) {
+      const r = await som(vem, (tx) => tx.query('select id from public.notiser where id = $1', [n.id]))
+      expect(r.rows, vem).toHaveLength(0)
+      const u = await som(vem, (tx) => tx.query('update public.notiser set last = now() where id = $1', [n.id]))
+      expect(u.affectedRows, vem).toBe(0)
+      const d = await som(vem, (tx) => tx.query('delete from public.notiser where id = $1', [n.id]))
+      expect(d.affectedRows, vem).toBe(0)
+    }
+    expect((await notiser(OLA))[0].last).toBeNull()
+  })
+
+  it('ingen kan skapa en notis, och bara last går att ändra', async () => {
+    await forvantaFel(som(OLA, (tx) => tx.query(`insert into public.notiser (user_id, typ, text) values ($1, 'gick_med', 'Falsk')`, [OLA])))
+    await forvantaFel(som(OLA, (tx) => tx.query(`insert into public.notiser (user_id, typ, text) values ($1, 'gick_med', 'Falsk')`, [RUT])))
+    const [n] = await notiser(OLA)
+    await forvantaFel(som(OLA, (tx) => tx.query(`update public.notiser set text = 'Ändrad' where id = $1`, [n.id])))
+    await forvantaFel(som(OLA, (tx) => tx.query('update public.notiser set user_id = $2 where id = $1', [n.id, RUT])))
+    await forvantaFel(som(OLA, (tx) => tx.query(`update public.notiser set lank = '/hem' where id = $1`, [n.id])))
+    await forvantaFel(som(OLA, (tx) => tx.query(`update public.notiser set typ = 'gick_med' where id = $1`, [n.id])))
+    await forvantaFel(som(OLA, (tx) => tx.query('update public.notiser set tur_id = null where id = $1', [n.id])))
+    await forvantaFel(som(OLA, (tx) => tx.query('update public.notiser set fran_user_id = $2 where id = $1', [n.id, OLA])))
+    await forvantaFel(som(OLA, (tx) => tx.query('update public.notiser set skapad = now() where id = $1', [n.id])))
+  })
+
+  it('man markerar sina egna som lästa och tar bort sina egna', async () => {
+    const u = await som(OLA, (tx) => tx.query('update public.notiser set last = now() where last is null'))
+    expect(u.affectedRows).toBeGreaterThan(0)
+    expect((await notiser(OLA)).every((n) => n.last !== null)).toBe(true)
+    // Redigerarens notis är fortfarande oläst.
+    expect((await notiser(RUT))[0].last).toBeNull()
+    const [n] = await notiser(OLA)
+    const d = await som(OLA, (tx) => tx.query('delete from public.notiser where id = $1', [n.id]))
+    expect(d.affectedRows).toBe(1)
+  })
+
+  it('anon når ingenting', async () => {
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.notiser')))
+    await forvantaFel(somAnon((tx) => tx.query('delete from public.notiser')))
+    await forvantaFel(somAnon((tx) => tx.query('update public.notiser set last = now()')))
+  })
+
+  it('ligger i Realtime med replica identity default, så att en borttagning bara skickar id', async () => {
+    const p = await db.query(`select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'notiser'`)
+    expect(p.rows).toHaveLength(1)
+    const r = await db.query<{ r: string }>(`select relreplident as r from pg_class where oid = 'public.notiser'::regclass`)
+    expect(r.rows[0].r).toBe('d')
+  })
+
+  it('en sökväg till en annan webbplats och en okänd sort stoppas, och sorterna är desamma som i src/lib/notiser.ts', async () => {
+    await forvantaFel(db.query(`insert into public.notiser (user_id, typ, text, lank) values ($1, 'gick_med', 'x', '//annan.se')`, [OLA]))
+    await forvantaFel(db.query(`insert into public.notiser (user_id, typ, text, lank) values ($1, 'gick_med', 'x', 'https://annan.se')`, [OLA]))
+    await forvantaFel(db.query(`insert into public.notiser (user_id, typ, text) values ($1, 'okand', 'x')`, [OLA]))
+    const r = await db.query<{ def: string }>(
+      `select pg_get_constraintdef(c.oid) as def from pg_constraint c where c.conrelid = 'public.notiser'::regclass and c.contype = 'c' and pg_get_constraintdef(c.oid) like '%typ%'`,
+    )
+    expect([...r.rows[0].def.matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1])).toEqual([...NOTISTYPER])
+  })
+
+  it('den som lämnar turen eller tas bort förlorar sina notiser om turen, men de andras ligger kvar', async () => {
+    expect(await notiser(RUT)).toHaveLength(1)
+    const ola = (await notiser(OLA)).length
+    await som(RUT, (tx) => tx.query('delete from public.deltagare where tur_id = $1 and user_id = $2', [tur, RUT]))
+    expect(await mottagare()).not.toContain(RUT)
+    expect(await notiser(OLA)).toHaveLength(ola)
+    await som(OLA, (tx) => tx.query(`update public.deltagare set roll = 'editor' where tur_id = $1 and user_id = $2`, [tur, LIS]))
+    await som(RUT, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    expect(await notiser(LIS)).toHaveLength(1)
+    await som(OLA, (tx) => tx.query('delete from public.deltagare where tur_id = $1 and user_id = $2', [tur, LIS]))
+    expect(await mottagare()).not.toContain(LIS)
+    expect(await mottagare()).toContain(OLA)
+  })
+
+  it('notiserna försvinner med turen', async () => {
+    expect(await mottagare()).not.toEqual([])
+    await som(OLA, (tx) => tx.query('delete from public.turer where id = $1', [tur]))
+    expect(await mottagare()).toEqual([])
+  })
+
+  it('notiserna försvinner med mottagarens konto, och notiserna från en person när hen raderar sitt konto', async () => {
+    const t = await skapaTur(OLA, 'Tur före kontoradering')
+    const k = await kodFor(t)
+    await som(MAX, (tx) => tx.query('select public.ga_med($1)', [k]))
+    await som(TIM, (tx) => tx.query('select public.ga_med($1)', [k]))
+    // Max är redigerare och får också en notis när Tim går med.
+    expect(await mottagare(t)).toEqual([MAX, OLA, OLA].sort())
+    await db.query('delete from auth.users where id = $1', [MAX])
+    expect((await notiser(OLA, t)).map((n) => n.fran_user_id)).toEqual([TIM])
+    await db.query('delete from auth.users where id = $1', [OLA])
+    expect((await db.query('select 1 from public.notiser where user_id = $1', [OLA])).rows).toHaveLength(0)
   })
 })
