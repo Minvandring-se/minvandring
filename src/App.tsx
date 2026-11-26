@@ -1,6 +1,5 @@
-import { lazy, type ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router'
-import { AppSkal } from '@/components/app/AppSkal'
 import { Felgrans } from '@/components/Felgrans'
 import { Layout } from '@/components/Layout'
 import { RullaUpp } from '@/components/RullaUpp'
@@ -13,8 +12,10 @@ import { NyttLosenord } from '@/pages/NyttLosenord'
 import { SkapaKonto } from '@/pages/SkapaKonto'
 import { Start } from '@/pages/Start'
 
-// Sidorna för inloggade ligger i egna JS-filer och hämtas först när de behövs.
-// Startsidan, sidorna för konto och inloggning samt integritetssidan ligger kvar i huvudfilen.
+// Sidorna för inloggade ligger i egna JS-filer och hämtas först när de behövs, liksom ramen med sidomenyn
+// (höjdkurvorna och ikonerna är stora). Startsidan, sidorna för konto och inloggning samt integritetssidan ligger kvar
+// i huvudfilen.
+const AppSkal = lazy(() => import('@/components/app/AppSkal').then((m) => ({ default: m.AppSkal })))
 const Hem = lazy(() => import('@/pages/Hem').then((m) => ({ default: m.Hem })))
 const HittaVandring = lazy(() => import('@/pages/HittaVandring').then((m) => ({ default: m.HittaVandring })))
 const MinaTurer = lazy(() => import('@/pages/MinaTurer').then((m) => ({ default: m.MinaTurer })))
@@ -71,6 +72,9 @@ export default function App() {
       <RullaUpp />
       {/* Fångar fel på sidorna utan sidomeny. De inloggade sidorna har en egen felgräns inne i ramen. */}
       <Felgrans aterstall={pathname}>
+      {/* Medan en sidas fil hämtas visas en tom yta, utan text som blinkar förbi. Inne i ramen har sidorna en egen
+          laddning med platshållare. */}
+      <Suspense fallback={<div aria-busy className="min-h-dvh" />}>
       <Routes>
         <Route path="/" element={<Start />} />
         <Route path="/logga-in" element={<LoggaIn />} />
@@ -126,6 +130,7 @@ export default function App() {
           }
         />
       </Routes>
+      </Suspense>
       </Felgrans>
     </Layout>
   )
