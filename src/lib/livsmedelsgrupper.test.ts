@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { allergenerForLivsmedel, arMatratt, MATRATTSGRUPPER } from './livsmedelsgrupper'
+import { allergenerForLivsmedel, arMatratt, HUVUDGRUPPER, huvudgruppFor, kostForLivsmedel, MATRATTSGRUPPER } from './livsmedelsgrupper'
 
 describe('arMatratt', () => {
   it('räknar färdiga rätter som maträtter, men inte råvaror', () => {
@@ -142,5 +142,47 @@ describe('allergenerForLivsmedel, de misstänkta livsmedlen', () => {
     // En blandning som räknar upp sina sädesslag har kända allergener.
     expect(a('Grynblandning havre råg vete korn kokt m. salt', 'Ris eller annat spannmål')).toEqual(['gluten'])
     expect(a('Mjölblandning rågsikt', 'Cerealier eller cerealielika mjölprodukter och derivat')).toEqual(['gluten'])
+  })
+})
+describe('huvudgrupper', () => {
+  it('lägger varje grupp i högst en huvudgrupp', () => {
+    const alla = HUVUDGRUPPER.flatMap((h) => h.grupper)
+    expect(new Set(alla).size).toBe(alla.length)
+  })
+
+  it('hittar huvudgruppen för en grupp', () => {
+    expect(huvudgruppFor('Rött kött')).toBe('kott')
+    expect(huvudgruppFor('Hårdost')).toBe('mejeri')
+    expect(huvudgruppFor('Soppa')).toBe('ratter')
+    expect(huvudgruppFor('Kosttillskott och hälsopreparat')).toBeNull()
+    expect(huvudgruppFor(null)).toBeNull()
+  })
+})
+
+describe('kostForLivsmedel', () => {
+  it('räknar enkla växter med kända allergener som veganska', () => {
+    expect(kostForLivsmedel('Linser röda torkade', 'Baljväxter', [])).toEqual({ vegetarisk: true, vegansk: true, glutenfri: true, laktosfri: true })
+    expect(kostForLivsmedel('Havregryn fullkorn', 'Ris eller annat spannmål', ['gluten'])).toEqual({ vegetarisk: true, vegansk: true, glutenfri: false, laktosfri: true })
+  })
+
+  it('räknar mejeri och ägg som vegetariskt men inte veganskt, och mjölk som inte laktosfritt', () => {
+    expect(kostForLivsmedel('Mjölk laktosfri', 'Mjölk', ['mjolk'])).toEqual({ vegetarisk: true, vegansk: false, glutenfri: true, laktosfri: false })
+    expect(kostForLivsmedel('Ägg rått', 'Ägg', ['agg'])).toMatchObject({ vegetarisk: true, vegansk: false })
+    expect(kostForLivsmedel('Pasta äggnudlar okokt', 'Pasta och liknande produkter', ['gluten', 'agg'])).toMatchObject({ vegetarisk: true, vegansk: false })
+  })
+
+  it('räknar honung som inte veganskt', () => {
+    expect(kostForLivsmedel('Honung', 'Socker, honung eller sirap', [])).toMatchObject({ vegetarisk: true, vegansk: false })
+  })
+
+  it('räknar kött och fisk som varken vegetariskt eller veganskt, även när allergenerna är okända', () => {
+    expect(kostForLivsmedel('Nöt entrecote rå', 'Rött kött', [])).toMatchObject({ vegetarisk: false, vegansk: false })
+    expect(kostForLivsmedel('Kycklingfilé panerad', 'Fågel', null)).toEqual({ vegetarisk: false, vegansk: false, glutenfri: null, laktosfri: null })
+    expect(kostForLivsmedel('Korv veg. sojakorv konserv. fett 15%', 'Korv eller liknande produkt', null)).toMatchObject({ vegetarisk: null, vegansk: null })
+  })
+
+  it('låter allt annat vara okänt', () => {
+    expect(kostForLivsmedel('Köttbullar', 'Kötträtt', null)).toEqual({ vegetarisk: null, vegansk: null, glutenfri: null, laktosfri: null })
+    expect(kostForLivsmedel('Chips', 'Snacks', [])).toEqual({ vegetarisk: null, vegansk: null, glutenfri: true, laktosfri: true })
   })
 })

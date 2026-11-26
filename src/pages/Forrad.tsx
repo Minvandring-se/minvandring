@@ -1,4 +1,4 @@
-import { ChevronDown, ExternalLink, LayoutGrid, List, NotebookPen, Pencil, Plus, RotateCcw, Search } from 'lucide-react'
+import { ChevronDown, ExternalLink, LayoutGrid, List, NotebookPen, Pencil, Plus, RotateCcw } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
@@ -15,8 +15,8 @@ import { SakFormular } from '@/components/forrad/SakFormular'
 import { Button } from '@/components/ui/button'
 import { Bricka } from '@/components/ui/bricka'
 import { Flikrad } from '@/components/ui/flikrad'
-import { Input } from '@/components/ui/input'
 import { KommerSnart, KommerSnartEtikett } from '@/components/ui/kommerSnart'
+import { SokFalt } from '@/components/ui/sokfalt'
 import { Select } from '@/components/ui/select'
 import { Panel } from '@/components/ui/panel'
 import { Sektion } from '@/components/ui/sektion'
@@ -351,24 +351,7 @@ function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: List
   return (
     <section aria-label="Sök och sortera" className="space-y-3">
       <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
-        <div className="space-y-1">
-          <label htmlFor={`${id}-sok`} className="block text-sm font-medium">
-            Sök i förrådet
-          </label>
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              id={`${id}-sok`}
-              type="search"
-              autoComplete="off"
-              enterKeyHint="search"
-              maxLength={80}
-              className="pl-10"
-              value={val.sok}
-              onChange={(e) => onVal({ ...val, sok: e.target.value })}
-            />
-          </div>
-        </div>
+        <SokFalt etikett="Sök i förrådet" varde={val.sok} onAndra={(sok) => onVal({ ...val, sok })} />
         <div className="space-y-1">
           <label htmlFor={`${id}-sortera`} className="block text-sm font-medium">
             Sortera

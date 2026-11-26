@@ -105,3 +105,10 @@ Vid den första körningen 2026-11-24 fick 255 livsmedel allergener, 579 inga oc
 ## Råvaror före maträtter
 
 När man skriver en ingrediens kommer råvaror före färdiga rätter, eftersom man oftast skriver in det man själv köper och lagar. Grupperna som räknas som maträtter står i `MATRATTSGRUPPER` i `src/lib/livsmedelsgrupper.ts`: Kötträtt, Sås i maträtt, Cerealierätter (klimp, risotto, pannkakor med fyllning, couscous, smörgåsar), Fisk- och skaldjursrätt, Grönsaksrätter, Potatisrätter, Soppa, Matpaj eller pizza, Baljväxträtter, Pastarätter, Färdigsallad, Äggrätter, Svamprätter, Smörgåsar, Maträtter och efterrätter, Livsmedelsrätter och ingredienser, Pannkaka eller våffla och Dessert.
+
+## Kost och huvudgrupper i matkatalogen
+
+Matkatalogen visar livsmedlen i huvudgrupper (`HUVUDGRUPPER` i `src/lib/livsmedelsgrupper.ts`), och kostvalen räknas i appen med `kostForLivsmedel` utifrån gruppen och allergenerna:
+
+- **Glutenfri och laktosfri:** kända allergener utan gluten och utan mjölk. Livsmedel med mjölk räknas inte som laktosfria, eftersom databasen inte säger om laktosen är borttagen.
+- **Vegetarisk och vegansk:** bara enkla råvaror från växtriket och mejeri och ägg, med kända allergener. Kött, fisk och skaldjur är varken eller. Honung är inte veganskt. Allt annat är okänt, och okänt räknas aldrig som att något passar ett filter.

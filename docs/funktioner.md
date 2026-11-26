@@ -56,6 +56,7 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Egna rätter med ingredienser | Finns |
 | Matkatalog med frystorkade och lufttorkade påsar | Finns, fylls på med data från Astra |
 | Egen sida för matkatalogen med sökning, filter, sortering och panel | Finns (`/matplanering/katalog`) |
+| Matkatalogen i tre delar: påsar, märkesvaror och livsmedel, med måltider och grupper som rutor | Finns, illustrationerna är platshållare tills Astras bilder kommer (`src/components/illustrationer/Illustration.tsx`) |
 | Mina matplaner: nästa tur överst och hur många måltider som saknas i varje tur | Finns (`/matplanering`) |
 | Inköpslista med ansvarig | Finns |
 | Kcal, protein och matvikt per person och dag | Finns |

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest'
 import {
   allergentext,
+  antalPerMaltid,
+  bytDel,
+  delFranAdress,
+  kortForLivsmedel,
+  kortForVara,
+  kostbrickor,
+  naringPer100,
+  rakna,
   filterFranAdress,
   filterTillAdress,
   kostetiketter,
@@ -149,5 +157,48 @@ describe('det som visas', () => {
     expect(spartext({ spar: ['notter'] })).toBe('Nötter')
     expect(pristext({ pris_sek_ca: null })).toBeNull()
     expect(pristext({ pris_sek_ca: 1299 })).toBe('Cirka 1 299 kr')
+  })
+})
+
+describe('delarna i katalogen', () => {
+  it('läser delen ur adressen och faller tillbaka på påsar', () => {
+    expect(delFranAdress(new URLSearchParams('del=varor'))).toBe('varor')
+    expect(delFranAdress(new URLSearchParams('del=okand'))).toBe('pasar')
+    expect(delFranAdress(new URLSearchParams())).toBe('pasar')
+  })
+
+  it('tar bort måltid, grupp och öppen påse men behåller kostfiltret när delen byts', () => {
+    const p = bytDel('livsmedel', new URLSearchParams('maltid=frukost&pase=1&kost=vegansk&utan=sesam'))
+    expect(p.toString()).toBe('kost=vegansk&utan=sesam&del=livsmedel')
+    expect(bytDel('pasar', new URLSearchParams('del=varor&grupp=brod')).toString()).toBe('')
+  })
+
+  it('räknar påsar per måltid och nycklar', () => {
+    expect(antalPerMaltid([pase('a'), pase('b', { maltid: 'frukost' })])).toEqual({ frukost: 1, lunch_middag: 1, mellanmal: 0, dessert: 0 })
+    expect(rakna(['brod', 'brod', null, 'frukost'])).toEqual({ brod: 2, frukost: 1 })
+  })
+
+  it('gör kort av en märkesvara och ett livsmedel', () => {
+    const vara = kortForVara({
+      id: 'v', marke: 'Pågen', namn: 'Gifflar', kategori: 'brod', kcal_per_100g: 380, protein_per_100g: 6.5,
+      vegetarisk: true, vegansk: false, glutenfri: false, laktosfri: null, allergener: ['gluten', 'mjolk'], spar: [],
+    })
+    expect(vara).toMatchObject({ marke: 'Pågen', grupp: 'Bröd', kcal: 380, protein: 6.5 })
+    expect(kostbrickor(vara.kost)).toEqual(['Vegetarisk'])
+
+    const livs = kortForLivsmedel({ nummer: 12, namn: 'Linser röda torkade', grupp: 'Baljväxter', tillstand: 'torr', kcal_per_100g: 340, protein_per_100g: 24, allergener: [] })
+    expect(livs).toMatchObject({ id: '12', marke: null, grupp: 'Baljväxter' })
+    expect(kostbrickor(livs.kost)).toEqual(['Vegansk', 'Glutenfri', 'Laktosfri'])
+  })
+
+  it('visar okända allergener som en egen bricka', () => {
+    const livs = kortForLivsmedel({ nummer: 1, namn: 'Köttbullar', grupp: 'Kötträtt', tillstand: null, kcal_per_100g: 200, protein_per_100g: null, allergener: null })
+    expect(kostbrickor(livs.kost)).toEqual(['Allergener okända'])
+  })
+
+  it('skriver näringen per 100 g', () => {
+    expect(naringPer100({ kcal: 352, protein: 12.5 })).toBe('352 kcal, 12,5 g protein per 100 g')
+    expect(naringPer100({ kcal: 352, protein: null })).toBe('352 kcal per 100 g')
+    expect(naringPer100({ kcal: null, protein: null })).toBeNull()
   })
 })
