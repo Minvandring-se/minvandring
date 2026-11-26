@@ -4461,3 +4461,120 @@ describe('notiser', () => {
     expect((await db.query('select 1 from public.notiser where user_id = $1', [OLA])).rows).toHaveLength(0)
   })
 })
+
+describe('egna rätter hemma och favoritrecept', () => {
+  // Egna användare: Siv och Tage delar en tur. Det ska inte ge Tage någon åtkomst till Sivs rader.
+  const SIV = '00000000-0000-0000-0000-000000000041'
+  const TAGE = '00000000-0000-0000-0000-000000000042'
+  let sivsRecept: string
+  let tagesRecept: string
+  let sivsRatt: string
+
+  beforeAll(async () => {
+    await db.query(`insert into auth.users (id, email) values ('${SIV}', 'siv@exempel.se'), ('${TAGE}', 'tage@exempel.se')`)
+    const tur = await skapaTur(SIV, 'Tur med hemmarätter')
+    const kod = await kodFor(tur)
+    await som(TAGE, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    sivsRecept = (await som(SIV, (tx) => tx.query<{ id: string }>(`insert into public.recept (namn) values ('Korvstroganoff') returning id`))).rows[0].id
+    tagesRecept = (await som(TAGE, (tx) => tx.query<{ id: string }>(`insert into public.recept (namn) values ('Tages gryta') returning id`))).rows[0].id
+    sivsRatt = (
+      await som(SIV, (tx) =>
+        tx.query<{ id: string }>(
+          `insert into public.skafferiratter (namn, portioner, bast_fore, recept_id) values ('Mammas korvstroganoff', 5, '2027-03-01', $1) returning id`,
+          [sivsRecept],
+        ),
+      )
+    ).rows[0].id
+    await som(SIV, (tx) => tx.query(`insert into public.receptfavoriter (receptkatalog_id) values ('aprikosgrot')`))
+    await som(SIV, (tx) => tx.query('insert into public.receptfavoriter (recept_id) values ($1)', [sivsRecept]))
+    // Tage har en stjärna och en rätt kopplad till sitt eget recept, så att raderingen av kontot prövar båda.
+    await som(TAGE, (tx) => tx.query('insert into public.receptfavoriter (recept_id) values ($1)', [tagesRecept]))
+    await som(TAGE, (tx) => tx.query(`insert into public.skafferiratter (namn, recept_id) values ('Tages gryta hemma', $1)`, [tagesRecept]))
+  })
+
+  it('raderna blir ens egna utan att user_id anges, och ägaren ändrar och tar bort', async () => {
+    const r = await som(SIV, (tx) => tx.query<{ namn: string; portioner: number; user_id: string }>('select namn, portioner, user_id from public.skafferiratter'))
+    expect(r.rows).toEqual([{ namn: 'Mammas korvstroganoff', portioner: 5, user_id: SIV }])
+    expect((await som(SIV, (tx) => tx.query('select id from public.receptfavoriter'))).rows).toHaveLength(2)
+    expect((await som(SIV, (tx) => tx.query('update public.skafferiratter set portioner = 4, bast_fore = null where id = $1', [sivsRatt]))).affectedRows).toBe(1)
+    const ny = await som(SIV, (tx) => tx.query<{ id: string }>(`insert into public.skafferiratter (namn, receptkatalog_id) values ('Torkad gröt', 'aprikosgrot') returning id`))
+    expect((await som(SIV, (tx) => tx.query('delete from public.skafferiratter where id = $1', [ny.rows[0].id]))).affectedRows).toBe(1)
+  })
+
+  it('någon annan ser inte, ändrar inte och tar inte bort raderna, inte ens i samma tur', async () => {
+    for (const vem of [TAGE, C]) {
+      expect((await som(vem, (tx) => tx.query(`select id from public.skafferiratter where user_id = '${SIV}'`))).rows).toHaveLength(0)
+      expect((await som(vem, (tx) => tx.query(`select id from public.receptfavoriter where user_id = '${SIV}'`))).rows).toHaveLength(0)
+    }
+    // Tage ser bara sina egna rader.
+    const tages = await som(TAGE, (tx) => tx.query<{ user_id: string }>('select user_id from public.skafferiratter'))
+    expect(tages.rows.every((x) => x.user_id === TAGE)).toBe(true)
+    expect((await som(TAGE, (tx) => tx.query('update public.skafferiratter set portioner = 99 where id = $1', [sivsRatt]))).affectedRows).toBe(0)
+    expect((await som(TAGE, (tx) => tx.query('delete from public.skafferiratter where id = $1', [sivsRatt]))).affectedRows).toBe(0)
+    expect((await som(TAGE, (tx) => tx.query(`delete from public.receptfavoriter where user_id = '${SIV}'`))).affectedRows).toBe(0)
+    expect((await db.query<{ portioner: number }>('select portioner from public.skafferiratter where id = $1', [sivsRatt])).rows).toEqual([{ portioner: 4 }])
+  })
+
+  it('man kan inte lägga något hos någon annan, ge bort sina rader eller koppla till någon annans recept', async () => {
+    const rls = /row-level security/
+    await expect(som(TAGE, (tx) => tx.query(`insert into public.skafferiratter (namn, user_id) values ('Smyg', '${SIV}')`))).rejects.toThrow(rls)
+    await expect(som(TAGE, (tx) => tx.query(`insert into public.receptfavoriter (receptkatalog_id, user_id) values ('aprikosgrot', '${SIV}')`))).rejects.toThrow(rls)
+    await expect(som(SIV, (tx) => tx.query(`update public.skafferiratter set user_id = '${TAGE}' where id = $1`, [sivsRatt]))).rejects.toThrow(rls)
+    // Ett eget recept måste ha samma ägare som raden.
+    await forvantaFel(som(SIV, (tx) => tx.query(`insert into public.skafferiratter (namn, recept_id) values ('Lånad', $1)`, [tagesRecept])))
+    await forvantaFel(som(SIV, (tx) => tx.query('insert into public.receptfavoriter (recept_id) values ($1)', [tagesRecept])))
+    await forvantaFel(som(SIV, (tx) => tx.query('update public.skafferiratter set recept_id = $1 where id = $2', [tagesRecept, sivsRatt])))
+    // En stjärna ändras inte, den läggs till eller tas bort.
+    await forvantaFel(som(SIV, (tx) => tx.query(`update public.receptfavoriter set receptkatalog_id = 'havregryta'`)))
+  })
+
+  it('går inte att nå utan inloggning, och har bara de avsedda rättigheterna', async () => {
+    const har = async (roll: string, t: string, r: string) => (await db.query<{ ok: boolean }>('select has_table_privilege($1, $2, $3) as ok', [roll, t, r])).rows[0].ok
+    for (const t of ['public.skafferiratter', 'public.receptfavoriter']) {
+      await forvantaFel(somAnon((tx) => tx.query(`select 1 from ${t}`)))
+      await forvantaFel(somAnon((tx) => tx.query(`delete from ${t}`)))
+      for (const r of ['select', 'insert', 'update', 'delete']) {
+        expect(await har('anon', t, r), `anon ${t} ${r}`).toBe(false)
+        expect(await har('public', t, r), `public ${t} ${r}`).toBe(false)
+      }
+      for (const r of ['select', 'insert', 'delete']) expect(await har('authenticated', t, r), `authenticated ${t} ${r}`).toBe(true)
+      const rls = await db.query('select relrowsecurity from pg_class where oid = $1::regclass', [t])
+      expect(rls.rows).toEqual([{ relrowsecurity: true }])
+    }
+    expect(await har('authenticated', 'public.receptfavoriter', 'update')).toBe(false)
+    expect(await har('authenticated', 'public.skafferiratter', 'update')).toBe(true)
+  })
+
+  it('kräver portioner 1 till 999, ett namn, högst ett recept och ett unikt namn per person', async () => {
+    for (const fel of [
+      `insert into public.skafferiratter (namn, portioner) values ('Noll', 0)`,
+      `insert into public.skafferiratter (namn, portioner) values ('Tusen', 1000)`,
+      `insert into public.skafferiratter (namn) values ('')`,
+      `insert into public.skafferiratter (namn) values (' Mellanslag')`,
+      `insert into public.skafferiratter (namn, recept_id, receptkatalog_id) values ('Båda', '${sivsRecept}', 'aprikosgrot')`,
+      `insert into public.skafferiratter (namn) values ('MAMMAS KORVSTROGANOFF')`,
+      `insert into public.receptfavoriter (recept_id) values (null)`,
+      `insert into public.receptfavoriter (recept_id, receptkatalog_id) values ('${sivsRecept}', 'aprikosgrot')`,
+      `insert into public.receptfavoriter (receptkatalog_id) values ('aprikosgrot')`,
+      `insert into public.receptfavoriter (receptkatalog_id) values ('finns-inte')`,
+    ])
+      await forvantaFel(som(SIV, (tx) => tx.query(fel)))
+    expect((await som(SIV, (tx) => tx.query('update public.skafferiratter set portioner = 999 where id = $1', [sivsRatt]))).affectedRows).toBe(1)
+    // Tage får ha en rätt med samma namn.
+    expect((await som(TAGE, (tx) => tx.query(`insert into public.skafferiratter (namn) values ('Mammas korvstroganoff')`))).affectedRows).toBe(1)
+  })
+
+  it('när receptet tas bort finns rätten kvar utan koppling, och stjärnan försvinner', async () => {
+    await som(SIV, (tx) => tx.query('delete from public.recept where id = $1', [sivsRecept]))
+    const r = await db.query<{ recept_id: string | null; user_id: string }>('select recept_id, user_id from public.skafferiratter where id = $1', [sivsRatt])
+    expect(r.rows).toEqual([{ recept_id: null, user_id: SIV }])
+    expect((await db.query('select 1 from public.receptfavoriter where user_id = $1 and recept_id is not null', [SIV])).rows).toHaveLength(0)
+  })
+
+  it('försvinner med kontot', async () => {
+    await db.query(`delete from auth.users where id = '${TAGE}'`)
+    expect((await db.query(`select 1 from public.skafferiratter where user_id = '${TAGE}'`)).rows).toHaveLength(0)
+    expect((await db.query(`select 1 from public.receptfavoriter where user_id = '${TAGE}'`)).rows).toHaveLength(0)
+    expect((await db.query('select 1 from public.recept where id = $1', [tagesRecept])).rows).toHaveLength(0)
+  })
+})
