@@ -1,4 +1,5 @@
 import { Printer } from 'lucide-react'
+import { Ikon } from '@/components/ikoner/Ikon'
 import { useId, useState } from 'react'
 import { Link } from 'react-router'
 import { TomtLage } from '@/components/app/TomtLage'
@@ -81,7 +82,7 @@ export function Inkopslista({
   }
 
   return (
-    <Sektion rubrik="Inköpslista" atgard={attKopa.length > 0 && <span className="text-sm text-muted-foreground tabular-nums">{klara} av {attKopa.length} klara</span>}>
+    <Sektion rubrik="Inköpslista" ikon={<Ikon namn="inkopslista" />} atgard={attKopa.length > 0 && <span className="text-sm text-muted-foreground tabular-nums">{klara} av {attKopa.length} klara</span>}>
       {rader.length === 0 ? (
         <TomtLage kompakt text="Listan fylls på när ni lägger rätter i matplanen." />
       ) : (

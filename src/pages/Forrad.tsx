@@ -1,4 +1,5 @@
 import { ChevronDown, ExternalLink, LayoutGrid, List, NotebookPen, Pencil, Plus, RotateCcw } from 'lucide-react'
+import { Kategoriikon } from '@/components/forrad/Kategoriikon'
 import { useEffect, useId, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
@@ -546,7 +547,6 @@ function Underrad({ sak, kok }: { sak: Forradssak; kok?: string | null }) {
 function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: Forradssak[]; vy: Vy; onAndra: () => void; onAndrad: () => void }) {
   const id = useId()
   const [utfalld, setUtfalld] = useState(false)
-  const Ikon = kategoriFor(sak.kategori).ikon
   const { egen } = viktjamforelse(sak)
   const antalDelar = arKok(sak) ? kokdelar(sak, alla).length : 0
   const kokText = antalDelar > 0 ? `Kök med ${antalDelar} ${antalDelar === 1 ? 'del' : 'delar'}` : kokForDel(sak, alla) ? 'I ditt kök' : null
@@ -576,7 +576,7 @@ function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: F
   )
   const ikon = (
     <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-      <Ikon className="size-5" aria-hidden />
+      <Kategoriikon kategori={sak.kategori as KategoriNyckel} />
     </span>
   )
 

@@ -1,4 +1,5 @@
 import { Check } from 'lucide-react'
+import { Kategoriikon } from '@/components/forrad/Kategoriikon'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -126,7 +127,7 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
       <fieldset className="space-y-2">
         <legend className="text-sm font-medium">Kategori</legend>
         <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-          {KATEGORIER.map(({ nyckel, etikett, ikon: Ikon }) => (
+          {KATEGORIER.map(({ nyckel, etikett }) => (
             <label key={nyckel} className={cn(valbarKlass, 'min-h-14 px-3 py-2 text-sm leading-tight')}>
               <input
                 type="radio"
@@ -135,7 +136,7 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
                 checked={falt.kategori === nyckel}
                 onChange={() => setFalt((f) => medKategori(f, nyckel))}
               />
-              <Ikon className="size-5 shrink-0 group-has-checked:hidden" aria-hidden />
+              <Kategoriikon kategori={nyckel} className="group-has-checked:hidden" />
               <Check className="hidden size-5 shrink-0 group-has-checked:block" aria-hidden />
               {etikett}
             </label>

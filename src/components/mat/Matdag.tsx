@@ -1,4 +1,5 @@
 import { ChevronDown, Plus, X } from 'lucide-react'
+import { Ikon, type IkonNamn } from '@/components/ikoner/Ikon'
 import { useId } from 'react'
 import { Initial } from '@/components/mat/Initial'
 import { PasNamn } from '@/components/mat/PasNamn'
@@ -9,6 +10,9 @@ import { uppraknade, varningar, varningarForRatt, type Behov, type Kostinfo } fr
 import { dagensText, formateraKcal, grupperaMaltid, HUVUDMALTIDER, kcalPer100g, MALTIDER, maltidsord, maltidsrutaId, orimligPortion, type Dagssumma, type Naring } from '@/lib/mat'
 import type { Maltid, Maltidsrad, Matatare, Matprodukt, Ratt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
+
+/** MinVandrings ikon för varje måltid i matplanen. */
+const MALTIDSIKON: Record<Maltid, IkonNamn> = { frukost: 'grot', lunch: 'matpase', middag: 'middag', mellanmal: 'mellanmal' }
 
 export interface Ratter {
   /** Turens rätter med id som nyckel. */
@@ -151,7 +155,8 @@ function Maltidsruta({
         tom ? 'border-2 border-dashed border-border' : 'border border-border bg-card',
       )}
     >
-      <h3 className="flex flex-wrap items-baseline gap-x-2 font-sans text-sm font-semibold">
+      <h3 className="flex flex-wrap items-center gap-x-2 font-sans text-sm font-semibold">
+        <Ikon namn={MALTIDSIKON[maltid]} storlek={20} />
         {etikett}
         {tom && HUVUDMALTIDER.includes(maltid) && <span className="font-medium text-accent-strong">Saknas</span>}
         {tom && !HUVUDMALTIDER.includes(maltid) && <span className="font-normal text-muted-foreground">Frivilligt</span>}

@@ -1,4 +1,5 @@
 import { Check, Copy, RefreshCw } from 'lucide-react'
+import { Ikon } from '@/components/ikoner/Ikon'
 import { useEffect, useState } from 'react'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Button } from '@/components/ui/button'
@@ -60,7 +61,10 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
 
   return (
     <div className="space-y-2 rounded-md bg-muted p-3">
-      <p className="text-sm font-medium">Dela länken med de som ska med</p>
+      <p className="flex items-center gap-2 text-sm font-medium">
+        <Ikon namn="inbjudan" storlek={20} />
+        Dela länken med de som ska med
+      </p>
       <p className="text-sm text-muted-foreground">Den som går med via länken blir redigerare. Ägaren kan ändra rollen efteråt.</p>
       {kod === undefined && (
         <Laddar text="Hämtar länken">

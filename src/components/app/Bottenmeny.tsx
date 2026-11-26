@@ -1,7 +1,7 @@
 import { MoreHorizontal, Sparkles, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
-import { MENYIKON } from '@/components/app/menyIkoner'
+import { Menyikon } from '@/components/app/Menyikon'
 import { Snart } from '@/components/ui/snart'
 import { BLAD, bladIState, FLIKAR, flikAktiv, SIDOR, type Blad, type Sida } from '@/lib/meny'
 import { cn } from '@/lib/utils'
@@ -92,10 +92,14 @@ export function Bottenmeny({ aktiv }: { aktiv: Sida | null }) {
         <ul className="mx-auto grid max-w-md grid-cols-5">
           {FLIKAR.map((flik) => {
             const markerad = oppet ? flik.typ === 'blad' && flik.blad === oppet : flikAktiv(flik, aktiv)
-            const Ikon = flik.typ === 'sida' ? MENYIKON[flik.sida] : BLADIKON[flik.blad]
+            const Bladikon = flik.typ === 'blad' ? BLADIKON[flik.blad] : null
             const innehall = (
               <>
-                <Ikon className="size-6" aria-hidden strokeWidth={markerad ? 2.25 : 1.75} />
+                {flik.typ === 'sida' ? (
+                  <Menyikon sida={flik.sida} storlek={24} aktiv={markerad} />
+                ) : (
+                  Bladikon && <Bladikon className="size-6" aria-hidden strokeWidth={markerad ? 2.25 : 1.75} />
+                )}
                 <span>{flik.namn}</span>
                 {/* Markerad flik: fet text, fetare ikon och ett kort rostfärgat streck under. */}
                 <span aria-hidden className={cn('h-[3px] w-[18px] rounded-full', markerad ? 'bg-accent' : 'bg-transparent')} />
@@ -166,7 +170,6 @@ export function Bottenmeny({ aktiv }: { aktiv: Sida | null }) {
               <ul>
                 {BLAD[visat].map((s) => {
                   const { namn, till, byggd, beskrivning } = SIDOR[s]
-                  const Ikon = MENYIKON[s]
                   return (
                     <li key={s} className="border-b border-border last:border-b-0">
                       <Link
@@ -179,7 +182,7 @@ export function Bottenmeny({ aktiv }: { aktiv: Sida | null }) {
                         className="flex min-h-14 items-center gap-3.5 rounded-md px-1 py-2 focus-visible:outline-2 focus-visible:outline-ring"
                       >
                         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                          <Ikon className="size-5" aria-hidden />
+                          <Menyikon sida={s} storlek={20} />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className={cn('block text-[0.9375rem]', aktiv === s ? 'font-bold text-primary' : 'font-semibold')}>{namn}</span>

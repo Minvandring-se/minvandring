@@ -1,4 +1,5 @@
 import { Pencil, Plus } from 'lucide-react'
+import { Ikon } from '@/components/ikoner/Ikon'
 import { useId, useState, type FormEvent } from 'react'
 import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
@@ -193,14 +194,22 @@ function Dag({
             </p>
             <h3 className="font-sans text-base font-semibold break-words">{rubrik ?? (etapp ? 'Utan plats' : 'Inte planerad')}</h3>
           </div>
-          {km !== null && <span className="shrink-0 text-base font-semibold tabular-nums">{kmText(km)}</span>}
+          {km !== null && (
+            <span className="flex shrink-0 items-center gap-1.5 text-base font-semibold tabular-nums">
+              <Ikon namn="distans" storlek={20} />
+              {kmText(km)}
+            </span>
+          )}
         </div>
         {(natt || etapp?.notering) && (
-          <p className="text-sm break-words text-muted-foreground">
-            {natt}
-            {natt && kanBokas(etapp?.boende ?? null) && (etapp?.bokad ? '. Bokad' : <span className="font-semibold text-accent-strong">. Inte bokad</span>)}
-            {natt && etapp?.notering && <br />}
-            {etapp?.notering}
+          <p className="flex gap-2 text-sm break-words text-muted-foreground">
+            {natt && <Ikon namn="overnattning" storlek={20} className="mt-px" />}
+            <span className="min-w-0">
+              {natt}
+              {natt && kanBokas(etapp?.boende ?? null) && (etapp?.bokad ? '. Bokad' : <span className="font-semibold text-accent-strong">. Inte bokad</span>)}
+              {natt && etapp?.notering && <br />}
+              {etapp?.notering}
+            </span>
           </p>
         )}
         {oppen ? (

@@ -1,4 +1,5 @@
 import { Check, ChevronDown, ChevronLeft, ExternalLink } from 'lucide-react'
+import { Kategoriikon } from '@/components/forrad/Kategoriikon'
 import { useEffect, useId, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
@@ -325,7 +326,7 @@ function iForradetFor(modell: Modell<Katalogprodukt>, iForradet: IForradetKarta)
  */
 function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogprodukt>; iForradet: IForradetKarta; onOppna: () => void }) {
   const forsta = modell.varianter[0]
-  const { ikon: Ikon, etikett } = kategoriFor(forsta.kategori)
+  const { etikett } = kategoriFor(forsta.kategori)
   const flera = modell.varianter.length > 1
   const finns = iForradetFor(modell, iForradet)
   return (
@@ -338,7 +339,7 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
       >
         <span className="flex w-full items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-            <Ikon className="size-5" aria-hidden />
+            <Kategoriikon kategori={forsta.kategori as KategoriNyckel} />
           </span>
           <span className="min-w-0 flex-1">
             <span className="block font-semibold break-words">{produktnamn(modell)}</span>

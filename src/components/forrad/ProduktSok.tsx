@@ -1,5 +1,6 @@
 import { ChevronDown, Plus } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
+import { Kategoriikon } from '@/components/forrad/Kategoriikon'
 import { Laddfel } from '@/components/app/Laddfel'
 import { Granskad } from '@/components/forrad/Granskad'
 import { KokSteg } from '@/components/forrad/KokSteg'
@@ -354,12 +355,11 @@ function Produktrad({
   indragen?: boolean
   onValj: (p: Produkt) => void
 }) {
-  const Ikon = kategoriFor(produkt.kategori).ikon
   const storlek = viktstorlekText(produkt.underkategori, produkt.egenskaper)
   return (
     <>
       <button type="button" disabled={upptagen} onClick={() => onValj(produkt)} className={cn(radKlass, granskning(produkt).marke ? 'pt-2 pb-1' : 'py-2', indragen && 'pl-11')}>
-        {!indragen && <Ikon className="size-5 shrink-0 text-primary" aria-hidden />}
+        {!indragen && <Kategoriikon kategori={produkt.kategori as KategoriNyckel} />}
         <span className="min-w-0 flex-1">
           <span className="block font-medium break-words">
             <span className="sr-only">Lägg till </span>
@@ -395,12 +395,11 @@ function Modellrad({
   onValj: (p: Produkt) => void
 }) {
   const id = useId()
-  const Ikon = kategoriFor(modell.varianter[0].kategori).ikon
   const antalIForradet = modell.varianter.filter((v) => finnsRedan.has(v.id)).length
   return (
     <>
       <button type="button" aria-expanded={utfalld} aria-controls={id} onClick={onVaxla} className={cn(radKlass, 'py-2')}>
-        <Ikon className="size-5 shrink-0 text-primary" aria-hidden />
+        <Kategoriikon kategori={modell.varianter[0].kategori as KategoriNyckel} />
         <span className="min-w-0 flex-1">
           <span className="block font-medium break-words">{produktnamn(modell)}</span>
           <span className="block text-sm text-muted-foreground">

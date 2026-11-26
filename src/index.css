@@ -48,6 +48,11 @@
   --color-yta-stark-linje: #4b6a5a;
   /* Text och symboler ovanpå foton. Ljus i båda lägena, eftersom fotot inte byter färg. */
   --color-pa-bild: #ffffff;
+  /* MinVandrings egna ikoner (src/components/ikoner/): mjuk tvåton, varm, med brun linje. */
+  --ikon-linje: #5a4a3a;
+  --ikon-yta: #f6ead6;
+  --ikon-yta-2: #ecc28f;
+  --ikon-accent: #e8a33d;
   /* Sökfältet på den mörkgröna ytan. Ljust med mörk text i båda lägena. */
   --color-sokfalt: #f7faf7;
   --color-sokfalt-foreground: #1c2420;
@@ -150,6 +155,10 @@ html[data-tema='mork'] {
   --color-yta-stark-foreground: #e8efe9;
   --color-yta-stark-muted: #a3b3a9;
   --color-yta-stark-linje: #3d5a4c;
+  --ikon-linje: #f0dcc0;
+  --ikon-yta: #3b332a;
+  --ikon-yta-2: #7d6143;
+  --ikon-accent: #c98f2e;
   --color-sokfalt: #f7faf7;
   --color-sokfalt-foreground: #1c2420;
   --color-sloja: rgb(0 0 0 / 0.55);
@@ -195,14 +204,15 @@ html[data-tema='mork'] {
     --color-yta-stark-foreground: #e8efe9;
     --color-yta-stark-muted: #a3b3a9;
     --color-yta-stark-linje: #3d5a4c;
+    --ikon-linje: #f0dcc0;
+    --ikon-yta: #3b332a;
+    --ikon-yta-2: #7d6143;
+    --ikon-accent: #c98f2e;
     --color-sokfalt: #f7faf7;
     --color-sokfalt-foreground: #1c2420;
-  --color-sokfalt: #f7faf7;
-  --color-sokfalt-foreground: #1c2420;
     --color-sloja: rgb(0 0 0 / 0.55);
     --shadow-soft: 0 1px 2px rgb(0 0 0 / 0.3), 0 6px 20px rgb(0 0 0 / 0.25);
     --shadow-lyft: 0 2px 4px rgb(0 0 0 / 0.35), 0 12px 28px rgb(0 0 0 / 0.4);
-  --shadow-lyft: 0 2px 4px rgb(0 0 0 / 0.35), 0 12px 28px rgb(0 0 0 / 0.4);
   }
 }
 
