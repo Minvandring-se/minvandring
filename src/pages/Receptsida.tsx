@@ -4,9 +4,9 @@ import { Link, useParams, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
-import { Illustration } from '@/components/illustrationer/Illustration'
 import { Matflikar } from '@/components/mat/Matflikar'
 import { Receptbrickor } from '@/components/mat/MinvandringsRecept'
+import { Receptbild } from '@/components/mat/Receptbild'
 import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
 import { Select } from '@/components/ui/select'
@@ -92,7 +92,8 @@ function Receptet({ recept }: { recept: Katalogrecept }) {
 
   return (
     <article className="mx-auto max-w-3xl space-y-6">
-      <Illustration namn={recept.id} className="aspect-[16/9] w-full rounded-yta sm:aspect-[5/2]" />
+      {/* Bilden är 5:2, så den visas hel även i mobil. Platshållaren är högre i mobil. */}
+      <Receptbild recept={recept} typ="vy" className={cn('w-full rounded-yta', recept.bild ? 'aspect-[5/2]' : 'aspect-[16/9] sm:aspect-[5/2]')} />
       <div className="space-y-3">
         <Link to={RECEPT} className={cn('-ml-1 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary', fokus)}>
           <ChevronLeft className="size-4" aria-hidden />

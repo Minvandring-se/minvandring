@@ -17,6 +17,7 @@ const grot: Katalogrecept = {
   inspirerat_av: 'Trail Recipes',
   inspirerat_av_url: 'https://trail.recipes/',
   status: 'otestat',
+  bild: false,
   ingredienser: [
     {
       ordning: 1,

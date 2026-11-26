@@ -2388,6 +2388,9 @@ describe('matplanen', () => {
     it('inloggade läser recepten med ingredienser och steg från seeden', async () => {
       const r = await som(LASARE, (tx) => tx.query<{ n: number }>('select count(*)::int as n from public.receptkatalog'))
       expect(r.rows[0].n).toBe(29)
+      // Alla recept har bild efter seeden receptkatalog_bilder.
+      const b = await som(LASARE, (tx) => tx.query<{ n: number }>('select count(*)::int as n from public.receptkatalog where bild'))
+      expect(b.rows[0].n).toBe(29)
       const i = await som(LASARE, (tx) =>
         tx.query<{ ingrediens: string; livsmedel_nummer: number | null }>("select ingrediens, livsmedel_nummer from public.receptkatalog_ingredienser where recept_id = 'aprikosgrot' order by ordning limit 2"),
       )

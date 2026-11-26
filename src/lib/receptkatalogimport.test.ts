@@ -1,13 +1,13 @@
 import { describe, expect, it } from 'vitest'
 import { importeraReceptkatalog, receptSeedSql, varunyckel } from './receptkatalogimport'
 
-const RECEPT = 'id,namn,maltid,portioner,kok_kravs,torkning_hemma,beskrivning,mangder,inspirerat_av,inspirerat_av_url,status'
+const RECEPT = 'id,namn,maltid,portioner,kok_kravs,torkning_hemma,beskrivning,mangder,inspirerat_av,inspirerat_av_url,status,bild'
 const INGR = 'recept_id,ordning,ingrediens,mangd,enhet,packas,kommentar,livsmedel_nummer,varukatalog,gram'
 const STEG = 'recept_id,steg_nr,var,steg,tid_min'
 const kopplingar = { livsmedel: new Set([702]), varor: new Set([varunyckel('Pågen', 'Gifflar')]) }
 
 const filer = (recept: string[], ingr: string[], steg: string[]) => ({ recept: [RECEPT, ...recept].join('\n'), ingredienser: [INGR, ...ingr].join('\n'), steg: [STEG, ...steg].join('\n') })
-const grot = 'grot,Gröt med kanel,frukost,1,ja,nej,"Varm gröt, snabbt.",egna,Någon,https://exempel.se/grot,otestat'
+const grot = 'grot,Gröt med kanel,frukost,1,ja,nej,"Varm gröt, snabbt.",egna,Någon,https://exempel.se/grot,otestat,ja'
 
 describe('importen av recepten', () => {
   it('läser ett recept med ingredienser och steg', () => {
@@ -28,7 +28,7 @@ describe('importen av recepten', () => {
   it('stoppar fel i varje fil', () => {
     const imp = importeraReceptkatalog(
       filer(
-        [grot, 'Fel id,X,brunch,0,kanske,nej,,egna,,http://x,klar'],
+        [grot, 'Fel id,X,brunch,0,kanske,nej,,egna,,http://x,klar,ja'],
         ['grot,1,Havregryn,6,liter,hemma,,999,,', 'grot,2,Salt,,tsk,hemma,,,,', 'okant,1,X,1,g,hemma,,,,', 'grot,3,Gifflar,1,st,hemma,,,Pågen Gifflar,'],
         ['grot,1,ute,Koka.,snart'],
       ),
