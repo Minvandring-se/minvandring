@@ -51,6 +51,16 @@ describe('Att göra', () => {
     expect(attGora(tur, { mat: null, utanBarare: [], packat: { packat: 0, totalt: 1 } })[0].under).toBe('Din packlista, 0 av 1 sak')
   })
 
+  it('skriver singular på alla rader när det är en', () => {
+    const rader = attGora(tur, { mat: { totalt: 3, planerade: 2, saknas: 1, forsta }, utanBarare: [{ namn: 'Tält' }], packat: { packat: 0, totalt: 1 } })
+    expect(rader.map((r) => [r.text, r.under])).toEqual([
+      ['1 måltid saknas', 'Matplanen för Sörmlandsleden'],
+      ['1 gemensam sak har ingen som bär', 'Tält'],
+      ['Du har packat 0 %', 'Din packlista, 0 av 1 sak'],
+    ])
+    expect(bandNedrakning({ avresa: '2026-11-27' }, '2026-11-26')?.varde).toBe('1 dag')
+  })
+
   it('är tom när allt är klart eller inget går att räkna', () => {
     expect(attGora(tur, { mat: { totalt: 9, planerade: 9, saknas: 0, forsta: null }, utanBarare: [], packat: { packat: 5, totalt: 5 } })).toEqual([])
     expect(attGora(tur, { mat: null, utanBarare: [], packat: { packat: 0, totalt: 0 } })).toEqual([])

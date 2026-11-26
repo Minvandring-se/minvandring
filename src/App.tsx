@@ -78,8 +78,6 @@ export default function App() {
         <Route path="/ga-med/:kod" element={<GaMed />} />
         {/* De inloggade sidorna, i ramen med sidomeny och bottennavigation. */}
         <Route element={<Inloggad><AppSkal /></Inloggad>}>
-          {/* Hem byggs i nästa PR. Tills dess leder /hem till Mina turer. */}
-          <Route path="/hem" element={<Navigate to="/turer" replace />} />
           <Route path="/turer" element={<MinaTurer />} />
           {/* Turen är en ram med delsidor. Ramen hämtar turen och deltagarna en gång. */}
           <Route path="/tur/:id" element={<TurRam />}>

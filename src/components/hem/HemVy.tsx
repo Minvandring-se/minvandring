@@ -60,7 +60,8 @@ export function HemVy({
 
       {(nasta || harInspiration(inspiration)) && (
         // Bredvid varandra på dator när båda finns, annars får den som finns hela bredden.
-        <div className={cn('grid gap-6', nasta && harInspiration(inspiration) && 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]')}>
+        // items-start: korten får sin egen höjd, så att ett kort med en rad inte får en stor tom yta.
+        <div className={cn('grid items-start gap-6', nasta && harInspiration(inspiration) && 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]')}>
           {nasta && <AttGora tur={nasta} rader={attgora} />}
           {harInspiration(inspiration) && <InspirationKort inspiration={inspiration} />}
         </div>
