@@ -15,6 +15,8 @@ import { Start } from '@/pages/Start'
 
 // Sidorna för inloggade ligger i egna JS-filer och hämtas först när de behövs.
 // Startsidan, sidorna för konto och inloggning samt integritetssidan ligger kvar i huvudfilen.
+const Hem = lazy(() => import('@/pages/Hem').then((m) => ({ default: m.Hem })))
+const HittaVandring = lazy(() => import('@/pages/HittaVandring').then((m) => ({ default: m.HittaVandring })))
 const MinaTurer = lazy(() => import('@/pages/MinaTurer').then((m) => ({ default: m.MinaTurer })))
 const Forrad = lazy(() => import('@/pages/Forrad').then((m) => ({ default: m.Forrad })))
 const Profil = lazy(() => import('@/pages/Profil').then((m) => ({ default: m.Profil })))
@@ -76,8 +78,6 @@ export default function App() {
         <Route path="/ga-med/:kod" element={<GaMed />} />
         {/* De inloggade sidorna, i ramen med sidomeny och bottennavigation. */}
         <Route element={<Inloggad><AppSkal /></Inloggad>}>
-          {/* Hem byggs i nästa PR. Tills dess leder /hem till Mina turer. */}
-          <Route path="/hem" element={<Navigate to="/turer" replace />} />
           <Route path="/turer" element={<MinaTurer />} />
           {/* Turen är en ram med delsidor. Ramen hämtar turen och deltagarna en gång. */}
           <Route path="/tur/:id" element={<TurRam />}>
@@ -93,6 +93,8 @@ export default function App() {
           </Route>
           <Route path="/forrad" element={<Forrad />} />
           <Route path="/kom-ihag" element={<KomIhag />} />
+          <Route path="/hem" element={<Hem />} />
+          <Route path="/hitta-vandring" element={<HittaVandring />} />
           <Route path="/profil" element={<Profil />} />
           <Route path="/installningar" element={<Installningar />} />
           <Route path="/utrustning" element={<Utrustningskatalog />} />

@@ -15,6 +15,8 @@ export const knappStil = cva(
         ghost: 'hover:bg-muted',
         /** Den fyllda knappen på den mörkgröna ytan (yta-stark). */
         ljus: 'bg-yta-stark-foreground font-semibold text-yta-stark hover:bg-yta-stark-muted focus-visible:outline-yta-stark-foreground',
+        /** Hjortron på den mörkgröna ytan, för det som lägger till något (Ny tur på Hem). Sparsamt. */
+        hjortron: 'bg-hjortron font-semibold text-yta-stark hover:bg-hjortron/90 focus-visible:outline-yta-stark-foreground',
         /** Knapp med kant på den mörkgröna ytan. */
         'kant-stark': 'border border-yta-stark-muted/60 text-yta-stark-muted hover:bg-yta-stark-linje/40 hover:text-yta-stark-foreground focus-visible:outline-yta-stark-foreground',
       },

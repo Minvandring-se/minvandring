@@ -169,7 +169,7 @@ function PlaneraKnapp({ className = '' }: { className?: string }) {
 /** Startsidan för den som inte är inloggad. Inloggade skickas direkt till sina turer. */
 export function Start() {
   const session = useSession()
-  if (session) return <Navigate to="/turer" replace />
+  if (session) return <Navigate to="/hem" replace />
 
   return (
     <StigProvider>
