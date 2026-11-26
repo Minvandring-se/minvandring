@@ -256,3 +256,13 @@ Idén är en inställning i profilen, "Hur van är du att vandra?", med tre svar
 Nivån gäller personen, inte turen, eftersom en tur kan ha deltagare med olika vana. Varje person ser hjälpen för sin egen nivå.
 
 Ett första steg kan vara att bara fråga om nivån när man skapar konto och spara svaret (en kolumn på `profiler`), så att den finns när innehållet är klart. Innehållet (mallar och tips per nivå) tas helst fram utifrån vad riktiga nybörjare frågar om. Tips följer reglerna i `src/lib/tips.ts`: varje siffra har en källa, och råden är allmänna. Bygg efter betan.
+
+## Databasen: prestanda efter betan (Supabase Performance Advisor)
+
+Performance Advisor (läst 2026-11-26 med `npx supabase db advisors --remote --type performance`) har inga fel, men några varningar som är värda en migrering efter betan. De påverkar inte behörigheterna och märks inte med dagens datamängd.
+
+- **`auth.uid()` räknas om för varje rad (`auth_rls_initplan`, 16 policyer):** skriv om policyerna så att de använder `(select auth.uid())` i stället för `auth.uid()`, som de nyare migreringarna redan gör. Det gäller `profiler` (egen profil), `turer` (skapa tur), `notiser` (alla fyra), `packstatus`, `inkop_klart` (lägger till och tar bort), `anteckningar` (alla fyra) och `lardomar` (alla fyra).
+- **Flera tillåtande policyer för SELECT (`multiple_permissive_policies`):** `ingredienser`, `kostbehov`, `maltider`, `packrader`, `packstatus`, `ratter` och `varor` har både en policy för att läsa och en `for all`-policy för att ändra, så båda prövas vid varje läsning. Dela upp `for all` i `insert`, `update` och `delete`, i samma migrering som punkten ovan.
+- **Främmande nycklar utan index (31 st):** lägg index på de nycklar som används när en tur eller ett konto tas bort, främst `packrader.tur_id`, `ingredienser.tur_id`, `deltagare.user_id`, `anteckningar.user_id`, `lardomar.tur_id`, `turer.skapad_av`, `notiser.fran_user_id`, och nycklarna på `(…, tur_id)` för `maltider` (`ratt_id`, `bars_av`), `maltid_atare`, `inkop_klart` och `packstatus`. De andra kan vänta.
+
+Kör advisorn igen efter migreringen. Ändringarna i policyerna ska ha tester i `supabase/rls.test.ts`, även om reglerna inte ändras: kör hela sviten och kontrollera att inga tester behöver ändras. Varningarna om `SECURITY DEFINER`-funktioner och tabeller med RLS men utan policyer i Security Advisor är avsiktliga, se avsnittet om databasen i `CLAUDE.md`.
