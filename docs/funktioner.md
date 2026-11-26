@@ -9,7 +9,7 @@ Status:
 - **Senare**: en egen modul längre fram.
 - **Idé**: inte bestämt.
 
-Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor och mallar, Dagbok, Kom ihåg till nästa, Statistik och Vandringskompisar) som det kommer att se ut, med etiketten ”Kommer snart”. Exempelinnehållet ligger i `src/lib/exempeldata.ts` och tas bort när modulen byggs på riktigt.
+Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor och mallar, Dagbok, Statistik och Vandringskompisar) som det kommer att se ut, med etiketten ”Kommer snart”. Exempelinnehållet ligger i `src/lib/exempeldata.ts` och tas bort när modulen byggs på riktigt.
 
 ## Turen
 
@@ -105,8 +105,8 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 
 | Funktion | Status |
 |---|---|
-| Anteckningar | Nästa (P1) |
-| Kom ihåg till nästa vandring | Nästa (P1) |
+| Anteckningar | Finns (`/tur/:id/anteckningar`): egna anteckningar per tur, delade med gruppen eller bara för en själv |
+| Kom ihåg till nästa vandring | Finns (`/kom-ihag` och under Anteckningar i turen): personliga lärdomar per ämne, som visas i nästa tur |
 | Vad användes och vad inte | Senare |
 | Dagbok och bilder | Idé |
 | Statistik över åren | Idé |

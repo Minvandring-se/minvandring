@@ -10,11 +10,6 @@ export const REDO_FOR_AVFARD = {
   ejKlart: ['Packning, 68 % klart', 'Middag dag 3 och 4', 'Färdplan till någon hemma'],
 }
 
-export const KOM_IHAG = {
-  fran: 'Från Jämtlandstriangeln 2026',
-  rader: ['En extra gaspatron räckte inte till fyra dagar', 'Myggnät till alla, även hunden', 'Torrsäck till sovsäcken'],
-}
-
 export const ATT_GORA: { text: string; vem: string; nar: string; klar: boolean; bradskar?: boolean }[] = [
   { text: 'Boka nattåg till Abisko', vem: 'Erik', nar: 'Klart', klar: true },
   { text: 'Boka STF-stugor, natt 1, 2 och 4', vem: 'Anna', nar: 'Senast 1 aug', klar: false, bradskar: true },
@@ -115,7 +110,6 @@ export const DELA_OCH_SPARA = ['Dela packlistan med en länk', 'Spara som mall t
 export const EFTER_TUREN = [
   { rubrik: 'Dagbok och bilder', text: 'Några rader och bilder per dag.', accent: false },
   { rubrik: 'Vad användes?', text: 'Bocka av det ni inte använde. Det blir lättare nästa gång.', accent: false },
-  { rubrik: 'Kom ihåg till nästa tur', text: 'Lärdomarna följer med till nästa tur.', accent: true },
   { rubrik: 'Statistik', text: 'Kilometer, nätter och turer genom åren.', accent: false },
 ]
 
@@ -161,28 +155,6 @@ export const DAGBOK = {
     { dag: 'Dag 3, söndag 5 juli', rubrik: 'Blåhammaren till Storulvån', text: 'Kort sista dag. Bad i bäcken innan bussen hem.', bilder: 2 },
   ],
 }
-
-/** Kom ihåg till nästa: lärdomarna från alla turer, grupperade efter ämne. */
-export const LARDOMAR: { amne: string; rader: { text: string; tur: string }[] }[] = [
-  {
-    amne: 'Kök och mat',
-    rader: [
-      { text: 'En extra gaspatron räckte inte till fyra dagar', tur: 'Jämtlandstriangeln 2026' },
-      { text: 'Packa frukosten i en egen påse per dag', tur: 'Sörmlandsleden 2025' },
-    ],
-  },
-  {
-    amne: 'Sova',
-    rader: [{ text: 'Torrsäck till sovsäcken, även när det inte ska regna', tur: 'Jämtlandstriangeln 2026' }],
-  },
-  {
-    amne: 'Hund',
-    rader: [
-      { text: 'Myggnät till alla, även hunden', tur: 'Jämtlandstriangeln 2026' },
-      { text: 'Tassvax för steniga stigar', tur: 'Sörmlandsleden 2025' },
-    ],
-  },
-]
 
 /** Vandringskompisar: personer ni har vandrat med. */
 export const KOMPISAR: { namn: string; turer: number; senast: string }[] = [

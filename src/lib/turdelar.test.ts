@@ -27,8 +27,8 @@ describe('turens delar', () => {
     for (const sokvag of ['packa', 'rutt', 'karta', 'okand']) expect(aktivTurdel(`/tur/abc/${sokvag}`)).toBe(delFranSokvag(sokvag))
   })
 
-  it('visar översikten, etapperna, packningen och maten som byggda, och varje planerad del säger vad den blir', () => {
-    expect(TURDELAR.filter((d) => d.byggd).map((d) => d.del)).toEqual(['oversikt', 'etapper', 'packning', 'mat'])
+  it('visar översikten, etapperna, packningen, maten och anteckningarna som byggda, och varje planerad del säger vad den blir', () => {
+    expect(TURDELAR.filter((d) => d.byggd).map((d) => d.del)).toEqual(['oversikt', 'etapper', 'packning', 'mat', 'anteckningar'])
     for (const d of TURDELAR.filter((d) => !d.byggd)) expect(d.blir.length).toBeGreaterThan(20)
   })
 

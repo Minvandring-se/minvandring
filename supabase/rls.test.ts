@@ -9,6 +9,7 @@ import { beforeAll, describe, expect, it } from 'vitest'
 import { KATEGORIER } from '../src/lib/forrad'
 import { AVDELNINGAR, ENHETER } from '../src/lib/handla'
 import { ALLERGENER } from '../src/lib/kost'
+import { AMNEN } from '../src/lib/lardomar'
 import { godkanda, importera } from '../src/lib/katalogimport'
 import { godkandaLivsmedel, importeraLivsmedel, LIVSMEDELSKOLUMNER, livsmedelSeedSql } from '../src/lib/livsmedelimport'
 import { godkandaPasar, importeraMatkatalog, MATKOLUMNER, matSeedSql } from '../src/lib/matkatalogimport'
@@ -140,6 +141,9 @@ describe('funktionerna i public', () => {
     'public.bara_personer_bar()',
     'public.pase_utan_ingredienser()',
     'public.skydda_forradskok()',
+    'public.anteckning_andrad()',
+    'public.privata_anteckningar_bort()',
+    'public.lardom_tur_namn()',
   ]
   const forInloggade = [
     'public.ar_medlem(uuid)',
@@ -3979,5 +3983,179 @@ describe('längdgränser på textkolumnerna', () => {
         'N'.repeat(60),
       ]),
     )
+  })
+})
+
+describe('anteckningar och lärdomar', () => {
+  // Egna användare: NA äger turen, NB är redigerare, NC läsare och ND är inte med.
+  const NA = '00000000-0000-0000-0000-0000000000f1'
+  const NB = '00000000-0000-0000-0000-0000000000f2'
+  const NC = '00000000-0000-0000-0000-0000000000f3'
+  const ND = '00000000-0000-0000-0000-0000000000f4'
+  let tur: string
+  let annanTur: string
+  let ncRad: string
+
+  const anteckna = (vem: string, turId: string, text: string, privat = false) =>
+    som(vem, (tx) =>
+      tx.query<{ id: string }>('insert into public.anteckningar (tur_id, text, privat) values ($1, $2, $3) returning id', [turId, text, privat]),
+    ).then((r) => r.rows[0].id)
+  const synligaAnteckningar = (vem: string, turId: string) =>
+    som(vem, (tx) => tx.query<{ text: string }>('select text from public.anteckningar where tur_id = $1 order by text', [turId])).then((r) =>
+      r.rows.map((x) => x.text),
+    )
+  const lardom = (vem: string, turId: string | null, text: string, amne = 'mat') =>
+    som(vem, (tx) =>
+      tx.query<{ id: string }>('insert into public.lardomar (tur_id, amne, text) values ($1, $2, $3) returning id', [turId, amne, text]),
+    ).then((r) => r.rows[0].id)
+  const minaLardomar = (vem: string) =>
+    som(vem, (tx) => tx.query<{ text: string; tur_namn: string | null }>('select text, tur_namn from public.lardomar order by text')).then((r) => r.rows)
+
+  beforeAll(async () => {
+    await db.exec(
+      `insert into auth.users (id, email) values ('${NA}', 'na@exempel.se'), ('${NB}', 'nb@exempel.se'), ('${NC}', 'nc@exempel.se'), ('${ND}', 'nd@exempel.se');`,
+    )
+    tur = await skapaTur(NA, 'Anteckningstur')
+    const kod = await kodFor(tur)
+    await som(NB, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(NC, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    ncRad = (await db.query<{ id: string }>('select id from public.deltagare where tur_id = $1 and user_id = $2', [tur, NC])).rows[0].id
+    await som(NA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [ncRad]))
+    annanTur = await skapaTur(ND, 'Någon annans tur')
+  })
+
+  describe('anteckningar', () => {
+    it('alla i turen, även läsaren, skriver egna, och delade syns för alla i turen', async () => {
+      await anteckna(NA, tur, 'Ägarens delade')
+      await anteckna(NC, tur, 'Läsarens delade')
+      for (const vem of [NA, NB, NC]) expect(await synligaAnteckningar(vem, tur)).toEqual(['Läsarens delade', 'Ägarens delade'])
+    })
+
+    it('en privat anteckning syns bara för den som skrev den', async () => {
+      await anteckna(NB, tur, 'Redigerarens privata', true)
+      expect(await synligaAnteckningar(NB, tur)).toContain('Redigerarens privata')
+      expect(await synligaAnteckningar(NA, tur)).not.toContain('Redigerarens privata')
+      expect(await synligaAnteckningar(NC, tur)).not.toContain('Redigerarens privata')
+    })
+
+    it('ingen skriver en anteckning i någon annans namn eller sätter tiderna själv', async () => {
+      await forvantaFel(som(NB, (tx) => tx.query('insert into public.anteckningar (tur_id, user_id, text) values ($1, $2, $3)', [tur, NA, 'Falsk'])))
+      await forvantaFel(som(NB, (tx) => tx.query(`insert into public.anteckningar (tur_id, text, skapad) values ($1, 'Gammal', '2020-01-01')`, [tur])))
+    })
+
+    it('man ändrar bara sina egna, och anteckningen kan inte flyttas', async () => {
+      const id = await anteckna(NC, tur, 'Ska ändras')
+      expect((await som(NA, (tx) => tx.query(`update public.anteckningar set text = 'Ägaren ändrade' where id = $1`, [id]))).affectedRows).toBe(0)
+      expect((await som(NB, (tx) => tx.query(`update public.anteckningar set text = 'Redigeraren ändrade' where id = $1`, [id]))).affectedRows).toBe(0)
+      expect((await som(NC, (tx) => tx.query(`update public.anteckningar set text = 'Ändrad', privat = true where id = $1`, [id]))).affectedRows).toBe(1)
+      await forvantaFel(som(NC, (tx) => tx.query('update public.anteckningar set tur_id = $1 where id = $2', [annanTur, id])))
+      await forvantaFel(som(NC, (tx) => tx.query('update public.anteckningar set user_id = $1 where id = $2', [NA, id])))
+      const r = await db.query<{ text: string; privat: boolean; nyare: boolean }>('select text, privat, andrad > skapad as nyare from public.anteckningar where id = $1', [id])
+      expect(r.rows[0]).toEqual({ text: 'Ändrad', privat: true, nyare: true })
+      await forvantaFel(som(NC, (tx) => tx.query(`update public.anteckningar set andrad = now(), skapad = now() where id = $1`, [id])))
+      expect((await som(NA, (tx) => tx.query('update public.anteckningar set privat = false where id = $1', [id]))).affectedRows).toBe(0)
+    })
+
+    it('tabellen skickar ändringar till appen', async () => {
+      const r = await db.query(`select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'anteckningar'`)
+      expect(r.rows).toHaveLength(1)
+    })
+
+    it('ägaren tar bort andras delade men inte privata, och redigeraren och läsaren bara sina egna', async () => {
+      const delad = await anteckna(NB, tur, 'Delad att ta bort')
+      const privat = await anteckna(NB, tur, 'Privat att behålla', true)
+      const lasarens = await anteckna(NC, tur, 'Läsarens att behålla')
+      expect((await som(NC, (tx) => tx.query('delete from public.anteckningar where id = $1', [delad]))).affectedRows).toBe(0)
+      expect((await som(NB, (tx) => tx.query('delete from public.anteckningar where id = $1', [lasarens]))).affectedRows).toBe(0)
+      expect((await som(NA, (tx) => tx.query('delete from public.anteckningar where id = $1', [privat]))).affectedRows).toBe(0)
+      expect((await som(NA, (tx) => tx.query('delete from public.anteckningar where id = $1', [delad]))).affectedRows).toBe(1)
+      expect((await som(NB, (tx) => tx.query('delete from public.anteckningar where id = $1', [privat]))).affectedRows).toBe(1)
+    })
+
+    it('den som inte är med i turen ser och ändrar ingenting, och anon når ingenting', async () => {
+      const id = await anteckna(NA, tur, 'Bara för gruppen')
+      expect(await synligaAnteckningar(ND, tur)).toEqual([])
+      await forvantaFel(anteckna(ND, tur, 'Utifrån'))
+      expect((await som(ND, (tx) => tx.query(`update public.anteckningar set text = 'x' where id = $1`, [id]))).affectedRows).toBe(0)
+      expect((await som(ND, (tx) => tx.query('delete from public.anteckningar where id = $1', [id]))).affectedRows).toBe(0)
+      await forvantaFel(somAnon((tx) => tx.query('select id from public.anteckningar')))
+      await forvantaFel(somAnon((tx) => tx.query(`insert into public.anteckningar (tur_id, text) values ($1, 'x')`, [tur])))
+      await forvantaFel(somAnon((tx) => tx.query(`update public.anteckningar set text = 'x'`)))
+      await forvantaFel(somAnon((tx) => tx.query('delete from public.anteckningar')))
+    })
+
+    it('fälten har gränser', async () => {
+      await forvantaFel(anteckna(NA, tur, '   '))
+      await forvantaFel(anteckna(NA, tur, 'x'.repeat(2001)))
+    })
+  })
+
+  describe('lärdomar', () => {
+    it('är personliga, även när man delar en tur', async () => {
+      await lardom(NA, tur, 'Ägarens lärdom')
+      await lardom(NB, null, 'Redigerarens lärdom utan tur', 'packning')
+      expect((await minaLardomar(NA)).map((l) => l.text)).toEqual(['Ägarens lärdom'])
+      expect((await minaLardomar(NB)).map((l) => l.text)).toEqual(['Redigerarens lärdom utan tur'])
+      expect(await minaLardomar(NC)).toEqual([])
+      const id = (await db.query<{ id: string }>(`select id from public.lardomar where text = 'Ägarens lärdom'`)).rows[0].id
+      expect((await som(NB, (tx) => tx.query(`update public.lardomar set text = 'x' where id = $1`, [id]))).affectedRows).toBe(0)
+      expect((await som(NB, (tx) => tx.query('delete from public.lardomar where id = $1', [id]))).affectedRows).toBe(0)
+      await forvantaFel(somAnon((tx) => tx.query('select id from public.lardomar')))
+      await forvantaFel(somAnon((tx) => tx.query(`insert into public.lardomar (amne, text) values ('mat', 'x')`)))
+      await forvantaFel(somAnon((tx) => tx.query(`update public.lardomar set text = 'x'`)))
+      await forvantaFel(somAnon((tx) => tx.query('delete from public.lardomar')))
+    })
+
+    it('ägaren ändrar och tar bort sina egna, men byter inte ägare', async () => {
+      const id = await lardom(NB, null, 'Att ändra')
+      expect((await som(NB, (tx) => tx.query(`update public.lardomar set text = 'Ändrad', amne = 'sova' where id = $1`, [id]))).affectedRows).toBe(1)
+      await forvantaFel(som(NB, (tx) => tx.query('update public.lardomar set user_id = $1 where id = $2', [NA, id])))
+      expect((await som(NB, (tx) => tx.query('delete from public.lardomar where id = $1', [id]))).affectedRows).toBe(1)
+    })
+
+    it('turens namn sätts av databasen och går inte att skriva', async () => {
+      await lardom(NC, tur, 'Läsarens lärdom')
+      expect(await minaLardomar(NC)).toEqual([{ text: 'Läsarens lärdom', tur_namn: 'Anteckningstur' }])
+      await forvantaFel(som(NC, (tx) => tx.query(`insert into public.lardomar (amne, text, tur_namn) values ('mat', 'x', 'Påhittad')`)))
+      await forvantaFel(som(NC, (tx) => tx.query(`update public.lardomar set tur_namn = 'Påhittad'`)))
+    })
+
+    it('en lärdom kan bara knytas till en tur man är med i, och inte i någon annans namn', async () => {
+      await forvantaFel(lardom(NA, annanTur, 'Fel tur'))
+      await forvantaFel(som(NA, (tx) => tx.query(`insert into public.lardomar (user_id, amne, text) values ($1, 'mat', 'x')`, [NB])))
+      await forvantaFel(som(NA, (tx) => tx.query(`update public.lardomar set tur_id = $1`, [annanTur])))
+    })
+
+    it('ämnet och texten har gränser, och ämnena är desamma som i src/lib/lardomar.ts', async () => {
+      await forvantaFel(lardom(NA, null, 'x', 'hund'))
+      await forvantaFel(lardom(NA, null, '  '))
+      await forvantaFel(lardom(NA, null, 'x'.repeat(301)))
+      const r = await db.query<{ def: string }>(
+        `select pg_get_constraintdef(c.oid) as def from pg_constraint c where c.conrelid = 'public.lardomar'::regclass and c.contype = 'c' and pg_get_constraintdef(c.oid) like '%amne%'`,
+      )
+      expect([...r.rows[0].def.matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1])).toEqual(AMNEN.map((a) => a.nyckel))
+    })
+  })
+
+  it('en borttagen deltagare ser inte längre turens anteckningar, förlorar sina privata men behåller sina lärdomar', async () => {
+    const delad = await anteckna(NC, tur, 'Läsarens delade som blir kvar')
+    await anteckna(NC, tur, 'Läsarens privata som försvinner', true)
+    await som(NA, (tx) => tx.query('delete from public.deltagare where id = $1', [ncRad]))
+    expect(await synligaAnteckningar(NC, tur)).toEqual([])
+    await forvantaFel(anteckna(NC, tur, 'Efteråt'))
+    await forvantaFel(lardom(NC, tur, 'Efteråt'))
+    expect((await som(NC, (tx) => tx.query(`update public.anteckningar set text = 'x' where id = $1`, [delad]))).affectedRows).toBe(0)
+    expect((await som(NC, (tx) => tx.query('delete from public.anteckningar where id = $1', [delad]))).affectedRows).toBe(0)
+    const kvar = await db.query<{ text: string }>('select text from public.anteckningar where tur_id = $1 and user_id = $2 order by text', [tur, NC])
+    expect(kvar.rows.map((r) => r.text)).not.toContain('Läsarens privata som försvinner')
+    expect(kvar.rows.map((r) => r.text)).toContain('Läsarens delade som blir kvar')
+    expect((await minaLardomar(NC)).map((l) => l.text)).toEqual(['Läsarens lärdom'])
+  })
+
+  it('anteckningarna försvinner med turen, och lärdomarna blir kvar med turens namn', async () => {
+    await som(NA, (tx) => tx.query('delete from public.turer where id = $1', [tur]))
+    expect((await db.query('select 1 from public.anteckningar where tur_id = $1', [tur])).rows).toHaveLength(0)
+    const r = await db.query<{ tur_id: string | null; tur_namn: string }>(`select tur_id, tur_namn from public.lardomar where text = 'Ägarens lärdom'`)
+    expect(r.rows[0]).toEqual({ tur_id: null, tur_namn: 'Anteckningstur' })
   })
 })

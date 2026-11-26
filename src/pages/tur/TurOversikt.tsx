@@ -14,7 +14,6 @@ import {
   Fardplan,
   GemensamUtrustning,
   KartaOchHojdprofil,
-  KomIhag,
   MatPerDag,
   Omrostning,
   Packlage,
@@ -23,6 +22,7 @@ import {
   SenasteIGruppen,
   ViktPerPerson,
 } from '@/components/tur/Exempelsektioner'
+import { KomIhagIOversikten } from '@/components/tur/KomIhagIOversikten'
 import { useTur } from '@/components/tur/turKontext'
 import { TurUppgifter } from '@/components/tur/TurUppgifter'
 import { Button } from '@/components/ui/button'
@@ -76,7 +76,7 @@ export function TurOversikt() {
           />
         </div>
         <TurUppgifter key={tur.id} tur={tur} kanAndra={kanAndra(minRoll)} onSparad={setTur} />
-        <KomIhag />
+        <KomIhagIOversikten turId={tur.id} />
 
         <RedoForAvfard className={BRED} />
         <AttGora className={BRED} />
