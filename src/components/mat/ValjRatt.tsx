@@ -1,4 +1,4 @@
-import { BookmarkPlus, ChevronDown, PackagePlus, Pencil, Search, Star } from 'lucide-react'
+import { BookmarkPlus, ChevronDown, PackagePlus, Pencil, Star } from 'lucide-react'
 import { useId, useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
@@ -9,7 +9,6 @@ import { Kostfilterval } from '@/components/mat/Kostfilterval'
 import { LaggISkafferi } from '@/components/mat/LaggISkafferi'
 import { PasNamn } from '@/components/mat/PasNamn'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { Panel } from '@/components/ui/panel'
 import { useMatkatalog } from '@/hooks/useMatplan'
 import type { Receptlage } from '@/hooks/useRecept'
@@ -19,6 +18,7 @@ import { filterknappText, forstaAndraNamn, formateraKcal, kcalPer100g, naringFor
 import { rattTillRader, receptMedNamn, receptTillRader } from '@/lib/recept'
 import { bokadText, skafferietForst } from '@/lib/skafferi'
 import type { Ingrediens, Maltid, Matprodukt, Ratt, Recept, Vara } from '@/lib/typer'
+import { SokFalt } from '@/components/ui/sokfalt'
 import { cn } from '@/lib/utils'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
@@ -354,15 +354,7 @@ export function Pasar({
 
   return (
     <div className="space-y-4">
-      <div>
-        <label htmlFor={`${id}-sok`} className="mb-1.5 block text-sm font-medium">
-          Sök bland påsarna
-        </label>
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-3 left-3 size-5 text-muted-foreground" aria-hidden />
-          <Input id={`${id}-sok`} type="search" className="pl-10" placeholder="Märke eller namn" value={sok} onChange={(e) => setSok(e.target.value)} />
-        </div>
-      </div>
+      <SokFalt etikett="Sök bland påsarna" varde={sok} onAndra={setSok} placeholder="Märke eller namn" />
 
       <div className="flex flex-wrap items-center justify-between gap-x-4 gap-y-1">
         <button
@@ -540,7 +532,6 @@ function SparaSomRecept({ namn, finns, onSpara }: { namn: string; finns: boolean
 
 /** Ens recept, med sökning. Ett tryck kopierar receptet till turen och lägger det i måltiden. */
 function Receptlista({ recept, valjer, onValj }: { recept: Receptlage; valjer: boolean; onValj: (r: Recept) => void }) {
-  const id = useId()
   const [sok, setSok] = useState('')
   if (recept === null) return <Listladdar text="Hämtar dina recept" />
   // Recepten hämtas av turens mat. Panelen kan stängas och öppnas igen, så här finns ingen Försök igen.
@@ -551,15 +542,7 @@ function Receptlista({ recept, valjer, onValj }: { recept: Receptlage; valjer: b
   const traffar = recept.filter((r) => !s || r.namn.toLowerCase().includes(s))
   return (
     <div className="space-y-4">
-      <div>
-        <label htmlFor={`${id}-sok`} className="mb-1.5 block text-sm font-medium">
-          Sök bland dina recept
-        </label>
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-3 left-3 size-5 text-muted-foreground" aria-hidden />
-          <Input id={`${id}-sok`} type="search" className="pl-10" value={sok} onChange={(e) => setSok(e.target.value)} />
-        </div>
-      </div>
+      <SokFalt etikett="Sök bland dina recept" varde={sok} onAndra={setSok} />
       <p className="text-sm text-muted-foreground">Receptet kopieras till turen. Ändrar du receptet senare ändras inte turen.</p>
       <ul className="divide-y divide-border">
         {traffar.map((r) => {

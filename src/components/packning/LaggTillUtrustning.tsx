@@ -4,6 +4,7 @@ import { TomtLage } from '@/components/app/TomtLage'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Panel } from '@/components/ui/panel'
+import { SokFalt } from '@/components/ui/sokfalt'
 import { Select } from '@/components/ui/select'
 import { useId, useState } from 'react'
 import { faltFran, formateraVikt, KATEGORIER, kategoriFor, medKategori, medUnderkategori, tolkaSak, underkategorierFor, type SakVarden } from '@/lib/forrad'
@@ -110,10 +111,7 @@ export function LaggTillUtrustning({
 
         {lage === 'forrad' ? (
           <div className="space-y-3">
-            <label htmlFor={`${id}-sok`} className="block font-semibold">
-              Ur ditt förråd
-            </label>
-            <Input id={`${id}-sok`} type="search" value={sok} onChange={(e) => setSok(e.target.value)} placeholder="Sök bland dina saker" />
+            <SokFalt etikett="Ur ditt förråd" varde={sok} onAndra={setSok} placeholder="Sök bland dina saker" />
             {saker === null && (
               <Laddar text="Hämtar ditt förråd" className="space-y-2">
                 <Skelett className="h-11 rounded-lg" />
