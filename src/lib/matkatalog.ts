@@ -166,6 +166,15 @@ export const KATALOGDELAR: readonly { nyckel: Katalogdel; namn: string }[] = [
   { nyckel: 'livsmedel', namn: 'Livsmedel' },
 ]
 
+/**
+ * Bilden till en ruta i katalogen, utan storlek och filändelse: public/katalog/<namn>-480.webp och -960.webp.
+ * Görs med npm run katalogbilder. Påsarnas och märkesvarornas frukost och mellanmål har olika bilder.
+ */
+export function katalogbild(del: Katalogdel, nyckel: string): string {
+  const prefix = { pasar: 'maltid', varor: 'varor', livsmedel: 'livsmedel' }[del]
+  return `${prefix}-${nyckel.replaceAll('_', '-')}`
+}
+
 /** Delen som står i adressen (?del=varor). Påsar när den saknas eller är okänd. */
 export function delFranAdress(p: URLSearchParams): Katalogdel {
   const del = p.get('del')

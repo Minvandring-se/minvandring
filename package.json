@@ -15,6 +15,7 @@
     "livsmedel": "node scripts/livsmedel.mjs",
     "receptkatalog": "node scripts/receptkatalog.mjs",
     "receptbilder": "node scripts/receptbilder.mjs",
+    "katalogbilder": "node scripts/katalogbilder.mjs",
     "ikoner": "node scripts/ikoner.mjs"
   },
   "dependencies": {

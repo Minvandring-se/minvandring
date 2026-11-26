@@ -4,7 +4,6 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
-import { Illustration } from '@/components/illustrationer/Illustration'
 import { Kostfilterval } from '@/components/mat/Kostfilterval'
 import { Matflikar } from '@/components/mat/Matflikar'
 import { Bricka } from '@/components/ui/bricka'
@@ -31,6 +30,7 @@ import {
   delFranAdress,
   filterFranAdress,
   filterTillAdress,
+  katalogbild,
   KATALOGDELAR,
   KATALOGMALTIDER,
   kostbrickor,
@@ -149,8 +149,11 @@ function Filterinnehall({ kost, onKost, marke }: { kost: Kostfilter; onKost: (f:
 /** Texten på Visa-knappen i filterpanelen. */
 const VISA: Record<Katalogdel, string> = { pasar: 'Visa påsarna', varor: 'Visa varorna', livsmedel: 'Visa livsmedlen' }
 
-/** En ruta för en måltid eller grupp: illustration, namn och antal. Vald när den är tryckt. */
-function Ruta({ nyckel, namn, antal, vald, onValj }: { nyckel: string; namn: string; antal: string | null; vald: boolean; onValj: () => void }) {
+/**
+ * En ruta för en måltid eller grupp: bild, namn och antal. Vald när den är tryckt. Bilden är 5:3 med motivet i mitten
+ * och visas som 5:2 på dator, där den tomma bakgrunden över och under skärs bort.
+ */
+function Ruta({ bild, namn, antal, vald, onValj }: { bild: string; namn: string; antal: string | null; vald: boolean; onValj: () => void }) {
   return (
     <li>
       <button
@@ -162,7 +165,15 @@ function Ruta({ nyckel, namn, antal, vald, onValj }: { nyckel: string; namn: str
           vald ? 'border-primary ring-1 ring-primary' : 'border-border',
         )}
       >
-        <Illustration namn={nyckel} className="aspect-[5/3] w-full md:aspect-[5/2]" />
+        <img
+          src={`/katalog/${bild}-480.webp`}
+          srcSet={`/katalog/${bild}-480.webp 480w, /katalog/${bild}-960.webp 960w`}
+          sizes="(min-width: 768px) 25vw, 50vw"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="aspect-[5/3] w-full object-cover md:aspect-[5/2]"
+        />
         <span className="flex flex-1 flex-col gap-0.5 px-3 py-2.5">
           <span className="font-semibold break-words">{namn}</span>
           {antal && <span className="text-sm text-muted-foreground tabular-nums">{antal}</span>}
@@ -276,7 +287,7 @@ function Pasdel({
         {KATALOGMALTIDER.map((m) => (
           <Ruta
             key={m.nyckel}
-            nyckel={m.nyckel}
+            bild={katalogbild('pasar', m.nyckel)}
             namn={m.etikett}
             antal={antalText(perMaltid[m.nyckel], 'påse', 'påsar')}
             vald={filter.maltid === m.nyckel}
@@ -351,7 +362,7 @@ function Naringsdel({ del, sok, grupp, valjGrupp, kost }: { del: 'varor' | 'livs
     <>
       <Rutor rubrik={text.rubrik}>
         {rutor.map((r) => (
-          <Ruta key={r.nyckel} nyckel={r.nyckel} namn={r.etikett} antal={antalText(antal[r.nyckel], text.en, text.flera)} vald={giltig === r.nyckel} onValj={() => valjGrupp(r.nyckel)} />
+          <Ruta key={r.nyckel} bild={katalogbild(del, r.nyckel)} namn={r.etikett} antal={antalText(antal[r.nyckel], text.en, text.flera)} vald={giltig === r.nyckel} onValj={() => valjGrupp(r.nyckel)} />
         ))}
       </Rutor>
 
