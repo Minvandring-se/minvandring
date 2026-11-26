@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aktivSida, aktivUndersida, BLAD, bladIState, FLIKAR, flikAktiv, gruppFor, MENYGRUPPER, MER, oppnaGrupper, SIDOR, UNDERSIDOR } from '@/lib/meny'
+import { aktivSida, aktivUndersida, BLAD, bladIState, FLIKAR, flikAktiv, GRUPPSTART, gruppFor, MENYGRUPPER, MER, oppnaGrupper, SIDOR, UNDERSIDOR } from '@/lib/meny'
 
 describe('menyns sidor', () => {
   it('har sökvägar utan å, ä och ö, och alla är olika', () => {
@@ -118,5 +118,12 @@ describe('aktivSida och flikAktiv', () => {
     expect(flikAktiv(FLIKAR[1], 'turer')).toBe(true)
     expect(flikAktiv(FLIKAR[0], null)).toBe(false)
     expect(aktivSida('/hem')).toBe('hem')
+  })
+})
+
+describe('gruppernas startsidor', () => {
+  it('Planera går till Mina turer och Utrustning till Mitt förråd, och startsidan hör till gruppen', () => {
+    expect(GRUPPSTART).toEqual({ planera: 'turer', utrustning: 'forrad' })
+    for (const [grupp, sida] of Object.entries(GRUPPSTART)) expect(MENYGRUPPER.find((g) => g.nyckel === grupp)?.sidor).toContain(sida)
   })
 })

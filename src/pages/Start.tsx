@@ -198,10 +198,12 @@ export function Start() {
 
           <div className="relative flex flex-1 flex-col items-center justify-center overflow-hidden px-4 pt-20 pb-10 text-center [text-shadow:0_1px_14px_rgb(0_0_0/0.35)] sm:pt-24 md:justify-start md:pt-[max(5.5rem,8%)]">
             <div className="relative isolate flex flex-col items-center">
-              {/* Mjuk skugga bara bakom texten och knappen, så att den vita texten klarar kontrastkraven utan att hela bilden dämpas. */}
+              {/* Mjuk skugga bara bakom texten och knappen, så att den vita texten klarar kontrastkraven utan att hela bilden dämpas.
+                  Den tonar ut jämnt, så att den inte syns som en mörk fläck. Mätt mot alla bilderna på dator och i mobil: rubriken minst 3:1 och
+                  undertexten och länken minst 4,5:1, utan textskuggan. Ändras den: mät igen. */}
               <div
                 aria-hidden
-                className="pointer-events-none absolute -inset-x-[32%] -inset-y-[36%] -z-10 bg-[radial-gradient(closest-side,rgb(0_0_0/0.55),rgb(0_0_0/0.48)_55%,rgb(0_0_0/0.26)_80%,rgb(0_0_0/0.08)_93%,transparent)]"
+                className="pointer-events-none absolute -inset-x-[32%] -inset-y-[36%] -z-10 bg-[radial-gradient(closest-side,rgb(0_0_0/0.44),rgb(0_0_0/0.42)_45%,rgb(0_0_0/0.38)_65%,rgb(0_0_0/0.32)_80%,rgb(0_0_0/0.14)_93%,transparent)]"
               />
               <h1 id="start-rubrik" className="text-[2.6rem] leading-[1.05] font-bold sm:text-6xl lg:text-[clamp(4.5rem,4.2vw,6.5rem)]">
                 Planera. Packa. Upplev.

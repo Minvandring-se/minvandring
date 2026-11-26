@@ -61,14 +61,15 @@ const rita = (adress: string) =>
   )
 
 describe('MinVandrings recept', () => {
-  it('visar korten med måltid, kök, okända allergener och att receptet inte är provlagat', () => {
+  it('visar korten med måltid, kök och okända allergener, men inte om receptet är provlagat', () => {
     const html = renderToStaticMarkup(
       <MemoryRouter>
         <MinvandringsRecept />
       </MemoryRouter>,
     )
     expect(html).toContain('href="/matplanering/recept/aprikosgrot"')
-    for (const t of ['Frukost', 'Aprikosgröt med valnötter', 'Kök krävs', 'Allergener okända', 'Inte provlagat av oss än']) expect(html).toContain(t)
+    for (const t of ['Frukost', 'Aprikosgröt med valnötter', 'Kök krävs', 'Allergener okända']) expect(html).toContain(t)
+    expect(html).not.toContain('provlagat')
   })
 
   it('visar receptet med ingredienser, steg hemma och på turen, källan och knapparna', () => {

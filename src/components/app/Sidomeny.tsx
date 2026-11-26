@@ -9,7 +9,7 @@ import { Namnbricka } from '@/components/app/Namnbricka'
 import { Logotyp } from '@/components/Logotyp'
 import { Sidfot } from '@/components/Sidfot'
 import { Ikon, type IkonNamn } from '@/components/ikoner/Ikon'
-import { MENYGRUPPER, oppnaGrupper, SIDOR, UNDERSIDOR, type Gruppnyckel, type Menygrupp, type Sida } from '@/lib/meny'
+import { GRUPPSTART, MENYGRUPPER, oppnaGrupper, SIDOR, UNDERSIDOR, type Gruppnyckel, type Menygrupp, type Sida } from '@/lib/meny'
 import type { TurIListan } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
 
@@ -43,16 +43,41 @@ function Menyrad({ sida, aktiv, iGrupp = false }: { sida: Sida; aktiv: boolean; 
   )
 }
 
-/** En grupp som fälls ut: rubriken med ikon och pil, och sidorna under. */
-function Grupp({ grupp, aktiv, oppen, onVaxla }: { grupp: Menygrupp; aktiv: Sida | null; oppen: boolean; onVaxla: () => void }) {
+/**
+ * En grupp som fälls ut: rubriken med ikon och pil, och sidorna under. Har gruppen en startsida (GRUPPSTART) är
+ * rubriken en länk som öppnar gruppen och går dit, och pilen är en egen knapp som fäller ut och ihop.
+ */
+function Grupp({ grupp, aktiv, oppen, onVaxla, onOppna }: { grupp: Menygrupp; aktiv: Sida | null; oppen: boolean; onVaxla: () => void; onOppna: () => void }) {
   const id = useId()
+  const ikon = grupp.nyckel === 'snart' ? <Clock className="size-6 shrink-0" strokeWidth={1.75} aria-hidden /> : <Ikon namn={GRUPPIKON[grupp.nyckel]} />
+  const pil = <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none', oppen && 'rotate-180')} aria-hidden />
+  const start = GRUPPSTART[grupp.nyckel]
   return (
     <li>
-      <button type="button" aria-expanded={oppen} aria-controls={id} onClick={onVaxla} className={cn(radKlass(false), 'w-full font-medium')}>
-        {grupp.nyckel === 'snart' ? <Clock className="size-6 shrink-0" strokeWidth={1.75} aria-hidden /> : <Ikon namn={GRUPPIKON[grupp.nyckel]} />}
-        <span className="min-w-0 flex-1 text-left">{grupp.rubrik}</span>
-        <ChevronDown className={cn('size-4 shrink-0 text-muted-foreground transition-transform motion-reduce:transition-none', oppen && 'rotate-180')} aria-hidden />
-      </button>
+      {start ? (
+        <div className="flex items-center gap-0.5">
+          <Link to={SIDOR[start].till} onClick={onOppna} className={cn(radKlass(false), 'min-w-0 flex-1 font-medium')}>
+            {ikon}
+            <span className="min-w-0 flex-1">{grupp.rubrik}</span>
+          </Link>
+          <button
+            type="button"
+            aria-expanded={oppen}
+            aria-controls={id}
+            aria-label={`${oppen ? 'Fäll ihop' : 'Fäll ut'} ${grupp.rubrik}`}
+            onClick={onVaxla}
+            className={cn('flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors hover:bg-muted 3xl:size-12', fokus)}
+          >
+            {pil}
+          </button>
+        </div>
+      ) : (
+        <button type="button" aria-expanded={oppen} aria-controls={id} onClick={onVaxla} className={cn(radKlass(false), 'w-full font-medium')}>
+          {ikon}
+          <span className="min-w-0 flex-1 text-left">{grupp.rubrik}</span>
+          {pil}
+        </button>
+      )}
       <ul id={id} hidden={!oppen} className="mt-0.5 space-y-0.5">
         {grupp.sidor.map((s) => (
           <li key={s}>
@@ -119,7 +144,7 @@ export function Sidomeny({
                 <Menyrad sida="hem" aktiv={aktiv === 'hem'} />
               </li>
               {MENYGRUPPER.map((g) => (
-                <Grupp key={g.nyckel} grupp={g} aktiv={aktiv} oppen={oppna.has(g.nyckel)} onVaxla={() => vaxla(g.nyckel)} />
+                <Grupp key={g.nyckel} grupp={g} aktiv={aktiv} oppen={oppna.has(g.nyckel)} onVaxla={() => vaxla(g.nyckel)} onOppna={() => setOppna((o) => new Set([...o, g.nyckel]))} />
               ))}
             </ul>
           </nav>

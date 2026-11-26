@@ -14,7 +14,7 @@ import { cn } from '@/lib/utils'
 /** En länk som täcker hela bildkortet, med fokusringen runt kortet. */
 const tackande = 'after:absolute after:inset-0 after:rounded-[1.375rem] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ring'
 
-/** Brickorna för ett recept: kök, torkning, provlagat och det som är känt om kosten. */
+/** Brickorna för ett recept: kök, torkning och det som är känt om kosten. */
 export function Receptbrickor({ recept }: { recept: Katalogrecept }) {
   const kost = kostForRecept(kostdelar(recept))
   return (
@@ -25,7 +25,6 @@ export function Receptbrickor({ recept }: { recept: Katalogrecept }) {
         <Bricka key={b}>{b}</Bricka>
       ))}
       {kost.allergener === null && <Bricka>Allergener okända</Bricka>}
-      {recept.status === 'otestat' && <Bricka ton="rost">Inte provlagat av oss än</Bricka>}
     </span>
   )
 }
