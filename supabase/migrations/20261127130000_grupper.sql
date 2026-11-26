@@ -50,11 +50,17 @@ create policy "ägaren ser sina" on public.gruppmedlemmar for select to authenti
 create policy "ägaren lägger till i sina" on public.gruppmedlemmar for insert to authenticated with check (user_id = auth.uid());
 create policy "ägaren tar bort ur sina" on public.gruppmedlemmar for delete to authenticated using (user_id = auth.uid());
 
--- En medlem måste vara ägarens vän, och en grupp har högst 50 medlemmar (lika många som lagg_till_vanner tar emot).
+-- Gruppen måste vara den inloggades egen, en medlem måste vara ägarens vän, och en grupp har högst 50 medlemmar
+-- (lika många som lagg_till_vanner tar emot). Ägaren kontrolleras först, så att inget av de andra svaren säger något
+-- om någon annans grupp. Gruppraden låses, så att två insättningar samtidigt inte kan passera taket.
 -- Security definer, eftersom vänskaperna inte går att läsa direkt.
 create function public.skydda_gruppmedlem() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
+  perform 1 from public.grupper g where g.id = new.grupp_id and g.user_id = new.user_id for update;
+  if not found then
+    raise exception 'Hittar ingen grupp';
+  end if;
   if not public.ar_vanner(new.user_id, new.medlem_id) then
     raise exception 'Bara vänner kan vara med i en grupp';
   end if;

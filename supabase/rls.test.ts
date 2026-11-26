@@ -5302,6 +5302,19 @@ describe('grupper', () => {
     expect(await medlemmar(fjallganget)).toEqual([SAM, TEA].sort())
   })
 
+  it('medlemmarna får ingen notis, och en grupp som skapas direkt får den inloggade som ägare', async () => {
+    const notiser = async () => (await db.query('select 1 from public.notiser where user_id = any($1)', [[SAM, TEA, ULF]])).rows.length
+    const fore = await notiser()
+    await spara(RUT, null, 'Tyst grupp', [SAM, TEA, ULF])
+    expect(await notiser()).toBe(fore)
+    const id = crypto.randomUUID()
+    await som(RUT, (tx) => tx.query(`insert into public.grupper (id, namn) values ($1, 'Direkt')`, [id]))
+    const r = await db.query<{ user_id: string }>('select user_id from public.grupper where id = $1', [id])
+    expect(r.rows[0].user_id).toBe(RUT)
+    await forvantaFel(som(RUT, (tx) => tx.query(`insert into public.grupper (id, namn) values ($1, ' DIREKT ')`, [crypto.randomUUID()])))
+    await som(RUT, (tx) => tx.query(`delete from public.grupper where namn in ('Tyst grupp', 'Direkt')`))
+  })
+
   it('en ändring byter namn och ersätter medlemmarna', async () => {
     expect(await spara(RUT, fjallganget, 'Fjällgänget 2027', [TEA, ULF])).toBe(fjallganget)
     expect(await grupperFor(RUT)).toEqual(['Fjällgänget 2027'])
@@ -5325,13 +5338,24 @@ describe('grupper', () => {
       expect(u.affectedRows, vem).toBe(0)
       const d = await som(vem, (tx) => tx.query('delete from public.grupper where id = $1', [fjallganget]))
       expect(d.affectedRows, vem).toBe(0)
+      const dm = await som(vem, (tx) => tx.query('delete from public.gruppmedlemmar where grupp_id = $1', [fjallganget]))
+      expect(dm.affectedRows, vem).toBe(0)
     }
+    // Ingen kan flytta en rad eller en grupp, inte heller ägaren.
+    await forvantaFel(som(RUT, (tx) => tx.query('update public.gruppmedlemmar set medlem_id = $2 where grupp_id = $1', [fjallganget, SAM])))
+    await forvantaFel(som(RUT, (tx) => tx.query('update public.grupper set user_id = $2 where id = $1', [fjallganget, SAM])))
     await forvantaFel(spara(VERA, fjallganget, 'Kapad', []))
     expect(await grupperFor(RUT)).toEqual(['Fjällgänget 2027'])
   })
 
   it('man kan inte lägga in en rad i någon annans grupp eller lägga till någon som inte är ens vän', async () => {
-    await forvantaFel(som(SAM, (tx) => tx.query('insert into public.gruppmedlemmar (grupp_id, medlem_id) values ($1, $2)', [fjallganget, ULF])))
+    await expect(
+      som(SAM, (tx) => tx.query('insert into public.gruppmedlemmar (grupp_id, medlem_id) values ($1, $2)', [fjallganget, RUT])),
+    ).rejects.toThrow('Hittar ingen grupp')
+    // Även med en vän som redan är med i gruppen blir svaret detsamma.
+    await expect(
+      som(SAM, (tx) => tx.query('insert into public.gruppmedlemmar (grupp_id, medlem_id) values ($1, $2)', [fjallganget, ULF])),
+    ).rejects.toThrow('Hittar ingen grupp')
     await forvantaFel(som(RUT, (tx) => tx.query('insert into public.gruppmedlemmar (grupp_id, medlem_id) values ($1, $2)', [fjallganget, VERA])))
     await forvantaFel(som(RUT, (tx) => tx.query('insert into public.grupper (id, namn, user_id) values ($1, $2, $3)', [crypto.randomUUID(), 'Annans', SAM])))
     expect(await medlemmar(fjallganget)).toEqual([TEA, ULF].sort())
@@ -5343,8 +5367,17 @@ describe('grupper', () => {
     expect(await medlemmar(fjallganget)).toEqual([SAM, ULF].sort())
   })
 
-  it('högst 50 medlemmar', async () => {
-    await forvantaFel(spara(RUT, null, 'För många', Array.from({ length: 51 }, () => crypto.randomUUID())))
+  it('högst 50 medlemmar, både via spara_grupp och direkt', async () => {
+    const MANGA = '00000000-0000-0000-0000-0000000004b0'
+    const vannerna = Array.from({ length: 51 }, (_, i) => `00000000-0000-0000-0000-0000000004${(0xc0 + i).toString(16).padStart(2, '0')}`)
+    await db.query(`insert into auth.users (id, email) values ${[MANGA, ...vannerna].map((id) => `('${id}', '${id}@grupper.se')`).join(', ')}`)
+    for (const v of vannerna) await vanner(MANGA, v)
+    await forvantaFel(spara(MANGA, null, 'För många', vannerna))
+    const g = await spara(MANGA, null, 'Femtio', vannerna.slice(0, 50))
+    expect(await medlemmar(g)).toHaveLength(50)
+    await expect(
+      som(MANGA, (tx) => tx.query('insert into public.gruppmedlemmar (grupp_id, medlem_id) values ($1, $2)', [g, vannerna[50]])),
+    ).rejects.toThrow('högst 50')
   })
 
   it('anon når ingenting', async () => {
@@ -5356,8 +5389,11 @@ describe('grupper', () => {
   it('en vän som tas bort försvinner ur gruppen, åt båda håll', async () => {
     const samsGrupp = (await som(SAM, (tx) => tx.query<{ id: string }>('select id from public.grupper'))).rows[0].id
     expect(await medlemmar(samsGrupp)).toEqual([ULF])
+    const ulfsGrupp = await spara(ULF, null, 'Ulfs grupp', [SAM, RUT])
+    expect(await medlemmar(ulfsGrupp)).toEqual([RUT, SAM].sort())
     await som(ULF, (tx) => tx.query('select public.ta_bort_van($1)', [SAM]))
     expect(await medlemmar(samsGrupp)).toEqual([])
+    expect(await medlemmar(ulfsGrupp)).toEqual([RUT])
     expect(await medlemmar(fjallganget)).toEqual([SAM, ULF].sort())
   })
 

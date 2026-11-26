@@ -44,7 +44,7 @@ export function Grupper({ vanner }: { vanner: readonly Van[] }) {
     >
       <p className="text-sm text-muted-foreground">
         {vanner.length > 0
-          ? 'Spara de ni brukar vandra med, så startar ni nästa tur med alla på en gång. Bara du ser dina grupper.'
+          ? 'Samla vännerna du brukar vandra med i en grupp, så kan du starta nästa tur med alla på en gång. Bara du ser dina grupper.'
           : 'Lägg till vänner först, så kan du samla dem i grupper.'}
       </p>
 
