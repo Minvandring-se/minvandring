@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 import type { Ingrediens, Kostbehov, Ratt, Vara } from '@/lib/typer'
 
 const KOLUMNER = `id, namn, maltid, portioner, kok_kravs, torkning_hemma, beskrivning, mangder, inspirerat_av, inspirerat_av_url, status,
-  ingredienser:receptkatalog_ingredienser(ordning, ingrediens, mangd, enhet, packas, kommentar, livsmedel_nummer, varukatalog_id,
+  ingredienser:receptkatalog_ingredienser(ordning, ingrediens, mangd, enhet, packas, kommentar, gram, livsmedel_nummer, varukatalog_id,
     livsmedel(namn, grupp, allergener, kcal_per_100g, protein_per_100g),
     varukatalog(vegetarisk, vegansk, glutenfri, laktosfri, allergener, spar, kcal_per_100g, protein_per_100g)),
   steg:receptkatalog_steg(steg_nr, var, steg, tid_min)`
@@ -32,6 +32,7 @@ export function useReceptkatalog(): Katalogrecept[] | null | 'fel' {
           ingredienser: r.ingredienser.map((i) => ({
             ...i,
             mangd: tal(i.mangd),
+            gram: tal(i.gram),
             livsmedel: i.livsmedel && { ...i.livsmedel, kcal_per_100g: tal(i.livsmedel.kcal_per_100g), protein_per_100g: tal(i.livsmedel.protein_per_100g) },
             varukatalog: i.varukatalog && { ...i.varukatalog, protein_per_100g: tal(i.varukatalog.protein_per_100g) },
           })),
@@ -85,6 +86,8 @@ export interface Turlage {
   ingredienser: Ingrediens[]
   varor: Vara[]
   behov: Behov[]
+  /** Hur många personer som är med i turen, utan hundar. */
+  personer: number
 }
 
 export async function hamtaTurlage(turId: string): Promise<Turlage | null> {
@@ -93,7 +96,7 @@ export async function hamtaTurlage(turId: string): Promise<Turlage | null> {
     supabase.from('ratter').select('id, namn, matprodukt_id, ansvarig, klart').eq('tur_id', turId),
     supabase.from('ingredienser').select('id, ratt_id, vara_id, mangd, enhet, gram_per_portion').eq('tur_id', turId),
     supabase.from('varor').select('id, namn, kcal_per_100g, protein_per_100g, extra_g, varifran, ansvarig, klart, avdelning, varukatalog_id').eq('tur_id', turId),
-    supabase.from('deltagare').select('id, namn').eq('tur_id', turId),
+    supabase.from('deltagare').select('id, namn, typ').eq('tur_id', turId),
   ])
   if (ratter.error || ingredienser.error || varor.error || deltagare.error) return null
   // Kostbehoven hör till deltagarna, och RLS släpper bara fram dem i turer man är med i.
@@ -111,5 +114,6 @@ export async function hamtaTurlage(turId: string): Promise<Turlage | null> {
     ingredienser: (ingredienser.data as Ingrediens[]).map((i) => ({ ...i, mangd: i.mangd === null ? null : Number(i.mangd) })),
     varor: (varor.data as Vara[]).map((v) => ({ ...v, protein_per_100g: v.protein_per_100g === null ? null : Number(v.protein_per_100g) })),
     behov: (kostbehov.data as Kostbehov[]).flatMap((k) => (namn.has(k.deltagare_id) ? [{ ...k, namn: namn.get(k.deltagare_id)! }] : [])),
+    personer: (deltagare.data as { typ: string }[]).filter((d) => d.typ === 'person').length,
   }
 }

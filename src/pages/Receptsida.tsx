@@ -1,6 +1,6 @@
-import { ChevronLeft, ExternalLink } from 'lucide-react'
-import { useId, useState } from 'react'
-import { Link, useParams } from 'react-router'
+import { ChevronLeft, ExternalLink, Minus, Plus } from 'lucide-react'
+import { useEffect, useId, useRef, useState } from 'react'
+import { Link, useParams, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
@@ -16,7 +16,20 @@ import { sparaRecept, useRecept } from '@/hooks/useRecept'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { allergenetikett, uppraknade, varningarForRatt } from '@/lib/kost'
 import { ledigtNamn, valForRecept } from '@/lib/recept'
-import { allergenrad, kostdelar, mangdtext, RECEPTMALTID_ETIKETT, receptPerPortion, stegPerPlats, tidtext, type Katalogrecept } from '@/lib/receptkatalog'
+import {
+  allergenrad,
+  kcalPerPortion,
+  kostdelar,
+  mangdtext,
+  MAX_PERSONER,
+  MIN_PERSONER,
+  RECEPTMALTID_ETIKETT,
+  receptPerPortion,
+  skalaRecept,
+  stegPerPlats,
+  tidtext,
+  type Katalogrecept,
+} from '@/lib/receptkatalog'
 import { cn } from '@/lib/utils'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
@@ -60,10 +73,22 @@ export function Receptsida() {
   )
 }
 
+const begransa = (n: number) => Math.min(MAX_PERSONER, Math.max(MIN_PERSONER, n))
+
 function Receptet({ recept }: { recept: Katalogrecept }) {
+  const [adress] = useSearchParams()
   const steg = stegPerPlats(recept.steg)
   const allergener = allergenrad(recept)
-  const ingredienser = [...recept.ingredienser].sort((a, b) => a.ordning - b.ordning)
+  const kcal = kcalPerPortion(recept)
+  // Antal personer börjar på receptets portioner. Väljs en tur tar det turens antal, tills man ändrar det själv.
+  const [personer, setPersoner] = useState(() => begransa(recept.portioner))
+  const andrat = useRef(false)
+  const ingredienser = skalaRecept([...recept.ingredienser].sort((a, b) => a.ordning - b.ordning), recept.portioner, personer)
+
+  function andraPersoner(n: number) {
+    andrat.current = true
+    setPersoner(begransa(n))
+  }
 
   return (
     <article className="mx-auto max-w-3xl space-y-6">
@@ -81,15 +106,14 @@ function Receptet({ recept }: { recept: Katalogrecept }) {
         <Receptbrickor recept={recept} />
       </div>
 
-      <Atgarder recept={recept} />
+      <Atgarder recept={recept} startTur={adress.get('tur') ?? ''} onTurPersoner={(n) => !andrat.current && n > 0 && setPersoner(begransa(n))} />
 
       <section aria-labelledby="ingredienser" className="space-y-3">
         <h2 id="ingredienser" className="text-xl">
           Ingredienser
         </h2>
-        <p className="text-sm text-muted-foreground">
-          Till {recept.portioner === 1 ? '1 portion' : `${recept.portioner} portioner`}.{recept.mangder === 'egna' && ' Källan saknade mängder, så vi har satt dem.'}
-        </p>
+        <Personvaljare personer={personer} onAndra={andraPersoner} />
+        {recept.mangder === 'egna' && <p className="text-sm text-muted-foreground">Källan saknade mängder, så vi har satt dem.</p>}
         <ul className="divide-y divide-border rounded-lg border border-border bg-card">
           {ingredienser.map((i) => (
             <li key={i.ordning} className="flex gap-3 px-4 py-2.5">
@@ -105,6 +129,7 @@ function Receptet({ recept }: { recept: Katalogrecept }) {
             </li>
           ))}
         </ul>
+        <p className="text-sm font-medium">{kcal === null ? 'Kcal går inte att räkna än.' : `Cirka ${kcal.toLocaleString('sv-SE')} kcal per portion.`}</p>
         <p className="text-sm">
           {allergener.innehaller.length > 0 ? `Innehåller ${uppraknade(allergener.innehaller.map((a) => allergenetikett(a).toLowerCase()))}.` : allergener.okanda === 0 ? 'Ingen av de 14 allergenerna.' : ''}
           {allergener.okanda > 0 && (
@@ -128,6 +153,30 @@ function Receptet({ recept }: { recept: Katalogrecept }) {
         </a>
       </p>
     </article>
+  )
+}
+
+/** Minus och plus för antal personer, 1 till 12. Mängderna räknas om direkt. */
+function Personvaljare({ personer, onAndra }: { personer: number; onAndra: (n: number) => void }) {
+  const id = useId()
+  const knapp = knappStil({ variant: 'outline', size: 'ikon' })
+  return (
+    <div role="group" aria-labelledby={id} className="flex items-center justify-between gap-3 rounded-lg border border-border bg-card px-4 py-2">
+      <span id={id} className="font-medium">
+        Antal personer
+      </span>
+      <span className="flex items-center gap-2">
+        <button type="button" className={knapp} aria-label="En person färre" disabled={personer <= MIN_PERSONER} onClick={() => onAndra(personer - 1)}>
+          <Minus className="size-5" aria-hidden />
+        </button>
+        <output aria-live="polite" className="w-8 text-center text-lg font-semibold tabular-nums">
+          {personer}
+        </output>
+        <button type="button" className={knapp} aria-label="En person fler" disabled={personer >= MAX_PERSONER} onClick={() => onAndra(personer + 1)}>
+          <Plus className="size-5" aria-hidden />
+        </button>
+      </span>
+    </div>
   )
 }
 
@@ -158,7 +207,7 @@ function Steglista({ rubrik, steg }: { rubrik: string; steg: Katalogrecept['steg
 type Lage = { typ: 'vila' } | { typ: 'sparar' } | { typ: 'klart'; text: string; till?: { adress: string; text: string } } | { typ: 'fel'; text: string }
 
 /** Lägg i turen och Spara som eget recept. Båda kopierar receptet, så att katalogen aldrig ändras. */
-function Atgarder({ recept }: { recept: Katalogrecept }) {
+function Atgarder({ recept, startTur, onTurPersoner }: { recept: Katalogrecept; startTur: string; onTurPersoner: (personer: number) => void }) {
   const id = useId()
   const turer = useRedigerbaraTurer()
   const { recept: egna, laddaOm } = useRecept()
@@ -175,7 +224,20 @@ function Atgarder({ recept }: { recept: Katalogrecept }) {
     if (!ny) return
     const hamtat = await hamtaTurlage(ny)
     setTurlage({ turId: ny, lage: hamtat })
+    if (hamtat) onTurPersoner(hamtat.personer)
   }
+
+  // Kommer man från en tur (?tur= i adressen) är den vald från början, om man får lägga recept i den.
+  const startad = useRef(false)
+  useEffect(() => {
+    if (startad.current || !startTur || !Array.isArray(turer) || !turer.some((t) => t.id === startTur)) return
+    startad.current = true
+    void hamtaTurlage(startTur).then((hamtat) => {
+      setTurId(startTur)
+      setTurlage({ turId: startTur, lage: hamtat })
+      if (hamtat) onTurPersoner(hamtat.personer)
+    })
+  }, [startTur, turer, onTurPersoner])
 
   async function laggITuren() {
     if (!aktuellt) return

@@ -1,11 +1,11 @@
 import { describe, expect, it } from 'vitest'
 import { varningarForRatt, type Allergen } from './kost'
-import { allergenrad, kostdelar, kostForIngrediens, kostForRecept, mangdtext, receptbrickor, receptPerPortion, stegPerPlats, tidtext, type Katalogingrediens } from './receptkatalog'
+import { allergenrad, avrundaMangd, kcalPerPortion, kostdelar, kostForIngrediens, kostForRecept, mangdtext, receptbrickor, receptadress, receptPerPortion, skalaRecept, stegPerPlats, tidtext, viktFor, type Katalogingrediens } from './receptkatalog'
 
 const livs = (namn: string, grupp: string, allergener: Allergen[] | null, kcal = 350) => ({ namn, grupp, allergener, kcal_per_100g: kcal, protein_per_100g: 12.5 })
 
 function ing(ordning: number, ingrediens: string, extra: Partial<Katalogingrediens> = {}): Katalogingrediens {
-  return { ordning, ingrediens, mangd: 6, enhet: 'msk', packas: 'hemma', kommentar: null, livsmedel_nummer: null, varukatalog_id: null, livsmedel: null, varukatalog: null, ...extra }
+  return { ordning, ingrediens, mangd: 6, enhet: 'msk', packas: 'hemma', kommentar: null, gram: null, livsmedel_nummer: null, varukatalog_id: null, livsmedel: null, varukatalog: null, ...extra }
 }
 
 const gryn = ing(1, 'Havregryn', { livsmedel_nummer: 702, livsmedel: livs('Havregryn fullkorn', 'Ris eller annat spannmål', ['gluten']) })
@@ -76,5 +76,83 @@ describe('det som visas', () => {
     ])
     expect(s.hemma.map((x) => x.steg)).toEqual(['Blanda'])
     expect(s.turen.map((x) => x.steg)).toEqual(['Koka'])
+  })
+})
+
+describe('antal personer', () => {
+  it('avrundar läsbart: dl och msk till en decimal, tsk, krm och st till närmaste halva, g till hela gram', () => {
+    expect(avrundaMangd(1.4583, 'dl')).toBe(1.5)
+    expect(avrundaMangd(2.333, 'msk')).toBe(2.3)
+    expect(avrundaMangd(0.7, 'tsk')).toBe(0.5)
+    expect(avrundaMangd(0.8, 'krm')).toBe(1)
+    expect(avrundaMangd(2.25, 'st')).toBe(2.5)
+    expect(avrundaMangd(83.4, 'g')).toBe(83)
+    expect(avrundaMangd(1.234, 'kg')).toBe(1.23)
+    expect(avrundaMangd(12, 'ml')).toBe(10)
+  })
+
+  it('går aldrig ner till noll', () => {
+    expect(avrundaMangd(0.1, 'tsk')).toBe(0.5)
+    expect(avrundaMangd(0.2, 'g')).toBe(1)
+    expect(avrundaMangd(0.01, 'dl')).toBe(0.1)
+  })
+
+  it('räknar om alla mängder, även vattnet på plats, och gram utan avrundning', () => {
+    const rader = [ing(1, 'Gryn', { mangd: 3.5, enhet: 'dl', gram: 140 }), ing(2, 'Kanel', { mangd: 0.75, enhet: 'tsk' }), { ...vatten, mangd: 2.5 }, ing(4, 'Citronpulver', { mangd: null, enhet: null })]
+    const tre = skalaRecept(rader, 2, 3)
+    expect(tre.map((r) => [r.mangd, r.enhet])).toEqual([
+      [5.3, 'dl'],
+      [1, 'tsk'],
+      [3.8, 'dl'],
+      [null, null],
+    ])
+    expect(tre[0].gram).toBe(210)
+  })
+
+  it('visar mängderna som de står för receptets eget antal', () => {
+    const rader = [ing(1, 'Kanel', { mangd: 0.75, enhet: 'tsk' })]
+    expect(skalaRecept(rader, 2, 2)[0].mangd).toBe(0.75)
+  })
+
+  it('lägger turen i adressen när den finns', () => {
+    expect(receptadress('aprikosgrot')).toBe('/matplanering/recept/aprikosgrot')
+    expect(receptadress('aprikosgrot', 'abc')).toBe('/matplanering/recept/aprikosgrot?tur=abc')
+  })
+})
+
+describe('kcal per portion', () => {
+  const gram = (ordning: number, g: number, kcal: number | null, extra: Partial<Katalogingrediens> = {}) =>
+    ing(ordning, `Vara ${ordning}`, { mangd: g, enhet: 'g', livsmedel: kcal === null ? null : livs('Vara', 'Grupp', [], kcal), ...extra })
+
+  it('tar vikten ur gram, eller ur mängden när enheten är g eller kg', () => {
+    expect(viktFor(ing(1, 'A', { mangd: 2, enhet: 'dl', gram: 80 }))).toBe(80)
+    expect(viktFor(ing(1, 'A', { mangd: 120, enhet: 'g' }))).toBe(120)
+    expect(viktFor(ing(1, 'A', { mangd: 0.5, enhet: 'kg' }))).toBe(500)
+    expect(viktFor(ing(1, 'A', { mangd: 2, enhet: 'dl' }))).toBeNull()
+  })
+
+  it('räknar per portion och avrundar till närmaste 10', () => {
+    // 100 g à 370 kcal + 50 g à 600 kcal = 670 kcal, för 2 portioner 335, avrundat 340.
+    expect(kcalPerPortion({ portioner: 2, ingredienser: [gram(1, 100, 370), gram(2, 50, 600)] })).toBe(340)
+  })
+
+  it('räknar inte vattnet på plats och räknar kryddor i tsk och krm som 0 g', () => {
+    expect(kcalPerPortion({ portioner: 1, ingredienser: [gram(1, 100, 370), vatten, kanel] })).toBe(370)
+  })
+
+  it('visas bara när ingredienser med känd kcal är minst 80 % av vikten', () => {
+    expect(kcalPerPortion({ portioner: 1, ingredienser: [gram(1, 80, 400), gram(2, 20, null)] })).toBe(320)
+    expect(kcalPerPortion({ portioner: 1, ingredienser: [gram(1, 79, 400), gram(2, 21, null)] })).toBeNull()
+  })
+
+  it('går inte att räkna när vikten saknas för en ingrediens som inte är en krydda', () => {
+    expect(kcalPerPortion({ portioner: 1, ingredienser: [gram(1, 100, 370), ing(2, 'Russin', { mangd: 1, enhet: 'dl', livsmedel: livs('Russin', 'Frukt', []) })] })).toBeNull()
+    expect(kcalPerPortion({ portioner: 1, ingredienser: [gram(1, 100, 370), ing(2, 'Russin', { mangd: 1, enhet: 'dl', gram: 60, livsmedel: livs('Russin', 'Frukt', [], 300) })] })).toBe(550)
+    expect(kcalPerPortion({ portioner: 1, ingredienser: [vatten] })).toBeNull()
+  })
+
+  it('tar kcal från märkesvaran före livsmedlet', () => {
+    const vara = { vegetarisk: true, vegansk: true, glutenfri: true, laktosfri: true, allergener: [], spar: [], kcal_per_100g: 500, protein_per_100g: 10 }
+    expect(kcalPerPortion({ portioner: 1, ingredienser: [gram(1, 100, 370, { varukatalog: vara })] })).toBe(500)
   })
 })

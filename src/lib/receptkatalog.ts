@@ -2,6 +2,7 @@
 // egna recept, och det som visas. Rena funktioner utan databas.
 import { ALLERGENER, KOSTVAL, type Allergen, type Kostinfo, type Kostval } from './kost'
 import { kostForLivsmedel } from './livsmedelsgrupper'
+import type { Enhet } from './handla'
 import { gramFor, MAX_VARUNAMN, type TolkadIngrediens } from './mat'
 import type { Livsmedel, Receptkatalogingrediens, Receptkatalogrecept, Receptkatalogsteg, Varukatalogvara } from './typer'
 import { kostinfoForVara } from './varukatalog'
@@ -116,5 +117,71 @@ export function receptPerPortion(recept: Pick<Katalogrecept, 'portioner' | 'ingr
     })
 }
 
+/** Antal personer som receptet kan räknas om till. */
+export const MIN_PERSONER = 1
+export const MAX_PERSONER = 12
+
+/** Hur mängden avrundas per enhet: närmaste steg, och aldrig ner till noll. */
+const STEG: Record<Enhet, number> = { g: 1, kg: 0.01, ml: 5, dl: 0.1, msk: 0.1, tsk: 0.5, krm: 0.5, st: 0.5 }
+
+/** En mängd räknad om och avrundad läsbart: 1,5 dl i stället för 1,4583 dl, och tsk, krm och st till närmaste halva. */
+export function avrundaMangd(mangd: number, enhet: Enhet): number {
+  const steg = STEG[enhet]
+  const avrundad = Math.round(mangd / steg) * steg
+  return Math.max(steg, Math.round(avrundad * 100) / 100)
+}
+
+/**
+ * Ingredienserna räknade om från receptets portioner till ett antal personer, även vatten på plats. För receptets
+ * eget antal visas mängderna som de står. Gram räknas om utan avrundning, eftersom de bara används för kcal.
+ */
+export function skalaRecept<T extends Pick<Receptkatalogingrediens, 'mangd' | 'enhet' | 'gram'>>(ingredienser: readonly T[], portioner: number, personer: number): T[] {
+  if (personer === portioner) return [...ingredienser]
+  const faktor = personer / portioner
+  return ingredienser.map((i) => ({
+    ...i,
+    mangd: i.mangd === null || i.enhet === null ? i.mangd : avrundaMangd(i.mangd * faktor, i.enhet),
+    gram: i.gram === null ? null : i.gram * faktor,
+  }))
+}
+
+/** Hur stor del av receptets vikt som måste ha känd kcal för att kcal ska visas. */
+export const KCAL_TACKNING = 0.8
+/** Kryddor i tsk och krm väger så lite att de räknas som 0 g när vikten saknas. */
+const SMA_ENHETER: readonly (Enhet | null)[] = ['tsk', 'krm']
+
+/** Vikten i gram för en ingrediens: gram-kolumnen, eller mängden när enheten är g eller kg. null när den är okänd. */
+export function viktFor(i: Pick<Receptkatalogingrediens, 'mangd' | 'enhet' | 'gram'>): number | null {
+  if (i.gram !== null) return i.gram
+  if (i.enhet === 'g') return i.mangd
+  if (i.enhet === 'kg') return i.mangd === null ? null : i.mangd * 1000
+  return null
+}
+
+/**
+ * Ungefär hur många kcal en portion ger, avrundat till närmaste 10. Räknas från ingrediensernas vikt och kcal per
+ * 100 g i det kopplade livsmedlet eller märkesvaran. Vatten på plats räknas inte.
+ * - Receptets vikt är summan av vikterna. Saknas vikten för en ingrediens är receptets vikt okänd, utom för kryddor i
+ *   tsk och krm, som räknas som 0 g.
+ * - null när vikten är okänd, eller när ingredienser med både vikt och kcal är mindre än 80 % av vikten.
+ */
+export function kcalPerPortion(recept: Pick<Katalogrecept, 'portioner' | 'ingredienser'>): number | null {
+  let vikt = 0
+  let kandVikt = 0
+  let kcal = 0
+  for (const i of recept.ingredienser) {
+    if (i.packas === 'pa_plats') continue
+    const g = viktFor(i) ?? (SMA_ENHETER.includes(i.enhet) ? 0 : null)
+    if (g === null) return null
+    vikt += g
+    const per100 = (i.varukatalog ?? i.livsmedel)?.kcal_per_100g ?? null
+    if (per100 === null) continue
+    kandVikt += g
+    kcal += (g * per100) / 100
+  }
+  if (vikt <= 0 || kandVikt / vikt < KCAL_TACKNING) return null
+  return Math.round(kcal / recept.portioner / 10) * 10
+}
+
 /** Adressen till ett recept i katalogen, till exempel /matplanering/recept/aprikosgrot. */
-export const receptadress = (id: string) => `/matplanering/recept/${id}`
+export const receptadress = (id: string, turId?: string) => `/matplanering/recept/${id}${turId ? `?tur=${turId}` : ''}`

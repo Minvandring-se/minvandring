@@ -6,7 +6,7 @@ import { lasCsv } from './katalogimport'
 import type { Receptkatalogingrediens, Receptkatalogrecept, Receptkatalogsteg } from './typer'
 
 export const RECEPTKOLUMNER = ['id', 'namn', 'maltid', 'portioner', 'kok_kravs', 'torkning_hemma', 'beskrivning', 'mangder', 'inspirerat_av', 'inspirerat_av_url', 'status'] as const
-export const INGREDIENSKOLUMNER = ['recept_id', 'ordning', 'ingrediens', 'mangd', 'enhet', 'packas', 'kommentar', 'livsmedel_nummer', 'varukatalog'] as const
+export const INGREDIENSKOLUMNER = ['recept_id', 'ordning', 'ingrediens', 'mangd', 'enhet', 'packas', 'kommentar', 'livsmedel_nummer', 'varukatalog', 'gram'] as const
 export const STEGKOLUMNER = ['recept_id', 'steg_nr', 'var', 'steg', 'tid_min'] as const
 
 export const RECEPTMALTIDER = ['frukost', 'lunch', 'middag', 'mellanmal', 'dryck'] as const
@@ -123,6 +123,8 @@ export function importeraReceptkatalog(filer: { recept: string; ingredienser: st
     const delar = falt.varukatalog.split('|').map((x) => x.trim())
     const vara = falt.varukatalog.trim() === '' ? null : delar.length === 2 && delar[0] && delar[1] ? { marke: delar[0], namn: delar[1] } : undefined
     const namn = text(falt.ingrediens, 80)
+    // Vikten för hela mängden, frivillig. Behövs för kcal när enheten inte är g eller kg.
+    const gram = falt.gram === '' ? null : /^\d+(\.\d)?$/.test(falt.gram) ? Number(falt.gram) : NaN
     const radfel = [
       !receptId.has(falt.recept_id) && `receptet ${falt.recept_id} finns inte i recept.csv`,
       ordning < 1 && 'ordning ska vara ett heltal från 1',
@@ -137,6 +139,8 @@ export function importeraReceptkatalog(filer: { recept: string; ingredienser: st
       vara === undefined && 'varukatalog ska vara märke och namn med | emellan',
       vara && !kopplingar.varor.has(varunyckel(vara.marke, vara.namn)) && `varan ${falt.varukatalog} finns inte i varukatalogen`,
       livsmedel !== null && !!vara && 'koppla till ett livsmedel eller en vara, inte båda',
+      (Number.isNaN(gram) || (gram !== null && (gram <= 0 || gram > 20000))) && 'gram ska vara ett tal med punkt och högst en decimal, större än 0 och högst 20000',
+      gram !== null && (enhet === 'g' || enhet === 'kg') && 'gram behövs inte när enheten är g eller kg',
     ].filter((x): x is string => typeof x === 'string')
     if (radfel.length) {
       fel.push(...radfel.map((f) => `${var_}: ${f}.`))
@@ -150,6 +154,7 @@ export function importeraReceptkatalog(filer: { recept: string; ingredienser: st
       enhet,
       packas: falt.packas as Receptkatalogingrediens['packas'],
       kommentar: falt.kommentar.trim() || null,
+      gram,
       livsmedel_nummer: livsmedel,
       varukatalog: vara ?? null,
     })
@@ -206,7 +211,7 @@ function ingrediensvarde(r: Importingrediens, k: string): string {
   return `(select v.id from public.varukatalog v where lower(v.marke) = lower(${sql(r.varukatalog.marke)}) and lower(v.namn) = lower(${sql(r.varukatalog.namn)}))`
 }
 
-const INGREDIENSKOLUMNER_DB = ['recept_id', 'ordning', 'ingrediens', 'mangd', 'enhet', 'packas', 'kommentar', 'livsmedel_nummer', 'varukatalog_id'] as const
+const INGREDIENSKOLUMNER_DB = ['recept_id', 'ordning', 'ingrediens', 'mangd', 'enhet', 'packas', 'kommentar', 'gram', 'livsmedel_nummer', 'varukatalog_id'] as const
 
 /**
  * Seed-SQL för recepten. Hela katalogen skrivs om: recept som inte längre finns i CSV:n tas bort, och varje recepts

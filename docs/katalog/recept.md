@@ -12,7 +12,7 @@ Seeden skriver om hela katalogen: recept som inte längre finns i CSV:n tas bort
 ## Filerna
 
 - **recept.csv**: ett recept per rad: `id` (små bokstäver, siffror och bindestreck), `namn`, `maltid` (frukost, lunch, middag, mellanmal eller dryck), `portioner` (hur många portioner ingredienserna räcker till), `kok_kravs` och `torkning_hemma` (ja eller nej), `beskrivning`, `mangder` (`fran_kallan` eller `egna` när källan saknade mängder), `inspirerat_av`, `inspirerat_av_url` och `status` (`otestat` tills någon av grundarna har lagat rätten, sedan `testat`).
-- **ingredienser.csv**: en rad per ingrediens för hela receptet: `recept_id`, `ordning`, `ingrediens`, `mangd` (punkt som decimaltecken), `enhet` (g, kg, dl, ml, st, msk, tsk eller krm), `packas` (`hemma`, `separat` eller `pa_plats` för vatten), `kommentar`, `livsmedel_nummer` och `varukatalog`.
+- **ingredienser.csv**: en rad per ingrediens för hela receptet: `recept_id`, `ordning`, `ingrediens`, `mangd` (punkt som decimaltecken), `enhet` (g, kg, dl, ml, st, msk, tsk eller krm), `packas` (`hemma`, `separat` eller `pa_plats` för vatten), `kommentar`, `livsmedel_nummer`, `varukatalog` och `gram` (frivillig, vikten i gram för hela mängden med högst en decimal, bara när enheten inte är g eller kg).
 - **steg.csv**: stegen i ordning: `recept_id`, `steg_nr`, `var` (`hemma` eller `turen`), `steg` och `tid_min` (minuter, till exempel 5 eller 5–10).
 
 ## Kopplingar, allergener och kost
@@ -24,6 +24,14 @@ En ingrediens kan kopplas till ett livsmedel (`livsmedel_nummer`, Livsmedelsverk
 - Koppla bara när livsmedlet verkligen är samma sak. En kryddning eller en färdig produkt utan säkert livsmedel får hellre vara okänd.
 
 Vid den första importen 2026-11-26 kopplades 144 av 193 ingredienser. Matolja kopplades till Rapsolja (2189), eftersom livsmedlet Matolja (3418) inte går igenom livsmedelsimporten.
+
+## Kcal och antal personer
+
+Receptvyn räknar kcal per portion från ingrediensernas vikt och kcal per 100 g i det kopplade livsmedlet eller märkesvaran (`kcalPerPortion` i `src/lib/receptkatalog.ts`). Vikten är `gram`, eller mängden när enheten är g eller kg. Vatten på plats räknas inte, och kryddor i tsk och krm utan gram räknas som 0 g.
+
+Kcal visas, avrundat till närmaste 10, bara när ingredienser med både vikt och kcal är minst 80 % av receptets vikt. Saknas vikten för någon annan ingrediens visar appen "Kcal går inte att räkna än". Fyll alltså i `gram` för rader i dl, msk, st och liknande, och koppla dem till ett livsmedel eller en märkesvara.
+
+I receptvyn går det att välja 1 till 12 personer. Alla mängder räknas om och avrundas läsbart (`skalaRecept`): dl och msk till en decimal, tsk, krm och st till närmaste halva och g till hela gram.
 
 ## I appen
 

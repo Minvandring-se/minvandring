@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import { importeraReceptkatalog, receptSeedSql, varunyckel } from './receptkatalogimport'
 
 const RECEPT = 'id,namn,maltid,portioner,kok_kravs,torkning_hemma,beskrivning,mangder,inspirerat_av,inspirerat_av_url,status'
-const INGR = 'recept_id,ordning,ingrediens,mangd,enhet,packas,kommentar,livsmedel_nummer,varukatalog'
+const INGR = 'recept_id,ordning,ingrediens,mangd,enhet,packas,kommentar,livsmedel_nummer,varukatalog,gram'
 const STEG = 'recept_id,steg_nr,var,steg,tid_min'
 const kopplingar = { livsmedel: new Set([702]), varor: new Set([varunyckel('Pågen', 'Gifflar')]) }
 
@@ -12,7 +12,7 @@ const grot = 'grot,Gröt med kanel,frukost,1,ja,nej,"Varm gröt, snabbt.",egna,N
 describe('importen av recepten', () => {
   it('läser ett recept med ingredienser och steg', () => {
     const imp = importeraReceptkatalog(
-      filer([grot], ['grot,1,Havregryn,6,msk,hemma,,702,', 'grot,2,Gifflar,1,st,separat,,,Pågen | Gifflar', 'grot,3,Vatten,3,dl,pa_plats,,,'], ['grot,1,turen,Koka upp vattnet.,5–10']),
+      filer([grot], ['grot,1,Havregryn,6,msk,hemma,,702,,', 'grot,2,Gifflar,1,st,separat,,,Pågen | Gifflar,', 'grot,3,Vatten,3,dl,pa_plats,,,,'], ['grot,1,turen,Koka upp vattnet.,5–10']),
       kopplingar,
     )
     expect(imp.fel).toEqual([])
@@ -29,7 +29,7 @@ describe('importen av recepten', () => {
     const imp = importeraReceptkatalog(
       filer(
         [grot, 'Fel id,X,brunch,0,kanske,nej,,egna,,http://x,klar'],
-        ['grot,1,Havregryn,6,liter,hemma,,999,', 'grot,2,Salt,,tsk,hemma,,,', 'okant,1,X,1,g,hemma,,,', 'grot,3,Gifflar,1,st,hemma,,,Pågen Gifflar'],
+        ['grot,1,Havregryn,6,liter,hemma,,999,,', 'grot,2,Salt,,tsk,hemma,,,,', 'okant,1,X,1,g,hemma,,,,', 'grot,3,Gifflar,1,st,hemma,,,Pågen Gifflar,'],
         ['grot,1,ute,Koka.,snart'],
       ),
       kopplingar,
@@ -60,7 +60,7 @@ describe('importen av recepten', () => {
   })
 
   it('skriver seed som tar bort gamla recept och slår upp märkesvaran på märke och namn', () => {
-    const imp = importeraReceptkatalog(filer([grot], ['grot,1,Gifflar,1,st,separat,,,Pågen | Gifflar'], ['grot,1,hemma,Packa maten.,']), kopplingar)
+    const imp = importeraReceptkatalog(filer([grot], ['grot,1,Gifflar,1,st,separat,,,Pågen | Gifflar,'], ['grot,1,hemma,Packa maten.,']), kopplingar)
     const sql = receptSeedSql(imp)
     expect(sql).toContain("delete from public.receptkatalog where id not in ('grot');")
     expect(sql).toContain('on conflict (id) do update set')
@@ -68,5 +68,15 @@ describe('importen av recepten', () => {
     expect(sql).toContain("'Varm gröt, snabbt.'")
     // Hittas varan inte stoppas migreringen i stället för att kopplingen blir tom.
     expect(sql).toContain('where varukatalog_id is not null) <> 1 then')
+  })
+
+  it('läser gram, frivilligt, och stoppar gram som inte behövs eller inte är ett tal', () => {
+    const ok = importeraReceptkatalog(filer([grot], ['grot,1,Havregryn,6,msk,hemma,,702,,90', 'grot,2,Salt,0.5,tsk,hemma,,,,'], ['grot,1,turen,Koka.,']), kopplingar)
+    expect(ok.fel).toEqual([])
+    expect(ok.ingredienser.map((i) => i.gram)).toEqual([90, null])
+    expect(receptSeedSql(ok)).toContain("'hemma', null, 90, 702")
+    const fel = importeraReceptkatalog(filer([grot], ['grot,1,Havregryn,90,g,hemma,,702,,90', 'grot,2,Salt,0.5,tsk,hemma,,,,ett'], ['grot,1,turen,Koka.,']), kopplingar)
+    expect(fel.fel.join(' ')).toContain('gram behövs inte när enheten är g eller kg')
+    expect(fel.fel.join(' ')).toContain('gram ska vara ett tal')
   })
 })
