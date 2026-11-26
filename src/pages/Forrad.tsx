@@ -92,6 +92,10 @@ export function Forrad() {
   const [oppet, setOppet] = useState<Oppet>(null)
   // Det senaste som lades till, från katalogen eller som egen sak, så att man kan gå vidare och ändra antal eller anteckning.
   const [tillagd, setTillagd] = useState<{ sakId: string } | null>(null)
+  // Det som har lagts till sedan rutan Lägg till utrustning öppnades. Rutan står kvar tills man trycker Klar.
+  const [iRutan, setIRutan] = useState<string[]>([])
+  // Fler än en sak lades till i rutan. Då visas antalet i stället för namnet.
+  const [flera, setFlera] = useState<number | null>(null)
 
   // Räknas upp när något har sparats eller tagits bort, så att listan hämtas igen.
   const [omgang, setOmgang] = useState(0)
@@ -113,6 +117,7 @@ export function Forrad() {
   function klar() {
     setOppet(null)
     setTillagd(null)
+    setFlera(null)
     hamtaOm()
   }
 
@@ -134,7 +139,16 @@ export function Forrad() {
   const tillagdNamn = tillagd ? alla.find((s) => s.id === tillagd.sakId)?.namn : undefined
   const oppnaSok = (kategori?: KategoriNyckel, underkategori?: UnderkategoriNyckel) => {
     setTillagd(null)
+    setFlera(null)
+    setIRutan([])
     setOppet({ sok: true, kategori, underkategori })
+  }
+  /** Stänger Lägg till utrustning och visar det som lades till: namnet på en sak, eller antalet. */
+  const stangSok = () => {
+    setOppet(null)
+    if (iRutan.length === 1) setTillagd({ sakId: iRutan[0] })
+    else if (iRutan.length > 1) setFlera(iRutan.length)
+    setIRutan([])
   }
   const sok = oppet !== null && 'sok' in oppet ? oppet : null
   const laggTillKnapp = (
@@ -156,20 +170,31 @@ export function Forrad() {
       {saker && saker.length > 0 && <Sokdel val={val} onVal={setVal} saker={saker} />}
 
       {sok && (
-        <Panel etikett="Lägg till utrustning" rubrik={<h2 className="text-2xl">Lägg till utrustning</h2>} onStang={() => setOppet(null)}>
+        <Panel
+          etikett="Lägg till utrustning"
+          rubrik={<h2 className="text-2xl">Lägg till utrustning</h2>}
+          onStang={stangSok}
+          fot={
+            <Button className="w-full" variant={iRutan.length > 0 ? 'default' : 'outline'} onClick={stangSok}>
+              {iRutan.length === 0 ? 'Stäng' : iRutan.length === 1 ? 'Klar, 1 sak tillagd' : `Klar, ${iRutan.length} saker tillagda`}
+            </Button>
+          }
+        >
           <ProduktSok
             // En tom ruta eller en knapp under Fyll på fler kategorier öppnar dialogen med rätt kategori vald.
             key={`${sok.kategori ?? 'alla'}|${sok.underkategori ?? ''}`}
             startKategori={sok.kategori}
             startUnderkategori={sok.underkategori}
             finnsRedan={finnsRedan}
+            forrad={alla}
             onTillagd={(sakId) => {
-              setTillagd({ sakId })
-              setOppet(null)
+              setIRutan((r) => [...r, sakId])
               hamtaOm()
             }}
             onEgen={(soktext, kategori, underkategori) => {
               setTillagd(null)
+              setFlera(iRutan.length > 0 ? iRutan.length : null)
+              setIRutan([])
               setOppet({ ny: { namn: soktext, kategori, underkategori } })
             }}
           />
@@ -185,6 +210,12 @@ export function Forrad() {
           }}
           onAvbryt={() => oppnaSok()}
         />
+      )}
+
+      {flera !== null && (
+        <div role="status" className="rounded-md bg-hjortron-soft px-4 py-2 text-sm text-hjortron-strong">
+          <p className="flex min-h-11 items-center font-medium">{antalText(flera)} ligger nu i ditt förråd.</p>
+        </div>
       )}
 
       {tillagd && dold && (
