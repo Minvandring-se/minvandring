@@ -2,6 +2,7 @@ import { Check } from 'lucide-react'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
 import {
   KATEGORIER,
   MAX_ANTAL,
@@ -17,6 +18,8 @@ import {
   type Forval,
   type SakFalt,
 } from '@/lib/forrad'
+import { konEtikett, storlekarFor, storlekHjalp, viktstorlek } from '@/lib/kladstorlek'
+import { arKlader } from '@/lib/produktegenskaper'
 import { supabase } from '@/lib/supabase'
 import type { Forradssak } from '@/lib/typer'
 import { tolkaVikt, visaTolkning } from '@/lib/viktfalt'
@@ -44,6 +47,9 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
   const [falt, setFalt] = useState<SakFalt>(() => faltFran(sak, forval))
   const [arbetar, setArbetar] = useState(false)
   const [fel, setFel] = useState('')
+  // Storleken går att välja för kläder ur katalogen, där appen vet vilken storlek vikten gäller.
+  const plagg = sak?.produkter && arKlader(sak.produkter.underkategori) ? sak.produkter : null
+  const [storlek, setStorlek] = useState(sak?.storlek ?? '')
 
   useEffect(() => namnFalt.current?.focus(), [])
 
@@ -63,7 +69,11 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
     setFel('')
     // Id:t läses tillbaka, så att förrådet kan säga till om ett filter döljer en ny sak.
     const { data, error } = sak
-      ? await supabase.from('forradssaker').update(tolkad.varden).eq('id', sak.id).select('id')
+      ? await supabase
+          .from('forradssaker')
+          .update(plagg ? { ...tolkad.varden, storlek: storlek || null } : tolkad.varden)
+          .eq('id', sak.id)
+          .select('id')
       : // En sak från katalogen sparas med sin produkt, som när man väljer produkten i Lägg till utrustning.
         await supabase
           .from('forradssaker')
@@ -189,6 +199,26 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
           />
         </div>
       </div>
+
+      {plagg && (
+        <div className="space-y-1">
+          <label htmlFor={`${id}-storlek`} className="block text-sm font-medium">
+            Din storlek <span className="font-normal text-muted-foreground">(frivillig)</span>
+          </label>
+          <Select id={`${id}-storlek`} value={storlek} aria-describedby={`${id}-storlekhjalp`} onChange={(e) => setStorlek(e.target.value)}>
+            <option value="">Ingen storlek</option>
+            {/* En storlek som sparats men inte finns i listan visas ändå, så att den inte försvinner. */}
+            {[...new Set([...storlekarFor(viktstorlek(plagg.egenskaper), konEtikett(plagg.egenskaper)), ...(sak?.storlek ? [sak.storlek] : [])])].map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </Select>
+          <p id={`${id}-storlekhjalp`} aria-live="polite" className="text-sm text-muted-foreground">
+            {storlekHjalp(viktstorlek(plagg.egenskaper), storlek || null)}
+          </p>
+        </div>
+      )}
 
       {/* Två kryssrutor som utesluter varandra. Ingen ikryssad betyder att saken ligger i ryggsäcken. */}
       <div className="space-y-1">
