@@ -31,7 +31,7 @@ export function Delval<T extends string>({
           aria-pressed={d.nyckel === vald}
           onClick={() => onValj(d.nyckel)}
           className={cn(
-            'min-h-11 flex-1 rounded-md px-2 text-sm transition-colors focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
+            'min-h-11 min-w-0 flex-auto rounded-md px-1 text-[0.8125rem] transition-colors sm:px-2 sm:text-sm focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
             d.nyckel === vald ? 'bg-card font-semibold text-primary shadow-soft' : 'text-muted-foreground hover:text-foreground',
           )}
         >

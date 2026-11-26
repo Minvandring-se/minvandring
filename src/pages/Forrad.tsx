@@ -16,7 +16,7 @@ import { Button } from '@/components/ui/button'
 import { Bricka } from '@/components/ui/bricka'
 import { Flikrad } from '@/components/ui/flikrad'
 import { KommerSnart, KommerSnartEtikett } from '@/components/ui/kommerSnart'
-import { SokFalt } from '@/components/ui/sokfalt'
+import { AktivaFilter, Filterpanel, Sokrad, Sokruta, type AktivtFilter } from '@/components/ui/sokruta'
 import { Select } from '@/components/ui/select'
 import { Panel } from '@/components/ui/panel'
 import { Sektion } from '@/components/ui/sektion'
@@ -154,7 +154,7 @@ export function Forrad() {
       {/* I mobil ligger den mörka rutan direkt under rubriken, före filtren. På dator står den i översikten. */}
       {saker && saker.length > 0 && <HelaForradet summa={summa} granskade={antalGranskade(alla)} className="lg:hidden" />}
 
-      {saker && saker.length > 0 && <Forradsdelar antal={saker.length} />}
+      {saker && saker.length > 0 && <Sokdel val={val} onVal={setVal} saker={saker} />}
 
       {sok && (
         <Panel etikett="Lägg till utrustning" rubrik={<h2 className="text-2xl">Lägg till utrustning</h2>} onStang={() => setOppet(null)}>
@@ -345,18 +345,59 @@ interface Radhjalp {
   onAvbryt: () => void
 }
 
-/** Sök, kategori och underkategori, sortering och val mellan lista och rutnät. */
+/**
+ * Sökrutan för förrådet: "Hitta i förrådet", förrådets flikar under rutan och Filter till höger. Kategori och
+ * underkategori ligger i filterpanelen, och de som är valda visas som etiketter med kryss.
+ */
+function Sokdel({ val, onVal, saker }: { val: Listval; onVal: (val: Listval) => void; saker: Forradssak[] }) {
+  const [filterOppet, setFilterOppet] = useState(false)
+  const rensa = () => onVal(valjKategori(val, '', ''))
+  const underetikett = underkategorivalIForradet(saker, val.kategori, val.underkategori).find((u) => u.nyckel === val.underkategori)?.etikett
+  const aktiva: AktivtFilter[] = val.kategori
+    ? [
+        { nyckel: 'kategori', text: kategoriFor(val.kategori).etikett, onTaBort: rensa },
+        ...(val.underkategori ? [{ nyckel: 'underkategori', text: underetikett ?? val.underkategori, onTaBort: () => onVal(valjKategori(val, val.kategori, '')) }] : []),
+      ]
+    : []
+  return (
+    <div className="space-y-3">
+      <Sokruta
+        rubrik="Hitta i förrådet"
+        rubrikniva={2}
+        rad={`${antalText(saker.length)} i förrådet.`}
+        sok={val.sok}
+        onSok={(sok) => onVal({ ...val, sok })}
+        etikett="Sök i förrådet"
+        placeholder="Till exempel sovsäck"
+      />
+      <Sokrad flikar={<Forradsdelar antal={saker.length} />} antalFilter={aktiva.length} onFilter={() => setFilterOppet(true)} />
+      <AktivaFilter filter={aktiva} onRensaAllt={rensa} />
+      {filterOppet && (
+        <Filterpanel visa="Visa sakerna" onStang={() => setFilterOppet(false)} harFilter={aktiva.length > 0} onRensaAllt={rensa}>
+          <Kategorifilter
+            kategorier={kategorivalIForradet(saker, val.kategori)}
+            underkategorier={underkategorivalIForradet(saker, val.kategori, val.underkategori)}
+            kategori={val.kategori}
+            underkategori={val.underkategori}
+            onAndra={(kategori, underkategori) => onVal(valjKategori(val, kategori, underkategori))}
+          />
+        </Filterpanel>
+      )}
+    </div>
+  )
+}
+
+/** Raden precis ovanför listan: sortering, val mellan lista och rutnät, och hur mycket som visas när ett filter är på. */
 function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: Listval) => void; saker: Forradssak[]; visas: number }) {
   const id = useId()
   return (
-    <section aria-label="Sök och sortera" className="space-y-3">
-      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-end">
-        <SokFalt etikett="Sök i förrådet" varde={val.sok} onAndra={(sok) => onVal({ ...val, sok })} />
-        <div className="space-y-1">
-          <label htmlFor={`${id}-sortera`} className="block text-sm font-medium">
+    <section aria-label="Sortera och visa" className="space-y-2">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div className="flex items-center gap-2">
+          <label htmlFor={`${id}-sortera`} className="text-sm text-muted-foreground">
             Sortera
           </label>
-          <Select id={`${id}-sortera`} value={val.sortering} onChange={(e) => onVal({ ...val, sortering: e.target.value as Listval['sortering'] })}>
+          <Select id={`${id}-sortera`} className="w-auto" value={val.sortering} onChange={(e) => onVal({ ...val, sortering: e.target.value as Listval['sortering'] })}>
             {SORTERINGAR.map((s) => (
               <option key={s.varde} value={s.varde}>
                 {s.etikett}
@@ -364,7 +405,7 @@ function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: List
             ))}
           </Select>
         </div>
-        <div role="group" aria-label="Visning" className="flex w-fit gap-1 self-end rounded-lg bg-muted p-1">
+        <div role="group" aria-label="Visning" className="flex w-fit gap-1 rounded-lg bg-muted p-1">
           {(
             [
               ['lista', 'Lista', List],
@@ -384,14 +425,6 @@ function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: List
           ))}
         </div>
       </div>
-
-      <Kategorifilter
-        kategorier={kategorivalIForradet(saker, val.kategori)}
-        underkategorier={underkategorivalIForradet(saker, val.kategori, val.underkategori)}
-        kategori={val.kategori}
-        underkategori={val.underkategori}
-        onAndra={(kategori, underkategori) => onVal(valjKategori(val, kategori, underkategori))}
-      />
 
       {/* Säger hur mycket av förrådet som visas, så att det märks att ett filter är på. Tar ingen plats utan filter. */}
       <div className={cn('flex flex-wrap items-center gap-x-4', harFilter(val) && 'min-h-11')}>

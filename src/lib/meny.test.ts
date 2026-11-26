@@ -35,7 +35,15 @@ describe('menyns sidor', () => {
   })
 
   it('har fem flikar i mobil och bladen Minnen och Mer', () => {
-    expect(FLIKAR.map((f) => f.namn)).toEqual(['Turer', 'Mat', 'Förråd', 'Minnen', 'Mer'])
+    expect(FLIKAR.map((f) => f.namn)).toEqual(['Mina turer', 'Matplanering', 'Mitt förråd', 'Minnen', 'Mer'])
+    // Sidorna heter likadant i mobilens meny som i sidomenyn.
+    for (const f of FLIKAR) if (f.typ === 'sida') expect(f.namn).toBe(SIDOR[f.sida].namn)
+    // Bladen har sidorna i samma ordning som sidomenyn.
+    const ordning = MENYGRUPPER.flatMap((g) => g.sidor)
+    for (const blad of Object.values(BLAD)) {
+      const plats = blad.filter((s) => ordning.includes(s)).map((s) => ordning.indexOf(s))
+      expect(plats).toEqual([...plats].sort((a, b) => a - b))
+    }
     expect(BLAD.minnen).toEqual(['dagbok', 'kom-ihag', 'statistik'])
     expect(BLAD.mer).toEqual(['packlistor', 'utrustning', 'kompisar', 'installningar'])
   })
@@ -68,7 +76,7 @@ describe('aktivSida och flikAktiv', () => {
       ['Skafferi', '/matplanering/skafferi'],
       ['Tips', '/matplanering/tips'],
     ])
-    const mat = FLIKAR.find((f) => f.namn === 'Mat')!
+    const mat = FLIKAR.find((f) => f.namn === 'Matplanering')!
     for (const adress of ['/matplanering', '/matplanering/katalog', '/matplanering/recept', '/matplanering/skafferi/', '/matplanering/tips']) {
       expect(aktivSida(adress)).toBe('matplanering')
       expect(flikAktiv(mat, aktivSida(adress))).toBe(true)
