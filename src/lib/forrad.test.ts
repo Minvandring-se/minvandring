@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   KATEGORIER,
   antalGranskade,
+  rensaFraga,
   arKategori,
   arUnderkategori,
   storstaVinsten,
@@ -624,5 +625,15 @@ describe('antalGranskade', () => {
 
   it('räknar inte en sak med egen vikt', () => {
     expect(antalGranskade([fran(katalogprodukt({ granskad: '2026-11-01' }), 1750)])).toBe(0)
+  })
+})
+
+describe('rensaFraga', () => {
+  it('säger hur många som tas bort, och att det bara är de som visas när filtret döljer några', () => {
+    const slut = 'ur ditt förråd? Turer där de redan ligger i packlistan påverkas inte.'
+    expect(rensaFraga('Kläder', 7, 7)).toBe(`Ta bort alla 7 saker i kläder ${slut}`)
+    expect(rensaFraga('Kläder', 1, 1)).toBe(`Ta bort den enda saken i kläder ${slut}`)
+    expect(rensaFraga('Kläder', 3, 7)).toBe(`Ta bort de 3 saker som visas i kläder ${slut}`)
+    expect(rensaFraga('Kläder', 1, 7)).toBe(`Ta bort den sak som visas i kläder ${slut}`)
   })
 })

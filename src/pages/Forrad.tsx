@@ -12,6 +12,7 @@ import { DittKok } from '@/components/forrad/DittKok'
 import { Granskad } from '@/components/forrad/Granskad'
 import { Kategorifilter } from '@/components/forrad/Kategorifilter'
 import { ProduktSok } from '@/components/forrad/ProduktSok'
+import { RensaKategori } from '@/components/forrad/RensaKategori'
 import { SakFormular } from '@/components/forrad/SakFormular'
 import { TaBortSak } from '@/components/forrad/TaBortSak'
 import { Button } from '@/components/ui/button'
@@ -535,6 +536,14 @@ function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; 
             </li>
           ))}
         </ul>
+      )}
+      {lista.length > 0 && (
+        <RensaKategori
+          etikett={kategori.etikett}
+          ids={lista.map((s) => s.id)}
+          iKategorin={radhjalp.alla.filter((s) => s.kategori === kategori.nyckel).length}
+          onRensad={radhjalp.onAndrad}
+        />
       )}
     </Sektion>
   )

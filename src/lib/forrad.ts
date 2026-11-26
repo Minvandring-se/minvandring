@@ -628,3 +628,12 @@ export function flerKategorier(saker: readonly Forradssak[]): { nyckel: Kategori
   const finns = new Set(saker.map((s) => kategoriFor(s.kategori).nyckel))
   return FLER_KATEGORIER.filter((k) => !finns.has(k)).map((nyckel) => ({ nyckel, etikett: kategoriFor(nyckel).etikett }))
 }
+
+/**
+ * Frågan innan alla saker i en kategori tas bort ur förrådet. Döljer sök eller filter några av kategorins saker
+ * gäller det bara de som visas, och det sägs i frågan.
+ */
+export function rensaFraga(etikett: string, visas: number, iKategorin: number): string {
+  const vilka = visas === iKategorin ? (visas === 1 ? 'den enda saken' : `alla ${visas} saker`) : visas === 1 ? 'den sak som visas' : `de ${visas} saker som visas`
+  return `Ta bort ${vilka} i ${etikett.toLowerCase()} ur ditt förråd? Turer där de redan ligger i packlistan påverkas inte.`
+}
