@@ -22,6 +22,7 @@ const VARIANT: Record<Variant, string> = {
 export function Sektion({
   rubrik,
   overrubrik,
+  ikon,
   atgard,
   etikett,
   kommerSnart = false,
@@ -34,6 +35,8 @@ export function Sektion({
   rubrik: string
   /** En kort rad ovanför rubriken, till exempel vilken tur något kommer från. */
   overrubrik?: ReactNode
+  /** En ikon före rubriken, till exempel en av MinVandrings egna ikoner. Dekor. */
+  ikon?: ReactNode
   /** En länk eller knapp till höger om rubriken. */
   atgard?: ReactNode
   /** En egen etikett bredvid rubriken. */
@@ -61,6 +64,7 @@ export function Sektion({
             </p>
           )}
           <div className="flex flex-wrap items-center gap-x-2.5 gap-y-1">
+            {ikon}
             <Rubrik id={id} className={cn('min-w-0 text-xl wrap-anywhere lg:text-2xl 3xl:text-[1.75rem]', variant === 'hjortron' && 'text-hjortron-strong', rubrikKlass)}>
               {rubrik}
             </Rubrik>

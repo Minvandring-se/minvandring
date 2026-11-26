@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils'
  */
 export function TomtLage({
   bild,
+  ikon,
   rubrik,
   text,
   knapp,
@@ -15,6 +16,8 @@ export function TomtLage({
   className,
 }: {
   bild?: ReactNode
+  /** En ikon i det kompakta läget, till exempel en av MinVandrings egna ikoner. Dekor. */
+  ikon?: ReactNode
   rubrik?: string
   text?: ReactNode
   knapp?: ReactNode
@@ -24,6 +27,7 @@ export function TomtLage({
   if (kompakt)
     return (
       <div className={cn('space-y-3 rounded-lg border border-dashed border-border px-5 py-6', className)}>
+        {ikon}
         {rubrik && <h3 className="text-lg">{rubrik}</h3>}
         {text && <p className="max-w-prose text-muted-foreground">{text}</p>}
         {knapp && <div>{knapp}</div>}

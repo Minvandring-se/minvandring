@@ -1,4 +1,5 @@
 import { Plus, X } from 'lucide-react'
+import { Ikon } from '@/components/ikoner/Ikon'
 import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
 import { useLocation, useNavigate, useSearchParams } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
@@ -116,7 +117,7 @@ export function MinaTurer() {
           {nasta && <NastaTurKort tur={nasta} idag={idag} />}
 
           {!nasta && (
-            <TomtLage kompakt text="Du har ingen kommande tur. Skapa en ny tur när det är dags att planera nästa." />
+            <TomtLage kompakt ikon={<Ikon namn="fjall" storlek={32} className="text-primary" />} text="Du har ingen kommande tur. Skapa en ny tur när det är dags att planera nästa." />
           )}
 
           {fler.visa && (

@@ -13,7 +13,8 @@
     "matkatalog": "node scripts/matkatalog.mjs",
     "varukatalog": "node scripts/varukatalog.mjs",
     "livsmedel": "node scripts/livsmedel.mjs",
-    "receptkatalog": "node scripts/receptkatalog.mjs"
+    "receptkatalog": "node scripts/receptkatalog.mjs",
+    "ikoner": "node scripts/ikoner.mjs"
   },
   "dependencies": {
     "@fontsource-variable/fraunces": "^5.3.0",

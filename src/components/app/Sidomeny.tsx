@@ -1,7 +1,7 @@
 import { Link } from 'react-router'
 import { DinaTurer } from '@/components/app/DinaTurer'
 import { Skelett } from '@/components/app/Laddar'
-import { MENYIKON } from '@/components/app/menyIkoner'
+import { Menyikon } from '@/components/app/Menyikon'
 import { Namnbricka } from '@/components/app/Namnbricka'
 import { Logotyp } from '@/components/Logotyp'
 import { Sidfot } from '@/components/Sidfot'
@@ -15,7 +15,6 @@ const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 /** En rad i sidomenyn: ikon, namn och "Snart" för sidor som inte är byggda. Aktiv sida får en rostfärgad markering. */
 function Menyrad({ sida, aktiv }: { sida: Sida; aktiv: boolean }) {
   const { namn, till, byggd } = SIDOR[sida]
-  const Ikon = MENYIKON[sida]
   return (
     <Link
       to={till}
@@ -28,7 +27,7 @@ function Menyrad({ sida, aktiv }: { sida: Sida; aktiv: boolean }) {
       )}
     >
       {aktiv && <span aria-hidden className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent" />}
-      <Ikon className="size-5 shrink-0 3xl:size-[1.375rem]" aria-hidden strokeWidth={aktiv ? 2.25 : 1.75} />
+      <Menyikon sida={sida} storlek={24} aktiv={aktiv} className="shrink-0" />
       {/* Långa namn som Vandringskompisar avstavas, så att de inte går in under "Snart". */}
       <span className="min-w-0 flex-1 hyphens-auto wrap-break-word">{namn}</span>
       {!byggd && <Snart />}

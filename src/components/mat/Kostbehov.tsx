@@ -1,4 +1,5 @@
 import { ChevronDown, Lock } from 'lucide-react'
+import { Ikon } from '@/components/ikoner/Ikon'
 import { useId, useState, type FormEvent } from 'react'
 import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
@@ -52,7 +53,10 @@ export function Kostbehov({
           className="flex min-h-14 w-full items-start gap-3 rounded-ruta px-4 py-3 text-left focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring sm:px-5"
         >
           <span className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
-            <span className="shrink-0 pt-0.5 font-semibold">Kostbehov</span>
+            <span className="flex shrink-0 items-center gap-2 pt-0.5 font-semibold">
+              <Ikon namn="allergi" className="text-primary" />
+              Kostbehov
+            </span>
             <span id={`${id}-sammanfattning`} className="flex min-w-0 flex-col gap-1.5 font-normal">
               {medBehov.length > 0 && (
                 <span className="flex flex-wrap gap-1.5">

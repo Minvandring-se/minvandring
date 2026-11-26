@@ -1,4 +1,5 @@
-import { ChevronDown, Dog, Plus, UserPlus, X } from 'lucide-react'
+import { ChevronDown, Plus, UserPlus, X } from 'lucide-react'
+import { Ikon } from '@/components/ikoner/Ikon'
 import { useEffect, useId, useState, type FormEvent } from 'react'
 import { useLocation } from 'react-router'
 import { Namnbricka } from '@/components/app/Namnbricka'
@@ -98,6 +99,7 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
   return (
     <Sektion
       rubrik="Deltagare"
+      ikon={<Ikon namn="deltagare" storlek={28} className="text-primary" />}
       atgard={
         farBjudaIn && (
           <Button variant="outline" aria-expanded={bjuderIn} aria-controls={`${faltId}-inbjudan`} onClick={() => setBjuderIn((b) => !b)}>
@@ -124,7 +126,7 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
             <li key={d.id} className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-1 py-2 sm:flex-nowrap">
               {d.typ === 'hund' ? (
                 <span className="inline-flex size-9 shrink-0 items-center justify-center">
-                  <Dog className="size-5 text-primary" role="img" aria-label="Hund" />
+                  <Ikon namn="hund" storlek={28} etikett="Hund" className="text-primary" />
                 </span>
               ) : (
                 // Profilbilden när den finns, annars bokstaven. Personer utan konto har alltid bokstaven.

@@ -1,3 +1,4 @@
+import { Ikon } from '@/components/ikoner/Ikon'
 import { Link } from 'react-router'
 import { Nyckeltal } from '@/components/ui/nyckeltal'
 import { Sektion } from '@/components/ui/sektion'
@@ -29,7 +30,7 @@ function Forslag({ personer, dagar, arstid }: { personer: number; dagar: number;
 export function Gasbehov({ personer, dagar }: { personer: number; dagar: number }) {
   if (gasbehov(personer, dagar) === 0) return null
   return (
-    <Sektion rubrik="Gas till köket">
+    <Sektion rubrik="Gas till köket" ikon={<Ikon namn="gaspatron" storlek={28} className="text-primary" />}>
       <Nyckeltal
         varden={[
           { etikett: 'Sommar', varde: <Forslag personer={personer} dagar={dagar} arstid="sommar" /> },
