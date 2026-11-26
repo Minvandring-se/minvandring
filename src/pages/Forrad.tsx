@@ -13,6 +13,7 @@ import { Granskad } from '@/components/forrad/Granskad'
 import { Kategorifilter } from '@/components/forrad/Kategorifilter'
 import { ProduktSok } from '@/components/forrad/ProduktSok'
 import { SakFormular } from '@/components/forrad/SakFormular'
+import { TaBortSak } from '@/components/forrad/TaBortSak'
 import { Button } from '@/components/ui/button'
 import { Bricka } from '@/components/ui/bricka'
 import { Flikrad } from '@/components/ui/flikrad'
@@ -545,7 +546,7 @@ function Underrad({ sak, kok }: { sak: Forradssak; kok?: string | null }) {
 
 /**
  * En sak i listan eller rutnätet: ikonen för kategorin, namnet, version och kategori, vikten stort till höger och
- * anteckningen på en egen rad i hela kortets bredd. Ett tryck fäller ut katalogens uppgifter, anteckningen och knappen Ändra.
+ * anteckningen på en egen rad i hela kortets bredd. Ett tryck fäller ut katalogens uppgifter, anteckningen och knapparna Ändra och Ta bort.
  */
 function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: Forradssak[]; vy: Vy; onAndra: () => void; onAndrad: () => void }) {
   const id = useId()
@@ -645,7 +646,7 @@ function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: F
   )
 }
 
-/** Den utfällda delen av en sak: katalogens uppgifter med granskningsnivån, din sak och anteckning, Ändra, och det som kommer. */
+/** Den utfällda delen av en sak: katalogens uppgifter med granskningsnivån, din sak och anteckning, Ändra och Ta bort, och det som kommer. */
 function Utfalld({ sak, alla, onAndra, onAndrad }: { sak: Forradssak; alla: Forradssak[]; onAndra: () => void; onAndrad: () => void }) {
   const id = useId()
   const [visaAlla, setVisaAlla] = useState(false)
@@ -727,6 +728,7 @@ function Utfalld({ sak, alla, onAndra, onAndrad }: { sak: Forradssak; alla: Forr
             {aterstaller ? 'Återställer …' : 'Återställ till katalogens vikt'}
           </Button>
         )}
+        <TaBortSak sak={sak} alla={alla} onBorttagen={onAndrad} />
       </div>
       {fel && (
         <p role="alert" className="text-sm text-destructive">
