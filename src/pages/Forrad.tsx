@@ -532,9 +532,12 @@ function Underrad({ sak, kok }: { sak: Forradssak; kok?: string | null }) {
   // Kön och storleken katalogens vikt gäller, för kläder ur katalogen.
   const storlek = kladrad(sak)
   return (
-    <span className="mt-1 flex flex-wrap gap-1.5">
+    // Etiketterna på en rad under namnet. Räcker inte bredden bredvid vikten går de över på nästa rad i stället för att kapas.
+    <span className="flex min-w-0 flex-wrap gap-1.5">
       {[sak.produkter?.version, under, storlek, kok].filter(Boolean).map((text) => (
-        <Bricka key={text}>{text}</Bricka>
+        <Bricka key={text} className="shrink-0 whitespace-nowrap">
+          {text}
+        </Bricka>
       ))}
     </span>
   )
@@ -542,7 +545,7 @@ function Underrad({ sak, kok }: { sak: Forradssak; kok?: string | null }) {
 
 /**
  * En sak i listan eller rutnätet: ikonen för kategorin, namnet, version och kategori, vikten stort till höger och
- * anteckningen på en egen rad. Ett tryck fäller ut katalogens uppgifter, anteckningen och knappen Ändra.
+ * anteckningen på en egen rad i hela kortets bredd. Ett tryck fäller ut katalogens uppgifter, anteckningen och knappen Ändra.
  */
 function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: Forradssak[]; vy: Vy; onAndra: () => void; onAndrad: () => void }) {
   const id = useId()
@@ -550,7 +553,8 @@ function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: F
   const { egen } = viktjamforelse(sak)
   const antalDelar = arKok(sak) ? kokdelar(sak, alla).length : 0
   const kokText = antalDelar > 0 ? `Kök med ${antalDelar} ${antalDelar === 1 ? 'del' : 'delar'}` : kokForDel(sak, alla) ? 'I ditt kök' : null
-  const vikt =
+  // Vikten stort till höger om namnet, och lite mindre när den står under namnet bredvid etiketterna.
+  const vikt = (liten = false) =>
     sak.vikt_g === null ? (
       <span className="text-sm text-muted-foreground italic">
         <Prick />
@@ -558,13 +562,15 @@ function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: F
       </span>
     ) : (
       <span className="block text-right">
-        <span className="block text-xl font-bold tabular-nums">{formateraVikt(sak.antal * sak.vikt_g)}</span>
+        <span className={cn('block font-bold tabular-nums', liten ? 'text-lg' : 'text-xl')}>{formateraVikt(sak.antal * sak.vikt_g)}</span>
         {egen && <span className="block text-xs text-muted-foreground">Egen vikt</span>}
       </span>
     )
+  // Ord bryts aldrig mitt i (ingen break-all och ingen automatisk avstavning). Långa namn bryts mellan ord, högst två rader.
   const namn = (
-    <span className="block text-base font-semibold break-words">
-      {sak.namn}
+    <span className="line-clamp-2 text-base font-semibold [overflow-wrap:normal] hyphens-manual">
+      {/* Hårda bindestreck (U+2011), så att "2-Person" inte delas på två rader. */}
+      {sak.namn.replaceAll('-', '‑')}
       {sak.antal > 1 && <span className="font-normal text-muted-foreground"> × {sak.antal}</span>}
     </span>
   )
@@ -579,6 +585,7 @@ function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: F
       <Kategoriikon kategori={sak.kategori as KategoriNyckel} />
     </span>
   )
+  const pil = <ChevronDown className={cn('mt-1 size-5 shrink-0 text-muted-foreground transition-transform', utfalld && 'rotate-180')} aria-hidden />
 
   return (
     <>
@@ -589,27 +596,41 @@ function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: F
         onClick={() => setUtfalld((u) => !u)}
         className={cn(
           'w-full text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
-          vy === 'lista' ? 'flex min-h-16 items-start gap-3 px-4 py-3' : 'flex h-full flex-col gap-3 p-4',
+          vy === 'lista' ? '@container flex min-h-16 items-start gap-3 px-4 py-3' : 'flex h-full flex-col gap-3 p-4',
         )}
       >
         {vy === 'lista' ? (
           <>
             {ikon}
-            <span className="min-w-0 flex-1">
-              {namn}
-              <Underrad sak={sak} kok={kokText} />
+            {/*
+              Namnet får hela bredden. Är raden bred nog (från 28rem) står vikten och pilen till höger om namnet,
+              annars under namnet bredvid etiketterna. Anteckningen ligger sist i hela bredden.
+            */}
+            <span className="min-w-0 flex-1 space-y-1">
+              <span className="flex items-start gap-3">
+                <span className="min-w-0 flex-1">{namn}</span>
+                <span className="hidden shrink-0 items-start gap-2 @[28rem]:flex">
+                  {vikt()}
+                  {pil}
+                </span>
+              </span>
+              <span className="flex items-start justify-between gap-3">
+                <Underrad sak={sak} kok={kokText} />
+                <span className="flex shrink-0 items-center gap-2 @[28rem]:hidden">
+                  {vikt(true)}
+                  {pil}
+                </span>
+              </span>
               {anteckning}
             </span>
-            <span className="shrink-0">{vikt}</span>
-            <ChevronDown className={cn('mt-2 size-5 shrink-0 text-muted-foreground transition-transform', utfalld && 'rotate-180')} aria-hidden />
           </>
         ) : (
           <>
             <span className="flex items-start justify-between gap-3">
               {ikon}
-              {vikt}
+              {vikt()}
             </span>
-            <span className="min-w-0">
+            <span className="min-w-0 space-y-1">
               {namn}
               <Underrad sak={sak} kok={kokText} />
               {anteckning}

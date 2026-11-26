@@ -58,9 +58,10 @@ export function Packrad({
 
   const namnrad = (
     <span className="flex min-w-0 flex-1 items-baseline justify-between gap-3">
-      <span className={cn('min-w-0 break-words', packad && 'text-muted-foreground line-through')}>
+      {/* Ord bryts aldrig mitt i, och bindestreck är hårda (U+2011), som i förrådet. */}
+      <span className={cn('line-clamp-2 min-w-0 [overflow-wrap:normal]', packad && 'text-muted-foreground line-through')}>
         {rad.antal > 1 && `${rad.antal} × `}
-        {rad.namn}
+        {rad.namn.replaceAll('-', '‑')}
       </span>
       <span className="shrink-0 text-sm tabular-nums">{vikt === null ? 'Ingen vikt' : formateraVikt(vikt)}</span>
     </span>
