@@ -28,6 +28,7 @@ import { personfarger } from '@/lib/personfarg'
 import { kanAndra as rollKanAndra } from '@/lib/roller'
 import { receptbesked, receptMedNamn, receptTillRader, valForRecept } from '@/lib/recept'
 import { bokade, garUtFore, hemma, jamforDatum, ledigaHemma, senastAnvanda, taPaseSjalv, turerFore } from '@/lib/skafferi'
+import { rattForHemma, ratterHemma } from '@/lib/skafferiratter'
 import { lokaltDatum } from '@/lib/turlista'
 import { turdelAdress } from '@/lib/turdelar'
 import type { DeltagareRad, Maltid, Maltidsrad } from '@/lib/typer'
@@ -115,6 +116,8 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
   const { skafferi, laddaOm: laddaOmSkafferi } = useSkafferi()
   const egnaRader = useMemo(() => (skafferi && skafferi !== 'fel' ? skafferi.rader : []), [skafferi])
   const mittDeltagareId = deltagare.find((d) => d.user_id === mittUserId)?.id ?? null
+  // Ens egna rätter hemma, utan dem vars bäst före har passerat vid turens första dag.
+  const egnaRatterHemma = useMemo(() => (skafferi && skafferi !== 'fel' ? ratterHemma(skafferi.ratter, jamforDatum(tur.avresa, lokaltDatum())) : []), [skafferi, tur.avresa])
   // Påsarna i ens andra turer: det man har hemma och som går till en tur som börjar före den här är bokat.
   const andra = useAndraTurer(tur.id, mittUserId)
   const bokat = useMemo(() => bokade(andra.bokningar, turerFore(andra.turer, tur.id, lokaltDatum())), [andra, tur.id])
@@ -369,6 +372,18 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
             const ny = await laggISkafferi(pase.id, egnaRader.find((r) => r.matprodukt_id === pase.id), antal, bastFore)
             if (ny) await laddaOmSkafferi()
             return ny
+          }}
+          ratterHemma={egnaRatterHemma}
+          jamforMed={jamforDatum(tur.avresa, lokaltDatum())}
+          onValjHemma={async (r) => {
+            // Rätten läggs i turen utan ingredienser, så att inget hamnar i inköpslistan, och man bär den själv.
+            const val = rattForHemma(r.namn, plan.ratter, (id) => plan.ingredienser.some((i) => i.ratt_id === id))
+            const rattId = val.typ === 'befintlig' ? val.rattId : await sparaEgenRatt(tur.id, null, val.namn, [])
+            if (!rattId) return false
+            const ok = await laggIMaltid(tur.id, rattId, valjer.dag.dag, valjer.maltid, sortering(valjer.dag.dag, valjer.maltid), mittDeltagareId)
+            if (ok) await lagdTill(valjer.dag.dag, valjer.maltid)
+            else if (val.typ === 'ny') await laddaOm()
+            return ok
           }}
           onValjRecept={async (r) => {
             const rader = receptTillRader(r)

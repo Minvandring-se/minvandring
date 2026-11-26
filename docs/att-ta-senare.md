@@ -238,3 +238,7 @@ Sedan `20261124230000_handlingslista.sql` bygger inköpslistan på `maltider.bar
 ## Matplanen: välja sin egen färg
 
 Färgen per deltagare räknas i dag ut i deltagarnas ordning (`personfarger` i `src/lib/personfarg.ts`, åtta färger i `src/index.css`). Att välja färg själv kräver en kolumn, till exempel `deltagare.farg` med de åtta bokstäverna som tillåtna värden, och att personen själv får ändra den på sin rad. I dag ändrar ingen sin egen rad direkt (se `synka_namn`). Bygg det när någon ber om det.
+
+## Skafferiet: boka och räkna ner egna rätter hemma
+
+En egen rätt hemma (`skafferiratter`) läggs i turen som en egen rätt utan ingredienser, men portionerna hemma räknas inte ner och bokas inte till turen, som påsarna gör (`bokningarFranRader` i `src/lib/skafferi.ts`). Det kräver en koppling från turens rätt till den privata raden, till exempel en kolumn på `ratter` som bara ägaren av raden kan läsa betydelsen av, eller att man räknar ner portionerna själv när turen är planerad. Bygg det när någon ber om det.
