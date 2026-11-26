@@ -5,23 +5,19 @@ import { FORRAD_EXEMPEL } from '@/lib/exempeldata'
 import { formateraVikt, type Forradssumma } from '@/lib/forrad'
 import { cn } from '@/lib/utils'
 
-/** Hela förrådet i den mörkgröna rutan: vikten stort, antal saker, hur många som är granskade och hur många som är utan vikt. */
-export function HelaForradet({ summa, granskade, ljus = false, className }: { summa: Forradssumma; granskade: number; ljus?: boolean; className?: string }) {
-  // Högst ett mörkgrönt kort per sida. I mobil är sökrutan det mörkgröna kortet, så där är det här kortet vitt (ljus).
+/** Hela förrådet i ett vitt kort: vikten stort, antal saker, hur många som är granskade och hur många som är utan vikt. */
+export function HelaForradet({ summa, granskade, className }: { summa: Forradssumma; granskade: number; className?: string }) {
   return (
-    <section
-      aria-labelledby={ljus ? 'hela-forradet-ljus' : 'hela-forradet'}
-      className={cn('rounded-lg p-5 sm:p-6', ljus ? 'border border-border bg-card' : 'bg-yta-stark text-yta-stark-foreground', className)}
-    >
-      <h2 id={ljus ? 'hela-forradet-ljus' : 'hela-forradet'} className={cn('font-sans text-sm font-semibold', ljus ? 'text-muted-foreground' : 'text-hjortron')}>
+    <section aria-labelledby="hela-forradet" className={cn('rounded-lg border border-border bg-card p-5 sm:p-6', className)}>
+      <h2 id="hela-forradet" className="font-sans text-sm font-semibold text-muted-foreground">
         Hela förrådet
       </h2>
-      <p className={cn('mt-1 font-heading text-[52px] leading-none font-semibold tracking-[-0.02em] tabular-nums', ljus && 'text-primary')}>{formateraVikt(summa.viktG)}</p>
-      <ul className={cn('mt-3 space-y-0.5 text-sm', ljus ? 'text-muted-foreground' : 'text-yta-stark-muted')}>
+      <p className="mt-1 font-heading text-[52px] leading-none font-semibold tracking-[-0.02em] text-primary tabular-nums">{formateraVikt(summa.viktG)}</p>
+      <ul className="mt-3 space-y-0.5 text-sm text-muted-foreground">
         <li>{summa.antal === 1 ? '1 sak' : `${summa.antal} saker`}</li>
         {granskade > 0 && (
           <li className="flex items-center gap-1.5">
-            <Check className={cn('size-4 shrink-0', ljus ? 'text-primary' : 'text-hjortron')} aria-hidden />
+            <Check className="size-4 shrink-0 text-primary" aria-hidden />
             {granskade} med vikt granskad mot tillverkaren
           </li>
         )}

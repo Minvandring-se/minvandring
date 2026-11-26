@@ -81,7 +81,7 @@ function antalText(antal: number) {
  * sortering och val mellan lista och rutnät. Saknas någon av de fyra tunga (ryggsäck, tält eller tarp, sovsäck,
  * liggunderlag) visas en tom ruta under dess kategori, och under listan knappar för kategorier man inte har fyllt på.
  * Bara man själv ser sitt förråd. På dator ligger listan till vänster och översikten till höger, där den ligger kvar
- * när man scrollar. I mobil kommer sökrutan direkt under rubriken och översikten, med hela förrådets vikt i ett vitt kort, under listan.
+ * när man scrollar. I mobil kommer sökrutan direkt under rubriken och översikten, med hela förrådets vikt, under listan.
  */
 export function Forrad() {
   useSidtitel('Mitt förråd')
@@ -251,9 +251,8 @@ export function Forrad() {
 
           {/* På dator en egen kolumn till höger som stannar kvar när man scrollar. I mobil efter listan. */}
           <aside aria-label="Översikt" className="space-y-5 lg:sticky lg:top-6">
-            {/* På dator den mörkgröna rutan överst i översikten. I mobil, där sökrutan är sidans mörkgröna kort, ett vitt kort under listan. */}
-            <HelaForradet summa={summa} granskade={antalGranskade(alla)} className="hidden lg:block" />
-            <HelaForradet summa={summa} granskade={antalGranskade(alla)} ljus className="lg:hidden" />
+            {/* Ett vitt kort, eftersom sökrutan är sidans enda mörkgröna yta. Överst i översikten på dator, under listan i mobil. */}
+            <HelaForradet summa={summa} granskade={antalGranskade(alla)} />
             <ViktPerKategori summa={summa} />
             <StorstaVinsten vinst={storstaVinsten(alla)} />
             <Onskelista />
