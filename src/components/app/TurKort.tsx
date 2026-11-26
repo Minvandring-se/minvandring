@@ -6,7 +6,7 @@ import { Namnbrickor } from '@/components/app/Namnbricka'
 import { knappStil } from '@/components/ui/knappStil'
 import { Nyckeltal } from '@/components/ui/nyckeltal'
 import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
-import { ARSTID_ETIKETT, arstidFor, arstidsbild, type Arstid } from '@/lib/arstid'
+import { arstidFor, arstidsbild, type Arstid } from '@/lib/arstid'
 import { avfardEtikett, dagarVarde, datumIntervall, datumrad, deltagareText } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
 
@@ -26,8 +26,7 @@ export interface TurMedDeltagare {
 const FRAN_LISTA = { franLista: true }
 
 /**
- * Bilden för turens årstid. På dator till höger med en mjuk båge i kortets färg över bildens vänstra kant och
- * årstiden som etikett nere till höger. I mobil överst, cirka 200 px hög, och tonar ut nedåt mot texten.
+ * Bilden för turens årstid. På dator till höger med en mjuk båge i kortets färg över bildens vänstra kant. I mobil överst, cirka 200 px hög, och tonar ut nedåt mot texten.
  * Dekorativ, så alt är tomt. Bara det första kortet på sidan laddar bilden direkt.
  */
 function Arstidsbild({ arstid, forst }: { arstid: Arstid; forst: boolean }) {
@@ -49,7 +48,6 @@ function Arstidsbild({ arstid, forst }: { arstid: Arstid; forst: boolean }) {
       </svg>
       {/* I mobil tonar bilden ut nedåt mot textdelen, i kortets färg. */}
       <div aria-hidden className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-card to-transparent md:hidden" />
-      <span className="absolute right-3.5 bottom-3 hidden rounded-full bg-yta-stark/75 px-2.5 py-1 text-xs font-semibold text-pa-bild md:block">{ARSTID_ETIKETT[arstid]}</span>
     </div>
   )
 }

@@ -2,8 +2,6 @@
 
 export type Arstid = 'vinter' | 'var' | 'sommar' | 'host'
 
-export const ARSTID_ETIKETT: Record<Arstid, string> = { vinter: 'Vinter', var: 'Vår', sommar: 'Sommar', host: 'Höst' }
-
 /**
  * Årstiden efter turens första dag (ÅÅÅÅ-MM-DD): vinter december–mars, vår april–maj, sommar juni–augusti och höst
  * september–november. Utan datum, eller med ett datum som inte går att läsa, blir det sommar.
