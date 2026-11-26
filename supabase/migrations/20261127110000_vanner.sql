@@ -36,11 +36,15 @@ create unique index vanforfragningar_en_per_person on public.vanforfragningar (f
 revoke all on public.vanforfragningar from public, anon, authenticated;
 alter table public.vanforfragningar enable row level security;
 
--- En förfrågan till en person (inte till en adress) försvinner när personen raderar sitt konto.
+-- När någon raderar sitt konto: en förfrågan till personen (inte till en adress) försvinner. Personens notiser om
+-- förfrågningar hos andra blir anonyma och dolda i stället för att tas bort, så att ingen kan se på borttagningar i
+-- Realtime vilka adresser personen hade skickat till.
 create function public.vanforfragningar_konto_raderas() returns trigger
 language plpgsql security definer set search_path = '' as $$
 begin
   delete from public.vanforfragningar where till_user_id = old.id and till_epost is null;
+  update public.notiser set fran_user_id = null, vanforfragan_id = null, text = 'En vänförfrågan'
+   where fran_user_id = old.id and typ = 'vanforfragan';
   return old;
 end;
 $$;
@@ -128,6 +132,17 @@ language sql security definer set search_path = '' as $$
    where (nekad is null or nekad <= now() - interval '30 days')
      and (senaste_notis is null or senaste_notis <= now() - interval '1 day');
   delete from public.vanforsok where tid <= now() - interval '1 day';
+$$;
+
+-- Döljer förfrågningarna mellan två som har blivit vänner, åt båda håll, och notiserna om dem. Den som skickade ser
+-- sina rader som förut.
+create function public.dolj_forfragningar_mellan(a uuid, b uuid) returns void
+language sql security definer set search_path = '' as $$
+  update public.vanforfragningar set synlig = false
+   where synlig and ((fran_user_id = a and till_user_id = b) or (fran_user_id = b and till_user_id = a));
+  update public.notiser set vanforfragan_id = null
+   where typ = 'vanforfragan' and vanforfragan_id is not null
+     and ((user_id = a and fran_user_id = b) or (user_id = b and fran_user_id = a));
 $$;
 
 -- Låser paret i transaktionen, så att två som frågar eller svarar samtidigt hanteras en i taget.
@@ -238,8 +253,11 @@ begin
     perform public.las_vanpar(anvandare, mottagare);
   end if;
   insert into public.vanforfragningar (fran_user_id, till_user_id, till_epost) values (anvandare, mottagare, adress)
+  on conflict (fran_user_id, till_epost) where till_epost is not null do nothing
   returning id into ny;
-  perform public.hantera_vanforfragan(ny);
+  if ny is not null then
+    perform public.hantera_vanforfragan(ny);
+  end if;
 end;
 $$;
 
@@ -271,8 +289,8 @@ $$;
 
 -- ─── Svara på en förfrågan ───────────────────────────────────────────────────
 -- Bara mottagaren svarar, och bara på en förfrågan hen ser.
--- Ja: ni blir vänner, den som frågade får en notis och den förfrågan försvinner hos hen. Andra förfrågningar från
--- samma person döljs för mottagaren men finns kvar hos den som skickade.
+-- Ja: ni blir vänner, den som frågade får en notis och den förfrågan försvinner hos hen. Andra förfrågningar mellan
+-- er, åt båda håll, döljs för mottagarna men finns kvar hos dem som skickade.
 -- Nej: förfrågningarna från den personen döljs för mottagaren, och den personen kan inte ge en ny notis på 30
 -- dagar. Den som frågade ser ingen skillnad.
 create function public.svara_vanforfragan(forfragan uuid, ja boolean) returns void
@@ -297,13 +315,14 @@ begin
       values (fran, 'van_godkand', public.profilnamn(anvandare) || ' godkände din vänförfrågan', '/vanner', anvandare);
     end if;
     delete from public.vanforfragningar where id = forfragan;
+    perform public.dolj_forfragningar_mellan(anvandare, fran);
   else
     insert into public.vanparsparr (fran_user_id, till_user_id, nekad) values (fran, anvandare, now())
     on conflict (fran_user_id, till_user_id) do update set nekad = now();
+    update public.vanforfragningar set synlig = false where fran_user_id = fran and till_user_id = anvandare;
+    update public.notiser set vanforfragan_id = null
+     where user_id = anvandare and fran_user_id = fran and typ = 'vanforfragan' and vanforfragan_id is not null;
   end if;
-  update public.vanforfragningar set synlig = false where fran_user_id = fran and till_user_id = anvandare;
-  update public.notiser set vanforfragan_id = null
-   where user_id = anvandare and fran_user_id = fran and typ = 'vanforfragan' and vanforfragan_id is not null;
 end;
 $$;
 
@@ -407,6 +426,7 @@ begin
     return agare;
   end if;
   insert into public.vanskap (user_a, user_b) values (least(anvandare, agare), greatest(anvandare, agare));
+  perform public.dolj_forfragningar_mellan(anvandare, agare);
   if public.far_vannotis(anvandare, agare) then
     insert into public.notiser (user_id, typ, text, lank, fran_user_id)
     values (agare, 'van_via_lank', public.profilnamn(anvandare) || ' blev din vän via din vänlänk', '/vanner', anvandare);
@@ -524,6 +544,7 @@ create policy "profilbilder: läsa sin egen, turkamraters och vänners" on stora
 revoke execute on function
   public.vanforfragningar_konto_raderas(),
   public.ar_vanner(uuid, uuid),
+  public.dolj_forfragningar_mellan(uuid, uuid),
   public.stada_vanner(),
   public.las_vanpar(uuid, uuid),
   public.las_vanforsok(uuid),

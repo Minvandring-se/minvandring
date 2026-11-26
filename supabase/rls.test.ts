@@ -149,6 +149,7 @@ describe('funktionerna i public', () => {
     'public.notiser_bort_med_deltagare()',
     'public.vanforfragningar_konto_raderas()',
     'public.ar_vanner(uuid, uuid)',
+    'public.dolj_forfragningar_mellan(uuid, uuid)',
     'public.stada_vanner()',
     'public.las_vanpar(uuid, uuid)',
     'public.las_vanforsok(uuid)',
@@ -4500,8 +4501,10 @@ describe('vänner', () => {
   const IDA = '00000000-0000-0000-0000-0000000002a9'
   const JON = '00000000-0000-0000-0000-0000000002aa'
   const KIM = '00000000-0000-0000-0000-0000000002ab'
+  const LEO = '00000000-0000-0000-0000-0000000002ac'
+  const MIA = '00000000-0000-0000-0000-0000000002ad'
   const NAMN: Record<string, string> = {
-    [ANNA]: 'Anna', [BO]: 'Bo', [CIA]: 'Cia', [DAN]: 'Dan', [EVA]: 'Eva', [FIA]: 'Fia', [GUS]: 'Gus', [HUGO]: 'Hugo', [IDA]: 'Ida', [JON]: 'Jon', [KIM]: 'Kim',
+    [ANNA]: 'Anna', [BO]: 'Bo', [CIA]: 'Cia', [DAN]: 'Dan', [EVA]: 'Eva', [FIA]: 'Fia', [GUS]: 'Gus', [HUGO]: 'Hugo', [IDA]: 'Ida', [JON]: 'Jon', [KIM]: 'Kim', [LEO]: 'Leo', [MIA]: 'Mia',
   }
   const epost = (id: string) => `${NAMN[id].toLowerCase()}@vanner.se`
 
@@ -4637,12 +4640,14 @@ describe('vänner', () => {
     const [tillEva] = await inkommande(EVA)
     await svara(FIA, tillFia.id, true)
     expect(await antalPar(EVA, FIA)).toBe(1)
-    // Eva ser inte längre Fias förfrågan, eftersom de redan är vänner. Ett ja på den ändrar ingenting.
+    // Fias förfrågan till Eva och notisen om den döljs, så Eva ser bara att Fia godkände.
     expect(await inkommande(EVA)).toEqual([])
-    await svara(EVA, tillEva.id, true)
-    expect(await antalPar(EVA, FIA)).toBe(1)
     expect(await vannotiser(EVA)).toEqual([{ typ: 'van_godkand', text: 'Fia godkände din vänförfrågan', fran_user_id: FIA }])
     expect(await vannotiser(FIA)).toEqual([])
+    await forvantaFel(svara(EVA, tillEva.id, true))
+    expect(await antalPar(EVA, FIA)).toBe(1)
+    // Fia ser fortfarande sin skickade förfrågan, som alla andra.
+    expect(await skickade(FIA)).toEqual([epost(EVA)])
   })
 
   it('båda svarar ja på var sin förfrågan: fortfarande ett par', async () => {
@@ -4651,7 +4656,7 @@ describe('vänner', () => {
       [IDA, JON],
     )
     await svara(JON, r.rows.find((x) => x.fran_user_id === IDA)!.id, true)
-    await svara(IDA, r.rows.find((x) => x.fran_user_id === JON)!.id, true)
+    await forvantaFel(svara(IDA, r.rows.find((x) => x.fran_user_id === JON)!.id, true))
     expect(await antalPar(IDA, JON)).toBe(1)
     expect(await vannotiser(JON)).toEqual([])
     expect(await vannotiser(IDA)).toEqual([{ typ: 'van_godkand', text: 'Jon godkände din vänförfrågan', fran_user_id: JON }])
@@ -4762,7 +4767,7 @@ describe('vänner', () => {
     expect(ihop).toEqual([{ user_id: KIM, namn: 'Kim', turer_ihop: 1 }])
     await skickaTill(JON, KIM)
     expect(await fraga(JON, 'select * from public.vandrat_ihop()')).toEqual([])
-    expect(await skickade(JON)).toEqual(['Kim'])
+    expect(await skickade(JON)).toContain('Kim')
     expect(await vannotiser(KIM)).toEqual([{ typ: 'vanforfragan', text: 'Jon vill bli din vän', fran_user_id: JON }])
     const [f] = await inkommande(KIM)
     await svara(KIM, f.id, true)
@@ -4859,6 +4864,35 @@ describe('vänner', () => {
     expect(await skickade(IDA)).toContain(epost(GUS))
     await db.query('delete from auth.users where id = $1', [GUS])
     expect(await skickade(IDA)).toContain(epost(GUS))
+  })
+
+  it('raderar mottagaren sitt konto försvinner en förfrågan till personen, och kontot går att radera', async () => {
+    await tur(DAN, LEO, 'Dans och Leos tur')
+    await skickaTill(DAN, LEO)
+    expect(await skickade(DAN)).toEqual(['Leo'])
+    await db.query('delete from auth.users where id = $1', [LEO])
+    expect(await skickade(DAN)).toEqual([])
+  })
+
+  it('att bli vän via länken ändrar inte ens skickade förfrågningar, men döljer mottagarens notis', async () => {
+    await skicka(JON, epost(CIA))
+    expect(await vannotiser(CIA)).toContainEqual({ typ: 'vanforfragan', text: 'Jon vill bli din vän', fran_user_id: JON })
+    const forut = await skickadeRader(JON)
+    await bliVan(JON, (await lank(CIA)).kod)
+    expect(await antalPar(JON, CIA)).toBe(1)
+    expect(await skickadeRader(JON)).toEqual(forut)
+    expect((await vannotiser(CIA)).filter((n) => n.typ === 'vanforfragan')).toEqual([])
+    expect(await inkommande(CIA)).toEqual([])
+  })
+
+  it('raderar den som skickade sitt konto blir notisen anonym och dold, men tas inte bort', async () => {
+    await skicka(MIA, epost(KIM))
+    const rader = await allaNotisrader(KIM)
+    await db.query('delete from auth.users where id = $1', [MIA])
+    expect(await allaNotisrader(KIM)).toBe(rader)
+    expect(await vannotiser(KIM)).not.toContainEqual(expect.objectContaining({ typ: 'vanforfragan', fran_user_id: MIA }))
+    const r = await db.query<{ text: string }>(`select text from public.notiser where user_id = $1 and typ = 'vanforfragan' and fran_user_id is null`, [KIM])
+    expect(r.rows.map((x) => x.text)).toEqual(['En vänförfrågan'])
   })
 
   it('allt försvinner med kontot', async () => {
