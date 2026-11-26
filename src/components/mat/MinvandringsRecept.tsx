@@ -61,10 +61,10 @@ export function MinvandringsRecept() {
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visade.map((r) => (
             <li key={r.id}>
-              <Bildkort klickbar lagBild ljusBild={r.bild} className="h-full" bild={<Receptbild recept={r} typ="kort" className="absolute inset-0 size-full" />} textKlass="flex-1 gap-2 px-4 pt-1 pb-4 @2xl:p-6">
+              <Bildkort klickbar bildKlass="aspect-[5/2] @2xl:aspect-auto" ljusBild={r.bild} className="h-full" bild={<Receptbild recept={r} typ="kort" className="absolute inset-0 size-full" />} textKlass="flex-1 gap-2 px-4 pt-1 pb-4 @2xl:p-6">
                 <span className="text-sm text-muted-foreground">{[RECEPTMALTID_ETIKETT[r.maltid], kcalText(r)].filter(Boolean).join(', ')}</span>
-                {/* Länken täcker hela kortet, så att det går att trycka var som helst på det. */}
-                <Link to={receptadress(r.id)} className={cn(tackande, 'font-heading text-lg font-semibold break-words text-primary')}>
+                {/* Länken täcker hela kortet, så att det går att trycka var som helst på det. Själva länken är minst 44 px hög. */}
+                <Link to={receptadress(r.id)} className={cn(tackande, 'flex min-h-11 items-center font-heading text-lg font-semibold break-words text-primary')}>
                   {r.namn}
                 </Link>
                 <Receptbrickor recept={r} />

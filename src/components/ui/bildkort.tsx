@@ -6,7 +6,8 @@ import { cn } from '@/lib/utils'
  * Kortet räknar ut sin form efter sin egen bredd (container query), så samma kort fungerar i en lista och i ett rutnät:
  * - Brett (från 42rem): texten till vänster och bilden till höger, 40 procent av bredden. Textdelen buktar ut över
  *   bildens vänstra kant i en mjuk båge i kortets färg.
- * - Smalt: bilden överst, 200 px hög (120 px i mobil med lagBild), och den tonar ut nedåt mot texten i kortets färg.
+ * - Smalt: bilden överst, 200 px hög (eller med bildKlass, till exempel ett eget format), och den tonar ut nedåt mot texten
+ *   i kortets färg.
  * Kort som går att trycka på (klickbar) lyfts vid hovring och fokus (lyft). Bilden ges som bild och ska fylla sin ruta
  * (absolute inset-0 size-full). Det som ska ligga ovanpå bilden, till exempel knappar, ges som paBilden.
  */
@@ -15,7 +16,7 @@ export function Bildkort({
   paBilden,
   ton = 'kort',
   klickbar = false,
-  lagBild = false,
+  bildKlass,
   ljusBild = false,
   element: Element = 'article',
   className,
@@ -29,11 +30,12 @@ export function Bildkort({
   /** kort: vit yta. stark: den mörkgröna ytan. Bågen och toningen får samma färg som kortet. */
   ton?: 'kort' | 'stark'
   klickbar?: boolean
-  /** Lägre bild i mobil (120 px i stället för 200 px), för listor där fler kort ska synas per skärm. */
-  lagBild?: boolean
+  /** Bildrutans höjd i smalt kort i stället för 200 px, till exempel aspect-[5/2] för receptbilderna. */
+  bildKlass?: string
   /**
    * Bilden har en ljus botten (receptbilderna). I mörkt läge tonas den då inte ut mot det mörka kortet, eftersom
-   * övergången blir ett grumligt band. Bilden slutar i stället med en rak kant.
+   * övergången blir ett grumligt band. Bilden slutar i stället med en rak kant. I ljust läge är toningen kortare, så
+   * att den inte bleker motivets nederkant.
    */
   ljusBild?: boolean
   element?: 'article' | 'section' | 'div'
@@ -54,8 +56,8 @@ export function Bildkort({
         className,
       )}
     >
-      <div className="grid h-full @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className={cn('relative @2xl:order-2 @2xl:h-auto @2xl:min-h-72', lagBild ? 'h-[120px] md:h-[200px]' : 'h-[200px]')}>
+      <div className="grid h-full grid-rows-[auto_1fr] @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @2xl:grid-rows-none">
+        <div className={cn('relative @2xl:order-2 @2xl:h-auto @2xl:min-h-72', bildKlass ?? 'h-[200px]')}>
           {bild}
           <svg
             aria-hidden
@@ -67,7 +69,7 @@ export function Bildkort({
           </svg>
           <div
             aria-hidden
-            className={cn('absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t to-transparent @2xl:hidden', stark ? 'from-yta-stark' : 'from-card', ljusBild && 'mork:hidden')}
+            className={cn('absolute inset-x-0 bottom-0 bg-gradient-to-t to-transparent @2xl:hidden', stark ? 'from-yta-stark' : 'from-card', ljusBild ? 'h-1/5 mork:hidden' : 'h-2/5')}
           />
           {paBilden}
         </div>
