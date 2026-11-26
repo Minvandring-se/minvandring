@@ -159,6 +159,8 @@ describe('funktionerna i public', () => {
     'public.far_vannotis(uuid, uuid)',
     'public.hantera_vanforfragan(uuid)',
     'public.vanlank_agare(text)',
+    'public.skydda_gruppmedlem()',
+    'public.grupper_utan_vanskap()',
   ]
   const forInloggade = [
     'public.ar_medlem(uuid)',
@@ -190,6 +192,7 @@ describe('funktionerna i public', () => {
     'public.mina_skickade()',
     'public.vandrat_ihop()',
     'public.lagg_till_vanner(uuid, uuid[])',
+    'public.spara_grupp(uuid, text, uuid[])',
   ]
 
   it('går inte att anropa utan inloggning', async () => {
@@ -5266,5 +5269,108 @@ describe('vänner i turer', () => {
       `select pg_get_constraintdef(c.oid) as def from pg_constraint c where c.conrelid = 'public.notiser'::regclass and c.contype = 'c' and pg_get_constraintdef(c.oid) like '%typ%'`,
     )
     expect([...r.rows[0].def.matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1])).toEqual([...NOTISTYPER])
+  })
+})
+
+describe('grupper', () => {
+  // Egna användare. Rut är vän med Sam, Tea och Ulf. Sam är också vän med Ulf. Vera är ingens vän.
+  const RUT = '00000000-0000-0000-0000-0000000004a1'
+  const SAM = '00000000-0000-0000-0000-0000000004a2'
+  const TEA = '00000000-0000-0000-0000-0000000004a3'
+  const ULF = '00000000-0000-0000-0000-0000000004a4'
+  const VERA = '00000000-0000-0000-0000-0000000004a5'
+  let fjallganget: string
+
+  const vanner = (a: string, b: string) =>
+    db.query('insert into public.vanskap (user_a, user_b) values (least($1::uuid, $2::uuid), greatest($1::uuid, $2::uuid))', [a, b])
+  const spara = (vem: string, grupp: string | null, namn: string, medlemmar: string[]) =>
+    som(vem, (tx) => tx.query<{ id: string }>('select public.spara_grupp($1, $2, $3) as id', [grupp, namn, medlemmar])).then((r) => r.rows[0].id)
+  const medlemmar = (grupp: string) =>
+    db.query<{ medlem_id: string }>('select medlem_id from public.gruppmedlemmar where grupp_id = $1 order by medlem_id', [grupp]).then((r) => r.rows.map((x) => x.medlem_id))
+  const grupperFor = (vem: string) =>
+    som(vem, (tx) => tx.query<{ namn: string }>('select namn from public.grupper order by namn')).then((r) => r.rows.map((x) => x.namn))
+
+  beforeAll(async () => {
+    await db.query(`insert into auth.users (id, email) values ${[RUT, SAM, TEA, ULF, VERA].map((id) => `('${id}', '${id}@grupper.se')`).join(', ')}`)
+    for (const v of [SAM, TEA, ULF]) await vanner(RUT, v)
+    await vanner(SAM, ULF)
+  })
+
+  it('ägaren sparar en grupp med sina vänner, och andra än vänner hoppas över', async () => {
+    fjallganget = await spara(RUT, null, '  Fjällgänget ', [SAM, TEA, VERA, RUT, SAM])
+    expect(await grupperFor(RUT)).toEqual(['Fjällgänget'])
+    expect(await medlemmar(fjallganget)).toEqual([SAM, TEA].sort())
+  })
+
+  it('en ändring byter namn och ersätter medlemmarna', async () => {
+    expect(await spara(RUT, fjallganget, 'Fjällgänget 2027', [TEA, ULF])).toBe(fjallganget)
+    expect(await grupperFor(RUT)).toEqual(['Fjällgänget 2027'])
+    expect(await medlemmar(fjallganget)).toEqual([TEA, ULF].sort())
+  })
+
+  it('samma namn bara en gång per person, oavsett stora och små bokstäver, och namnet har gränser', async () => {
+    await forvantaFel(spara(RUT, null, 'FJÄLLGÄNGET 2027', [SAM]))
+    await forvantaFel(spara(RUT, null, '   ', [SAM]))
+    await forvantaFel(spara(RUT, null, 'x'.repeat(41), [SAM]))
+    // En annan person får använda samma namn.
+    await spara(SAM, null, 'Fjällgänget 2027', [ULF])
+  })
+
+  it('grupperna är privata: ingen annan ser, ändrar eller tar bort dem, inte ens medlemmarna', async () => {
+    for (const vem of [TEA, ULF, VERA]) {
+      expect(await grupperFor(vem), vem).toEqual([])
+      const m = await som(vem, (tx) => tx.query('select 1 from public.gruppmedlemmar where grupp_id = $1', [fjallganget]))
+      expect(m.rows, vem).toHaveLength(0)
+      const u = await som(vem, (tx) => tx.query(`update public.grupper set namn = 'Kapad' where id = $1`, [fjallganget]))
+      expect(u.affectedRows, vem).toBe(0)
+      const d = await som(vem, (tx) => tx.query('delete from public.grupper where id = $1', [fjallganget]))
+      expect(d.affectedRows, vem).toBe(0)
+    }
+    await forvantaFel(spara(VERA, fjallganget, 'Kapad', []))
+    expect(await grupperFor(RUT)).toEqual(['Fjällgänget 2027'])
+  })
+
+  it('man kan inte lägga in en rad i någon annans grupp eller lägga till någon som inte är ens vän', async () => {
+    await forvantaFel(som(SAM, (tx) => tx.query('insert into public.gruppmedlemmar (grupp_id, medlem_id) values ($1, $2)', [fjallganget, ULF])))
+    await forvantaFel(som(RUT, (tx) => tx.query('insert into public.gruppmedlemmar (grupp_id, medlem_id) values ($1, $2)', [fjallganget, VERA])))
+    await forvantaFel(som(RUT, (tx) => tx.query('insert into public.grupper (id, namn, user_id) values ($1, $2, $3)', [crypto.randomUUID(), 'Annans', SAM])))
+    expect(await medlemmar(fjallganget)).toEqual([TEA, ULF].sort())
+  })
+
+  it('ägaren lägger till en vän och tar bort en medlem direkt', async () => {
+    await som(RUT, (tx) => tx.query('insert into public.gruppmedlemmar (grupp_id, medlem_id) values ($1, $2)', [fjallganget, SAM]))
+    await som(RUT, (tx) => tx.query('delete from public.gruppmedlemmar where grupp_id = $1 and medlem_id = $2', [fjallganget, TEA]))
+    expect(await medlemmar(fjallganget)).toEqual([SAM, ULF].sort())
+  })
+
+  it('högst 50 medlemmar', async () => {
+    await forvantaFel(spara(RUT, null, 'För många', Array.from({ length: 51 }, () => crypto.randomUUID())))
+  })
+
+  it('anon når ingenting', async () => {
+    await forvantaFel(somAnon((tx) => tx.query('select 1 from public.grupper')))
+    await forvantaFel(somAnon((tx) => tx.query('select 1 from public.gruppmedlemmar')))
+    await forvantaFel(somAnon((tx) => tx.query('select public.spara_grupp(null, $1, $2)', ['x', []])))
+  })
+
+  it('en vän som tas bort försvinner ur gruppen, åt båda håll', async () => {
+    const samsGrupp = (await som(SAM, (tx) => tx.query<{ id: string }>('select id from public.grupper'))).rows[0].id
+    expect(await medlemmar(samsGrupp)).toEqual([ULF])
+    await som(ULF, (tx) => tx.query('select public.ta_bort_van($1)', [SAM]))
+    expect(await medlemmar(samsGrupp)).toEqual([])
+    expect(await medlemmar(fjallganget)).toEqual([SAM, ULF].sort())
+  })
+
+  it('att ta bort gruppen tar bort medlemmarna, och allt försvinner med kontot', async () => {
+    const t = await spara(RUT, null, 'Tillfällig', [TEA])
+    await som(RUT, (tx) => tx.query('delete from public.grupper where id = $1', [t]))
+    expect(await medlemmar(t)).toEqual([])
+    // Ulf raderar sitt konto: han försvinner ur Ruts grupp.
+    await db.query('delete from auth.users where id = $1', [ULF])
+    expect(await medlemmar(fjallganget)).toEqual([SAM])
+    // Rut raderar sitt konto: grupperna och medlemmarna försvinner.
+    await db.query('delete from auth.users where id = $1', [RUT])
+    expect((await db.query('select 1 from public.grupper where user_id = $1', [RUT])).rows).toHaveLength(0)
+    expect((await db.query('select 1 from public.gruppmedlemmar where user_id = $1', [RUT])).rows).toHaveLength(0)
   })
 })

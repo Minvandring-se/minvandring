@@ -4,16 +4,19 @@ import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Button } from '@/components/ui/button'
 import { VanVal } from '@/components/vanner/VanVal'
+import { useGrupper } from '@/hooks/useGrupper'
 import { laggTillVannerITur, useMinaVanner } from '@/hooks/useVanner'
+import { valjGrupp } from '@/lib/grupper'
 import { laddfelText } from '@/lib/texter'
 import { tillagdaText, vanfel, vannerUtanfor } from '@/lib/vanner'
 
 /**
- * Lägg till vänner i turen: ens vänner som inte redan är med, att bocka i. De läggs till direkt som redigerare och
- * får en notis. Visas i inbjudan, ovanför länken, för ägare och redigerare.
+ * Lägg till vänner i turen: ens vänner som inte redan är med, att bocka i, eller en hel grupp med ett tryck. De läggs
+ * till direkt som redigerare och får en notis. Visas i inbjudan, ovanför länken, för ägare och redigerare.
  */
 export function LaggTillVannerITur({ turId, medIturen, onAndrad }: { turId: string; medIturen: readonly (string | null)[]; onAndrad: () => void }) {
   const vanner = useMinaVanner(true)
+  const { grupper } = useGrupper()
   const [valda, setValda] = useState<Set<string>>(new Set())
   const [sparar, setSparar] = useState(false)
   const [status, setStatus] = useState<{ ok: boolean; text: string } | null>(null)
@@ -27,6 +30,8 @@ export function LaggTillVannerITur({ turId, medIturen, onAndrad }: { turId: stri
   if (vanner === 'fel') return <p className="text-sm text-destructive">{laddfelText('dina vänner')}</p>
 
   const utanfor = vannerUtanfor(vanner, medIturen)
+  // Grupperna där minst en vän inte redan är med.
+  const valbaraGrupper = Array.isArray(grupper) ? grupper.filter((g) => valjGrupp(g, utanfor).size > 0) : []
 
   async function laggTill() {
     setSparar(true)
@@ -57,6 +62,18 @@ export function LaggTillVannerITur({ turId, medIturen, onAndrad }: { turId: stri
       ) : (
         <>
           <p className="text-sm text-muted-foreground">De läggs till direkt som redigerare och får en notis. De kan alltid lämna turen själva.</p>
+          {valbaraGrupper.length > 0 && (
+            <div className="space-y-1">
+              <p className="text-sm font-medium">Välj en grupp</p>
+              <div className="flex flex-wrap gap-2">
+                {valbaraGrupper.map((g) => (
+                  <Button key={g.id} variant="outline" onClick={() => setValda(valjGrupp(g, utanfor))}>
+                    {g.namn}
+                  </Button>
+                ))}
+              </div>
+            </div>
+          )}
           <VanVal rubrik="Vilka ska med?" vanner={utanfor} valda={valda} onAndra={setValda} />
           <Button disabled={valda.size === 0 || sparar} onClick={() => void laggTill()}>
             {valda.size > 1 ? `Lägg till ${valda.size} vänner` : 'Lägg till'}
