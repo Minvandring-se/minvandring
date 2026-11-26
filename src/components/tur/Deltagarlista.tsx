@@ -5,6 +5,7 @@ import { useLocation } from 'react-router'
 import { Namnbricka } from '@/components/app/Namnbricka'
 import { arProfilbildHamtad } from '@/hooks/useProfilbilder'
 import { Inbjudan } from '@/components/tur/Inbjudan'
+import { LaggTillVannerITur } from '@/components/tur/LaggTillVannerITur'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Sektion } from '@/components/ui/sektion'
@@ -110,9 +111,9 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
       }
     >
       {farBjudaIn && minRoll && (
-        <div id={`${faltId}-inbjudan`} hidden={!bjuderIn} tabIndex={-1} role="group" aria-label="Inbjudan" className="rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
-
-          {/* Länken hämtas först när rutan öppnas. */}
+        <div id={`${faltId}-inbjudan`} hidden={!bjuderIn} tabIndex={-1} role="group" aria-label="Inbjudan" className="space-y-3 rounded-md focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring">
+          {/* Vännerna och länken hämtas först när rutan öppnas. Vänner läggs till direkt, länken är för alla andra. */}
+          {bjuderIn && <LaggTillVannerITur turId={tur.id} medIturen={deltagare.map((d) => d.user_id)} onAndrad={onAndrad} />}
           {bjuderIn && <Inbjudan turId={tur.id} minRoll={minRoll} />}
         </div>
       )}

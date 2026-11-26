@@ -114,7 +114,7 @@ export const UNDERSIDOR: Partial<Record<Sida, readonly Undersida[]>> = {
   ],
 }
 
-export type Gruppnyckel = 'planera' | 'utrustning' | 'folk' | 'minnen' | 'snart'
+export type Gruppnyckel = 'planera' | 'utrustning' | 'vandrare' | 'minnen' | 'snart'
 
 export interface Menygrupp {
   nyckel: Gruppnyckel
@@ -126,7 +126,7 @@ export interface Menygrupp {
 export const MENYGRUPPER: readonly Menygrupp[] = [
   { nyckel: 'planera', rubrik: 'Planera', sidor: ['turer', 'matplanering'] },
   { nyckel: 'utrustning', rubrik: 'Utrustning', sidor: ['forrad', 'utrustning'] },
-  { nyckel: 'folk', rubrik: 'Folk', sidor: ['vanner'] },
+  { nyckel: 'vandrare', rubrik: 'Vandrare', sidor: ['vanner'] },
   { nyckel: 'minnen', rubrik: 'Minnen', sidor: ['kom-ihag'] },
   { nyckel: 'snart', rubrik: 'Kommer snart', sidor: ['packlistor', 'dagbok', 'statistik'] },
 ]

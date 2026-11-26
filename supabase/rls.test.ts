@@ -189,6 +189,7 @@ describe('funktionerna i public', () => {
     'public.mina_forfragningar()',
     'public.mina_skickade()',
     'public.vandrat_ihop()',
+    'public.lagg_till_vanner(uuid, uuid[])',
   ]
 
   it('går inte att anropa utan inloggning', async () => {
@@ -5081,5 +5082,127 @@ describe('egna rätter hemma och favoritrecept', () => {
     expect((await db.query(`select 1 from public.skafferiratter where user_id = '${TAGE}'`)).rows).toHaveLength(0)
     expect((await db.query(`select 1 from public.receptfavoriter where user_id = '${TAGE}'`)).rows).toHaveLength(0)
     expect((await db.query('select 1 from public.recept where id = $1', [tagesRecept])).rows).toHaveLength(0)
+  })
+})
+
+describe('vänner i turer', () => {
+  // Egna användare. Åsa äger turen och Bo är redigerare där. Åsa är vän med Cecilia, David, Ella och Lina, Bo med
+  // Filip. Gösta är ingens vän från början. Lina är läsare i turen.
+  const ASA = '00000000-0000-0000-0000-0000000003a1'
+  const BO = '00000000-0000-0000-0000-0000000003a2'
+  const CECILIA = '00000000-0000-0000-0000-0000000003a3'
+  const DAVID = '00000000-0000-0000-0000-0000000003a4'
+  const ELLA = '00000000-0000-0000-0000-0000000003a5'
+  const FILIP = '00000000-0000-0000-0000-0000000003a6'
+  const GOSTA = '00000000-0000-0000-0000-0000000003a7'
+  const LINA = '00000000-0000-0000-0000-0000000003a8'
+  const NAMN: Record<string, string> = {
+    [ASA]: 'Åsa', [BO]: 'Bo', [CECILIA]: 'Cecilia', [DAVID]: 'David', [ELLA]: 'Ella', [FILIP]: 'Filip', [GOSTA]: 'Gösta', [LINA]: 'Lina',
+  }
+  let tur: string
+
+  const vanner = (a: string, b: string) =>
+    db.query('insert into public.vanskap (user_a, user_b) values (least($1::uuid, $2::uuid), greatest($1::uuid, $2::uuid))', [a, b])
+  const laggTill = (vem: string, t: string, personer: string[]) =>
+    som(vem, (tx) => tx.query<{ antal: number }>('select public.lagg_till_vanner($1, $2) as antal', [t, personer])).then((r) => r.rows[0].antal)
+  const deltagare = (t: string) =>
+    db
+      .query<{ user_id: string; roll: string; namn: string }>(
+        'select user_id, roll, namn from public.deltagare where tur_id = $1 and user_id is not null order by namn',
+        [t],
+      )
+      .then((r) => r.rows)
+  const tillagdNotiser = (vem: string) =>
+    db
+      .query<{ text: string; lank: string; fran_user_id: string }>(
+        `select text, lank, fran_user_id from public.notiser where user_id = $1 and typ = 'tillagd_i_tur' order by skapad`,
+        [vem],
+      )
+      .then((r) => r.rows)
+
+  beforeAll(async () => {
+    const alla = Object.keys(NAMN)
+    await db.query(`insert into auth.users (id, email) values ${alla.map((id) => `('${id}', '${id}@turvanner.se')`).join(', ')}`)
+    for (const id of alla) await db.query('update public.profiler set namn = $2 where id = $1', [id, NAMN[id]])
+    for (const v of [CECILIA, DAVID, ELLA, LINA]) await vanner(ASA, v)
+    await vanner(BO, FILIP)
+    tur = await skapaTur(ASA, 'Kungsleden med vänner')
+    const k = await kodFor(tur)
+    for (const v of [BO, LINA]) await som(v, (tx) => tx.query('select public.ga_med($1)', [k]))
+    await som(ASA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where tur_id = $1 and user_id = $2`, [tur, LINA]))
+  })
+
+  it('ägaren lägger till sina vänner som redigerare, och de får en notis', async () => {
+    expect(await laggTill(ASA, tur, [CECILIA, DAVID])).toBe(2)
+    const d = await deltagare(tur)
+    expect(d.filter((x) => [CECILIA, DAVID].includes(x.user_id))).toEqual([
+      { user_id: CECILIA, roll: 'editor', namn: 'Cecilia' },
+      { user_id: DAVID, roll: 'editor', namn: 'David' },
+    ])
+    expect(await tillagdNotiser(CECILIA)).toEqual([{ text: 'Åsa lade till dig i Kungsleden med vänner', lank: `/tur/${tur}`, fran_user_id: ASA }])
+    // De ser turen direkt.
+    const r = await som(DAVID, (tx) => tx.query('select id from public.turer where id = $1', [tur]))
+    expect(r.rows).toHaveLength(1)
+  })
+
+  it('den som redan är med, ens egen person och dubbletter hoppas över', async () => {
+    expect(await laggTill(ASA, tur, [CECILIA, ASA, CECILIA])).toBe(0)
+    expect(await tillagdNotiser(CECILIA)).toHaveLength(1)
+  })
+
+  it('bara den som lägger tills egna vänner läggs till, inte någon annans', async () => {
+    // Filip är Bos vän, inte Åsas. Gösta är ingens vän.
+    expect(await laggTill(ASA, tur, [FILIP, GOSTA])).toBe(0)
+    expect((await deltagare(tur)).map((x) => x.user_id)).not.toContain(FILIP)
+    expect(await tillagdNotiser(FILIP)).toEqual([])
+    // Bo är redigerare och kan lägga till sin egen vän.
+    expect(await laggTill(BO, tur, [FILIP])).toBe(1)
+    expect(await tillagdNotiser(FILIP)).toEqual([{ text: 'Bo lade till dig i Kungsleden med vänner', lank: `/tur/${tur}`, fran_user_id: BO }])
+  })
+
+  it('en läsare och den som inte är med i turen kan inte lägga till någon', async () => {
+    await vanner(LINA, GOSTA)
+    await forvantaFel(laggTill(LINA, tur, [GOSTA]))
+    const annan = await skapaTur(GOSTA, 'Göstas tur')
+    await forvantaFel(laggTill(ASA, annan, [ELLA]))
+    expect((await deltagare(annan)).map((x) => x.user_id)).toEqual([GOSTA])
+  })
+
+  it('anon kan inte anropa funktionen', async () => {
+    await forvantaFel(somAnon((tx) => tx.query('select public.lagg_till_vanner($1, $2)', [tur, [ELLA]])))
+  })
+
+  it('det går fortfarande inte att lägga in någon annans konto direkt', async () => {
+    await forvantaFel(som(ASA, (tx) => tx.query('insert into public.deltagare (tur_id, user_id, namn) values ($1, $2, $3)', [tur, ELLA, 'Ella'])))
+    // Inte heller med inställningen satt för hand: RLS-policyn kräver fortfarande att user_id är tomt.
+    await forvantaFel(
+      som(ASA, async (tx) => {
+        await tx.query(`select set_config('minvandring.lagg_till_vanner', $1, true)`, [tur])
+        return tx.query('insert into public.deltagare (tur_id, user_id, namn) values ($1, $2, $3)', [tur, ELLA, 'Ella'])
+      }),
+    )
+    expect((await deltagare(tur)).map((x) => x.user_id)).not.toContain(ELLA)
+  })
+
+  it('högst 50 åt gången', async () => {
+    await forvantaFel(laggTill(ASA, tur, Array.from({ length: 51 }, () => crypto.randomUUID())))
+  })
+
+  it('den som har lagts till kan lämna turen och ser den sedan inte', async () => {
+    await som(DAVID, (tx) => tx.query('delete from public.deltagare where tur_id = $1 and user_id = $2', [tur, DAVID]))
+    const r = await som(DAVID, (tx) => tx.query('select id from public.turer where id = $1', [tur]))
+    expect(r.rows).toHaveLength(0)
+  })
+
+  it('ingen får notisen "gick med" när en vän läggs till', async () => {
+    const r = await db.query(`select 1 from public.notiser where tur_id = $1 and typ = 'gick_med' and fran_user_id = any($2)`, [tur, [CECILIA, DAVID, FILIP]])
+    expect(r.rows).toHaveLength(0)
+  })
+
+  it('notistyperna är desamma som i src/lib/notiser.ts', async () => {
+    const r = await db.query<{ def: string }>(
+      `select pg_get_constraintdef(c.oid) as def from pg_constraint c where c.conrelid = 'public.notiser'::regclass and c.contype = 'c' and pg_get_constraintdef(c.oid) like '%typ%'`,
+    )
+    expect([...r.rows[0].def.matchAll(/'([a-z_]+)'::text/g)].map((m) => m[1])).toEqual([...NOTISTYPER])
   })
 })

@@ -81,6 +81,8 @@ export function vanfel(meddelande: string | undefined): string {
   if (meddelande?.includes('egen vänlänk')) return 'Det här är din egen vänlänk. Skicka den till den du vill bli vän med.'
   if (meddelande?.includes('Hittar ingen förfrågan')) return 'Förfrågan finns inte längre.'
   if (meddelande?.includes('måste vara inloggad')) return 'Du är utloggad. Logga in och försök igen.'
+  if (meddelande?.includes('Bara ägare och redigerare')) return 'Bara ägare och redigerare kan lägga till vänner i turen.'
+  if (meddelande?.includes('Högst 50')) return 'Lägg till högst 50 vänner åt gången.'
   return 'Det gick inte att spara just nu. Kontrollera uppkopplingen och försök igen.'
 }
 
@@ -90,4 +92,31 @@ export function skickadText(skapad: string, nu: Date): string {
   if (tid === 'nyss' || tid === 'i går') return `Förfrågan skickad ${tid}`
   if (/ (min|tim)$/.test(tid)) return `Förfrågan skickad för ${tid} sedan`
   return `Förfrågan skickad den ${tid}`
+}
+
+/** Vännerna som inte redan är med i turen, i samma ordning som förut. */
+export function vannerUtanfor<T extends { user_id: string }>(vanner: readonly T[], medIturen: readonly (string | null | undefined)[]): T[] {
+  const med = new Set(medIturen)
+  return vanner.filter((v) => !med.has(v.user_id))
+}
+
+/** Vännerna som var med i en annan tur, för "Samma som Kungsleden 2026". */
+export function sammaSom(vanner: readonly { user_id: string }[], deltagare: readonly { user_id?: string | null }[]): Set<string> {
+  const med = new Set(deltagare.map((d) => d.user_id))
+  return new Set(vanner.filter((v) => med.has(v.user_id)).map((v) => v.user_id))
+}
+
+/** Turerna man kan välja under "Samma som": de där minst en vän var med, senast skapad först. */
+export function turerMedVanner<T extends { skapad: string; deltagare: readonly { user_id?: string | null }[] }>(
+  turer: readonly T[],
+  vanner: readonly { user_id: string }[],
+): T[] {
+  return turer.filter((t) => sammaSom(vanner, t.deltagare).size > 0).toSorted((a, b) => b.skapad.localeCompare(a.skapad))
+}
+
+/** "Anna är tillagd i turen." eller "3 vänner är tillagda i turen." */
+export function tillagdaText(antal: number, namn?: string): string {
+  if (antal <= 0) return 'Ingen ny lades till. De kan redan vara med i turen.'
+  if (antal === 1) return `${namn ?? '1 vän'} är tillagd i turen.`
+  return `${antal} vänner är tillagda i turen.`
 }

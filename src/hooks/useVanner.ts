@@ -90,3 +90,26 @@ export async function nyVanlank(): Promise<Vanlank | null> {
   const { data, error } = await supabase.rpc('ny_vanlank')
   return error ? null : ((data as Vanlank[])[0] ?? null)
 }
+
+/** Ens vänner, för att välja vilka som ska med i en tur. Hämtas först när aktiv är sann. */
+export function useMinaVanner(aktiv: boolean): Van[] | null | 'fel' {
+  const [vanner, setVanner] = useState<Van[] | null | 'fel'>(null)
+  useEffect(() => {
+    if (!aktiv || !supabase) return
+    let aktuell = true
+    supabase.rpc('mina_vanner').then(({ data, error }) => {
+      if (aktuell) setVanner(error ? 'fel' : (data as Van[]))
+    })
+    return () => {
+      aktuell = false
+    }
+  }, [aktiv])
+  return vanner
+}
+
+/** Lägger till vänner i en tur. Ger antalet som lades till, eller felet. */
+export async function laggTillVannerITur(tur: string, personer: string[]): Promise<{ antal: number; fel: string | null }> {
+  if (!supabase) return { antal: 0, fel: null }
+  const { data, error } = await supabase.rpc('lagg_till_vanner', { tur, personer })
+  return error ? { antal: 0, fel: error.message } : { antal: typeof data === 'number' ? data : 0, fel: null }
+}
