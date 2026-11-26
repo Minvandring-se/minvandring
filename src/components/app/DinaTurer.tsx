@@ -55,7 +55,7 @@ export function DinaTurer({ turer, oppenTurId }: { turer: TurIListan[] | null; o
             )
           })}
           <li>
-            <Link to="/turer?ny=1" className={cn(radKlass, 'text-muted-foreground hover:bg-muted hover:text-foreground')}>
+            <Link to="?ny=1" className={cn(radKlass, 'text-muted-foreground hover:bg-muted hover:text-foreground')}>
               <Plus className="size-4 shrink-0" aria-hidden />
               Ny tur
             </Link>

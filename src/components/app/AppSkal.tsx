@@ -1,5 +1,5 @@
 import { Suspense, useEffect, useState } from 'react'
-import { Link, Outlet, useLocation } from 'react-router'
+import { Link, Outlet, useLocation, useSearchParams } from 'react-router'
 import type { AppKontext } from '@/components/app/appKontext'
 import { Bottenmeny } from '@/components/app/Bottenmeny'
 import { Laddar, Skelett } from '@/components/app/Laddar'
@@ -9,6 +9,7 @@ import { Sidomeny } from '@/components/app/Sidomeny'
 import { Felgrans } from '@/components/Felgrans'
 import { Logotyp } from '@/components/Logotyp'
 import { Sidfot } from '@/components/Sidfot'
+import { NyTurRuta } from '@/components/tur/NyTurRuta'
 import { useDinaTurer } from '@/hooks/useDinaTurer'
 import { useNotiser } from '@/hooks/useNotiser'
 import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
@@ -52,6 +53,19 @@ export function AppSkal() {
         setProfilHamtad(true)
       })
   }, [anvandarId])
+
+  // Ny tur öppnas som en stor ruta på den sida man är på, med ?ny=1 i adressen (Ny tur på Hem, i menyn och på Mina turer).
+  const [sok, setSok] = useSearchParams()
+  const nyTur = sok.get('ny') === '1'
+  const stangNyTur = () =>
+    setSok(
+      (s) => {
+        const ny = new URLSearchParams(s)
+        ny.delete('ny')
+        return ny
+      },
+      { replace: true },
+    )
 
   const kontext: AppKontext = { anvandarId, epost: session?.user.email ?? '', namn, profilHamtad, setNamn, bildUppdaterad, setBildUppdaterad, notiser }
 
@@ -125,6 +139,7 @@ export function AppSkal() {
               }
             >
               <Outlet context={kontext} />
+              {nyTur && <NyTurRuta anvandarId={anvandarId} onStang={stangNyTur} />}
             </Suspense>
             </Felgrans>
           </div>

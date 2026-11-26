@@ -97,7 +97,7 @@ function Valkomstband({ namn, idag, nasta }: { namn: string; idag: string; nasta
             <p className="text-yta-stark-muted lg:text-lg">Planera ditt nästa äventyr.</p>
           </div>
           <div className="flex flex-wrap gap-2 pt-1">
-            <Link to="/turer?ny=1" className={knappStil({ variant: 'hjortron' })}>
+            <Link to="?ny=1" className={knappStil({ variant: 'hjortron' })}>
               <Plus className="size-4" aria-hidden />
               Ny tur
             </Link>
@@ -329,7 +329,7 @@ function KomIgang() {
       rubrik: 'Skapa en tur',
       text: 'Ge turen ett namn. Datum, plats och dagar kan ni fylla i sedan.',
       knapp: (
-        <Link to="/turer?ny=1" className={knappStil()}>
+        <Link to="?ny=1" className={knappStil()}>
           Skapa en tur
         </Link>
       ),

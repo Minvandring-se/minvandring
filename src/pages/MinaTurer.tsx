@@ -1,7 +1,7 @@
-import { Plus, X } from 'lucide-react'
+import { Plus } from 'lucide-react'
 import { Ikon } from '@/components/ikoner/Ikon'
-import { useEffect, useId, useRef, useState, type FormEvent } from 'react'
-import { useLocation, useNavigate, useSearchParams } from 'react-router'
+import { useEffect, useState } from 'react'
+import { useLocation, useSearchParams } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { SidRubrik } from '@/components/app/SidRubrik'
@@ -10,17 +10,12 @@ import { TomtLage } from '@/components/app/TomtLage'
 import { FlikAntal } from '@/components/ui/bricka'
 import { TurBild } from '@/components/app/TurBild'
 import { NastaTurKort, TurRadKort, type TurMedDeltagare } from '@/components/app/TurKort'
-import { glomTurlistan, mindTurlista, minnsTurlistan } from '@/components/app/turlistaMinne'
+import { mindTurlista, minnsTurlistan } from '@/components/app/turlistaMinne'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
-import { Select } from '@/components/ui/select'
-import { VanVal } from '@/components/vanner/VanVal'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { laggTillVannerITur, useMinaVanner } from '@/hooks/useVanner'
 import { supabase } from '@/lib/supabase'
 import { delaUppTurer, flerTurer, halsning, lokaltDatum } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
-import { sammaSom, turerMedVanner } from '@/lib/vanner'
 
 export function MinaTurer() {
   const { namn: mittNamn, anvandarId, profilHamtad } = useApp()
@@ -28,8 +23,7 @@ export function MinaTurer() {
   const [laddfel, setLaddfel] = useState(false)
   // Räknas upp av Försök igen, så att listan hämtas igen.
   const [omgang, setOmgang] = useState(0)
-  const [sok, setSok] = useSearchParams()
-  const formularOppet = sok.get('ny') === '1'
+  const [, setSok] = useSearchParams()
   // Fliken man själv har valt. Innan dess gäller den förvalda (Tidigare när inga kommande turer finns).
   const [valdFlik, setValdFlik] = useState<'kommande' | 'tidigare' | null>(null)
   // Besked från sidan man kom ifrån, till exempel att en tur har raderats.
@@ -51,8 +45,9 @@ export function MinaTurer() {
       })
   }, [anvandarId, omgang])
 
-  function visaFormular(oppet: boolean) {
-    setSok(oppet ? { ny: '1' } : {}, { replace: true })
+  /** Ny tur öppnas som en stor ruta i ramen (AppSkal), med ?ny=1 i adressen. */
+  function visaFormular() {
+    setSok({ ny: '1' })
   }
 
   const idag = lokaltDatum()
@@ -66,8 +61,8 @@ export function MinaTurer() {
     )
 
   // En knapp med kant, eftersom Öppna turen är sidans huvudknapp. Sidomenyn på dator har också en länk till Ny tur.
-  const nyTurKnapp = !formularOppet && (
-    <Button variant="outline" onClick={() => visaFormular(true)}>
+  const nyTurKnapp = (
+    <Button variant="outline" onClick={visaFormular}>
       <Plus className="size-4" aria-hidden />
       Ny tur
     </Button>
@@ -87,8 +82,6 @@ export function MinaTurer() {
         </p>
       )}
 
-      {formularOppet && <NyTurFormular turer={turer ?? []} onStang={() => visaFormular(false)} />}
-
       {turer === null ? (
         <Laddar text="Hämtar dina turer">
           <div className="overflow-hidden rounded-[1.375rem] border border-border bg-card md:grid md:grid-cols-2">
@@ -103,19 +96,17 @@ export function MinaTurer() {
       ) : laddfel ? (
         <Laddfel vad="dina turer" onForsokIgen={() => setOmgang((n) => n + 1)} />
       ) : turer.length === 0 ? (
-        !formularOppet && (
-          <TomtLage
+        <TomtLage
             bild={<TurBild turId="forsta-turen" sizes="(min-width: 1024px) 900px, 100vw" prioritet className="aspect-[16/9] w-full sm:aspect-[21/9] lg:aspect-[3/1]" />}
             rubrik="Planera din första tur"
             text="Skapa en tur, bjud in de som ska med och samla datum, startpunkt och deltagare på ett ställe."
             knapp={
-              <Button size="lg" onClick={() => visaFormular(true)}>
+              <Button size="lg" onClick={visaFormular}>
                 <Plus className="size-5 text-hjortron-ikon" aria-hidden />
                 Ny tur
               </Button>
             }
           />
-        )
       ) : (
         <>
           {nasta && <NastaTurKort tur={nasta} idag={idag} />}
@@ -182,97 +173,5 @@ export function MinaTurer() {
         </>
       )}
     </div>
-  )
-}
-
-/**
- * Kort formulär för en ny tur: namnet, och de vänner som ska med, eller samma vänner som i en tidigare tur. Resten
- * fylls i inne i turen. Vännerna läggs till direkt som redigerare när turen har skapats.
- */
-function NyTurFormular({ turer, onStang }: { turer: readonly TurMedDeltagare[]; onStang: () => void }) {
-  const navigate = useNavigate()
-  const id = useId()
-  const falt = useRef<HTMLInputElement>(null)
-  const [namn, setNamn] = useState('')
-  const [skapar, setSkapar] = useState(false)
-  const [fel, setFel] = useState('')
-  const vanner = useMinaVanner(true)
-  const [valda, setValda] = useState<Set<string>>(new Set())
-  const [sammaSomTur, setSammaSomTur] = useState('')
-  const tidigare = Array.isArray(vanner) ? turerMedVanner(turer, vanner).slice(0, 10) : []
-
-  useEffect(() => falt.current?.focus(), [])
-
-  async function skapa(e: FormEvent) {
-    e.preventDefault()
-    if (!supabase || !namn.trim()) return
-    setSkapar(true)
-    setFel('')
-    // Id:t väljs här och raden läses inte tillbaka. Man blir deltagare först när raden finns,
-    // och innan dess släpper databasen inte fram turen till någon.
-    const id = crypto.randomUUID()
-    const { error } = await supabase.from('turer').insert({ id, namn: namn.trim() })
-    if (error) {
-      setSkapar(false)
-      setFel('Det gick inte att skapa turen. Kontrollera uppkopplingen och försök igen.')
-      return
-    }
-    // Gick det inte att lägga till vännerna öppnas inbjudan i turen, så att man kan försöka igen där.
-    const tillagda = valda.size > 0 ? await laggTillVannerITur(id, [...valda]) : null
-    setSkapar(false)
-    glomTurlistan()
-    navigate(tillagda?.fel ? `/tur/${id}#bjud-in` : `/tur/${id}`)
-  }
-
-  function valjTur(turId: string) {
-    setSammaSomTur(turId)
-    const tur = turer.find((t) => t.id === turId)
-    if (tur && Array.isArray(vanner)) setValda(sammaSom(vanner, tur.deltagare))
-  }
-
-  return (
-    <form onSubmit={skapa} className="space-y-3 rounded-lg border border-border bg-card p-5 shadow-soft sm:p-6">
-      <div className="flex items-start justify-between gap-4">
-        <h2 className="text-xl">Ny tur</h2>
-        <Button type="button" variant="ghost" className="-mt-2 -mr-2 size-11 px-0" aria-label="Stäng" onClick={onStang}>
-          <X className="size-5" aria-hidden />
-        </Button>
-      </div>
-      <label htmlFor={id} className="block text-sm font-medium">
-        Vad heter turen?
-      </label>
-      <div className="flex flex-col gap-3 sm:flex-row">
-        <Input id={id} ref={falt} placeholder="T.ex. Sarek 2027" maxLength={80} value={namn} onChange={(e) => setNamn(e.target.value)} />
-        <Button type="submit" disabled={!namn.trim() || skapar} className="shrink-0">
-          {skapar ? 'Skapar …' : 'Skapa turen'}
-        </Button>
-      </div>
-      {Array.isArray(vanner) && vanner.length > 0 && (
-        <div className="space-y-3 pt-1">
-          {tidigare.length > 0 && (
-            <div className="space-y-1">
-              <label htmlFor={`${id}-samma`} className="block text-sm font-medium">
-                Samma vänner som i
-              </label>
-              <Select id={`${id}-samma`} value={sammaSomTur} onChange={(e) => valjTur(e.target.value)}>
-                <option value="">Välj en tidigare tur</option>
-                {tidigare.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.namn}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
-          <VanVal rubrik="Vänner som ska med" vanner={vanner} valda={valda} onAndra={setValda} />
-        </div>
-      )}
-      <p className="text-sm text-muted-foreground">
-        {Array.isArray(vanner) && vanner.length > 0
-          ? 'Vännerna läggs till som redigerare och får en notis. Datum, startpunkt och fler deltagare lägger du till inne i turen.'
-          : 'Datum, startpunkt och deltagare lägger du till inne i turen.'}
-      </p>
-      {fel && <p className="text-sm text-destructive">{fel}</p>}
-    </form>
   )
 }
