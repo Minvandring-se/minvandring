@@ -17,7 +17,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://arcteryx.com/se/en/shop/mens/beta-ar-jacket-1062
 - Packvikt i katalogen: 460 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 2. Black Diamond FineLine Stretch Shell Herr
@@ -25,7 +25,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://blackdiamondequipment.com/products/mens-fineline-stretch-shell
 - Packvikt i katalogen: 320 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 3. Houdini BFF Jacket II Dam
@@ -33,7 +33,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://houdinisportswear.com/en-na/products/womens-bff-jacket-ii-810036
 - Packvikt i katalogen: 410 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 4. Klättermusen Asynja Jacket Dam
@@ -41,7 +41,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://www.klattermusen.com/en-us/10651w11-asynja-jacket-ws-raven/
 - Packvikt i katalogen: 316 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 5. Patagonia Torrentshell 3L Rain Jacket Herr
@@ -49,7 +49,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://eu.patagonia.com/se/en/product/mens-torrentshell-3-layer-rain-jacket/85241.html
 - Packvikt i katalogen: 400 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 6. Rab Downpour Waterproof Jacket Dam
@@ -57,5 +57,5 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://rab.equipment/uk/womens-downpour-waterproof-jacket
 - Packvikt i katalogen: 342 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
