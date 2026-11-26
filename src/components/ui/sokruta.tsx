@@ -9,25 +9,30 @@ import { cn } from '@/lib/utils'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
-/** Terrängerna i de mörkgröna ytorna: bandet på Hem, sökrutan och kortet Nästa tur. Var och en har sin egen viewBox. */
+/**
+ * Terrängerna i de mörkgröna ytorna: bandet på Hem, sökrutan och kortet Nästa tur. Var och en har sin egen viewBox.
+ * Turens kurvor har topparna längst till höger, där kortets båge och bild ligger ovanpå, så de ritas från höger.
+ */
 const TERRANGER = {
-  band: { bredd: 600, hojd: 190, linjer: BANDKURVOR },
-  sok: { bredd: 600, hojd: 160, linjer: SOKKURVOR },
-  tur: { bredd: 600, hojd: 150, linjer: TURKURVOR },
+  band: { bredd: 600, hojd: 190, linjer: BANDKURVOR, justering: 'xMidYMid slice' },
+  sok: { bredd: 600, hojd: 160, linjer: SOKKURVOR, justering: 'xMidYMid slice' },
+  tur: { bredd: 600, hojd: 150, linjer: TURKURVOR, justering: 'xMaxYMax slice' },
 } as const
 
 /**
  * Höjdkurvor som bakgrund i en mörkgrön yta: svaga linjer från en egen terräng per sorts yta, med topparna till höger
  * så att texten står på en lugn yta, och ett mjukt sken uppe till höger. Utan sken ritas bara linjerna, för kort där
- * en bild redan ligger till höger.
+ * en bild redan ligger till höger. Ytan tonar ut åt vänster (en mask med gradient, som i Menykurvor), så att linjerna
+ * aldrig börjar med en rak kant. Skenet ligger i en egen svg och tonas inte.
  */
 export function Hojdkurvor({ variant, sken = true, className }: { variant: keyof typeof TERRANGER; sken?: boolean; className?: string }) {
   const id = useId()
-  const { bredd, hojd, linjer } = TERRANGER[variant]
+  const { bredd, hojd, linjer, justering } = TERRANGER[variant]
+  const yta = cn('pointer-events-none absolute inset-0 size-full', className)
   return (
-    <svg viewBox={`0 0 ${bredd} ${hojd}`} preserveAspectRatio="xMidYMid slice" aria-hidden className={cn('pointer-events-none absolute inset-0 size-full', className)}>
+    <>
       {sken && (
-        <>
+        <svg viewBox={`0 0 ${bredd} ${hojd}`} preserveAspectRatio={justering} aria-hidden className={yta}>
           <defs>
             <radialGradient id={`${id}-sken`} cx="0.85" cy="0.1" r="0.9">
               <stop offset="0" style={{ stopColor: 'var(--color-yta-stark-linje)' }} />
@@ -35,14 +40,16 @@ export function Hojdkurvor({ variant, sken = true, className }: { variant: keyof
             </radialGradient>
           </defs>
           <rect width={bredd} height={hojd} fill={`url(#${id}-sken)`} />
-        </>
+        </svg>
       )}
-      <g fill="none" className="stroke-yta-stark-foreground" strokeOpacity="0.07" strokeWidth="1.2" strokeLinejoin="round">
-        {linjer.map((d, i) => (
-          <path key={i} d={d} />
-        ))}
-      </g>
-    </svg>
+      <svg viewBox={`0 0 ${bredd} ${hojd}`} preserveAspectRatio={justering} aria-hidden className={cn(yta, '[mask-image:linear-gradient(to_right,transparent_5%,black_50%)]')}>
+        <g fill="none" className="stroke-yta-stark-foreground" strokeOpacity="0.07" strokeWidth="1.2" strokeLinejoin="round">
+          {linjer.map((d, i) => (
+            <path key={i} d={d} />
+          ))}
+        </g>
+      </svg>
+    </>
   )
 }
 
