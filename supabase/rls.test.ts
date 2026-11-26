@@ -1193,6 +1193,16 @@ describe('Mitt förråd', () => {
     expect((await annasRad()).rows).toEqual([{ namn: 'Annas tält', user_id: A }])
   })
 
+  it('ägaren sätter sin storlek på en sak, som har en längdgräns, och ingen annan ser eller ändrar den', async () => {
+    expect((await som(A, (tx) => tx.query(`update public.forradssaker set storlek = 'L' where id = $1`, [annasSak]))).affectedRows).toBe(1)
+    expect((await som(B, (tx) => tx.query(`update public.forradssaker set storlek = 'S' where id = $1`, [annasSak]))).affectedRows).toBe(0)
+    expect((await som(B, (tx) => tx.query('select storlek from public.forradssaker where id = $1', [annasSak]))).rows).toEqual([])
+    await forvantaFel(som(A, (tx) => tx.query(`update public.forradssaker set storlek = '1234567890123' where id = $1`, [annasSak])))
+    await forvantaFel(som(A, (tx) => tx.query(`update public.forradssaker set storlek = '  ' where id = $1`, [annasSak])))
+    const r = await db.query<{ storlek: string }>('select storlek from public.forradssaker where id = $1', [annasSak])
+    expect(r.rows[0].storlek).toBe('L')
+  })
+
   it('man kan inte lägga en sak i någon annans förråd eller ge bort sin egen', async () => {
     await forvantaFel(som(B, (tx) => tx.query(`insert into public.forradssaker (namn, kategori, user_id) values ('Smugglad', 'ovrigt', '${A}')`)))
     await forvantaFel(som(A, (tx) => tx.query(`update public.forradssaker set user_id = '${B}' where id = $1`, [annasSak])))

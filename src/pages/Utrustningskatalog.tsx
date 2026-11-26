@@ -25,6 +25,8 @@ import {
   forvalFranProdukt,
   gArAttSoka,
   grupperaModeller,
+  variantnamn,
+  varianterText,
   iForradetText,
   ingaTraffarText,
   modellMedProdukt,
@@ -355,7 +357,7 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
             <span className="block font-semibold break-words">{produktnamn(modell)}</span>
             <span className="block text-sm text-muted-foreground">
               {flera
-                ? `${etikett}, ${modell.varianter.length} storlekar`
+                ? `${etikett}, ${varianterText(modell, formateraVikt)}`
                 : [etikett, forsta.version, viktstorlekText(forsta.underkategori, forsta.egenskaper)].filter(Boolean).join(', ')}
             </span>
           </span>
@@ -368,7 +370,7 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
           <span className="block w-full space-y-0.5 border-t border-border pt-2 text-sm">
             {modell.varianter.map((v) => (
               <span key={v.id} className="flex justify-between gap-3">
-                <span className="min-w-0 break-words text-muted-foreground">{v.version || 'Utan storlek'}</span>
+                <span className="min-w-0 break-words text-muted-foreground">{variantnamn(v)}</span>
                 <span className="shrink-0 tabular-nums">{formateraVikt(v.packvikt_g)}</span>
               </span>
             ))}
@@ -470,7 +472,7 @@ function Produktpanel({
               >
                 {/* En prick i hjortron på den valda storleken, utöver den gröna markeringen. */}
                 {v.id === vald.id && <span aria-hidden className="size-2 shrink-0 rounded-full bg-hjortron" />}
-                {v.version || 'Utan storlek'}
+                {variantnamn(v)}
                 <span className="tabular-nums opacity-80">{formateraVikt(v.packvikt_g)}</span>
               </button>
             ))}

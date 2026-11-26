@@ -39,6 +39,7 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Packlista per person | Finns (`/tur/:id/packning`): ur förrådet eller som egen sak, bockar per person, Alla har var sin med egen modell |
 | Basvikt, förbrukning och startvikt | Finns, startvikt per person med mat från matplanen |
 | Vikt per kategori och person | Finns: under Startvikt fälls basvikten per kategori ut för varje person, med en stapel per kategori |
+| Storlek på kläder i förrådet | Finns: kläder visas som en modell där man väljer herr eller dam och sin storlek, och appen säger om tillverkarens vikt gäller den storleken |
 | Gemensam utrustning och vem som bär | Finns: gemensamma rader, Jag tar med den (även läsare), förslag på det gruppen behöver och frågor om dubbletter |
 | Viktmål för turen | Senare |
 | Buren vikt | Senare |
