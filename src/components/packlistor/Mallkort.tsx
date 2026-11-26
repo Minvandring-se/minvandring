@@ -80,7 +80,7 @@ export function Mallkort({ mall, onAndrad }: { mall: Packmall; onAndrad: () => P
       ) : (
         <div className="flex items-start gap-2">
           <div className="min-w-0 flex-1">
-            <h2 className="font-heading text-xl font-semibold break-words">{mall.namn}</h2>
+            <h3 className="font-heading text-xl font-semibold break-words">{mall.namn}</h3>
             {mall.fran_tur_namn && <p className="text-sm break-words text-muted-foreground">Från {mall.fran_tur_namn}</p>}
             <p className="mt-1 text-sm">{detaljer.filter(Boolean).join(', ')}</p>
           </div>
@@ -115,7 +115,7 @@ export function Mallkort({ mall, onAndrad }: { mall: Packmall; onAndrad: () => P
             <div id={`${id}-rader`} className="mt-2 space-y-3">
               {mallPerKategori(mall.packmallrader).map((k) => (
                 <div key={k.nyckel}>
-                  <h3 className="text-sm font-semibold">{k.etikett}</h3>
+                  <h4 className="text-sm font-semibold">{k.etikett}</h4>
                   <ul className="divide-y divide-border text-sm">
                     {k.rader.map((r) => {
                       const vikt = visadVikt(r)

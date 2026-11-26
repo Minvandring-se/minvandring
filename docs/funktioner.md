@@ -46,7 +46,8 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Dagbok och 
 | Packläge att bocka av | Senare |
 | Utskrivbar packlista | Senare |
 | Packlistor och mallar | Finns: Spara som mall och Från mall i turens packning, och dina mallar under Packlistor |
-| Färdiga mallar från MinVandring, delade mallar och import från LighterPack | Senare |
+| Färdiga mallar från MinVandring | Finns: tre startmallar (Fjälltur sommar med tält, Stugtur i fjällen, Helg i skogen) under Packlistor och i Från mall |
+| Delade mallar och import från LighterPack | Senare |
 | Dela packlistan med länk | Senare |
 
 ## Mat
