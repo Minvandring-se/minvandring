@@ -159,3 +159,133 @@ export function allergenerForLivsmedel(namn: string, grupp: string | null): Alle
   const ordning: readonly Allergen[] = ['gluten', 'kraftdjur', 'agg', 'fisk', 'jordnotter', 'soja', 'mjolk', 'notter', 'selleri', 'senap', 'sesam', 'svaveldioxid', 'lupin', 'blotdjur']
   return ordning.filter((a) => ut.has(a))
 }
+
+// ─── Huvudgrupper och kost i matkatalogen ────────────────────────────────────
+
+/**
+ * Livsmedelsverkets drygt 90 grupper samlade i några huvudgrupper, som rutor att välja i matkatalogen. En grupp som
+ * inte står här finns bara i sökningen.
+ */
+export const HUVUDGRUPPER: readonly { nyckel: string; etikett: string; grupper: readonly string[] }[] = [
+  {
+    nyckel: 'kott',
+    etikett: 'Kött och fågel',
+    grupper: ['Rött kött', 'Fågel', 'Innanmat och inälvsmat', 'Korv eller liknande produkt', 'Konserverat kött', 'Kött eller köttprodukter', 'Andra djurfetter'],
+  },
+  { nyckel: 'fisk', etikett: 'Fisk och skaldjur', grupper: ['Fisk', 'Fisk- och skaldjursprodukt', 'Fisk och skaldjur'] },
+  { nyckel: 'mejeri', etikett: 'Mejeri och ägg', grupper: [...MEJERI, 'Ägg'] },
+  {
+    nyckel: 'spannmal',
+    etikett: 'Gryn, pasta och bröd',
+    grupper: [
+      'Ris eller annat spannmål',
+      'Pasta och liknande produkter',
+      'Cerealier eller cerealielika mjölprodukter och derivat',
+      'Spannmål och spannmålsprodukter',
+      'Frukostflingor',
+      'Ojäst bröd',
+      'Jäst bröd',
+      'Övriga bröd',
+      'Baknings ingrediens',
+    ],
+  },
+  { nyckel: 'gronsaker', etikett: 'Grönsaker och potatis', grupper: ['Grönsaker och svamp', 'Grönsaker, rotfrukter och svamp', 'Grönsaksprodukter', 'Potatis och stärkelserika rötter'] },
+  { nyckel: 'frukt', etikett: 'Frukt och bär', grupper: ['Frukt och bär', 'Processad frukt och bär', 'Sylt eller marmelad'] },
+  {
+    nyckel: 'baljvaxter',
+    etikett: 'Baljväxter, nötter och frön',
+    grupper: ['Baljväxter', 'Vegetariska produkter', 'Vegetabiliska mejeriprodukter', 'Nöt, frö eller kärna', 'Nöt eller frö produkt'],
+  },
+  {
+    nyckel: 'smak',
+    etikett: 'Fett och smaksättning',
+    grupper: [
+      'Vegetabiliskt fett och olja',
+      'Margarin och blandade fetter',
+      'Krydda',
+      'Kryddning eller extrakt',
+      'Smaksättare, tex ketchup, sojasås, senap',
+      'Kryddor smaksättare dressing röror',
+      'Dressing, majonnäs',
+      'Chutney eller pickle',
+      'Smakämne eller essencer',
+      'Socker, honung eller sirap',
+    ],
+  },
+  {
+    nyckel: 'sott',
+    etikett: 'Sött och snacks',
+    grupper: [
+      'Choklad eller chokladprodukt',
+      'Konfekt och annan sockerprodukt dvs ej choklad',
+      'Snacks',
+      'Söta kakor',
+      'Bageriprodukter, söta och/eller feta',
+      'Glass och annan frusen dessert med mejeriprodukter',
+      'Dessertsås',
+      'Socker och söta livsmedel',
+    ],
+  },
+  {
+    nyckel: 'dryck',
+    etikett: 'Dryck',
+    grupper: ['Dryck utan alkohol', 'Kaffe, te och kakao', 'Juice och nektar', 'Läsk', 'Vatten', 'Vin och vinliknande drycker', 'Likör eller sprit', 'Öl eller maltdryck', 'Cider och liknande drycker'],
+  },
+  { nyckel: 'ratter', etikett: 'Färdiga rätter', grupper: MATRATTSGRUPPER },
+]
+
+/** Huvudgruppen för en av Livsmedelsverkets grupper. null när gruppen inte hör till någon. */
+export function huvudgruppFor(grupp: string | null): string | null {
+  if (grupp === null) return null
+  return HUVUDGRUPPER.find((h) => h.grupper.includes(grupp))?.nyckel ?? null
+}
+
+/** Grupper med enkla råvaror från växtriket. Med kända allergener går det att säga om livsmedlet är veganskt. */
+const VAXTER = [
+  'Grönsaker och svamp',
+  'Grönsaker, rotfrukter och svamp',
+  'Frukt och bär',
+  'Potatis och stärkelserika rötter',
+  'Baljväxter',
+  'Nöt, frö eller kärna',
+  'Ris eller annat spannmål',
+  'Cerealier eller cerealielika mjölprodukter och derivat',
+  'Pasta och liknande produkter',
+  'Vegetabiliskt fett och olja',
+  'Krydda',
+  'Socker, honung eller sirap',
+  'Vatten',
+]
+
+/** Allergener som kommer från djur. */
+const FRAN_DJUR: readonly Allergen[] = ['mjolk', 'agg', 'fisk', 'kraftdjur', 'blotdjur']
+
+/**
+ * Kostvalen för ett livsmedel, utifrån gruppen och allergenerna. null betyder okänt, och okänt räknas aldrig som att
+ * livsmedlet passar.
+ * - Glutenfri och laktosfri: kända allergener utan gluten och utan mjölk. Med mjölk är det inte laktosfritt, eftersom
+ *   databasen inte säger om laktosen är borttagen.
+ * - Vegetarisk och vegansk: bara enkla råvaror från växtriket (VAXTER) och mejeri och ägg. Kött, fisk och skaldjur är
+ *   varken eller. Honung är inte veganskt. Allt annat är okänt.
+ */
+export function kostForLivsmedel(namn: string, grupp: string | null, allergener: readonly Allergen[] | null) {
+  const kand = allergener !== null
+  const huvud = huvudgruppFor(grupp)
+  // "Korv veg." ligger bland korvarna, så den är okänd i stället för kött.
+  const franDjur = (huvud === 'kott' || huvud === 'fisk') && !/\bveg/i.test(namn)
+  let vegetarisk: boolean | null = null
+  let vegansk: boolean | null = null
+  if (franDjur) {
+    vegetarisk = false
+    vegansk = false
+  } else if (kand && grupp !== null && (VAXTER.includes(grupp) || huvud === 'mejeri')) {
+    vegetarisk = !allergener.some((a) => a === 'fisk' || a === 'kraftdjur' || a === 'blotdjur')
+    vegansk = vegetarisk && !allergener.some((a) => FRAN_DJUR.includes(a)) && !/honung/i.test(namn)
+  }
+  return {
+    vegetarisk,
+    vegansk,
+    glutenfri: kand ? !allergener.includes('gluten') : null,
+    laktosfri: kand ? !allergener.includes('mjolk') : null,
+  }
+}

@@ -1,14 +1,16 @@
 import { ExternalLink, Search, Star } from 'lucide-react'
-import { useId, useMemo, useState } from 'react'
+import { useId, useMemo, useState, type ReactNode } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
+import { Illustration } from '@/components/illustrationer/Illustration'
 import { Kostfilterval } from '@/components/mat/Kostfilterval'
 import { Matflikar } from '@/components/mat/Matflikar'
 import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
+import { Delval } from '@/components/ui/delval'
 import { LaggISkafferi } from '@/components/mat/LaggISkafferi'
 import { PasNamn } from '@/components/mat/PasNamn'
 import { Input } from '@/components/ui/input'
@@ -16,60 +18,178 @@ import { Panel } from '@/components/ui/panel'
 import { Select } from '@/components/ui/select'
 import { Specrutor } from '@/components/ui/specrutor'
 import { useMatkatalog } from '@/hooks/useMatplan'
+import { useGruppantal, useNaringskatalog } from '@/hooks/useNaringskatalog'
 import { laggISkafferi, sattFavorit, useSkafferi, type Skafferi } from '@/hooks/useSkafferi'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { formateraVikt } from '@/lib/forrad'
+import { passarFilter, type Kostfilter } from '@/lib/kost'
+import { HUVUDGRUPPER } from '@/lib/livsmedelsgrupper'
 import { forstaAndraNamn, formateraKcal, kcalPer100g, pasnamn, TILLAGNING } from '@/lib/mat'
 import {
   allergentext,
+  antalPerMaltid,
+  bytDel,
+  delFranAdress,
   filterFranAdress,
   filterTillAdress,
+  KATALOGDELAR,
   KATALOGMALTIDER,
+  kostbrickor,
   kostetiketter,
   marken,
   mestEnergi,
+  naringPer100,
   naringstabell,
   pristext,
+  SIDSTORLEK,
   sokPasar,
   SORTERINGAR,
   spartext,
   type Katalogfilter,
+  type Naringskort,
 } from '@/lib/matkatalog'
 import { manadOchAr, SKAFFERISTATUS_TEXT, skafferistatus } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import { laddfelText } from '@/lib/texter'
 import type { Matprodukt } from '@/lib/typer'
+import { KATEGORIETIKETT } from '@/lib/varukatalog'
 import { cn } from '@/lib/utils'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4', fokus)
 
 /**
- * Matkatalogen: sök och filtrera bland påsarna och jämför energi och vikt. Filtret och sorteringen står i adressen.
- * Ett tryck på ett kort öppnar en panel med näring, tillagning, allergener och pris. Den öppna påsen står i adressen
+ * Matkatalogen i tre delar: påsar, märkesvaror och livsmedel. Överst sökningen, sedan måltiderna eller grupperna som
+ * rutor och kostfiltret. Listan är tom tills man har sökt eller valt en ruta. Delen, måltiden, gruppen, filtret och
+ * sorteringen står i adressen.
+ *
+ * Ett tryck på en påse öppnar en panel med näring, tillagning, allergener och pris. Den öppna påsen står i adressen
  * (?pase=<id>), så att bakåtknappen stänger panelen och en länk kan öppna den direkt.
  */
 export function Matkatalog() {
   useSidtitel('Matkatalog')
   const id = useId()
-  const { katalog, forsokIgen } = useMatkatalog()
-  const { skafferi, laddaOm } = useSkafferi()
   const [sok, setSok] = useState('')
   const [parametrar, setParametrar] = useSearchParams()
-  const location = useLocation()
-  const navigate = useNavigate()
-
+  const del = delFranAdress(parametrar)
   const filter = useMemo(() => filterFranAdress(parametrar), [parametrar])
-  const paseId = parametrar.get('pase')
-  const lista = useMemo(() => (Array.isArray(katalog) ? katalog : []), [katalog])
-  const traffar = useMemo(() => sokPasar(lista, sok, filter), [lista, sok, filter])
-  const markeslista = useMemo(() => marken(lista), [lista])
-  const basta = mestEnergi(traffar)
-  const oppen = paseId ? lista.find((p) => p.id === paseId) : undefined
+  const grupp = (parametrar.get('grupp') ?? '').slice(0, 40)
+  const kost = useMemo(() => ({ val: filter.val, utan: filter.utan }), [filter.val, filter.utan])
 
   function andraFilter(andring: Partial<Katalogfilter>) {
     setParametrar(filterTillAdress({ ...filter, ...andring }, parametrar), { replace: true })
   }
+
+  function valjGrupp(nyckel: string) {
+    const p = new URLSearchParams(parametrar)
+    if (grupp === nyckel) p.delete('grupp')
+    else p.set('grupp', nyckel)
+    setParametrar(p, { replace: true })
+  }
+
+  return (
+    <div className="space-y-6">
+      <Matflikar />
+      <SidRubrik rubrik="Matkatalog" text="Sök bland påsar, märkesvaror och livsmedel och jämför energi och protein. Lägg påsarna du har hemma i skafferiet." />
+
+      <Delval etikett="Visa" delar={KATALOGDELAR} vald={del} onValj={(d) => setParametrar(bytDel(d, parametrar), { replace: true })} />
+
+      <div>
+        <label htmlFor={`${id}-sok`} className="sr-only">
+          Sök
+        </label>
+        <div className="relative">
+          <Search className="pointer-events-none absolute top-1/2 left-2.5 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
+          <Input
+            id={`${id}-sok`}
+            type="search"
+            autoComplete="off"
+            enterKeyHint="search"
+            maxLength={80}
+            className="pr-3 pl-9"
+            placeholder="Rätt, märke eller till exempel viltgryta"
+            value={sok}
+            onChange={(e) => setSok(e.target.value)}
+          />
+        </div>
+      </div>
+
+      {del === 'pasar' && <Pasdel sok={sok} filter={filter} andraFilter={andraFilter} kost={kost} />}
+      {del !== 'pasar' && (
+        <Naringsdel del={del} sok={sok} grupp={grupp} valjGrupp={valjGrupp} kost={kost} andraKost={(f) => andraFilter({ val: [...f.val], utan: [...f.utan] })} />
+      )}
+    </div>
+  )
+}
+
+/** Rubriken och kostfiltret "Passar gruppen", samma i alla delar. */
+function PassarGruppen({ kost, onAndra }: { kost: Kostfilter; onAndra: (f: Kostfilter) => void }) {
+  const id = useId()
+  return (
+    <section aria-labelledby={id} className="space-y-3">
+      <h2 id={id} className="text-lg">
+        Passar gruppen
+      </h2>
+      <Kostfilterval filter={kost} onAndra={onAndra} />
+    </section>
+  )
+}
+
+/** En ruta för en måltid eller grupp: illustration, namn och antal. Vald när den är tryckt. */
+function Ruta({ nyckel, namn, antal, vald, onValj }: { nyckel: string; namn: string; antal: string | null; vald: boolean; onValj: () => void }) {
+  return (
+    <li>
+      <button
+        type="button"
+        aria-pressed={vald}
+        onClick={onValj}
+        className={cn(
+          'flex h-full w-full flex-col overflow-hidden rounded-lg border bg-card text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+          vald ? 'border-primary ring-1 ring-primary' : 'border-border',
+        )}
+      >
+        <Illustration namn={nyckel} className="aspect-[5/3] w-full md:aspect-[5/2]" />
+        <span className="flex flex-1 flex-col gap-0.5 px-3 py-2.5">
+          <span className="font-semibold break-words">{namn}</span>
+          {antal && <span className="text-sm text-muted-foreground tabular-nums">{antal}</span>}
+        </span>
+      </button>
+    </li>
+  )
+}
+
+function Rutor({ rubrik, children }: { rubrik: string; children: ReactNode }) {
+  const id = useId()
+  return (
+    <section aria-labelledby={id} className="space-y-3">
+      <h2 id={id} className="text-lg">
+        {rubrik}
+      </h2>
+      <ul className="grid grid-cols-2 gap-3 md:grid-cols-4">{children}</ul>
+    </section>
+  )
+}
+
+const antalText = (n: number | undefined, en: string, flera: string) => (n === undefined ? null : `${n.toLocaleString('sv-SE')} ${n === 1 ? en : flera}`)
+
+/** Påsarna ur matkatalogen. Hela katalogen hämtas en gång och söks i appen. */
+function Pasdel({ sok, filter, andraFilter, kost }: { sok: string; filter: Katalogfilter; andraFilter: (f: Partial<Katalogfilter>) => void; kost: Kostfilter }) {
+  const id = useId()
+  const { katalog, forsokIgen } = useMatkatalog()
+  const { skafferi, laddaOm } = useSkafferi()
+  const [parametrar, setParametrar] = useSearchParams()
+  const location = useLocation()
+  const navigate = useNavigate()
+
+  const paseId = parametrar.get('pase')
+  const lista = useMemo(() => (Array.isArray(katalog) ? katalog : []), [katalog])
+  const traffar = useMemo(() => sokPasar(lista, sok, filter), [lista, sok, filter])
+  const perMaltid = useMemo(() => antalPerMaltid(lista), [lista])
+  const markeslista = useMemo(() => marken(lista), [lista])
+  const basta = mestEnergi(traffar)
+  const oppen = paseId ? lista.find((p) => p.id === paseId) : undefined
+  const visa = sok.trim().length > 0 || filter.maltid !== ''
+  const egna = skafferi && skafferi !== 'fel' ? skafferi : null
 
   /** Öppnar panelen. Ett nytt steg i historiken, så att bakåtknappen stänger den. */
   function oppna(pase: string) {
@@ -89,92 +209,70 @@ export function Matkatalog() {
     setParametrar(p, { replace: true })
   }
 
-  const egna = skafferi && skafferi !== 'fel' ? skafferi : null
+  if (katalog === null)
+    return (
+      <Laddar text="Hämtar katalogen" className="grid grid-cols-2 gap-3 md:grid-cols-4">
+        <Skelett className="h-32 rounded-lg" />
+        <Skelett className="h-32 rounded-lg" />
+      </Laddar>
+    )
+  if (katalog === 'fel') return <Laddfel vad="katalogen" onForsokIgen={forsokIgen} />
+  if (lista.length === 0) return <TomtLage kompakt text="Det finns inga påsar i katalogen än." />
 
   return (
-    <div className="space-y-6">
-      <Matflikar />
-      <SidRubrik
-        rubrik="Matkatalog"
-        text={
-          lista.length
-            ? `Sök bland ${lista.length.toLocaleString('sv-SE')} påsar och jämför energi och vikt. Lägg det du har hemma i skafferiet.`
-            : 'Sök bland påsarna och jämför energi och vikt. Lägg det du har hemma i skafferiet.'
-        }
-      />
+    <>
+      <Rutor rubrik="Eller välj en måltid">
+        {KATALOGMALTIDER.map((m) => (
+          <Ruta
+            key={m.nyckel}
+            nyckel={m.nyckel}
+            namn={m.etikett}
+            antal={antalText(perMaltid[m.nyckel], 'påse', 'påsar')}
+            vald={filter.maltid === m.nyckel}
+            onValj={() => andraFilter({ maltid: filter.maltid === m.nyckel ? '' : m.nyckel })}
+          />
+        ))}
+      </Rutor>
 
-      {katalog === null && (
-        <Laddar text="Hämtar katalogen" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          <Skelett className="h-32 rounded-lg" />
-          <Skelett className="h-32 rounded-lg" />
-        </Laddar>
-      )}
-      {katalog === 'fel' && <Laddfel vad="katalogen" onForsokIgen={forsokIgen} />}
-      {Array.isArray(katalog) && katalog.length === 0 && <TomtLage kompakt text="Det finns inga påsar i katalogen än." />}
+      <PassarGruppen kost={kost} onAndra={(f) => andraFilter({ val: [...f.val], utan: [...f.utan] })} />
 
-      {lista.length > 0 && (
-        <>
-          <div className="space-y-4">
+      {!visa && <TomtLage kompakt text="Sök eller välj en måltid, så visas påsarna här." />}
+
+      {visa && (
+        <section aria-labelledby={`${id}-traffar`} className="space-y-4">
+          <div className="grid gap-3 sm:grid-cols-2">
             <div className="space-y-1">
-              <label htmlFor={`${id}-sok`} className="block text-sm font-medium">
-                Sök på märke eller namn
+              <label htmlFor={`${id}-marke`} className="block text-sm font-medium">
+                Märke
               </label>
-              <div className="relative">
-                <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-                <Input id={`${id}-sok`} type="search" autoComplete="off" enterKeyHint="search" maxLength={80} className="pl-10" value={sok} onChange={(e) => setSok(e.target.value)} />
-              </div>
+              <Select id={`${id}-marke`} value={markeslista.find((m) => m.toLowerCase() === filter.marke.toLowerCase()) ?? ''} onChange={(e) => andraFilter({ marke: e.target.value })}>
+                <option value="">Alla märken</option>
+                {markeslista.map((m) => (
+                  <option key={m} value={m}>
+                    {m}
+                  </option>
+                ))}
+              </Select>
             </div>
-
-            <div className="grid gap-3 sm:grid-cols-3">
-              <div className="space-y-1">
-                <label htmlFor={`${id}-maltid`} className="block text-sm font-medium">
-                  Måltid
-                </label>
-                <Select id={`${id}-maltid`} value={filter.maltid} onChange={(e) => andraFilter({ maltid: e.target.value as Katalogfilter['maltid'] })}>
-                  <option value="">Alla måltider</option>
-                  {KATALOGMALTIDER.map((m) => (
-                    <option key={m.nyckel} value={m.nyckel}>
-                      {m.etikett}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <label htmlFor={`${id}-marke`} className="block text-sm font-medium">
-                  Märke
-                </label>
-                <Select id={`${id}-marke`} value={markeslista.find((m) => m.toLowerCase() === filter.marke.toLowerCase()) ?? ''} onChange={(e) => andraFilter({ marke: e.target.value })}>
-                  <option value="">Alla märken</option>
-                  {markeslista.map((m) => (
-                    <option key={m} value={m}>
-                      {m}
-                    </option>
-                  ))}
-                </Select>
-              </div>
-              <div className="space-y-1">
-                <label htmlFor={`${id}-sortering`} className="block text-sm font-medium">
-                  Sortera
-                </label>
-                <Select id={`${id}-sortering`} value={filter.sortering} onChange={(e) => andraFilter({ sortering: e.target.value as Katalogfilter['sortering'] })}>
-                  {SORTERINGAR.map((s) => (
-                    <option key={s.nyckel} value={s.nyckel}>
-                      {s.etikett}
-                    </option>
-                  ))}
-                </Select>
-              </div>
+            <div className="space-y-1">
+              <label htmlFor={`${id}-sortering`} className="block text-sm font-medium">
+                Sortera
+              </label>
+              <Select id={`${id}-sortering`} value={filter.sortering} onChange={(e) => andraFilter({ sortering: e.target.value as Katalogfilter['sortering'] })}>
+                {SORTERINGAR.map((s) => (
+                  <option key={s.nyckel} value={s.nyckel}>
+                    {s.etikett}
+                  </option>
+                ))}
+              </Select>
             </div>
-
-            <Kostfilterval filter={{ val: filter.val, utan: filter.utan }} onAndra={(f) => andraFilter({ val: [...f.val], utan: [...f.utan] })} />
-            {(filter.val.length > 0 || filter.utan.length > 0) && <p className="text-sm text-muted-foreground">Påsar där uppgiften saknas visas inte när du filtrerar.</p>}
           </div>
 
-          <p aria-live="polite" className="text-sm font-medium">
-            {traffar.length === 0 ? '' : traffar.length === 1 ? 'En påse' : `${traffar.length} påsar`}
-          </p>
+          <h2 id={`${id}-traffar`} aria-live="polite" className="text-base font-medium">
+            {traffar.length === 0 ? 'Inga påsar' : traffar.length === 1 ? 'En påse' : `${traffar.length} påsar`}
+          </h2>
+          {(filter.val.length > 0 || filter.utan.length > 0) && <p className="text-sm text-muted-foreground">Påsar där uppgiften saknas visas inte när du filtrerar.</p>}
           {traffar.length === 0 && <TomtLage kompakt text="Inga påsar passar sökningen och filtret." />}
-
           {traffar.length > 0 && (
             <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
               {traffar.map((p) => (
@@ -182,11 +280,120 @@ export function Matkatalog() {
               ))}
             </ul>
           )}
-        </>
+        </section>
       )}
 
       {oppen && <Paspanel key={oppen.id} pase={oppen} skafferi={skafferi} laddaOm={laddaOm} onStang={stang} />}
-    </div>
+    </>
+  )
+}
+
+const NARINGSDEL = {
+  varor: { rubrik: 'Eller välj en kategori', tom: 'Sök eller välj en kategori, så visas varorna här.', en: 'vara', flera: 'varor', ingen: 'Inga varor' },
+  livsmedel: { rubrik: 'Eller välj en grupp', tom: 'Sök eller välj en grupp, så visas livsmedlen här.', en: 'livsmedel', flera: 'livsmedel', ingen: 'Inga livsmedel' },
+} as const
+
+const VARURUTOR = Object.entries(KATEGORIETIKETT).map(([nyckel, etikett]) => ({ nyckel, etikett }))
+
+/** Märkesvarorna eller livsmedlen. Databasen söker, och listan visas en sida i taget. */
+function Naringsdel({
+  del,
+  sok,
+  grupp,
+  valjGrupp,
+  kost,
+  andraKost,
+}: {
+  del: 'varor' | 'livsmedel'
+  sok: string
+  grupp: string
+  valjGrupp: (g: string) => void
+  kost: Kostfilter
+  andraKost: (f: Kostfilter) => void
+}) {
+  const id = useId()
+  const text = NARINGSDEL[del]
+  const rutor = del === 'varor' ? VARURUTOR : HUVUDGRUPPER
+  const giltig = rutor.some((r) => r.nyckel === grupp) ? grupp : ''
+  const antal = useGruppantal(del)
+  const kort = useNaringskatalog(del, sok, giltig)
+  const traffar = useMemo(() => (Array.isArray(kort) ? kort.filter((k) => passarFilter(k.kost, kost)) : []), [kort, kost])
+  const nyckel = `${del}|${sok}|${giltig}|${kost.val.join()}|${kost.utan.join()}`
+  const [sidor, setSidor] = useState({ nyckel: '', antal: 1 })
+  // En ny sökning, grupp eller ett nytt filter börjar om på första sidan.
+  const visade = (sidor.nyckel === nyckel ? sidor.antal : 1) * SIDSTORLEK
+  const visa = sok.trim().length >= 2 || giltig !== ''
+  const filtrerar = kost.val.length > 0 || kost.utan.length > 0
+
+  return (
+    <>
+      <Rutor rubrik={text.rubrik}>
+        {rutor.map((r) => (
+          <Ruta key={r.nyckel} nyckel={r.nyckel} namn={r.etikett} antal={antalText(antal[r.nyckel], text.en, text.flera)} vald={giltig === r.nyckel} onValj={() => valjGrupp(r.nyckel)} />
+        ))}
+      </Rutor>
+
+      <PassarGruppen kost={kost} onAndra={andraKost} />
+
+      {!visa && <TomtLage kompakt text={text.tom} />}
+      {visa && kort === null && (
+        <Laddar text="Söker" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+          <Skelett className="h-28 rounded-lg" />
+          <Skelett className="h-28 rounded-lg" />
+        </Laddar>
+      )}
+      {visa && kort === 'fel' && (
+        <p role="alert" className="text-destructive">
+          Det gick inte att söka. Kontrollera uppkopplingen och försök igen.
+        </p>
+      )}
+
+      {visa && Array.isArray(kort) && (
+        <section aria-labelledby={`${id}-traffar`} className="space-y-4">
+          <h2 id={`${id}-traffar`} aria-live="polite" className="text-base font-medium">
+            {traffar.length === 0 ? text.ingen : antalText(traffar.length, text.en, text.flera)}
+          </h2>
+          {filtrerar && <p className="text-sm text-muted-foreground">Det som saknar uppgiften visas inte när du filtrerar.</p>}
+          {traffar.length === 0 && <TomtLage kompakt text="Inget passar sökningen och filtret." />}
+          {traffar.length > 0 && (
+            <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+              {traffar.slice(0, visade).map((k) => (
+                <Naringskortet key={k.id} kort={k} />
+              ))}
+            </ul>
+          )}
+          {traffar.length > visade && (
+            <Button variant="outline" onClick={() => setSidor({ nyckel, antal: visade / SIDSTORLEK + 1 })}>
+              Visa fler
+            </Button>
+          )}
+          {del === 'livsmedel' && traffar.length > 0 && <p className="text-xs text-muted-foreground">Näringsvärden från Livsmedelsverkets livsmedelsdatabas.</p>}
+        </section>
+      )}
+    </>
+  )
+}
+
+/** En märkesvara eller ett livsmedel: märke på egen rad, namnet, kategorin eller gruppen, näringen och kostbrickorna. */
+function Naringskortet({ kort }: { kort: Naringskort }) {
+  const naring = naringPer100(kort)
+  const brickor = kostbrickor(kort.kost)
+  return (
+    <li className="flex flex-col gap-2 rounded-lg border border-border bg-card p-4">
+      <div className="space-y-0.5">
+        {kort.marke && <p className="text-sm text-muted-foreground">{kort.marke}</p>}
+        <p className="font-semibold break-words">{kort.namn}</p>
+        {kort.grupp && <p className="text-sm text-muted-foreground">{kort.grupp}</p>}
+      </div>
+      {naring && <p className="text-sm tabular-nums">{naring}</p>}
+      {brickor.length > 0 && (
+        <span className="flex flex-wrap gap-1.5">
+          {brickor.map((b) => (
+            <Bricka key={b}>{b}</Bricka>
+          ))}
+        </span>
+      )}
+    </li>
   )
 }
 

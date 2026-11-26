@@ -1,14 +1,16 @@
 // Matkatalogen: filter och sortering som står i adressen, sökning bland påsarna och det som visas på korten
 // och i panelen. Rena funktioner utan databas.
-import { ALLERGENER, allergenetikett, arAllergen, KOSTVAL, passarFilter, uppraknade, type Allergen, type Kostval } from './kost'
+import { ALLERGENER, allergenetikett, arAllergen, KOSTVAL, passarFilter, uppraknade, type Allergen, type Kostinfo, type Kostval } from './kost'
+import { kostForLivsmedel } from './livsmedelsgrupper'
 import { kcalPer100g, paseMatchar, pasnamn } from './mat'
-import type { Katalogmaltid, Matprodukt } from './typer'
+import type { Katalogmaltid, Livsmedel, Matprodukt, Varukatalogvara } from './typer'
+import { KATEGORIETIKETT, kostinfoForVara } from './varukatalog'
 
 export const KATALOGMALTIDER: readonly { nyckel: Katalogmaltid; etikett: string }[] = [
   { nyckel: 'frukost', etikett: 'Frukost' },
   { nyckel: 'lunch_middag', etikett: 'Lunch och middag' },
-  { nyckel: 'dessert', etikett: 'Dessert' },
   { nyckel: 'mellanmal', etikett: 'Mellanmål' },
+  { nyckel: 'dessert', etikett: 'Efterrätt' },
 ]
 
 export const SORTERINGAR = [
@@ -152,4 +154,90 @@ export function spartext(p: Pick<Matprodukt, 'spar'>): string | null {
 /** Priset som det visas: "Cirka 129 kr". null när priset saknas. */
 export function pristext(p: Pick<Matprodukt, 'pris_sek_ca'>): string | null {
   return p.pris_sek_ca === null ? null : `Cirka ${tal(p.pris_sek_ca, 0)} kr`
+}
+
+// ─── Delarna: påsar, märkesvaror och livsmedel ───────────────────────────────
+
+export type Katalogdel = 'pasar' | 'varor' | 'livsmedel'
+
+export const KATALOGDELAR: readonly { nyckel: Katalogdel; namn: string }[] = [
+  { nyckel: 'pasar', namn: 'Påsar' },
+  { nyckel: 'varor', namn: 'Märkesvaror' },
+  { nyckel: 'livsmedel', namn: 'Livsmedel' },
+]
+
+/** Delen som står i adressen (?del=varor). Påsar när den saknas eller är okänd. */
+export function delFranAdress(p: URLSearchParams): Katalogdel {
+  const del = p.get('del')
+  return KATALOGDELAR.some((d) => d.nyckel === del) ? (del as Katalogdel) : 'pasar'
+}
+
+/** Byter del i adressen. Måltiden, gruppen och den öppna påsen hör till delen och tas bort. Kostfiltret följer med. */
+export function bytDel(del: Katalogdel, forut: URLSearchParams): URLSearchParams {
+  const p = new URLSearchParams(forut)
+  for (const n of ['del', 'maltid', 'grupp', 'pase']) p.delete(n)
+  if (del !== 'pasar') p.set('del', del)
+  return p
+}
+
+/** Hur många påsar det finns för varje måltid, för rutorna. */
+export function antalPerMaltid(katalog: readonly Pick<Matprodukt, 'maltid'>[]): Record<Katalogmaltid, number> {
+  const ut: Record<Katalogmaltid, number> = { frukost: 0, lunch_middag: 0, mellanmal: 0, dessert: 0 }
+  for (const p of katalog) ut[p.maltid]++
+  return ut
+}
+
+/** Hur många det är av varje nyckel, till exempel varor per kategori. Nycklar som saknas räknas inte. */
+export function rakna(nycklar: readonly (string | null)[]): Record<string, number> {
+  const ut: Record<string, number> = {}
+  for (const n of nycklar) if (n !== null) ut[n] = (ut[n] ?? 0) + 1
+  return ut
+}
+
+/** Hur många rader som visas åt gången för märkesvaror och livsmedel. */
+export const SIDSTORLEK = 20
+
+/** En märkesvara eller ett livsmedel som kort: märke, namn, kategori eller grupp, näring per 100 g och kost. */
+export interface Naringskort {
+  id: string
+  marke: string | null
+  namn: string
+  grupp: string | null
+  kcal: number | null
+  protein: number | null
+  kost: Kostinfo
+}
+
+export type Varukort = Pick<
+  Varukatalogvara,
+  'id' | 'marke' | 'namn' | 'kategori' | 'kcal_per_100g' | 'protein_per_100g' | 'vegetarisk' | 'vegansk' | 'glutenfri' | 'laktosfri' | 'allergener' | 'spar'
+>
+
+export function kortForVara(v: Varukort): Naringskort {
+  return { id: v.id, marke: v.marke, namn: v.namn, grupp: KATEGORIETIKETT[v.kategori], kcal: v.kcal_per_100g, protein: v.protein_per_100g, kost: kostinfoForVara(v) }
+}
+
+export type Livsmedelskort = Pick<Livsmedel, 'nummer' | 'namn' | 'grupp' | 'tillstand' | 'kcal_per_100g' | 'protein_per_100g' | 'allergener'>
+
+export function kortForLivsmedel(l: Livsmedelskort): Naringskort {
+  return {
+    id: String(l.nummer),
+    marke: null,
+    namn: l.namn,
+    grupp: l.grupp,
+    kcal: l.kcal_per_100g,
+    protein: l.protein_per_100g,
+    kost: { ...kostForLivsmedel(l.namn, l.grupp, l.allergener), allergener: l.allergener },
+  }
+}
+
+/** Kostbrickorna på ett kort. Okända allergener står som en egen bricka, eftersom de aldrig räknas som att något passar. */
+export function kostbrickor(k: Kostinfo): string[] {
+  return [...kostetiketter(k), ...(k.allergener === null ? ['Allergener okända'] : [])]
+}
+
+/** Kcal och protein per 100 g på kortet: "352 kcal, 12,5 g protein per 100 g". null när båda saknas. */
+export function naringPer100(k: Pick<Naringskort, 'kcal' | 'protein'>): string | null {
+  const delar = [k.kcal === null ? null : `${tal(k.kcal, 0)} kcal`, k.protein === null ? null : `${tal(k.protein, 1)} g protein`].filter(Boolean)
+  return delar.length ? `${delar.join(', ')} per 100 g` : null
 }
