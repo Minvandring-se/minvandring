@@ -1,0 +1,263 @@
+import { ChevronLeft, ExternalLink } from 'lucide-react'
+import { useId, useState } from 'react'
+import { Link, useParams } from 'react-router'
+import { Laddar, Skelett } from '@/components/app/Laddar'
+import { Laddfel } from '@/components/app/Laddfel'
+import { TomtLage } from '@/components/app/TomtLage'
+import { Illustration } from '@/components/illustrationer/Illustration'
+import { Matflikar } from '@/components/mat/Matflikar'
+import { Receptbrickor } from '@/components/mat/MinvandringsRecept'
+import { Button } from '@/components/ui/button'
+import { knappStil } from '@/components/ui/knappStil'
+import { Select } from '@/components/ui/select'
+import { sparaEgenRatt } from '@/hooks/useMatplan'
+import { hamtaTurlage, useReceptkatalog, useRedigerbaraTurer, type Turlage } from '@/hooks/useReceptkatalog'
+import { sparaRecept, useRecept } from '@/hooks/useRecept'
+import { useSidtitel } from '@/hooks/useSidtitel'
+import { allergenetikett, uppraknade, varningarForRatt } from '@/lib/kost'
+import { ledigtNamn, valForRecept } from '@/lib/recept'
+import { allergenrad, kostdelar, mangdtext, RECEPTMALTID_ETIKETT, receptPerPortion, stegPerPlats, tidtext, type Katalogrecept } from '@/lib/receptkatalog'
+import { cn } from '@/lib/utils'
+
+const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
+const RECEPT = '/matplanering/recept'
+const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 font-medium text-primary underline underline-offset-4', fokus)
+
+/**
+ * Ett av MinVandrings recept: beskrivning, portioner, ingredienser, steg hemma och på turen och källan. Receptet kan
+ * läggas i en tur, där det blir en egen rätt, eller sparas som eget recept. Texterna kommer från receptkatalogen.
+ */
+export function Receptsida() {
+  const { id } = useParams()
+  const katalog = useReceptkatalog()
+  const recept = Array.isArray(katalog) ? katalog.find((r) => r.id === id) : undefined
+  useSidtitel(recept?.namn ?? 'Recept')
+
+  return (
+    <div className="space-y-6">
+      <Matflikar />
+      {katalog === null && (
+        <Laddar text="Hämtar receptet" className="space-y-3">
+          <Skelett className="h-48 rounded-lg" />
+          <Skelett className="h-24 rounded-lg" />
+        </Laddar>
+      )}
+      {katalog === 'fel' && <Laddfel vad="receptet" />}
+      {Array.isArray(katalog) && !recept && (
+        <TomtLage
+          kompakt
+          rubrik="Receptet finns inte"
+          text="Adressen kan vara fel, eller så har receptet tagits bort."
+          knapp={
+            <Link to={RECEPT} className={knappStil({ variant: 'outline' })}>
+              Alla recept
+            </Link>
+          }
+        />
+      )}
+      {recept && <Receptet recept={recept} />}
+    </div>
+  )
+}
+
+function Receptet({ recept }: { recept: Katalogrecept }) {
+  const steg = stegPerPlats(recept.steg)
+  const allergener = allergenrad(recept)
+  const ingredienser = [...recept.ingredienser].sort((a, b) => a.ordning - b.ordning)
+
+  return (
+    <article className="mx-auto max-w-3xl space-y-6">
+      <Illustration namn={recept.id} className="aspect-[16/9] w-full rounded-yta sm:aspect-[5/2]" />
+      <div className="space-y-3">
+        <Link to={RECEPT} className={cn('-ml-1 inline-flex min-h-11 items-center gap-1 text-sm font-medium text-primary', fokus)}>
+          <ChevronLeft className="size-4" aria-hidden />
+          Alla recept
+        </Link>
+        <p className="text-sm text-muted-foreground">
+          {RECEPTMALTID_ETIKETT[recept.maltid]}, {recept.portioner === 1 ? '1 portion' : `${recept.portioner} portioner`}
+        </p>
+        <h1 className="text-[2rem] leading-tight break-words lg:text-[2.5rem]">{recept.namn}</h1>
+        <p className="max-w-prose text-lg">{recept.beskrivning}</p>
+        <Receptbrickor recept={recept} />
+      </div>
+
+      <Atgarder recept={recept} />
+
+      <section aria-labelledby="ingredienser" className="space-y-3">
+        <h2 id="ingredienser" className="text-xl">
+          Ingredienser
+        </h2>
+        <p className="text-sm text-muted-foreground">
+          Till {recept.portioner === 1 ? '1 portion' : `${recept.portioner} portioner`}.{recept.mangder === 'egna' && ' Källan saknade mängder, så vi har satt dem.'}
+        </p>
+        <ul className="divide-y divide-border rounded-lg border border-border bg-card">
+          {ingredienser.map((i) => (
+            <li key={i.ordning} className="flex gap-3 px-4 py-2.5">
+              <span className="w-20 shrink-0 tabular-nums text-muted-foreground">{mangdtext(i)}</span>
+              <span className="min-w-0 flex-1">
+                <span className="block break-words">{i.ingrediens}</span>
+                {(i.kommentar || i.packas !== 'hemma') && (
+                  <span className="block text-sm text-muted-foreground">
+                    {[i.packas === 'separat' && 'Packas för sig', i.packas === 'pa_plats' && 'På plats', i.kommentar].filter(Boolean).join('. ')}
+                  </span>
+                )}
+              </span>
+            </li>
+          ))}
+        </ul>
+        <p className="text-sm">
+          {allergener.innehaller.length > 0 ? `Innehåller ${uppraknade(allergener.innehaller.map((a) => allergenetikett(a).toLowerCase()))}.` : allergener.okanda === 0 ? 'Ingen av de 14 allergenerna.' : ''}
+          {allergener.okanda > 0 && (
+            <span className="text-muted-foreground">
+              {' '}
+              Allergenerna är okända för {allergener.okanda === 1 ? 'en ingrediens' : `${allergener.okanda} ingredienser`}, så kontrollera förpackningarna.
+            </span>
+          )}
+        </p>
+      </section>
+
+      {steg.hemma.length > 0 && <Steglista rubrik="Hemma" steg={steg.hemma} />}
+      {steg.turen.length > 0 && <Steglista rubrik="På turen" steg={steg.turen} />}
+
+      <p className="border-t border-border pt-4 text-sm">
+        Inspirerat av{' '}
+        <a href={recept.inspirerat_av_url} target="_blank" rel="noopener noreferrer" className={lankKlass}>
+          {recept.inspirerat_av}
+          <ExternalLink className="size-3.5" aria-hidden />
+          <span className="sr-only">(öppnas i ny flik)</span>
+        </a>
+      </p>
+    </article>
+  )
+}
+
+function Steglista({ rubrik, steg }: { rubrik: string; steg: Katalogrecept['steg'] }) {
+  const id = useId()
+  return (
+    <section aria-labelledby={id} className="space-y-3">
+      <h2 id={id} className="text-xl">
+        {rubrik}
+      </h2>
+      <ol className="space-y-3">
+        {steg.map((s, n) => (
+          <li key={s.steg_nr} className="flex gap-3">
+            <span aria-hidden className="flex size-7 shrink-0 items-center justify-center rounded-full bg-primary-soft text-sm font-semibold text-primary tabular-nums">
+              {n + 1}
+            </span>
+            <span className="min-w-0 flex-1 pt-0.5">
+              {s.steg}
+              {s.tid_min && <span className="block text-sm text-muted-foreground">{tidtext(s.tid_min)}</span>}
+            </span>
+          </li>
+        ))}
+      </ol>
+    </section>
+  )
+}
+
+type Lage = { typ: 'vila' } | { typ: 'sparar' } | { typ: 'klart'; text: string; till?: { adress: string; text: string } } | { typ: 'fel'; text: string }
+
+/** Lägg i turen och Spara som eget recept. Båda kopierar receptet, så att katalogen aldrig ändras. */
+function Atgarder({ recept }: { recept: Katalogrecept }) {
+  const id = useId()
+  const turer = useRedigerbaraTurer()
+  const { recept: egna, laddaOm } = useRecept()
+  const [turId, setTurId] = useState('')
+  const [turlage, setTurlage] = useState<{ turId: string; lage: Turlage | null } | null>(null)
+  const [lage, setLage] = useState<Lage>({ typ: 'vila' })
+  const rader = receptPerPortion(recept)
+  const aktuellt = turlage?.turId === turId ? turlage.lage : undefined
+  const varningar = aktuellt ? varningarForRatt(kostdelar(recept), aktuellt.behov) : []
+
+  async function valjTur(ny: string) {
+    setTurId(ny)
+    setLage({ typ: 'vila' })
+    if (!ny) return
+    const hamtat = await hamtaTurlage(ny)
+    setTurlage({ turId: ny, lage: hamtat })
+  }
+
+  async function laggITuren() {
+    if (!aktuellt) return
+    setLage({ typ: 'sparar' })
+    const val = valForRecept(recept.namn, rader, aktuellt.ratter, aktuellt.ingredienser, aktuellt.varor)
+    const till = { adress: `/tur/${turId}/mat`, text: 'Till turens mat' }
+    if (val.typ === 'befintlig') return setLage({ typ: 'klart', text: `${val.namn} finns redan i turen med samma ingredienser.`, till })
+    const rattId = await sparaEgenRatt(turId, null, val.namn, rader)
+    if (!rattId) return setLage({ typ: 'fel', text: 'Det gick inte att lägga receptet i turen. Kontrollera uppkopplingen och försök igen.' })
+    setTurlage({ turId, lage: await hamtaTurlage(turId) })
+    setLage({ typ: 'klart', text: `${val.namn} ligger nu bland turens egna rätter. Välj den under Egna rätter när du planerar en måltid.`, till })
+  }
+
+  async function sparaSomEget() {
+    if (!Array.isArray(egna)) return
+    setLage({ typ: 'sparar' })
+    const namn = ledigtNamn(recept.namn, egna.map((r) => r.namn))
+    const ny = await sparaRecept(null, namn, rader)
+    if (!ny) return setLage({ typ: 'fel', text: 'Det gick inte att spara receptet. Kontrollera uppkopplingen och försök igen.' })
+    await laddaOm()
+    setLage({ typ: 'klart', text: `Sparat bland dina recept som ${namn}. Där kan du ändra det.`, till: { adress: RECEPT, text: 'Till dina recept' } })
+  }
+
+  const sparar = lage.typ === 'sparar'
+
+  return (
+    <section aria-label="Använd receptet" className="space-y-4 rounded-lg border border-border bg-card p-4">
+      <div className="grid gap-3 sm:grid-cols-[minmax(0,1fr)_auto] sm:items-end">
+        <div className="space-y-1">
+          <label htmlFor={`${id}-tur`} className="block text-sm font-medium">
+            Lägg i turen
+          </label>
+          <Select id={`${id}-tur`} value={turId} disabled={!Array.isArray(turer) || turer.length === 0} onChange={(e) => void valjTur(e.target.value)}>
+            <option value="">{turer === null ? 'Hämtar dina turer' : Array.isArray(turer) && turer.length === 0 ? 'Du har inga turer som du kan ändra' : 'Välj tur'}</option>
+            {Array.isArray(turer) &&
+              turer.map((t) => (
+                <option key={t.id} value={t.id}>
+                  {t.namn}
+                </option>
+              ))}
+          </Select>
+        </div>
+        <Button disabled={!aktuellt || sparar} onClick={() => void laggITuren()}>
+          Lägg i turen
+        </Button>
+      </div>
+      {turer === 'fel' && <p className="text-sm text-destructive">Det gick inte att hämta dina turer.</p>}
+      {turId && turlage?.turId === turId && turlage.lage === null && <p className="text-sm text-destructive">Det gick inte att hämta turen. Försök igen.</p>}
+      {varningar.length > 0 && (
+        <ul aria-label="Gruppens kostbehov" className="space-y-1 text-sm">
+          {varningar.map((v) => (
+            <li key={v.text} className={v.okand ? 'text-muted-foreground' : 'font-medium text-accent-strong'}>
+              {v.text}
+            </li>
+          ))}
+        </ul>
+      )}
+      {aktuellt && varningar.length === 0 && aktuellt.behov.length > 0 && <p className="text-sm text-muted-foreground">Receptet passar gruppens kostbehov.</p>}
+
+      <div className="border-t border-border pt-4">
+        <Button variant="outline" disabled={!Array.isArray(egna) || sparar} onClick={() => void sparaSomEget()}>
+          Spara som eget recept
+        </Button>
+      </div>
+
+      <div aria-live="polite">
+        {lage.typ === 'klart' && (
+          <p className="text-sm">
+            {lage.text}{' '}
+            {lage.till && (
+              <Link to={lage.till.adress} className={lankKlass}>
+                {lage.till.text}
+              </Link>
+            )}
+          </p>
+        )}
+        {lage.typ === 'fel' && (
+          <p role="alert" className="text-sm text-destructive">
+            {lage.text}
+          </p>
+        )}
+      </div>
+    </section>
+  )
+}

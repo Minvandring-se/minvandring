@@ -70,6 +70,7 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Egna recept på kontot, att lägga in i vilken tur som helst (kopieras till turen) | Finns (`/matplanering/recept`), personligt |
 | Spara en egen rätt i en tur som recept | Finns |
 | Tips om mat med källor: energi, vatten och bränsle, packning, kcal per 100 g | Finns som artiklar (`/matplanering/tips/<namn>`) med lästid, viktiga siffror och delar som fälls ut. Bilderna är platshållare |
+| MinVandrings recept: 29 recept med ingredienser, steg hemma och på turen och källa, kostfilter, Lägg i turen och Spara som eget recept | Finns (`/matplanering/recept/<id>`), migreringen `receptkatalog` behöver köras. Bilderna är platshållare |
 | Gas till köket: patroner som räcker på sommaren och med snösmältning, enligt Primus veckosiffror | Finns, i turens matplan och som förslaget Gas i packlistan |
 | Dela recept med andra användare | Senare |
 | Proviantering i STF-stugor | Senare |

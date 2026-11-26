@@ -2382,6 +2382,96 @@ describe('matplanen', () => {
     })
   })
 
+  describe('MinVandrings recept', () => {
+    const TABELLER = ['public.receptkatalog', 'public.receptkatalog_ingredienser', 'public.receptkatalog_steg']
+
+    it('inloggade läser recepten med ingredienser och steg från seeden', async () => {
+      const r = await som(LASARE, (tx) => tx.query<{ n: number }>('select count(*)::int as n from public.receptkatalog'))
+      expect(r.rows[0].n).toBe(29)
+      const i = await som(LASARE, (tx) =>
+        tx.query<{ ingrediens: string; livsmedel_nummer: number | null }>("select ingrediens, livsmedel_nummer from public.receptkatalog_ingredienser where recept_id = 'aprikosgrot' order by ordning limit 2"),
+      )
+      expect(i.rows).toEqual([
+        { ingrediens: 'Snabbhavregryn', livsmedel_nummer: 702 },
+        { ingrediens: 'Mjölkpulver', livsmedel_nummer: 4537 },
+      ])
+      const s = await som(UTOMSTAENDE, (tx) => tx.query<{ n: number }>("select count(*)::int as n from public.receptkatalog_steg where recept_id = 'aprikosgrot'"))
+      expect(s.rows[0].n).toBeGreaterThan(0)
+    })
+
+    it('ingen ändrar via API:t, anon når ingenting och RLS är påslaget', async () => {
+      await forvantaFel(
+        som(AGARE, (tx) =>
+          tx.query(
+            "insert into public.receptkatalog (id, namn, maltid, portioner, kok_kravs, torkning_hemma, beskrivning, mangder, inspirerat_av, inspirerat_av_url, status) values ('eget', 'Eget', 'middag', 1, true, false, 'Text', 'egna', 'Någon', 'https://x.se', 'testat')",
+          ),
+        ),
+      )
+      const u = await som(AGARE, (tx) => tx.query("update public.receptkatalog set status = 'testat' where id = 'aprikosgrot'")).catch(() => null)
+      expect(u?.affectedRows ?? 0).toBe(0)
+      await forvantaFel(som(AGARE, (tx) => tx.query("delete from public.receptkatalog_steg where recept_id = 'aprikosgrot'")))
+      for (const t of TABELLER) {
+        await forvantaFel(somAnon((tx) => tx.query(`select 1 from ${t}`)))
+        const har = async (roll: string, r: string) => (await db.query<{ ok: boolean }>('select has_table_privilege($1, $2, $3) as ok', [roll, t, r])).rows[0].ok
+        for (const r of ['insert', 'update', 'delete', 'truncate']) expect(await har('authenticated', r), `${t} ${r}`).toBe(false)
+        for (const r of ['select', 'insert', 'update', 'delete']) expect(await har('anon', r), `${t} ${r}`).toBe(false)
+        const rls = await db.query('select relrowsecurity from pg_class where oid = $1::regclass', [t])
+        expect(rls.rows, t).toEqual([{ relrowsecurity: true }])
+      }
+    })
+
+    it('mängd och enhet hör ihop, och en ingrediens kopplas till högst ett livsmedel eller en vara', async () => {
+      const ny = (varden: string) =>
+        db.query(`insert into public.receptkatalog_ingredienser (recept_id, ordning, ingrediens, mangd, enhet, packas, livsmedel_nummer, varukatalog_id) values ('aprikosgrot', 90, 'Test', ${varden})`)
+      await forvantaFel(ny("2, null, 'hemma', null, null"))
+      await forvantaFel(ny("null, 'g', 'hemma', null, null"))
+      await forvantaFel(ny("2, 'liter', 'hemma', null, null"))
+      const vara = (
+        await db.query<{ id: string }>("insert into public.varukatalog (marke, namn, kategori, forpackning_g, kcal_per_100g, kalla) values ('Test', 'Receptvara båda', 'brod', 100, 100, 'https://x.se') returning id")
+      ).rows[0].id
+      await forvantaFel(ny(`2, 'g', 'hemma', 702, '${vara}'`))
+    })
+
+    it('stoppar fel id, packas, plats, tid och portioner', async () => {
+      const recept = (id: string, portioner: number) =>
+        db.query(
+          `insert into public.receptkatalog (id, namn, maltid, portioner, kok_kravs, torkning_hemma, beskrivning, mangder, inspirerat_av, inspirerat_av_url, status) values ($1, 'Test', 'middag', $2, true, false, 'Text', 'egna', 'Någon', 'https://x.se', 'otestat')`,
+          [id, portioner],
+        )
+      await forvantaFel(recept('Stor_Bokstav', 1))
+      await forvantaFel(recept('noll-portioner', 0))
+      await forvantaFel(recept('for-manga', 51))
+      await forvantaFel(db.query("insert into public.receptkatalog_ingredienser (recept_id, ordning, ingrediens, packas) values ('aprikosgrot', 91, 'Test', 'annat')"))
+      const steg = (plats: string, tid: string) => db.query("insert into public.receptkatalog_steg (recept_id, steg_nr, var, steg, tid_min) values ('aprikosgrot', 90, $1, 'Test', $2)", [plats, tid])
+      await forvantaFel(steg('hem', '5'))
+      // Ett intervall skrivs med kort streck, inte med bindestreck.
+      await forvantaFel(steg('turen', '5-10'))
+    })
+
+    it('kopplingen blir tom när livsmedlet försvinner, och ingredienserna försvinner med receptet', async () => {
+      await db.query("insert into public.livsmedel (nummer, namn) values (999901, 'Testlivsmedel')")
+      await db.query(
+        "insert into public.receptkatalog (id, namn, maltid, portioner, kok_kravs, torkning_hemma, beskrivning, mangder, inspirerat_av, inspirerat_av_url, status) values ('testrecept', 'Test', 'middag', 1, true, false, 'Text', 'egna', 'Någon', 'https://x.se', 'otestat')",
+      )
+      await db.query("insert into public.receptkatalog_ingredienser (recept_id, ordning, ingrediens, packas, livsmedel_nummer) values ('testrecept', 1, 'Test', 'hemma', 999901)")
+      await db.query("insert into public.receptkatalog_steg (recept_id, steg_nr, var, steg, tid_min) values ('testrecept', 1, 'turen', 'Koka.', '5–10')")
+      const vara = (
+        await db.query<{ id: string }>("insert into public.varukatalog (marke, namn, kategori, forpackning_g, kcal_per_100g, kalla) values ('Test', 'Receptvara', 'brod', 100, 100, 'https://x.se') returning id")
+      ).rows[0].id
+      await db.query("insert into public.receptkatalog_ingredienser (recept_id, ordning, ingrediens, packas, varukatalog_id) values ('testrecept', 2, 'Vara', 'hemma', $1)", [vara])
+      await db.query('delete from public.livsmedel where nummer = 999901')
+      await db.query('delete from public.varukatalog where id = $1', [vara])
+      const k = await db.query("select livsmedel_nummer, varukatalog_id from public.receptkatalog_ingredienser where recept_id = 'testrecept' order by ordning")
+      expect(k.rows).toEqual([
+        { livsmedel_nummer: null, varukatalog_id: null },
+        { livsmedel_nummer: null, varukatalog_id: null },
+      ])
+      await db.query("delete from public.receptkatalog where id = 'testrecept'")
+      const kvar = await db.query("select 1 from public.receptkatalog_ingredienser where recept_id = 'testrecept' union all select 1 from public.receptkatalog_steg where recept_id = 'testrecept'")
+      expect(kvar.rows).toEqual([])
+    })
+  })
+
   describe('varukatalogen', () => {
     let vk: string
     const nyVaruKatalograd = async (namn: string, allergener = "array['gluten']::text[]") =>
