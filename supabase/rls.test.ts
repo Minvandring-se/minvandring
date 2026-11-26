@@ -193,6 +193,8 @@ describe('funktionerna i public', () => {
     'public.vandrat_ihop()',
     'public.lagg_till_vanner(uuid, uuid[])',
     'public.spara_grupp(uuid, text, uuid[])',
+    'public.spara_packmall(uuid, text)',
+    'public.anvand_packmall(uuid, uuid)',
   ]
 
   it('går inte att anropa utan inloggning', async () => {
@@ -5408,5 +5410,211 @@ describe('grupper', () => {
     await db.query('delete from auth.users where id = $1', [RUT])
     expect((await db.query('select 1 from public.grupper where user_id = $1', [RUT])).rows).toHaveLength(0)
     expect((await db.query('select 1 from public.gruppmedlemmar where user_id = $1', [RUT])).rows).toHaveLength(0)
+  })
+})
+
+describe('packlistor (mallar)', () => {
+  // Egna användare: Mia äger turen, Nils är redigerare, Olle läsare. Pia är inte med.
+  const MIA = '00000000-0000-0000-0000-0000000000c1'
+  const NILS = '00000000-0000-0000-0000-0000000000c2'
+  const OLLE = '00000000-0000-0000-0000-0000000000c3'
+  const PIA = '00000000-0000-0000-0000-0000000000c4'
+  let tur: string
+  let nyTur: string
+  let mia: string
+  let nils: string
+  let olle: string
+
+  const rader = (t: string) =>
+    db.query<{ namn: string; bars_av: string | null; alla: boolean; gemensam: boolean; vikt_g: number | null }>(
+      'select namn, bars_av, alla, gemensam, vikt_g from public.packrader where tur_id = $1 order by sortering, namn',
+      [t],
+    )
+
+  beforeAll(async () => {
+    await db.exec(
+      `insert into auth.users (id, email) values ('${MIA}', 'mia@exempel.se'), ('${NILS}', 'nils@exempel.se'), ('${OLLE}', 'olle@exempel.se'), ('${PIA}', 'pia@exempel.se');`,
+    )
+    tur = await skapaTur(MIA, 'Kungsleden')
+    const kod = await kodFor(tur)
+    await som(NILS, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(OLLE, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const d = await db.query<{ id: string; user_id: string }>('select id, user_id from public.deltagare where tur_id = $1', [tur])
+    mia = d.rows.find((r) => r.user_id === MIA)!.id
+    nils = d.rows.find((r) => r.user_id === NILS)!.id
+    olle = d.rows.find((r) => r.user_id === OLLE)!.id
+    await som(MIA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [olle]))
+
+    await som(MIA, async (tx) => {
+      await tx.query(
+        `insert into public.packrader (tur_id, namn, kategori, underkategori, vikt_g, bars_av, sortering) values
+           ($1, 'Mias ryggsäck', 'packning', null, 1200, $2, 1),
+           ($1, 'Nils ryggsäck', 'packning', null, 1500, $3, 2),
+           ($1, 'Tält', 'talt', 'talt', 1800, $3, 3)`,
+        [tur, mia, nils],
+      )
+      await tx.query(`update public.packrader set gemensam = true where tur_id = $1 and namn = 'Tält'`, [tur])
+      await tx.query(
+        `insert into public.packrader (tur_id, namn, kategori, underkategori, vikt_g, alla, sortering) values ($1, 'Sovsäck', 'sova', 'sovsack', 1000, true, 4)`,
+        [tur],
+      )
+      await tx.query(`insert into public.packrader (tur_id, namn, bars_av, med) values ($1, 'Stannar hemma', $2, false)`, [tur, mia])
+    })
+    // Mias egen sovsäck på raden som alla ska ha.
+    await som(MIA, (tx) =>
+      tx.query(
+        `insert into public.packstatus (packrad_id, deltagare_id, tur_id, namn, vikt_g)
+         select id, $2, $1, 'Mias dunsäck', 800 from public.packrader where tur_id = $1 and namn = 'Sovsäck'`,
+        [tur, mia],
+      ),
+    )
+    // Nils har en egen modell också. Den ska inte hamna i någon annans mall.
+    await som(NILS, (tx) =>
+      tx.query(
+        `insert into public.packstatus (packrad_id, deltagare_id, tur_id, namn, vikt_g)
+         select id, $2, $1, 'Nils sovsäck', 1100 from public.packrader where tur_id = $1 and namn = 'Sovsäck'`,
+        [tur, nils],
+      ),
+    )
+    nyTur = await skapaTur(MIA, 'Sarek')
+    const k2 = await kodFor(nyTur)
+    await som(NILS, (tx) => tx.query('select public.ga_med($1)', [k2]))
+    await som(OLLE, (tx) => tx.query('select public.ga_med($1)', [k2]))
+    const o2 = await db.query<{ id: string }>('select id from public.deltagare where tur_id = $1 and user_id = $2', [nyTur, OLLE])
+    await som(MIA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [o2.rows[0].id]))
+  })
+
+  it('en mall tar med det jag bär, det gemensamma och min modell av det alla ska ha, men inte andras saker', async () => {
+    const m = await som(MIA, (tx) => tx.query<{ id: string }>(`select public.spara_packmall($1, ' Fjällen ') as id`, [tur]))
+    const id = m.rows[0].id
+    const mall = await som(MIA, (tx) => tx.query<{ namn: string; fran_tur_namn: string; user_id: string }>('select namn, fran_tur_namn, user_id from public.packmallar where id = $1', [id]))
+    expect(mall.rows).toEqual([{ namn: 'Fjällen', fran_tur_namn: 'Kungsleden', user_id: MIA }])
+    const r = await som(MIA, (tx) =>
+      tx.query<{ namn: string; alla: boolean; gemensam: boolean; vikt_g: number; egen_namn: string | null; egen_vikt_g: number | null }>(
+        'select namn, alla, gemensam, vikt_g, egen_namn, egen_vikt_g from public.packmallrader where mall_id = $1 order by sortering',
+        [id],
+      ),
+    )
+    expect(r.rows).toEqual([
+      { namn: 'Mias ryggsäck', alla: false, gemensam: false, vikt_g: 1200, egen_namn: null, egen_vikt_g: null },
+      { namn: 'Tält', alla: false, gemensam: true, vikt_g: 1800, egen_namn: null, egen_vikt_g: null },
+      { namn: 'Sovsäck', alla: true, gemensam: false, vikt_g: 1000, egen_namn: 'Mias dunsäck', egen_vikt_g: 800 },
+    ])
+  })
+
+  it('en läsare får spara en mall, men den som inte är med får inte', async () => {
+    const m = await som(OLLE, (tx) => tx.query<{ id: string }>(`select public.spara_packmall($1, 'Olles') as id`, [tur]))
+    const r = await som(OLLE, (tx) =>
+      tx.query<{ namn: string; egen_namn: string | null }>('select namn, egen_namn from public.packmallrader where mall_id = $1 order by sortering', [m.rows[0].id]),
+    )
+    expect(r.rows).toEqual([
+      { namn: 'Tält', egen_namn: null },
+      { namn: 'Sovsäck', egen_namn: null },
+    ])
+    await forvantaFel(som(PIA, (tx) => tx.query(`select public.spara_packmall($1, 'Pias')`, [tur])))
+    expect((await db.query('select 1 from public.packmallar where user_id = $1', [PIA])).rows).toHaveLength(0)
+  })
+
+  it('samma namn två gånger och ett tomt namn stoppas', async () => {
+    await forvantaFel(som(MIA, (tx) => tx.query(`select public.spara_packmall($1, 'fjällen')`, [tur])))
+    await forvantaFel(som(MIA, (tx) => tx.query(`select public.spara_packmall($1, '  ')`, [tur])))
+  })
+
+  it('någon annan ser, ändrar eller tar inte bort mina mallar, inte ens i samma tur', async () => {
+    for (const vem of [NILS, PIA]) {
+      expect((await som(vem, (tx) => tx.query(`select id from public.packmallar where user_id = $1`, [MIA]))).rows).toHaveLength(0)
+      expect((await som(vem, (tx) => tx.query(`select id from public.packmallrader where user_id = $1`, [MIA]))).rows).toHaveLength(0)
+      expect((await som(vem, (tx) => tx.query(`update public.packmallar set namn = 'Stulen' where user_id = $1`, [MIA]))).affectedRows).toBe(0)
+      expect((await som(vem, (tx) => tx.query(`delete from public.packmallrader where user_id = $1`, [MIA]))).affectedRows).toBe(0)
+    }
+    const mall = await db.query<{ id: string }>(`select id from public.packmallar where user_id = $1 limit 1`, [MIA])
+    // En rad i någon annans mall går inte att lägga in, och en mall går inte att flytta till någon annan.
+    await forvantaFel(som(NILS, (tx) => tx.query(`insert into public.packmallrader (mall_id, namn) values ($1, 'Smygrad')`, [mall.rows[0].id])))
+    await forvantaFel(som(MIA, (tx) => tx.query(`update public.packmallar set user_id = $1 where id = $2`, [NILS, mall.rows[0].id])))
+    // Raderna går inte heller att flytta till någon annans mall eller till någon annan.
+    const nilsMall = (await som(NILS, (tx) => tx.query<{ id: string }>(`insert into public.packmallar (namn) values ('Nils tomma') returning id`))).rows[0].id
+    await forvantaFel(som(MIA, (tx) => tx.query('update public.packmallrader set mall_id = $1 where user_id = $2', [nilsMall, MIA])))
+    await forvantaFel(som(MIA, (tx) => tx.query('update public.packmallrader set user_id = $1 where user_id = $2', [NILS, MIA])))
+    expect((await som(NILS, (tx) => tx.query(`update public.packmallrader set namn = 'x' where user_id = $1`, [MIA]))).affectedRows).toBe(0)
+    expect((await som(NILS, (tx) => tx.query('delete from public.packmallar where user_id = $1', [MIA]))).affectedRows).toBe(0)
+    await som(NILS, (tx) => tx.query('delete from public.packmallar where id = $1', [nilsMall]))
+  })
+
+  it('min egen modell sparas bara på rader som alla ska ha', async () => {
+    const mall = (await db.query<{ id: string }>(`select id from public.packmallar where user_id = $1 limit 1`, [MIA])).rows[0].id
+    await forvantaFel(som(MIA, (tx) => tx.query(`insert into public.packmallrader (mall_id, namn, egen_namn) values ($1, 'Kniv', 'Min kniv')`, [mall])))
+    await forvantaFel(som(MIA, (tx) => tx.query(`insert into public.packmallrader (mall_id, namn, sortering) values ($1, 'Kniv', 2147483647)`, [mall])))
+  })
+
+  it('ägaren byter namn på och tar bort sin mall, och raderna försvinner med den', async () => {
+    const m = await som(MIA, (tx) => tx.query<{ id: string }>(`select public.spara_packmall($1, 'Tillfällig') as id`, [tur]))
+    const id = m.rows[0].id
+    expect((await som(MIA, (tx) => tx.query(`update public.packmallar set namn = 'Tillfällig 2' where id = $1`, [id]))).affectedRows).toBe(1)
+    expect((await som(MIA, (tx) => tx.query('delete from public.packmallar where id = $1', [id]))).affectedRows).toBe(1)
+    expect((await db.query('select 1 from public.packmallrader where mall_id = $1', [id])).rows).toHaveLength(0)
+  })
+
+  it('en mall läggs sist i en tur: det jag bar bär jag, det gemensamma bär ingen', async () => {
+    const m = await db.query<{ id: string }>(`select id from public.packmallar where user_id = $1 and namn = 'Fjällen'`, [MIA])
+    await som(MIA, (tx) => tx.query(`insert into public.packrader (tur_id, namn, sortering) values ($1, 'Finns redan', 5)`, [nyTur]))
+    const n = await som(MIA, (tx) => tx.query<{ n: number }>('select public.anvand_packmall($1, $2) as n', [m.rows[0].id, nyTur]))
+    expect(n.rows[0].n).toBe(3)
+    const miaNy = (await db.query<{ id: string }>('select id from public.deltagare where tur_id = $1 and user_id = $2', [nyTur, MIA])).rows[0].id
+    expect((await rader(nyTur)).rows).toEqual([
+      { namn: 'Finns redan', bars_av: null, alla: false, gemensam: false, vikt_g: null },
+      { namn: 'Mias ryggsäck', bars_av: miaNy, alla: false, gemensam: false, vikt_g: 1200 },
+      { namn: 'Tält', bars_av: null, alla: false, gemensam: true, vikt_g: 1800 },
+      { namn: 'Sovsäck', bars_av: null, alla: true, gemensam: false, vikt_g: 1000 },
+    ])
+    // Min dunsäck blir min modell på raden, inte allas.
+    const s = await db.query<{ deltagare_id: string; namn: string; vikt_g: number; packad: boolean }>(
+      `select s.deltagare_id, s.namn, s.vikt_g, s.packad from public.packstatus s join public.packrader r on r.id = s.packrad_id
+       where r.tur_id = $1`,
+      [nyTur],
+    )
+    expect(s.rows).toEqual([{ deltagare_id: miaNy, namn: 'Mias dunsäck', vikt_g: 800, packad: false }])
+  })
+
+  it('en redigerare lägger sin egen mall i turen, men en läsare och den som inte är med får inte', async () => {
+    const nm = await som(NILS, (tx) => tx.query<{ id: string }>(`select public.spara_packmall($1, 'Nils lista') as id`, [tur]))
+    const fore = (await rader(nyTur)).rows.length
+    expect((await som(NILS, (tx) => tx.query<{ n: number }>('select public.anvand_packmall($1, $2) as n', [nm.rows[0].id, nyTur]))).rows[0].n).toBe(3)
+    expect((await rader(nyTur)).rows.length).toBe(fore + 3)
+
+    const om = await db.query<{ id: string }>(`select id from public.packmallar where user_id = $1`, [OLLE])
+    await forvantaFel(som(OLLE, (tx) => tx.query('select public.anvand_packmall($1, $2)', [om.rows[0].id, nyTur])))
+    const pm = await som(PIA, (tx) => tx.query<{ id: string }>(`insert into public.packmallar (namn) values ('Pias egen') returning id`))
+    await forvantaFel(som(PIA, (tx) => tx.query('select public.anvand_packmall($1, $2)', [pm.rows[0].id, nyTur])))
+    expect((await rader(nyTur)).rows.length).toBe(fore + 3)
+  })
+
+  it('man kan inte lägga någon annans mall i en tur', async () => {
+    const m = await db.query<{ id: string }>(`select id from public.packmallar where user_id = $1 and namn = 'Fjällen'`, [MIA])
+    const fore = (await rader(nyTur)).rows.length
+    await forvantaFel(som(NILS, (tx) => tx.query('select public.anvand_packmall($1, $2)', [m.rows[0].id, nyTur])))
+    expect((await rader(nyTur)).rows.length).toBe(fore)
+  })
+
+  it('den som tas bort ur turen kan inte längre spara eller lägga till mallar där, men behåller sina mallar', async () => {
+    const nm = (await db.query<{ id: string }>(`select id from public.packmallar where user_id = $1 and namn = 'Nils lista'`, [NILS])).rows[0].id
+    await som(MIA, (tx) => tx.query('delete from public.deltagare where tur_id = $1 and user_id = $2', [nyTur, NILS]))
+    const fore = (await rader(nyTur)).rows.length
+    await forvantaFel(som(NILS, (tx) => tx.query(`select public.spara_packmall($1, 'Efteråt')`, [nyTur])))
+    await forvantaFel(som(NILS, (tx) => tx.query('select public.anvand_packmall($1, $2)', [nm, nyTur])))
+    expect((await rader(nyTur)).rows.length).toBe(fore)
+    expect((await som(NILS, (tx) => tx.query<{ namn: string }>('select namn from public.packmallar'))).rows).toEqual([{ namn: 'Nils lista' }])
+  })
+
+  it('en mall finns kvar när turen tas bort, och försvinner med kontot', async () => {
+    await som(MIA, (tx) => tx.query('delete from public.turer where id = $1', [tur]))
+    expect((await som(MIA, (tx) => tx.query(`select fran_tur_namn from public.packmallar where namn = 'Fjällen'`))).rows).toEqual([{ fran_tur_namn: 'Kungsleden' }])
+    await db.query('delete from auth.users where id = $1', [OLLE])
+    expect((await db.query('select 1 from public.packmallar where user_id = $1', [OLLE])).rows).toHaveLength(0)
+    expect((await db.query('select 1 from public.packmallrader where user_id = $1', [OLLE])).rows).toHaveLength(0)
+  })
+
+  it('anon når ingenting', async () => {
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.packmallar')))
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.packmallrader')))
   })
 })

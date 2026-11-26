@@ -138,14 +138,6 @@ export const STATISTIK = {
   ],
 }
 
-/** Packlistor och mallar: färdiga mallar och era egna från tidigare turer. */
-export const MALLAR: { namn: string; fran: string; saker: number; basvikt: string }[] = [
-  { namn: 'Fjälltur sommar', fran: 'Färdig mall', saker: 46, basvikt: '7,8 kg' },
-  { namn: 'Fjälltur vinter', fran: 'Färdig mall', saker: 58, basvikt: '11,2 kg' },
-  { namn: 'Helg i skogen med hund', fran: 'Er mall, från Sörmlandsleden 2025', saker: 34, basvikt: '6,1 kg' },
-  { namn: 'Stugtur i fjällen', fran: 'Färdig mall', saker: 31, basvikt: '4,9 kg' },
-]
-
 /** Dagbok: en tidslinje för en tur. */
 export const DAGBOK = {
   tur: 'Jämtlandstriangeln 2026',
