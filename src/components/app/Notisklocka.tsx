@@ -1,18 +1,22 @@
 import { Bell } from 'lucide-react'
 import { useEffect, useId, useRef, useState } from 'react'
 import { Link, useLocation } from 'react-router'
+import { Button } from '@/components/ui/button'
+import { svaraVanforfragan } from '@/hooks/useVanner'
 import type { Notiser } from '@/hooks/useNotiser'
 import { arAppLank, klockansNamn, notistid, olastaSiffra, type Notis } from '@/lib/notiser'
 import { cn } from '@/lib/utils'
+import { vanfel } from '@/lib/vanner'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
 /**
  * Notisklockan uppe till höger. Siffran visar olästa notiser. Klockan öppnar en lista med de senaste, och när den
  * öppnas markeras alla som lästa. De som var olästa behåller sin prick tills listan stängs.
- * Listan stängs med Escape, med ett tryck utanför och när man går till en annan sida.
+ * Listan stängs med Escape, med ett tryck utanför och när man går till en annan sida. En vänförfrågan har
+ * Godkänn och Neka direkt i listan.
  */
-export function Notisklocka({ notiser, olasta, markeraLasta }: Notiser) {
+export function Notisklocka({ notiser, olasta, markeraLasta, laddaOm }: Notiser) {
   const id = useId()
   const [oppen, setOppen] = useState(false)
   const [nya, setNya] = useState<ReadonlySet<string>>(new Set())
@@ -86,13 +90,21 @@ export function Notisklocka({ notiser, olasta, markeraLasta }: Notiser) {
         <h2 id={`${id}-rubrik`} className="px-3 pt-2 pb-1 text-lg">
           Notiser
         </h2>
-        {oppen && <Lista notiser={notiser} nya={nya} nu={nu} stang={() => setOppen(false)} />}
+        {oppen && <Lista notiser={notiser} nya={nya} nu={nu} stang={() => setOppen(false)} laddaOm={laddaOm} />}
       </section>
     </div>
   )
 }
 
-function Lista({ notiser, nya, nu, stang }: { notiser: Notiser['notiser']; nya: ReadonlySet<string>; nu: Date; stang: () => void }) {
+interface Listprops {
+  notiser: Notiser['notiser']
+  nya: ReadonlySet<string>
+  nu: Date
+  stang: () => void
+  laddaOm: () => Promise<void>
+}
+
+function Lista({ notiser, nya, nu, stang, laddaOm }: Listprops) {
   if (notiser === null) return <p className="px-3 py-3 text-sm text-muted-foreground">Hämtar notiserna …</p>
   if (notiser === 'fel')
     return <p className="px-3 py-3 text-sm text-destructive">Det gick inte att hämta notiserna. Kontrollera uppkopplingen och försök igen.</p>
@@ -105,6 +117,7 @@ function Lista({ notiser, nya, nu, stang }: { notiser: Notiser['notiser']; nya: 
       {notiser.map((n) => (
         <li key={n.id}>
           <Rad notis={n} ny={nya.has(n.id)} nu={nu} stang={stang} />
+          {n.typ === 'vanforfragan' && n.vanforfragan_id && <Svar forfragan={n.vanforfragan_id} laddaOm={laddaOm} />}
         </li>
       ))}
     </ul>
@@ -131,5 +144,41 @@ function Rad({ notis, ny, nu, stang }: { notis: Notis; ny: boolean; nu: Date; st
     </Link>
   ) : (
     <div className={klass}>{innehall}</div>
+  )
+}
+
+/** Godkänn och Neka på en vänförfrågan. Notisen försvinner när förfrågan är besvarad. */
+function Svar({ forfragan, laddaOm }: { forfragan: string; laddaOm: () => Promise<void> }) {
+  const [svarar, setSvarar] = useState(false)
+  const [fel, setFel] = useState('')
+
+  async function svara(ja: boolean) {
+    setSvarar(true)
+    setFel('')
+    const { fel: f } = await svaraVanforfragan(forfragan, ja)
+    if (f) {
+      setFel(vanfel(f))
+      setSvarar(false)
+      return
+    }
+    await laddaOm()
+  }
+
+  return (
+    <div className="space-y-1 pb-2 pl-[2.375rem]">
+      <div className="flex flex-wrap gap-2">
+        <Button disabled={svarar} onClick={() => void svara(true)}>
+          Godkänn
+        </Button>
+        <Button variant="outline" disabled={svarar} onClick={() => void svara(false)}>
+          Neka
+        </Button>
+      </div>
+      {fel && (
+        <p role="alert" className="text-sm text-destructive">
+          {fel}
+        </p>
+      )}
+    </div>
   )
 }

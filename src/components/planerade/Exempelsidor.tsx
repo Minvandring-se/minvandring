@@ -1,6 +1,5 @@
-import { ClipboardList, ImageIcon, UserPlus } from 'lucide-react'
-import { Namnbricka } from '@/components/app/Namnbricka'
-import { DAGBOK, KOMPISAR, MALLAR } from '@/lib/exempeldata'
+import { ClipboardList, ImageIcon } from 'lucide-react'
+import { DAGBOK, MALLAR } from '@/lib/exempeldata'
 
 // Exemplen på sidorna i menyn som inte är byggda än. De visas inerta under "Kommer snart" (PlaneradSida).
 
@@ -48,27 +47,5 @@ export function Dagboksexempel() {
         ))}
       </ol>
     </section>
-  )
-}
-
-/** Vandringskompisar: personer ni har vandrat med. */
-export function Kompisexempel() {
-  return (
-    <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {KOMPISAR.map((k) => (
-        <li key={k.namn} className={`${kort} flex items-center gap-3.5 p-4`}>
-          <Namnbricka namn={k.namn} />
-          <div className="min-w-0 flex-1">
-            <p className="font-semibold">{k.namn}</p>
-            <p className="text-sm text-muted-foreground">
-              {k.turer} turer, senast {k.senast}
-            </p>
-          </div>
-          <span className="flex size-11 items-center justify-center rounded-full border border-border text-muted-foreground">
-            <UserPlus className="size-5" aria-hidden />
-          </span>
-        </li>
-      ))}
-    </ul>
   )
 }

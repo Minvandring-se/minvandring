@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { SidRubrik } from '@/components/app/SidRubrik'
-import { Dagboksexempel, Kompisexempel, Mallexempel } from '@/components/planerade/Exempelsidor'
+import { Dagboksexempel, Mallexempel } from '@/components/planerade/Exempelsidor'
 import { Statistikexempel } from '@/components/planerade/Statistikexempel'
 import { KommerSnart, KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { useSidtitel } from '@/hooks/useSidtitel'
@@ -11,7 +11,6 @@ const EXEMPEL: Partial<Record<Sida, ReactNode>> = {
   packlistor: <Mallexempel />,
   dagbok: <Dagboksexempel />,
   statistik: <Statistikexempel />,
-  kompisar: <Kompisexempel />,
 }
 
 /**

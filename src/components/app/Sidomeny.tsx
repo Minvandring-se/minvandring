@@ -24,7 +24,7 @@ const radKlass = (aktiv: boolean) =>
   )
 
 /** Ikonen för en grupp. Kommer snart har en klocka från Lucide, eftersom det inte finns någon egen ikon för den. */
-const GRUPPIKON: Record<Exclude<Gruppnyckel, 'snart'>, IkonNamn> = { planera: 'mina-turer', utrustning: 'mitt-forrad', minnen: 'dagbok' }
+const GRUPPIKON: Record<Exclude<Gruppnyckel, 'snart'>, IkonNamn> = { planera: 'mina-turer', utrustning: 'mitt-forrad', folk: 'vandringskompisar', minnen: 'dagbok' }
 
 /** En sida i menyn. Sidor på översta nivån (Hem) har ikon, sidor i en grupp är indragna och utan ikon. */
 function Menyrad({ sida, aktiv, iGrupp = false }: { sida: Sida; aktiv: boolean; iGrupp?: boolean }) {
@@ -37,7 +37,7 @@ function Menyrad({ sida, aktiv, iGrupp = false }: { sida: Sida; aktiv: boolean; 
       className={cn(radKlass(aktiv), iGrupp && 'pl-12')}
     >
       {!iGrupp && <Menyikon sida={sida} storlek={24} aktiv={aktiv} />}
-      {/* Långa namn som Vandringskompisar avstavas. */}
+      {/* Långa namn som Utrustningskatalog avstavas. */}
       <span className="min-w-0 flex-1 hyphens-auto wrap-break-word">{namn}</span>
     </Link>
   )

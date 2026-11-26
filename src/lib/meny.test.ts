@@ -9,14 +9,14 @@ describe('menyns sidor', () => {
   })
 
   it('har sökvägarna från uppdraget', () => {
-    expect(['matplanering', 'packlistor', 'utrustning', 'dagbok', 'kom-ihag', 'statistik', 'kompisar', 'installningar'].map((s) => SIDOR[s as keyof typeof SIDOR].till)).toEqual([
+    expect(['matplanering', 'packlistor', 'utrustning', 'dagbok', 'kom-ihag', 'statistik', 'vanner', 'installningar'].map((s) => SIDOR[s as keyof typeof SIDOR].till)).toEqual([
       '/matplanering',
       '/packlistor',
       '/utrustning',
       '/dagbok',
       '/kom-ihag',
       '/statistik',
-      '/kompisar',
+      '/vanner',
       '/installningar',
     ])
   })
@@ -30,8 +30,9 @@ describe('menyns sidor', () => {
     expect(MENYGRUPPER.map((g) => [g.rubrik, g.sidor.map((s) => SIDOR[s].namn)])).toEqual([
       ['Planera', ['Mina turer', 'Matplanering']],
       ['Utrustning', ['Mitt förråd', 'Utrustningskatalog']],
+      ['Folk', ['Vänner']],
       ['Minnen', ['Kom ihåg till nästa tur']],
-      ['Kommer snart', ['Packlistor och mallar', 'Dagbok', 'Statistik', 'Vandringskompisar']],
+      ['Kommer snart', ['Packlistor och mallar', 'Dagbok', 'Statistik']],
     ])
     // Allt i Kommer snart är inte byggt, och allt som inte är byggt ligger där.
     const snart = MENYGRUPPER.find((g) => g.nyckel === 'snart')!.sidor
@@ -52,8 +53,9 @@ describe('menyns sidor', () => {
     for (const f of FLIKAR) if (f.typ === 'sida') expect(f.namn).toBe(SIDOR[f.sida].namn)
     expect(MER.map((g) => [g.rubrik, g.sidor])).toEqual([
       ['Utrustning', ['utrustning']],
+      ['Folk', ['vanner']],
       ['Minnen', ['kom-ihag']],
-      ['Kommer snart', ['packlistor', 'dagbok', 'statistik', 'kompisar']],
+      ['Kommer snart', ['packlistor', 'dagbok', 'statistik']],
       ['Konto', ['installningar']],
     ])
     // Hela menyn i samma ordning: flikarna och sedan Mer följer sidomenyns ordning.

@@ -48,12 +48,17 @@ export function Integritet() {
         <ul className="list-disc space-y-1 pl-5">
           <li>Ditt namn och din mejladress.</li>
           <li>
-            Din profilbild, om du har lagt in en. Den syns bara för dig och dem du delar en tur med, och du kan ta bort den när som helst
-            i Profil.
+            Din profilbild, om du har lagt in en. Den syns bara för dig, dem du delar en tur med och dina vänner, och du kan ta bort den
+            när som helst i Profil.
           </li>
           <li>Ditt lösenord. Det sparas krypterat hos Supabase, så varken vi eller någon annan kan se det.</li>
           <li>Dina turer och det ni lägger in i dem: deltagare, packning och mat.</li>
           <li>Namn på deltagare utan konto, som någon annan i turen har lagt till, till exempel en kompis eller en hund.</li>
+          <li>
+            Dina vänner och vänförfrågningar. Skickar du en förfrågan till en mejladress sparar vi adressen, även om den inte har något
+            konto hos oss. Vi skickar inget mejl till adressen. Förfrågan och adressen tas bort 30 dagar efter att förfrågan
+            skickades.
+          </li>
           <li>
             Dina kostbehov och allergier, om du själv anger dem under Mat i en tur. Det är frivilligt, och bara du kan ange dina. De
             sparas för en tur i taget, tillsammans med när du samtyckte.
@@ -80,6 +85,11 @@ export function Integritet() {
           Bara de som är med i samma tur ser turen, deltagarna och deras namn. Den som har turens inbjudningslänk kan gå med i turen
           efter att ha loggat in, så dela länken bara med dem du vill ha med. Det gäller också kostbehov och allergier: de syns för
           alla i samma tur, så att ni kan välja mat som passar, men inte för någon annan. Ingen annan kan ange eller ändra dina.
+        </p>
+        <p>
+          Dina vänner ser ditt namn, din profilbild och vilka turer ni har haft ihop, men inget annat. Den som skickar en förfrågan till
+          en mejladress får aldrig veta om adressen har ett konto hos oss. Den som har din vänlänk kan bli din vän direkt, så dela den
+          bara med dem du vill ha som vänner. Du kan göra en ny länk när som helst, och då slutar den gamla att fungera.
         </p>
       </Avsnitt>
 

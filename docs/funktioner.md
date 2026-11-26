@@ -82,7 +82,8 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 |---|---|
 | Deltagare med roller, hund utan konto | Finns |
 | Notisklockan uppe till höger: när någon går med i turen via länken | Finns |
-| Vänner, grupper, mejl och påminnelser i notisklockan | Nästa, i steg enligt planen för notiser |
+| Vänner: förfrågan via mejladress, vänlänk, godkänn och neka i notisklockan (`/vanner`) | Finns |
+| Vänner i turer, grupper, mejl och påminnelser | Nästa, i steg enligt planen för notiser |
 | Att göra med ansvarig och datum | Senare |
 | Omröstning om datum och led | Senare |
 | Senaste i gruppen | Senare |
