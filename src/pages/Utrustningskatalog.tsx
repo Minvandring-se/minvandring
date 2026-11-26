@@ -1,4 +1,4 @@
-import { Check, ChevronDown, ChevronLeft, ExternalLink, Search } from 'lucide-react'
+import { Check, ChevronDown, ChevronLeft, ExternalLink } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
@@ -12,10 +12,10 @@ import { SakFormular } from '@/components/forrad/SakFormular'
 import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
 import { Dialog } from '@/components/ui/dialog'
-import { Input } from '@/components/ui/input'
 import { KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { Panel } from '@/components/ui/panel'
 import { Sektion } from '@/components/ui/sektion'
+import { SokFalt } from '@/components/ui/sokfalt'
 import { Specrutor } from '@/components/ui/specrutor'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, underkategoriFor, underkategorierFor, type KategoriNyckel } from '@/lib/forrad'
@@ -76,7 +76,6 @@ async function hamtaIForradet(): Promise<IForradetKarta> {
  */
 export function Utrustningskatalog() {
   useSidtitel('Utrustningskatalog')
-  const id = useId()
   const [text, setText] = useState('')
   const [kategori, setKategori] = useState<KategoriNyckel | ''>('')
   const [underkategori, setUnderkategori] = useState('')
@@ -229,24 +228,7 @@ export function Utrustningskatalog() {
       />
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)]">
-        <div className="space-y-1">
-          <label htmlFor={`${id}-sok`} className="block text-sm font-medium">
-            Sök på märke, modell eller version
-          </label>
-          <div className="relative">
-            <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-            <Input
-              id={`${id}-sok`}
-              type="search"
-              autoComplete="off"
-              enterKeyHint="search"
-              maxLength={80}
-              className="pl-10"
-              value={text}
-              onChange={(e) => setText(e.target.value)}
-            />
-          </div>
-        </div>
+        <SokFalt etikett="Sök på märke, modell eller version" varde={text} onAndra={setText} />
         <Kategorifilter
           kategorier={KATEGORIER}
           underkategorier={underkategorierFor(kategori)}

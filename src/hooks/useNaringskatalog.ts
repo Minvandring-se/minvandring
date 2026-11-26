@@ -100,3 +100,31 @@ export function useGruppantal(del: 'varor' | 'livsmedel'): Record<string, number
 
   return antal?.del === del ? antal.antal : {}
 }
+
+export interface Katalogantal {
+  pasar: number
+  varor: number
+  livsmedel: number
+}
+
+/** Hur många påsar, märkesvaror och livsmedel det finns, räknat i databasen. null tills alla tre är räknade eller om det inte gick. */
+export function useKatalogantal(): Katalogantal | null {
+  const [antal, setAntal] = useState<Katalogantal | null>(null)
+
+  useEffect(() => {
+    if (!supabase) return
+    let aktuell = true
+    const rakna = async (tabell: 'matprodukter' | 'varukatalog' | 'livsmedel') => {
+      const { count, error } = await supabase!.from(tabell).select('*', { count: 'exact', head: true })
+      return error ? null : count
+    }
+    void Promise.all([rakna('matprodukter'), rakna('varukatalog'), rakna('livsmedel')]).then(([pasar, varor, livsmedel]) => {
+      if (aktuell && pasar !== null && varor !== null && livsmedel !== null) setAntal({ pasar, varor, livsmedel })
+    })
+    return () => {
+      aktuell = false
+    }
+  }, [])
+
+  return antal
+}

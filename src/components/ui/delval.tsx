@@ -9,9 +9,21 @@ export interface Del<T extends string> {
  * Ett val i två eller tre delar, till exempel Påsar, Märkesvaror och Livsmedel. Delarna är lika breda och den valda
  * är markerad i grönt. Knappar med aria-pressed, eftersom valet byter innehåll på samma sida.
  */
-export function Delval<T extends string>({ etikett, delar, vald, onValj }: { etikett: string; delar: readonly Del<T>[]; vald: T; onValj: (d: T) => void }) {
+export function Delval<T extends string>({
+  etikett,
+  delar,
+  vald,
+  onValj,
+  className,
+}: {
+  etikett: string
+  delar: readonly Del<T>[]
+  vald: T
+  onValj: (d: T) => void
+  className?: string
+}) {
   return (
-    <div role="group" aria-label={etikett} className="flex gap-1 rounded-lg border border-border bg-muted p-1">
+    <div role="group" aria-label={etikett} className={cn('flex gap-1 rounded-lg border border-border bg-muted p-1', className)}>
       {delar.map((d) => (
         <button
           key={d.nyckel}
