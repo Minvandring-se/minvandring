@@ -74,3 +74,9 @@ export function forradsStorlekText(kon: string | null, storlek: string | null, v
   const text = [vem, om].filter(Boolean).join(' · ')
   return text[0].toUpperCase() + text.slice(1)
 }
+
+/** Hjälptexten under ett storleksval: om vikten gäller den valda storleken, eller vilken storlek den gäller när inget är valt. */
+export function storlekHjalp(viktstorlekVarde: string | null, vald: string | null): string {
+  if (!vald && viktstorlekVarde) return `Vikten gäller storlek ${viktstorlekVarde}.`
+  return viktlageText(viktlage(viktstorlekVarde, vald))
+}

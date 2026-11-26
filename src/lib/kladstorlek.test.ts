@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { forradsStorlekText, konEtikett, storlekarFor, utanKon, viktlage, viktlageText, viktstorlek } from './kladstorlek'
+import { forradsStorlekText, storlekHjalp, konEtikett, storlekarFor, utanKon, viktlage, viktlageText, viktstorlek } from './kladstorlek'
 
 describe('kläders storlek', () => {
   it('tar bort M eller W sist i modellnamnet men inget annat', () => {
@@ -42,5 +42,11 @@ describe('kläders storlek', () => {
     expect(forradsStorlekText('Herr', null, 'M')).toBe('Herr · vikt i storlek M')
     expect(forradsStorlekText(null, null, null)).toBeNull()
     expect(forradsStorlekText(null, null, 'M')).toBe('Vikt i storlek M')
+  })
+
+  it('ger hjälptexten under storleksvalet', () => {
+    expect(storlekHjalp('M', null)).toBe('Vikten gäller storlek M.')
+    expect(storlekHjalp('M', 'M')).toBe('Vikten gäller din storlek.')
+    expect(storlekHjalp(null, null)).toBe('Tillverkaren anger inte vilken storlek vikten gäller.')
   })
 })
