@@ -65,11 +65,11 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Fliken Mat: kompakt turhuvud, en ruta per måltid, Nästa att planera och Vem bär vad | Finns |
 | Förslag med näringsvärden från Livsmedelsverket när man skriver ingredienser i egna rätter och recept | Finns |
 | Kostinformation för egna rätter | Senare |
-| Skafferi: påsar hemma med antal och bäst före, och favoriter | Finns (`/matplanering/skafferi`), personligt |
+| Skafferi: påsar hemma med antal och bäst före, och favoriter | Finns (`/matplanering/skafferi`), personligt. Hemma och Favoriter som två delar, sortering och kompakta rader som fälls ut |
 | Favoriter och det man har hemma först i Välj rätt, och "Köp 2 (du har 1 hemma)" i inköpslistan | Finns |
 | Egna recept på kontot, att lägga in i vilken tur som helst (kopieras till turen) | Finns (`/matplanering/recept`), personligt |
 | Spara en egen rätt i en tur som recept | Finns |
-| Tips om mat med källor: energi, vatten och bränsle, packning, kcal per 100 g | Finns (`/matplanering/tips`) |
+| Tips om mat med källor: energi, vatten och bränsle, packning, kcal per 100 g | Finns som artiklar (`/matplanering/tips/<namn>`) med lästid, viktiga siffror och delar som fälls ut. Bilderna är platshållare |
 | Gas till köket: patroner som räcker på sommaren och med snösmältning, enligt Primus veckosiffror | Finns, i turens matplan och som förslaget Gas i packlistan |
 | Dela recept med andra användare | Senare |
 | Proviantering i STF-stugor | Senare |

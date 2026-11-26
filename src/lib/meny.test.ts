@@ -76,6 +76,8 @@ describe('aktivSida och flikAktiv', () => {
     expect(aktivSida('/matplanering/annat')).toBeNull()
     expect(aktivUndersida('/matplanering/skafferi/')).toBe('/matplanering/skafferi')
     expect(aktivUndersida('/forrad')).toBeNull()
+    expect(aktivUndersida('/matplanering/tips/energi')).toBe('/matplanering/tips')
+    expect(aktivSida('/matplanering/tips/energi')).toBe('matplanering')
   })
 
   it('delarna har sökvägar utan å, ä och ö', () => {

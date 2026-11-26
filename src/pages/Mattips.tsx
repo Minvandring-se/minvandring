@@ -1,77 +1,70 @@
-import { ExternalLink } from 'lucide-react'
+import { Link } from 'react-router'
 import { SidRubrik } from '@/components/app/SidRubrik'
+import { Illustration } from '@/components/illustrationer/Illustration'
 import { Matflikar } from '@/components/mat/Matflikar'
-import { Sektion } from '@/components/ui/sektion'
 import { useSidtitel } from '@/hooks/useSidtitel'
-import { GUIDER, type Guide } from '@/lib/tips'
+import { GUIDER, lastid, tipsadress, type Guide } from '@/lib/tips'
 import { cn } from '@/lib/utils'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
-/** Tips om mat på tur: korta guider med källor. Innehållet står i src/lib/tips.ts. */
+/**
+ * Tips om mat på tur som artiklar: den första som ett stort kort, de två nästa bredvid varandra och resten som rader
+ * med liten bild. Innehållet står i src/lib/tips.ts.
+ */
 export function Mattips() {
   useSidtitel('Tips')
+  const [forsta, ...ovriga] = GUIDER
+  const mellan = ovriga.slice(0, 2)
+  const rader = ovriga.slice(2)
   return (
     <div className="space-y-6">
       <Matflikar />
       <SidRubrik rubrik="Tips" text="Korta guider om energi, vatten, bränsle och packning. Råden är allmänna, och varje guide visar vilka källor siffrorna bygger på." />
-      <nav aria-label="Guiderna" className="flex flex-wrap gap-2">
-        {GUIDER.map((g) => (
-          <a
-            key={g.nyckel}
-            href={`#${g.nyckel}`}
-            className={cn('inline-flex min-h-11 items-center rounded-full border border-border bg-card px-4 text-sm transition-colors hover:bg-muted', fokus)}
-          >
-            {g.rubrik}
-          </a>
+
+      <ul className="grid grid-cols-2 gap-3 sm:gap-4">
+        <li className="col-span-2">
+          <Artikelkort guide={forsta} stor />
+        </li>
+        {mellan.map((g) => (
+          <li key={g.nyckel}>
+            <Artikelkort guide={g} />
+          </li>
         ))}
-      </nav>
-      <div className="grid gap-5 xl:grid-cols-2">
-        {GUIDER.map((g) => (
-          <GuideSektion key={g.nyckel} guide={g} />
-        ))}
-      </div>
+      </ul>
+
+      {rader.length > 0 && (
+        <ul className="divide-y divide-border overflow-hidden rounded-lg border border-border bg-card">
+          {rader.map((g) => (
+            <li key={g.nyckel}>
+              <Link to={tipsadress(g.nyckel)} className={cn('flex items-center gap-4 p-3 hover:bg-muted', fokus)}>
+                <Illustration namn={g.nyckel} className="size-16 shrink-0 rounded-md" />
+                <span className="min-w-0 flex-1">
+                  <span className="block font-semibold break-words">{g.rubrik}</span>
+                  <span className="block text-sm text-muted-foreground">{lastid(g)} min läsning</span>
+                </span>
+              </Link>
+            </li>
+          ))}
+        </ul>
+      )}
     </div>
   )
 }
 
-function GuideSektion({ guide }: { guide: Guide }) {
+/** Ett kort för en artikel: bild, lästid, rubrik och, på det stora kortet, ingressen. Hela kortet är en länk. */
+function Artikelkort({ guide, stor = false }: { guide: Guide; stor?: boolean }) {
   return (
-    <div id={guide.nyckel} className="scroll-mt-6">
-      <Sektion rubrik={guide.rubrik} className="h-full">
-        <div className="max-w-prose space-y-4">
-          <p className="text-lg">{guide.ingress}</p>
-          {guide.avsnitt.map((a) => (
-            <div key={a.rubrik} className="space-y-2">
-              <h3 className="text-base">{a.rubrik}</h3>
-              {a.stycken.map((s) => (
-                <p key={s}>{s}</p>
-              ))}
-              {a.punkter && (
-                <ul className="list-disc space-y-1 pl-5">
-                  {a.punkter.map((p) => (
-                    <li key={p}>{p}</li>
-                  ))}
-                </ul>
-              )}
-            </div>
-          ))}
-          <div className="space-y-1 border-t border-border pt-3">
-            <h3 className="font-sans text-sm font-semibold text-muted-foreground">Källor</h3>
-            <ul className="space-y-1 text-sm">
-              {guide.kallor.map((k) => (
-                <li key={k.url}>
-                  <a href={k.url} target="_blank" rel="noopener noreferrer" className={cn('inline-flex min-h-11 items-center gap-1.5 py-1 text-primary underline underline-offset-4', fokus)}>
-                    <span>{k.namn}</span>
-                    <ExternalLink className="mt-0.5 size-3.5 shrink-0" aria-hidden />
-                    <span className="sr-only">(öppnas i ny flik)</span>
-                  </a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        </div>
-      </Sektion>
-    </div>
+    <Link
+      to={tipsadress(guide.nyckel)}
+      className={cn('lyft flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card', fokus)}
+    >
+      <Illustration namn={guide.nyckel} className={cn('w-full', stor ? 'aspect-[16/9] lg:aspect-[3/1]' : 'aspect-[4/3] sm:aspect-[16/7]')} />
+      <span className={cn('flex flex-1 flex-col gap-1.5', stor ? 'p-5' : 'p-4')}>
+        <span className="text-sm text-muted-foreground">{lastid(guide)} min läsning</span>
+        <span className={cn('font-heading font-semibold break-words text-primary', stor ? 'text-2xl' : 'text-lg')}>{guide.rubrik}</span>
+        {stor && <span className="text-muted-foreground">{guide.ingress}</span>}
+      </span>
+    </Link>
   )
 }

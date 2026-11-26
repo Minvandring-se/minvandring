@@ -4,7 +4,7 @@
 // En påse vars datum passerar inom en månad räknas, och märks.
 import { antalPasar } from './mat'
 import { lage } from './turlista'
-import type { Skafferirad } from './typer'
+import type { Katalogmaltid, Matprodukt, Skafferirad } from './typer'
 
 export type Bastfore = 'passerat' | 'snart' | 'ok'
 
@@ -261,3 +261,40 @@ export function skafferistatus(bastFore: string | null, idag: string): Skafferis
 }
 
 export const SKAFFERISTATUS_TEXT: Record<Skafferistatus, string> = { gatt_ut: 'Gått ut', snart: 'Går ut snart' }
+
+/** Månaden förkortad, som på datumraden i skafferiet. */
+const KORTA_MANADER = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'] as const
+
+/** Datumraden under en påse i skafferiet: "Bäst före mar 2027", eller "Gått ut, aug 2026" när datumet har passerat. null utan datum. */
+export function datumrad(bastFore: string | null, idag: string): { text: string; gattUt: boolean } | null {
+  if (!bastFore) return null
+  const [ar, manad] = bastFore.split('-').map(Number)
+  const kort = `${KORTA_MANADER[manad - 1]} ${ar}`
+  return bastFore < idag ? { text: `Gått ut, ${kort}`, gattUt: true } : { text: `Bäst före ${kort}`, gattUt: false }
+}
+
+export const SKAFFERISORTERINGAR = [
+  { nyckel: 'datum', etikett: 'Går ut först' },
+  { nyckel: 'marke', etikett: 'Märke' },
+  { nyckel: 'maltid', etikett: 'Måltid' },
+] as const
+
+export type Skafferisortering = (typeof SKAFFERISORTERINGAR)[number]['nyckel']
+
+/** Ordningen för måltiderna när skafferiet sorteras efter måltid. */
+const MALTIDSORDNING: Record<Katalogmaltid, number> = { frukost: 0, lunch_middag: 1, mellanmal: 2, dessert: 3 }
+
+/**
+ * Skafferiet sorterat: det som går ut först (som sorteraSkafferi), efter märke och namn, eller efter måltid och sedan
+ * det som går ut först.
+ */
+export function sorteraSkafferiEfter<T extends Pick<Skafferirad, 'bast_fore'>>(
+  rader: readonly T[],
+  sortering: Skafferisortering,
+  pase: (r: T) => Pick<Matprodukt, 'marke' | 'namn' | 'maltid'>,
+): T[] {
+  const efterDatum = sorteraSkafferi(rader, (r) => `${pase(r).marke} ${pase(r).namn}`)
+  if (sortering === 'datum') return efterDatum
+  if (sortering === 'marke') return [...rader].sort((a, b) => pase(a).marke.localeCompare(pase(b).marke, 'sv') || pase(a).namn.localeCompare(pase(b).namn, 'sv'))
+  return [...efterDatum].sort((a, b) => MALTIDSORDNING[pase(a).maltid] - MALTIDSORDNING[pase(b).maltid])
+}

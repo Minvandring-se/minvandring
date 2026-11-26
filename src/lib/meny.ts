@@ -162,14 +162,19 @@ export function aktivSida(pathname: string): Sida | null {
   if (sokvag === '/turer' || sokvag.startsWith('/tur/')) return 'turer'
   const sida = Object.values(SIDOR).find((s) => s.till === sokvag)?.sida
   if (sida) return sida
-  const med = (Object.keys(UNDERSIDOR) as Sida[]).find((s) => UNDERSIDOR[s]!.some((u) => u.till === sokvag))
+  const del = aktivUndersida(sokvag)
+  const med = del ? (Object.keys(UNDERSIDOR) as Sida[]).find((s) => UNDERSIDOR[s]!.some((u) => u.till === del)) : undefined
   return med ?? null
 }
 
 /** Vilken del av en sida en adress är. null när adressen inte är en av delarna. */
 export function aktivUndersida(pathname: string): string | null {
   const sokvag = pathname.replace(/\/+$/, '') || '/'
-  return Object.values(UNDERSIDOR).some((delar) => delar!.some((u) => u.till === sokvag)) ? sokvag : null
+  const delar = Object.values(UNDERSIDOR).flatMap((d) => d!.map((u) => u.till))
+  if (delar.includes(sokvag)) return sokvag
+  // En sida under en del, till exempel en artikel under Tips, hör till delen. Inte under sidan själv (/matplanering).
+  const sidor = new Set(Object.values(SIDOR).map((s) => s.till))
+  return delar.find((till) => !sidor.has(till) && sokvag.startsWith(`${till}/`)) ?? null
 }
 
 /** Är fliken aktiv? En sida när adressen hör till den, ett blad när en av dess sidor är öppen. */
