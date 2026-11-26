@@ -86,7 +86,7 @@ export function Matsummering({
               </li>
             )}
           </ul>
-          {inteFordelat > 0 && <p className="text-sm text-muted-foreground">Välj vem som bär rätterna i ”Vem tar med vad”.</p>}
+          {inteFordelat > 0 && <p className="text-sm text-muted-foreground">Välj vem som bär rätterna i ”Vem bär vad”.</p>}
         </div>
       )}
     </Sektion>

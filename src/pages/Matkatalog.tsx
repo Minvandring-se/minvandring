@@ -352,8 +352,12 @@ function Paspanel({ pase, skafferi, laddaOm, onStang }: { pase: Matprodukt; skaf
                 <th scope="row" className="py-1.5 text-left font-medium">
                   {r.etikett}
                 </th>
-                <td className="py-1.5 text-right">{r.perPase}</td>
-                <td className="py-1.5 text-right">{r.per100g}</td>
+                <td className="py-1.5 text-right">
+                  <Varde text={r.perPase} />
+                </td>
+                <td className="py-1.5 text-right">
+                  <Varde text={r.per100g} />
+                </td>
               </tr>
             ))}
           </tbody>
@@ -396,5 +400,16 @@ function Paspanel({ pase, skafferi, laddaOm, onStang }: { pase: Matprodukt; skaf
         </a>
       </div>
     </Panel>
+  )
+}
+
+/** Ett värde i näringstabellen. Ett streck betyder att värdet saknas, och läses så av skärmläsare. */
+function Varde({ text }: { text: string }) {
+  if (text !== '–') return text
+  return (
+    <>
+      <span aria-hidden>–</span>
+      <span className="sr-only">Saknas</span>
+    </>
   )
 }

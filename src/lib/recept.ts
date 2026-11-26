@@ -10,7 +10,7 @@ import type { Ingrediens, Ratt, Recept, Vara } from './typer'
 export function receptTillRader(r: Recept): TolkadIngrediens[] {
   return [...r.rader]
     .sort((a, b) => a.sortering - b.sortering)
-    .map((x) => ({ vara: x.vara, mangd: x.mangd, enhet: x.enhet, gram: x.gram_per_portion, kcalPer100g: x.kcal_per_100g, proteinPer100g: x.protein_per_100g }))
+    .map((x) => ({ vara: x.vara, mangd: x.mangd, enhet: x.enhet, gram: x.gram_per_portion, kcalPer100g: x.kcal_per_100g, proteinPer100g: x.protein_per_100g, ...(x.varukatalog_id ? { varukatalogId: x.varukatalog_id } : {}) }))
 }
 
 /** En egen rätt i en tur som ingrediensrader, med varornas kcal och protein. Ingredienser utan vara hoppas över. */
@@ -19,7 +19,7 @@ export function rattTillRader(rattId: string, ingredienser: readonly Ingrediens[
     .filter((i) => i.ratt_id === rattId)
     .flatMap((i) => {
       const v = varor.find((x) => x.id === i.vara_id)
-      return v ? [{ vara: v.namn, mangd: i.mangd, enhet: i.enhet, gram: i.gram_per_portion, kcalPer100g: v.kcal_per_100g, proteinPer100g: v.protein_per_100g }] : []
+      return v ? [{ vara: v.namn, mangd: i.mangd, enhet: i.enhet, gram: i.gram_per_portion, kcalPer100g: v.kcal_per_100g, proteinPer100g: v.protein_per_100g, ...(v.varukatalog_id ? { varukatalogId: v.varukatalog_id } : {}) }] : []
     })
 }
 
@@ -34,6 +34,7 @@ export function raderTillFalt(rader: readonly TolkadIngrediens[]): Ingrediensfal
     gram: r.enhet === 'g' || r.enhet === 'kg' ? '' : medKomma(r.gram),
     kcal: r.kcalPer100g?.toString() ?? '',
     protein: r.proteinPer100g?.toString().replace('.', ',') ?? '',
+    ...(r.varukatalogId ? { varukatalogId: r.varukatalogId } : {}),
   }))
 }
 

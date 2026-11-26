@@ -19,7 +19,7 @@ const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visi
 
 /**
  * Inköpslistan: det var och en köper, grupperat per person och butiksavdelning, och det som ingen köper än sist.
- * Var och en köper det hen bär i Vem tar med vad. Ägare och redigerare bockar av åt alla och väljer avdelning för
+ * Var och en köper det hen bär i Vem bär vad. Ägare och redigerare bockar av åt alla och väljer avdelning för
  * varorna. Var och en, även en läsare, bockar av sitt eget. Det man har hemma i sitt skafferi står bara i ens egen
  * lista, eftersom skafferiet är privat.
  */
@@ -127,7 +127,7 @@ export function Inkopslista({
               Det gick inte att spara. Kontrollera uppkopplingen och försök igen.
             </p>
           )}
-          {grupper.length === 0 && <p className="text-muted-foreground">Du köper inget än. Välj en rätt som du bär i ”Vem tar med vad”.</p>}
+          {grupper.length === 0 && <p className="text-muted-foreground">Du köper inget än. Ta en rätt i ”Vem bär vad”, så hamnar varorna i din lista.</p>}
           {grupper.map((g) => {
             const person = personer.find((p) => p.id === g.kopare)
             const namn = g.kopare === null ? 'Ingen köper än' : (person?.namn ?? 'Inte längre med i turen')
@@ -137,7 +137,7 @@ export function Inkopslista({
                   {g.kopare !== null && <Initial namn={namn} farg={farger.get(g.kopare)} className="size-8 text-sm" />}
                   <span className="min-w-0 wrap-anywhere">{g.kopare === mittDeltagareId ? `${namn} (du)` : namn}</span>
                 </h3>
-                {g.kopare === null && <p className="-mt-2 text-sm text-muted-foreground">Välj vem som bär rätterna i ”Vem tar med vad”, så hamnar varorna i hens lista.</p>}
+                {g.kopare === null && <p className="-mt-2 text-sm text-muted-foreground">Välj vem som bär rätterna i ”Vem bär vad”, så hamnar varorna i hens lista.</p>}
                 {g.avdelningar.map((a) => (
                   <div key={a.avdelning} className="space-y-0.5">
                     <h4 className="font-sans text-sm font-semibold text-muted-foreground">{AVDELNINGAR.find((x) => x.nyckel === a.avdelning)!.etikett}</h4>
@@ -201,6 +201,11 @@ function Rad({
       ) : (
         <p className={cn('flex min-h-11 items-center gap-3', rad.kopare !== null && 'pl-8')}>{innehall}</p>
       )}
+      {rad.andradFran !== null && (
+        <p className="pb-2 pl-8 text-sm font-medium text-accent-strong">
+          Mängden har ändrats sedan du bockade av{rad.andradFran ? ` (var ${rad.andradFran})` : ''}
+        </p>
+      )}
       {skafferi && (
         <p className="pb-2 pl-8 text-sm">
           {skafferi.text && <span className="block font-medium text-primary">{skafferi.text}</span>}
@@ -212,7 +217,9 @@ function Rad({
           <label htmlFor={`${id}-avdelning`} className="block text-sm text-muted-foreground">
             Butiksavdelning för {rad.namn}
           </label>
-          <Select id={`${id}-avdelning`} value={rad.avdelning} onChange={(e) => onAvdelning(e.target.value)}>
+          <Select id={`${id}-avdelning`} value={rad.avdelningVald ? rad.avdelning : ''} onChange={(e) => onAvdelning(e.target.value || null)}>
+            {/* Tomt val låter appen gissa avdelningen utifrån namnet igen. */}
+            <option value="">Gissa åt mig ({AVDELNINGAR.find((a) => a.nyckel === rad.avdelning)!.etikett})</option>
             {AVDELNINGAR.map((a) => (
               <option key={a.nyckel} value={a.nyckel}>
                 {a.etikett}

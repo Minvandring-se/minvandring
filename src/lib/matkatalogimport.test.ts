@@ -125,6 +125,12 @@ describe('importeraMatkatalog', () => {
     expect(r.rader[1].fel).toEqual(['samma märke och namn som rad 2'])
   })
 
+  it('stoppar en påse vars märke och namn tillsammans är längre än en rätt får vara', () => {
+    const r = importeraMatkatalog(fil(rad({ marke: 'M'.repeat(20), namn: 'N'.repeat(59) }), rad({ marke: 'M'.repeat(20), namn: 'N'.repeat(60) })))
+    expect(r.rader[0].fel).toEqual([])
+    expect(r.rader[1].fel).toContain('marke och namn: högst 80 tecken tillsammans')
+  })
+
   it('varnar för det som ser konstigt ut men importerar ändå', () => {
     const r = importeraMatkatalog(
       fil(

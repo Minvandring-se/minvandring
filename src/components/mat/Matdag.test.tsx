@@ -61,7 +61,7 @@ describe('Matdag', () => {
     expect(html.match(/>Pasta med vete</g)?.length).toBe(1)
     expect(html.indexOf('>Test<')).toBeLessThan(html.indexOf('>Pasta med vete<'))
     expect(html).toContain('6 st')
-    expect(html).toContain('aria-label="Ta bort en portion Test Pasta med vete från lunch dag 1"')
+    expect(html).toContain('aria-label="Ta bort en av 6 Test Pasta med vete från lunch dag 1"')
   })
 
   it('visar ingredienserna i en egen rätt, och fäller ihop dem när de är många', () => {
@@ -115,5 +115,16 @@ describe('Matdag', () => {
       />,
     )
     expect(html.replace(/\s/g, ' ')).toContain('600–700 kcal och 150–160 g per person')
+  })
+
+  it('varnar för en egen rätt utifrån varorna ur varukatalogen, och okänt räknas inte som att den passar', () => {
+    const medKost: Ratter = {
+      ...ratter,
+      kost: new Map([['gryta', [{ vegetarisk: true, vegansk: false, glutenfri: false, laktosfri: true, allergener: ['gluten'], spar: [] }, null]]]),
+    }
+    const html = renderToStaticMarkup(
+      <Matdag summa={{ dag: dag1, perPerson: new Map(), naring: portion(0, 0), saknas: [] }} datum={null} maltider={[rad('m1', 'gryta')]} ratter={medKost} behov={[oscar]} kanAndra onLaggTill={() => {}} onTaBort={() => {}} />,
+    )
+    expect(html).toContain('Inte glutenfri, passar inte Oscar')
   })
 })

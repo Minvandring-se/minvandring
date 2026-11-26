@@ -51,7 +51,7 @@ const ENKLA = [
   'Baljväxter',
   'Nöt, frö eller kärna',
   'Ris eller annat spannmål',
-  'Spannmål och spannmålsprodukter',
+  // Inte 'Spannmål och spannmålsprodukter': gruppen blandar deg, lasagne och snacks, så allergenerna är okända.
   'Cerealier eller cerealielika mjölprodukter och derivat',
   'Pasta och liknande produkter',
   'Vegetabiliskt fett och olja',
@@ -64,7 +64,25 @@ const ENKLA = [
  * Ord som visar att ett livsmedel i en enkel grupp ändå är sammansatt, till exempel "Kycklingfilé panerad",
  * "Leverpastej" eller "Risgrynsgröt". Då är allergenerna okända.
  */
-const SAMMANSATT = /panerad|pastej|korv|pudding|bröd|kebab|marinerad|soppa|sås|gratäng|fyllning|färdig|smaksatt|kryddad|choklad|glass|kaka|kex|müsli|granola|gröt|margarin/
+// Bara "biff" räcker inte, eftersom Ryggbiff och Rostbiff är rena köttbitar.
+const SAMMANSATT =
+  /panerad|pastej|korv|pudding|bröd|kebab|marinerad|soppa|sås|gratäng|fyllning|färdig|smaksatt|kryddad|choklad|glass|kaka|kex|müsli|granola|gröt|margarin|gryta|sauté|stuvad|sufflé|palt|lasagne(?!plattor)|deg\b|sushi(?!ris)|masala|tikka|hemlagad|blandning(?!.*(\s|^)(vete|råg|korn|havre))|mix|grönsaksbas|buljong|fond\b|burgare|hasselback|saffransris|krokar|chips|leverbiff|grönsaksbiff|rödbetsbiff/
+
+/** Pålägg kan innehålla mjölkprotein. Bara för kött och fågel, så att Champinjon skivad förblir enkel. */
+const PALAGG = /skivad|tunna skivor/
+
+/**
+ * Livsmedel i Livsmedelsverkets råvarugrupper där allergenerna är kända trots att de är sammansatta. Listan tar med
+ * allergener som troligen ingår, eftersom en varning för mycket är bättre än en för lite.
+ */
+const KANDA: readonly { grupp: string; namn: RegExp; allergener: readonly Allergen[] }[] = [
+  // En blandning kan innehålla jordnötter.
+  { grupp: 'Nöt, frö eller kärna', namn: /^nötter blandade (naturella|rostade m\. salt)$/, allergener: ['jordnotter', 'notter'] },
+  { grupp: 'Spannmål och spannmålsprodukter', namn: /^deg filodeg/, allergener: ['gluten'] },
+  { grupp: 'Spannmål och spannmålsprodukter', namn: /^lasagne nötfärs$/, allergener: ['gluten', 'agg', 'mjolk', 'selleri'] },
+  { grupp: 'Innanmat och inälvsmat', namn: /^(lever|njur)palt$/, allergener: ['gluten'] },
+  { grupp: 'Grönsaker, rotfrukter och svamp', namn: /^grönsakssufflé$/, allergener: ['gluten', 'agg', 'mjolk'] },
+]
 
 /**
  * "m." följt av något annat än salt, ben, skinn, skal, svål, lag, vatten, olja, fett eller ägg betyder att något
@@ -79,7 +97,7 @@ const GLUTEN = /(?<!bo)vete|^råg|[\s-]råg|råg(mjöl|kross|flingor|kli)|^korn|
 const ORD: readonly [Allergen, RegExp][] = [
   ['gluten', GLUTEN],
   ['jordnotter', /jordnöt/],
-  ['notter', /mandl|mandel(?!potatis)|hasselnöt|valnöt|cashew|pekannöt|paranöt|pistage|macadamia|nötmix/],
+  ['notter', /mandl|mandel(?!potatis)|hasselnöt|valnöt|cashew|pekannöt|paranöt|pistage|macadamia|nötmix|(^|\s)nötter/],
   ['sesam', /sesam|tahini/],
   ['soja', /soja|tofu|tempeh|edamame/],
   ['lupin', /lupin/],
@@ -106,15 +124,23 @@ function iNamnet(namn: string): Allergen[] {
  * - Mejerigrupperna innehåller alltid mjölk, även laktosfria (mjölkprotein). Ägg innehåller ägg.
  * - Fisk innehåller fisk. I "Fisk och skaldjur" avgör namnet: räkor och kräftor är kräftdjur, musslor blötdjur.
  * - Pasta innehåller gluten om den inte är gjord på ris, majs eller baljväxter eller kallas glutenfri.
- * - Torkad frukt är okänd, eftersom den kan innehålla svaveldioxid.
- * - Raffinerade oljor räknas inte som allergener (EU:s undantag), utom sesam- och jordnötsolja.
+ * - Torkad frukt, fruktchips och tillagad rödkål är okända, eftersom de kan innehålla svaveldioxid.
+ * - Raffinerade oljor räknas inte som allergener (EU:s undantag), utom sesam- och jordnötsolja. Vetegroddsolja och
+ *   kallpressade oljor behåller allergenerna i namnet (vetegroddsolja är gluten).
+ * - Några sammansatta livsmedel i råvarugrupperna har kända allergener (KANDA), till exempel Leverpalt.
  * - Annars avgör orden i namnet: vete, råg, korn, havre och dinkel är gluten, mandel och hasselnöt nötter, och så vidare.
  */
 export function allergenerForLivsmedel(namn: string, grupp: string | null): Allergen[] | null {
-  if (grupp === null || !ENKLA.includes(grupp)) return null
+  if (grupp === null) return null
   const n = namn.toLowerCase()
+  const kand = KANDA.find((k) => k.grupp === grupp && k.namn.test(n))
+  if (kand) return [...kand.allergener]
+  if (!ENKLA.includes(grupp)) return null
   if (SAMMANSATT.test(n) || MED_NAGOT.test(n)) return null
+  if ((grupp === 'Rött kött' || grupp === 'Fågel') && PALAGG.test(n)) return null
   if (grupp === 'Frukt och bär' && /torkad|torkade|torkat/.test(n)) return null
+  if (/rödkål/.test(n) && /tillagad/.test(n)) return null
+  if (grupp === 'Nöt, frö eller kärna' && /blandade/.test(n)) return null
 
   const ut = new Set<Allergen>(iNamnet(n))
   if (MEJERI.includes(grupp)) ut.add('mjolk')
@@ -126,7 +152,8 @@ export function allergenerForLivsmedel(namn: string, grupp: string | null): Alle
     if (!ut.has('kraftdjur') && !ut.has('blotdjur')) ut.add('fisk')
   }
   if (grupp === 'Pasta och liknande produkter' && !/(^|\s)ris|risnudl|glasnudl|majs|bön|lins|kikärt|mung|glutenfri/.test(n)) ut.add('gluten')
-  if (grupp === 'Vegetabiliskt fett och olja') {
+  // Undantaget gäller bara raffinerade oljor. Vetegroddsolja och kallpressade oljor behåller sina allergener.
+  if (grupp === 'Vegetabiliskt fett och olja' && !/vetegrodd|kallpressad/.test(n)) {
     for (const a of [...ut]) if (a !== 'sesam' && a !== 'jordnotter') ut.delete(a)
   }
   const ordning: readonly Allergen[] = ['gluten', 'kraftdjur', 'agg', 'fisk', 'jordnotter', 'soja', 'mjolk', 'notter', 'selleri', 'senap', 'sesam', 'svaveldioxid', 'lupin', 'blotdjur']

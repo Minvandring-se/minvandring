@@ -11,6 +11,7 @@
     "test": "vitest run",
     "katalog": "node scripts/katalog.mjs",
     "matkatalog": "node scripts/matkatalog.mjs",
+    "varukatalog": "node scripts/varukatalog.mjs",
     "livsmedel": "node scripts/livsmedel.mjs"
   },
   "dependencies": {

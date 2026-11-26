@@ -2,6 +2,9 @@ import { useEffect, useId, useState, type KeyboardEvent } from 'react'
 import { Bricka } from '@/components/ui/bricka'
 import { Input } from '@/components/ui/input'
 import { useLivsmedelForslag, type Livsmedelsforslag } from '@/hooks/useLivsmedelForslag'
+import { useVarukatalogForslag } from '@/hooks/useVarukatalogForslag'
+import { KATEGORIETIKETT } from '@/lib/varukatalog'
+import type { Katalogforslag } from '@/lib/varukatalog'
 import { allergenetikett, uppraknade, type Allergen } from '@/lib/kost'
 import { TILLSTAND_ETIKETT } from '@/lib/livsmedel'
 import type { Vara } from '@/lib/typer'
@@ -10,7 +13,7 @@ import { cn } from '@/lib/utils'
 /** En vara som redan finns i turen eller i ens recept. */
 export type Varuforslag = Pick<Vara, 'namn' | 'kcal_per_100g' | 'protein_per_100g'>
 
-type Alternativ = { typ: 'vara'; vara: Varuforslag } | { typ: 'livsmedel'; livsmedel: Livsmedelsforslag }
+type Alternativ = { typ: 'vara'; vara: Varuforslag } | { typ: 'katalog'; katalog: Katalogforslag } | { typ: 'livsmedel'; livsmedel: Livsmedelsforslag }
 
 const MAX_VAROR = 3
 
@@ -26,6 +29,8 @@ export function IngrediensSok({
   onAndra,
   onValjVara,
   onValjLivsmedel,
+  onValjKatalogvara,
+  varuetikett = 'I turen',
 }: {
   id: string
   varde: string
@@ -33,21 +38,31 @@ export function IngrediensSok({
   onAndra: (text: string) => void
   onValjVara: (vara: Varuforslag) => void
   onValjLivsmedel: (livsmedel: Livsmedelsforslag) => void
+  /** En märkesvara ur varukatalogen, med kända allergener. */
+  onValjKatalogvara: (vara: Katalogforslag) => void
+  /** Brickan på varuförslagen: "I turen", eller "I dina recept" i receptformuläret. */
+  varuetikett?: string
 }) {
   const listId = useId()
   const [oppen, setOppen] = useState(false)
   const [aktiv, setAktiv] = useState(-1)
   const livsmedel = useLivsmedelForslag(oppen ? varde : '')
+  const katalog = useVarukatalogForslag(oppen ? varde : '')
   const sok = varde.trim().toLowerCase()
   const varuforslag = sok
     ? varor.filter((v) => v.namn.toLowerCase().includes(sok) && v.namn.toLowerCase() !== sok).slice(0, MAX_VAROR)
     : []
-  const alternativ: Alternativ[] = [...varuforslag.map((vara) => ({ typ: 'vara' as const, vara })), ...livsmedel.map((l) => ({ typ: 'livsmedel' as const, livsmedel: l }))]
+  const alternativ: Alternativ[] = [
+    ...varuforslag.map((vara) => ({ typ: 'vara' as const, vara })),
+    ...katalog.map((k) => ({ typ: 'katalog' as const, katalog: k })),
+    ...livsmedel.map((l) => ({ typ: 'livsmedel' as const, livsmedel: l })),
+  ]
   const visas = oppen && alternativ.length > 0
   const aktivt = visas && aktiv >= 0 && aktiv < alternativ.length ? aktiv : -1
 
   function valj(a: Alternativ) {
     if (a.typ === 'vara') onValjVara(a.vara)
+    else if (a.typ === 'katalog') onValjKatalogvara(a.katalog)
     else onValjLivsmedel(a.livsmedel)
     setOppen(false)
     setAktiv(-1)
@@ -100,7 +115,7 @@ export function IngrediensSok({
         <ul id={listId} role="listbox" aria-label="Förslag" className="divide-y divide-border">
           {alternativ.map((a, i) => (
             <li
-              key={a.typ === 'vara' ? `v-${a.vara.namn}` : `l-${a.livsmedel.nummer}`}
+              key={a.typ === 'vara' ? `v-${a.vara.namn}` : a.typ === 'katalog' ? `k-${a.katalog.id}` : `l-${a.livsmedel.nummer}`}
               id={altId(i)}
               role="option"
               aria-selected={i === aktivt}
@@ -112,7 +127,11 @@ export function IngrediensSok({
               onMouseEnter={() => setAktiv(i)}
               className={cn('flex min-h-11 cursor-pointer items-center gap-3 px-3 py-2 text-sm', i === aktivt && 'bg-primary-soft ring-2 ring-primary ring-inset')}
             >
-              {a.typ === 'vara' ? <Rad namn={a.vara.namn} kcal={a.vara.kcal_per_100g} etikett="I turen" /> : <Rad namn={a.livsmedel.namn} kcal={a.livsmedel.kcal_per_100g} etikett={a.livsmedel.tillstand ? TILLSTAND_ETIKETT[a.livsmedel.tillstand] : null} allergener={a.livsmedel.allergener} />}
+              {a.typ === 'vara' ? (
+                <Rad namn={a.vara.namn} kcal={a.vara.kcal_per_100g} etikett={varuetikett} />
+              ) : a.typ === 'katalog' ? (
+                <Rad namn={`${a.katalog.marke} ${a.katalog.namn}`} kcal={a.katalog.kcal_per_100g} etikett={KATEGORIETIKETT[a.katalog.kategori]} allergener={a.katalog.allergener} visaOkanda />
+              ) : <Rad namn={a.livsmedel.namn} kcal={a.livsmedel.kcal_per_100g} etikett={a.livsmedel.tillstand ? TILLSTAND_ETIKETT[a.livsmedel.tillstand] : null} allergener={a.livsmedel.allergener} visaOkanda />}
             </li>
           ))}
         </ul>
@@ -127,7 +146,7 @@ export function IngrediensSok({
 }
 
 /** Ett förslag: namnet, tillståndet och kcal per 100 g, och för baslivsmedel de allergener som är kända. */
-function Rad({ namn, kcal, etikett, allergener = null }: { namn: string; kcal: number | null; etikett: string | null; allergener?: readonly Allergen[] | null }) {
+function Rad({ namn, kcal, etikett, allergener = null, visaOkanda = false }: { namn: string; kcal: number | null; etikett: string | null; allergener?: readonly Allergen[] | null; visaOkanda?: boolean }) {
   return (
     <>
       <span className="flex min-w-0 flex-1 flex-wrap items-center gap-x-2 gap-y-1">
@@ -136,6 +155,7 @@ function Rad({ namn, kcal, etikett, allergener = null }: { namn: string; kcal: n
         {allergener && allergener.length > 0 && (
           <span className="block w-full text-xs text-muted-foreground">Innehåller {uppraknade(allergener.map((a) => allergenetikett(a).toLowerCase()))}</span>
         )}
+        {visaOkanda && allergener === null && <span className="block w-full text-xs text-muted-foreground">Allergener okända</span>}
       </span>
       {kcal !== null && (
         <span className="shrink-0 text-muted-foreground tabular-nums">

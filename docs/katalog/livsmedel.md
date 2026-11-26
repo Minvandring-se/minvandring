@@ -88,16 +88,19 @@ Varje livsmedel har kolumnen `allergener` med EU:s 14 allergener, som påsarna i
 
 Reglerna gäller bara enkla råvaror. Allt annat är okänt.
 
-- **Enkla grupper:** Mjölk, Fil och yoghurt, Grädde, Smör, Hårdost, Lagrad ost, Halvhård ost, Mjukost, Ost, Färskost, Övriga ostprodukter, Mejeriprodukter, Övriga mjölkprodukter, Ägg, Fisk, Fisk och skaldjur, Rött kött, Fågel, Innanmat och inälvsmat, Andra djurfetter, Grönsaker och svamp, Grönsaker, rotfrukter och svamp, Frukt och bär, Potatis och stärkelserika rötter, Baljväxter, Nöt, frö eller kärna, Ris eller annat spannmål, Spannmål och spannmålsprodukter, Cerealier eller cerealielika mjölprodukter och derivat, Pasta och liknande produkter, Vegetabiliskt fett och olja, Krydda, Socker, honung eller sirap och Vatten.
-- **Sammansatt trots gruppen:** namn med till exempel panerad, pastej, korv, pudding, bröd, gröt, sås, soppa, margarin eller choklad, och namn med "m." följt av något annat än salt, ben, skinn, skal, svål, lag, vatten, olja, fett eller ägg ("Kyckling m. bacon jordnötter"), är okända.
+- **Enkla grupper:** Mjölk, Fil och yoghurt, Grädde, Smör, Hårdost, Lagrad ost, Halvhård ost, Mjukost, Ost, Färskost, Övriga ostprodukter, Mejeriprodukter, Övriga mjölkprodukter, Ägg, Fisk, Fisk och skaldjur, Rött kött, Fågel, Innanmat och inälvsmat, Andra djurfetter, Grönsaker och svamp, Grönsaker, rotfrukter och svamp, Frukt och bär, Potatis och stärkelserika rötter, Baljväxter, Nöt, frö eller kärna, Ris eller annat spannmål, Cerealier eller cerealielika mjölprodukter och derivat, Pasta och liknande produkter, Vegetabiliskt fett och olja, Krydda, Socker, honung eller sirap och Vatten. Spannmål och spannmålsprodukter är inte en enkel grupp, eftersom den blandar deg, lasagne och snacks.
+- **Sammansatt trots gruppen:** namn med till exempel panerad, pastej, korv, pudding, bröd, gröt, sås, soppa, margarin, choklad, gryta, sauté, stuvad, sufflé, palt, lasagne (inte lasagneplattor), sushi (inte sushiris), masala, hemlagad, mix, buljong, fond, burgare, chips, leverbiff och grönsaksbiff (men inte bara "biff", så att Ryggbiff är enkel), blandning (utom när namnet räknar upp vete, råg, korn eller havre) och namn med "m." följt av något annat än salt, ben, skinn, skal, svål, lag, vatten, olja, fett eller ägg ("Kyckling m. bacon jordnötter"), är okända.
+- **Pålägg:** kött och fågel som är skivad eller i tunna skivor är okända, eftersom pålägg kan innehålla mjölkprotein.
+- **Nötter blandade** är okända, eftersom en blandning kan innehålla jordnötter, utom de två nedan med kända allergener.
 - **Mejerigrupperna** innehåller alltid mjölk, även laktosfria, eftersom laktosfritt fortfarande är mjölkprotein. **Ägg** innehåller ägg.
 - **Fisk och skaldjur:** räkor, krabba, hummer och kräftor är kräftdjur. Musslor, ostron, bläckfisk och sniglar är blötdjur. Övrigt i grupperna Fisk och Fisk och skaldjur är fisk. Skaldjur räknas inte som fisk.
 - **Gluten:** vete (inte bovete), råg, korn (spannmålet, inte "krossade korn" av bovete eller hirs), havre, dinkel, spelt, bulgur, couscous och mannagryn. Pasta innehåller gluten om den inte är gjord på ris, majs eller baljväxter, är glasnudlar eller kallas glutenfri.
 - **Ur namnet:** jordnötter, nötter (mandel, hasselnöt, valnöt, cashew, pekan, para, pistage, macadamia, men inte mandelpotatis), sesam, soja, lupin, selleri (inte sellerikål), senap och ägg (som eget ord eller början på ett ord, inte "lägg").
-- **Torkad frukt** är okänd, eftersom den kan innehålla svaveldioxid.
-- **Oljor:** raffinerade oljor räknas inte som allergener, som i EU:s undantag. Sesamolja och jordnötsolja gör det.
+- **Torkad frukt**, fruktchips och tillagad rödkål är okända, eftersom de kan innehålla svaveldioxid.
+- **Oljor:** raffinerade oljor räknas inte som allergener, som i EU:s undantag. Sesamolja och jordnötsolja gör det. Vetegroddsolja och kallpressade oljor är inte raffinerade och behåller allergenerna i namnet, så vetegroddsolja innehåller gluten.
+- **Kända trots att de är sammansatta** (`KANDA`): Nötter blandade naturella och rostade m. salt (jordnötter och nötter), Deg filodeg (gluten), Lasagne nötfärs (gluten, ägg, mjölk och selleri), Leverpalt och Njurpalt (gluten) och Grönsakssufflé (gluten, ägg och mjölk). Listan tar med allergener som troligen ingår, eftersom en varning för mycket är bättre än en för lite.
 
-Vid den första körningen 2026-11-24 fick 255 livsmedel allergener, 579 inga och 1 771 okända. Förslagen visar "Innehåller gluten" och så vidare under namnet när allergenerna är kända.
+Vid den första körningen 2026-11-24 fick 255 livsmedel allergener, 579 inga och 1 771 okända. Efter felsökningen 2026-11-26 (34 livsmedel som räknades som "inga" fast de troligen innehåller allergener) fick 263 livsmedel allergener, 545 inga och 1 797 okända. Förslagen visar "Innehåller gluten" och så vidare under namnet när allergenerna är kända.
 
 ## Råvaror före maträtter
 

@@ -5,7 +5,7 @@ import { PasNamn } from '@/components/mat/PasNamn'
 import type { Person } from '@/components/mat/RadPanel'
 import { Bricka } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
-import { uppraknade, varningar, type Behov } from '@/lib/kost'
+import { uppraknade, varningar, varningarForRatt, type Behov, type Kostinfo } from '@/lib/kost'
 import { dagensText, formateraKcal, grupperaMaltid, HUVUDMALTIDER, kcalPer100g, MALTIDER, maltidsord, maltidsrutaId, orimligPortion, type Dagssumma, type Naring } from '@/lib/mat'
 import type { Maltid, Maltidsrad, Matatare, Matprodukt, Ratt } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -18,6 +18,8 @@ export interface Ratter {
   pasar: ReadonlyMap<string, Matprodukt>
   /** Namnen på varorna i varje egen rätt, i den ordning de skrevs in. */
   ingredienser: ReadonlyMap<string, readonly string[]>
+  /** Det som är känt om varje ingrediens i en egen rätt: varor ur varukatalogen har kända allergener, null är okänt. */
+  kost?: ReadonlyMap<string, readonly (Kostinfo | null)[]>
 }
 
 /** Turens personer med färger och vem som äter vad, för att visa vem som bär och äter varje rätt. */
@@ -209,8 +211,9 @@ function Rattrad({
   if (!ratt || !portion) return null
   const antal = grupp.rader.length
   const pase = ratt.matprodukt_id ? ratter.pasar.get(ratt.matprodukt_id) : undefined
-  // Varningar bara för påsar ur katalogen. Egna rätter har ingen kostinformation i första versionen.
-  const lista = pase ? varningar(pase, behov) : []
+  // Påsar ur katalogen har kända allergener. En egen rätt räknas utifrån varorna ur varukatalogen, och övriga
+  // ingredienser är okända.
+  const lista = pase ? varningar(pase, behov) : varningarForRatt(ratter.kost?.get(ratt.id) ?? [], behov)
   const per100 = kcalPer100g(portion.kcal, portion.gram)
   const ingredienser = ratt.matprodukt_id ? [] : (ratter.ingredienser.get(ratt.id) ?? [])
   const barsAv = grupp.rader[0].bars_av ?? null
@@ -222,7 +225,7 @@ function Rattrad({
     // Namnet får hela rutans bredd. Energin och Ta bort står på raden under, så att långa namn går att läsa i smala rutor.
     <li className="space-y-0.5 rounded-knapp bg-muted/60 pt-2 pl-3">
       <p className="flex flex-wrap items-baseline gap-x-2 pr-3 text-[0.9375rem] leading-snug font-medium">
-        {pase ? <PasNamn marke={pase.marke} namn={pase.namn} /> : <span className="min-w-0 break-words hyphens-auto">{ratt.namn}</span>}
+        {pase ? <PasNamn marke={pase.marke} namn={pase.namn} /> : <span className="min-w-0 break-words">{ratt.namn}</span>}
         {antal > 1 && <Bricka className="tabular-nums">{antal} st</Bricka>}
       </p>
       {ingredienser.length > 0 && <Ingredienser namn={ingredienser} />}
@@ -257,7 +260,7 @@ function Rattrad({
           )}
         </p>
         {kanAndra && (
-          <Button variant="ghost" size="ikon" onClick={() => onTaBort(grupp.rader.at(-1)!)} aria-label={antal > 1 ? `Ta bort en portion ${ratt.namn} från ${vad}` : `Ta bort ${ratt.namn} från ${vad}`}>
+          <Button variant="ghost" size="ikon" onClick={() => onTaBort(grupp.rader.at(-1)!)} aria-label={antal > 1 ? `Ta bort en av ${antal} ${ratt.namn} från ${vad}` : `Ta bort ${ratt.namn} från ${vad}`}>
             <X className="size-4" aria-hidden />
           </Button>
         )}

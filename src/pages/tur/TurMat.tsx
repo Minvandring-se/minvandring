@@ -19,7 +19,8 @@ import { knappStil } from '@/components/ui/knappStil'
 import { sparaRecept, useRecept } from '@/hooks/useRecept'
 import { laggISkafferi, useAndraTurer, useSkafferi } from '@/hooks/useSkafferi'
 import { bockaInkop, laggIMaltid, laggTillPase, sattAtare, sattAvdelning, sattBarare, slappRader, sparaEgenRatt, sparaKostbehov, taBortEgenRatt, taBortKostbehov, taBortUrMaltid, taRader, useMatplan, type Matplan } from '@/hooks/useMatplan'
-import type { Behov } from '@/lib/kost'
+import type { Behov, Kostinfo } from '@/lib/kost'
+import { kostinfoForVara } from '@/lib/varukatalog'
 import { dagssummor, dubblettText, MALTIDER, maltidsrutaId, matdagar, matstatus, matsummering, atareFor, fordela, platsText, portionerSomBars, rattPerPortion, rattPlatser, ratterSomSaknar, saknadeMaltider, saknasPerPerson, vemBarVad, type Barrad, type Matdag as Dag, type Matstatus } from '@/lib/mat'
 import { dagensDatum } from '@/lib/datum'
 import { handlingslista, matviktPerBarare } from '@/lib/handlingslista'
@@ -35,7 +36,7 @@ import { matvikter } from '@/lib/vikt'
 
 /**
  * Turens flik Mat: ett kompakt mörkgrönt huvud med hur många måltider som är planerade, turens flikar, Nästa att
- * planera och Vem tar med vad, kostbehoven, en ruta per dag och måltid, och sist summeringen och inköpslistan.
+ * planera och Vem bär vad, kostbehoven, en ruta per dag och måltid, och sist summeringen och inköpslistan.
  * Ägare och redigerare ändrar, läsare ser.
  */
 export function TurMat() {
@@ -141,13 +142,18 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
 
   const perPortion = useMemo(() => new Map(plan.ratter.map((r) => [r.id, rattPerPortion(r, plan)])), [plan])
   const ratter = useMemo(() => {
-    const varunamn = new Map(plan.varor.map((v) => [v.id, v.namn]))
+    const varor = new Map(plan.varor.map((v) => [v.id, v]))
     const ingredienser = new Map<string, string[]>()
+    const kost = new Map<string, (Kostinfo | null)[]>()
     for (const i of plan.ingredienser) {
-      const namn = varunamn.get(i.vara_id)
-      if (namn) ingredienser.set(i.ratt_id, [...(ingredienser.get(i.ratt_id) ?? []), namn])
+      const vara = varor.get(i.vara_id)
+      if (!vara) continue
+      ingredienser.set(i.ratt_id, [...(ingredienser.get(i.ratt_id) ?? []), vara.namn])
+      // En vara ur varukatalogen har kända allergener. Andra ingredienser är okända.
+      const katalog = vara.varukatalog_id ? plan.varukatalog.get(vara.varukatalog_id) : undefined
+      kost.set(i.ratt_id, [...(kost.get(i.ratt_id) ?? []), katalog ? kostinfoForVara(katalog) : null])
     }
-    return { ratter: new Map(plan.ratter.map((r) => [r.id, r])), perPortion, pasar: plan.pasar, ingredienser }
+    return { ratter: new Map(plan.ratter.map((r) => [r.id, r])), perPortion, pasar: plan.pasar, ingredienser, kost }
   }, [plan, perPortion])
   const summor = dagssummor(plan, dagar, personIds)
   // Matvikten räknas som inköpslistan: var och en bär det hen köper, i hela påsar. Hundarna bär sin egen mat.
@@ -201,7 +207,6 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
     fokusera(dag, maltid)
   }
 
-  const maltidsnamn = (m: Maltid) => MALTIDER.find((x) => x.nyckel === m)!.etikett
   const vemBar = vemBarVad(plan, dagar)
   const burenVikt = matvikt.perBarare
   // Det som bara vissa personer saknar. Det som saknas för alla står redan i summeringen.
@@ -213,9 +218,13 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
 
   return (
     <div className="space-y-6 lg:space-y-8">
-      {!kanAndra && <p className="text-muted-foreground">Du är läsare. Du kan se matplanen och ange dina egna kostbehov. Ägare och redigerare ändrar resten.</p>}
+      {!kanAndra && (
+        <p className="text-muted-foreground">
+          Du är läsare. Du kan se matplanen, ange dina kostbehov, ta och släppa rätter åt dig själv och bocka av det du köper. Ägare och redigerare ändrar resten.
+        </p>
+      )}
 
-      {/* När planen är klar är rutan till vänster bara en rad, så då ligger Vem tar med vad under i stället för bredvid. */}
+      {/* När planen är klar är rutan till vänster bara en rad, så då ligger Vem bär vad under i stället för bredvid. */}
       <div className={cn('grid grid-cols-1 items-start gap-6 lg:gap-8', status.forsta && 'lg:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]')}>
         <NastaAttPlanera
           status={status}
@@ -316,7 +325,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
           utskrift={`${turdelAdress(tur.id, 'mat')}/inkopslista`}
           onBocka={async (rad, klart) => {
             if (!rad.kopare) return false
-            return ochLaddaOm(await bockaInkop(tur.id, rad.kopare, rad.typ, rad.id, klart))
+            return ochLaddaOm(await bockaInkop(tur.id, rad.kopare, rad.typ, rad.id, klart, rad.mangd))
           }}
           onAvdelning={async (varaId, avdelning) => ochLaddaOm(await sattAvdelning(varaId, avdelning))}
         />
@@ -346,7 +355,7 @@ function Matplanvy({ plan, dagar, status, laddaOm }: { plan: Matplan; dagar: Dag
 
       {valjer && (
         <ValjRatt
-          rubrik={`${maltidsnamn(valjer.maltid)}, ${valjer.dag.namn.toLowerCase()}`}
+          rubrik={platsText({ dag: valjer.dag, maltid: valjer.maltid })}
           maltid={valjer.maltid}
           ratter={plan.ratter}
           perPortion={perPortion}

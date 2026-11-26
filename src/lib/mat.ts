@@ -2,7 +2,7 @@
 //
 // Varje person äter en portion av varje rad hen äter (maltid_atare, inga rader betyder alla). Hundar äter egen mat,
 // som räknas i vikt.ts (hundmat_per_dag_g).
-import { allergenetikett, uppraknade } from './kost'
+import { allergenetikett, filterText, uppraknade, type Kostfilter } from './kost'
 import { formateraVikt } from './forrad'
 import { arEnhet, type Enhet } from './handla'
 import type { Ingrediens, Katalogmaltid, Maltid, Maltidsrad, Matatare, Matprodukt, Ratt, Vara } from './typer'
@@ -271,6 +271,18 @@ export function antalPasar(ganger: number, personer: number, portioner: number):
   return Math.ceil((ganger * personer) / Math.max(1, portioner))
 }
 
+/**
+ * Varningen innan en deltagare tas bort ur turen: på rader där personen är den enda som äter betyder inga ätare
+ * efteråt att alla äter. Namnet skrivs ut i stället för ett pronomen. null när personen inte är ensam ätare någonstans.
+ */
+export function ensamAtareText(atare: readonly Matatare[], deltagareId: string, namn: string): string | null {
+  const perRad = new Map<string, string[]>()
+  for (const a of atare) perRad.set(a.maltid_id, [...(perRad.get(a.maltid_id) ?? []), a.deltagare_id])
+  const antal = [...perRad.values()].filter((d) => d.length === 1 && d[0] === deltagareId).length
+  if (antal === 0) return null
+  return `${namn} är den enda som äter ${antal} ${antal === 1 ? 'rätt' : 'rätter'}. Tas ${namn} bort äter alla ${antal === 1 ? 'den' : 'dem'}.`
+}
+
 /** De som äter en rad i matplanen: raderna i maltid_atare, eller alla personer när det inte finns några. */
 export function atareFor(maltidId: string, atare: readonly Matatare[] | undefined, personer: readonly string[]): string[] {
   const egna = (atare ?? []).filter((a) => a.maltid_id === maltidId).map((a) => a.deltagare_id)
@@ -516,6 +528,15 @@ export const PASAR_TILL: Record<Maltid, readonly Katalogmaltid[]> = {
   mellanmal: ['mellanmal', 'dessert'],
 }
 
+/**
+ * Filterknappen i Välj rätt: "Filter: mellanmål, glutenfri". Måltiden står med när påsarna filtreras på den, så att
+ * det syns varför en påse inte kommer med i sökningen.
+ */
+export function filterknappText(maltid: Maltid | null, allaMaltider: boolean, filter: Kostfilter): string {
+  const delar = [maltid && !allaMaltider ? maltidsord(maltid) : null, filterText(filter)?.toLowerCase() ?? null].filter(Boolean)
+  return `Filter: ${delar.length ? delar.join(', ') : 'Inga'}`
+}
+
 /** Namnet på en påse som det visas och som rätten i turen heter: märke och namn. */
 export function pasnamn(p: Pick<Matprodukt, 'marke' | 'namn'>): string {
   return `${p.marke} ${p.namn}`
@@ -556,7 +577,8 @@ export function pasdetaljer(p: Matprodukt): string[] {
   if (p.allergener === null) ut.push('Allergenerna är okända')
   else if (p.allergener.length === 0) ut.push('Ingen av de 14 allergenerna')
   else ut.push(`Innehåller ${uppraknade(p.allergener.map((a) => allergenetikett(a).toLowerCase()))}`)
-  if (p.spar?.length) ut.push(`Kan innehålla spår av ${uppraknade(p.spar.map((a) => allergenetikett(a).toLowerCase()))}`)
+  if (p.spar === null) ut.push('Spår: okänt')
+  else if (p.spar.length) ut.push(`Kan innehålla spår av ${uppraknade(p.spar.map((a) => allergenetikett(a).toLowerCase()))}`)
   return ut
 }
 
@@ -577,6 +599,8 @@ export interface Ingrediensfalt {
   gram: string
   kcal: string
   protein: string
+  /** Varan i varukatalogen som raden valdes från. Försvinner när namnet ändras. */
+  varukatalogId?: string | null
 }
 
 export interface TolkadIngrediens {
@@ -588,6 +612,8 @@ export interface TolkadIngrediens {
   gram: number | null
   kcalPer100g: number | null
   proteinPer100g: number | null
+  /** Varan i varukatalogen som raden valdes från. */
+  varukatalogId?: string | null
 }
 
 /** Vikten för en mängd i g eller kg. null för övriga enheter, där vikten skrivs för sig. */
@@ -607,7 +633,7 @@ export const MAX_VARUNAMN = 80
 /** Kontrollerar formuläret för en egen rätt. Helt tomma rader hoppas över, och en rätt får sakna ingredienser. */
 export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[]): Rattformular {
   const n = namn.trim()
-  if (!n) return { ok: false, fel: 'Skriv vad rätten heter.' }
+  if (!n) return { ok: false, fel: 'Skriv ett namn.' }
   if (n.length > MAX_RATTNAMN) return { ok: false, fel: `Namnet får vara högst ${MAX_RATTNAMN} tecken.` }
   const rader: TolkadIngrediens[] = []
   const varor = new Set<string>()
@@ -628,14 +654,16 @@ export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[])
     if (mangd !== null && enhet === null) return { ok: false, fel: `${rad}: välj en enhet.` }
     const skriven = enhet === 'g' || enhet === 'kg' ? null : tolkaTal(f.gram)
     if (skriven !== null && !(Number.isInteger(skriven) && skriven >= 1 && skriven <= 5000))
-      return { ok: false, fel: `${rad}: skriv vikten som ett heltal mellan 1 och 5000 gram.` }
+      return { ok: false, fel: `${rad}: skriv vikten som ett heltal mellan 1 och 5 000 gram.` }
     const gram = gramFor(mangd, enhet) ?? skriven
     if (gram !== null && (gram < 1 || gram > 5000)) return { ok: false, fel: `${rad}: mängden ska vara mellan 1 g och 5 kg per portion.` }
     const kcal = tolkaTal(f.kcal)
     if (kcal !== null && !(kcal <= 900)) return { ok: false, fel: `${rad}: skriv kcal per 100 g som ett tal mellan 0 och 900.` }
     const protein = tolkaTal(f.protein)
     if (protein !== null && !(protein <= 100)) return { ok: false, fel: `${rad}: skriv protein per 100 g som ett tal mellan 0 och 100.` }
-    rader.push({ vara, mangd, enhet, gram, kcalPer100g: kcal === null ? null : Math.round(kcal), proteinPer100g: protein })
+    // En vikt utan mängd blir mängden i gram. Annars sparas vikten med en enhet som inte syns när rätten öppnas igen.
+    const utanMangd = mangd === null && gram !== null
+    rader.push({ vara, mangd: utanMangd ? gram : mangd, enhet: utanMangd ? 'g' : enhet, gram, kcalPer100g: kcal === null ? null : Math.round(kcal), proteinPer100g: protein, ...(f.varukatalogId ? { varukatalogId: f.varukatalogId } : {}) })
   }
   return { ok: true, namn: n, rader }
 }
@@ -643,8 +671,9 @@ export function tolkaRattformular(namn: string, falt: readonly Ingrediensfalt[])
 /** Ingredienserna som de skickas till spara_egen_ratt och spara_recept i databasen. */
 export function ingredienserTillDatabasen(
   rader: readonly TolkadIngrediens[],
-): { vara: string; mangd: number | null; enhet: Enhet | null; gram: number | null; kcal: number | null; protein: number | null }[] {
-  return rader.map((r) => ({ vara: r.vara.trim(), mangd: r.mangd, enhet: r.enhet, gram: r.gram, kcal: r.kcalPer100g, protein: r.proteinPer100g }))
+): { vara: string; mangd: number | null; enhet: Enhet | null; gram: number | null; kcal: number | null; protein: number | null; varukatalog: string | null }[] {
+  // varukatalog skickas alltid, så att en koppling som har tagits bort i formuläret också tas bort i databasen.
+  return rader.map((r) => ({ vara: r.vara.trim(), mangd: r.mangd, enhet: r.enhet, gram: r.gram, kcal: r.kcalPer100g, protein: r.proteinPer100g, varukatalog: r.varukatalogId ?? null }))
 }
 
 /** En portion av rätten i formuläret, för att visa medan man skriver. */

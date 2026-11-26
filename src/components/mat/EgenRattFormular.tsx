@@ -1,5 +1,5 @@
 import { Plus, X } from 'lucide-react'
-import { useId, useState, type FormEvent, type ReactNode } from 'react'
+import { useEffect, useId, useRef, useState, type FormEvent, type ReactNode } from 'react'
 import { Button } from '@/components/ui/button'
 import { IngrediensSok } from '@/components/mat/IngrediensSok'
 import { Input } from '@/components/ui/input'
@@ -9,6 +9,7 @@ import { ENHETER } from '@/lib/handla'
 import { formateraKcal, MAX_RATTNAMN, naringForRader, orimligPortion, tolkaRattformular, type Ingrediensfalt, type TolkadIngrediens } from '@/lib/mat'
 import { faltFranLivsmedel } from '@/lib/livsmedel'
 import { raderTillFalt } from '@/lib/recept'
+import { varunamnFor, type Katalogforslag } from '@/lib/varukatalog'
 import type { Vara } from '@/lib/typer'
 
 // Gram är förvalt, eftersom det är det vanligaste för friluftsmat och ger energin direkt.
@@ -18,7 +19,7 @@ const TOM_RAD: Ingrediensfalt = { vara: '', mangd: '', enhet: 'g', gram: '', kca
 const behoverVikt = (enhet: string) => enhet !== 'g' && enhet !== 'kg'
 
 /** En vara som föreslås, med kcal och protein som fylls i när man väljer den. */
-type Forslag = Pick<Vara, 'namn' | 'kcal_per_100g' | 'protein_per_100g'>
+type Forslag = Pick<Vara, 'namn' | 'kcal_per_100g' | 'protein_per_100g' | 'varukatalog_id'>
 
 /** Texterna som skiljer en rätt i en tur från ett eget recept. */
 const TEXTER = {
@@ -45,11 +46,22 @@ const TEXTER = {
 } as const
 
 /** Fälten för en vara som föreslås, så att kcal och protein fylls i när man väljer den. */
-function faltForVara(vara: Forslag): Pick<Ingrediensfalt, 'vara' | 'kcal' | 'protein'> {
+function faltForVara(vara: Forslag): Pick<Ingrediensfalt, 'vara' | 'kcal' | 'protein' | 'varukatalogId'> {
   return {
     vara: vara.namn,
     kcal: vara.kcal_per_100g?.toString() ?? '',
     protein: vara.protein_per_100g?.toString().replace('.', ',') ?? '',
+    varukatalogId: vara.varukatalog_id ?? null,
+  }
+}
+
+/** Fälten för en vara ur varukatalogen: namnet, kcal och protein, och kopplingen som ger allergenerna. */
+function faltForKatalogvara(v: Katalogforslag): Pick<Ingrediensfalt, 'vara' | 'kcal' | 'protein' | 'varukatalogId'> {
+  return {
+    vara: varunamnFor(v),
+    kcal: String(v.kcal_per_100g),
+    protein: v.protein_per_100g === null ? '' : String(Math.round(v.protein_per_100g * 10) / 10).replace('.', ','),
+    varukatalogId: v.id,
   }
 }
 
@@ -92,6 +104,11 @@ export function EgenRattFormular({
   const [sparar, setSparar] = useState(false)
   // Borttagningen kräver två tryck: först frågar knappen, sedan tar den bort.
   const [sakerPa, setSakerPa] = useState(false)
+  const fraga = useRef<HTMLDivElement>(null)
+  // Frågan och knapparna ligger längst ner i panelen, så de skrollas fram när de visas.
+  useEffect(() => {
+    if (sakerPa) fraga.current?.scrollIntoView({ block: 'nearest' })
+  }, [sakerPa])
 
   async function taBort() {
     if (!onTaBort) return
@@ -111,11 +128,13 @@ export function EgenRattFormular({
       f.map((rad, j) => {
         if (j !== i) return rad
         const ny = { ...rad, ...del }
+        // Skriver man ett annat namn gäller inte kopplingen till varukatalogen längre.
+        if (del.vara !== undefined && !('varukatalogId' in del) && del.vara.trim().toLowerCase() !== rad.vara.trim().toLowerCase()) ny.varukatalogId = null
         // Väljer man en vara som finns i turen fylls kcal och protein i, om de är tomma.
         const finns = del.vara !== undefined ? varor.find((v) => v.namn.toLowerCase() === del.vara!.trim().toLowerCase()) : undefined
         if (finns) {
           const kand = faltForVara(finns)
-          return { ...ny, kcal: ny.kcal || kand.kcal, protein: ny.protein || kand.protein }
+          return { ...ny, kcal: ny.kcal || kand.kcal, protein: ny.protein || kand.protein, varukatalogId: ny.varukatalogId ?? kand.varukatalogId }
         }
         return ny
       }),
@@ -173,7 +192,9 @@ export function EgenRattFormular({
                   onAndra={(text) => andra(i, { vara: text })}
                   onValjVara={(v) => andra(i, faltForVara(v))}
                   // Värdena kopieras och går att ändra. Raden pekar inte på livsmedlet efteråt.
-                  onValjLivsmedel={(l) => andra(i, { vara: l.namn, ...faltFranLivsmedel(l) })}
+                  onValjLivsmedel={(l) => andra(i, { vara: l.namn, ...faltFranLivsmedel(l), varukatalogId: null })}
+                  onValjKatalogvara={(v) => andra(i, faltForKatalogvara(v))}
+                  varuetikett={typ === 'recept' ? 'I dina recept' : 'I turen'}
                 />
               </div>
               {falt.length > 1 && (
@@ -217,7 +238,7 @@ export function EgenRattFormular({
         {portion && tolkat.ok && tolkat.rader.length > 0 && (
           <>
             Per portion: {formateraKcal(portion.kcal)}, {Math.round(portion.proteinG)} g protein och {formateraVikt(portion.gram)}.
-            {portion.ofullstandig && <span className="text-muted-foreground"> Några varor saknar kcal eller protein.</span>}
+            {portion.ofullstandig && <span className="text-muted-foreground"> Några varor saknar vikt, kcal eller protein, så energin kan bli för låg.</span>}
             {orimligPortion(portion) && <span className="font-medium text-accent-strong"> Ovanligt stor portion. Kontrollera mängderna.</span>}
           </>
         )}
@@ -230,7 +251,7 @@ export function EgenRattFormular({
       )}
 
       {onTaBort && (
-        <div className="space-y-2 border-t border-border pt-4">
+        <div ref={fraga} className="space-y-2 border-t border-border pt-4">
           {sakerPa && (
             <p className="text-sm">{t.raderaFraga}</p>
           )}
