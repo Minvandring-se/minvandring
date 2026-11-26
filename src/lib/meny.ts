@@ -123,6 +123,9 @@ export interface Menygrupp {
 }
 
 /** Grupperna i sidomenyn på dator, i ordning, under Hem. Kommer snart samlar sidorna som inte är byggda. */
+/** Grupper vars rubrik också är en länk: ett tryck öppnar gruppen och går till sidan. Pilen fäller ut och ihop. */
+export const GRUPPSTART: Partial<Record<Gruppnyckel, Sida>> = { planera: 'turer', utrustning: 'forrad' }
+
 export const MENYGRUPPER: readonly Menygrupp[] = [
   { nyckel: 'planera', rubrik: 'Planera', sidor: ['turer', 'matplanering'] },
   { nyckel: 'utrustning', rubrik: 'Utrustning', sidor: ['forrad', 'utrustning'] },

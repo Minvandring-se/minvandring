@@ -30,7 +30,7 @@ function varorIRecepten(recept: readonly ReceptTyp[]) {
 }
 
 /**
- * Recept: MinVandrings recept överst, och ens egna recept, rätter med ingredienser som sparas på kontot och kan läggas
+ * Recept: Ens egna recept överst, och MinVandrings recept under. De egna är rätter med ingredienser som sparas på kontot och kan läggas
  * in i vilken tur som helst från Välj rätt. Bara man själv ser sina egna recept. När ett recept läggs i en tur kopieras det, så att en ändring här inte ändrar turen.
  */
 export function Recept() {
@@ -41,11 +41,7 @@ export function Recept() {
   return (
     <div className="space-y-6">
       <Matflikar />
-      <SidRubrik rubrik="Recept" text="MinVandrings recept och dina egna, som du kan lägga in i vilken tur som helst. Dina egna recept ser bara du." />
-
-      <Sektion rubrik="MinVandrings recept">
-        <MinvandringsRecept />
-      </Sektion>
+      <SidRubrik rubrik="Recept" text="Dina egna recept och MinVandrings recept, som du kan lägga in i vilken tur som helst. Dina egna recept ser bara du." />
 
       <Sektion
         rubrik="Dina recept"
@@ -106,6 +102,10 @@ export function Recept() {
             })}
           </ul>
         )}
+      </Sektion>
+
+      <Sektion rubrik="MinVandrings recept">
+        <MinvandringsRecept />
       </Sektion>
 
       {vy && Array.isArray(recept) && (

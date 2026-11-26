@@ -84,10 +84,11 @@ function Valkomstband({ namn, idag, nasta }: { namn: string; idag: string; nasta
   const nedrakning = nasta ? bandNedrakning(nasta, idag) : null
   const hej = fornamn(namn)
   return (
-    <section aria-labelledby="hem-rubrik" className="relative overflow-hidden rounded-[1.375rem] bg-yta-stark text-yta-stark-foreground">
+    <section aria-labelledby="hem-rubrik" className="@container relative overflow-hidden rounded-[1.375rem] bg-yta-stark text-yta-stark-foreground">
       <Hojdkurvor variant="band" />
-      <div className="relative flex flex-col gap-6 px-5 py-6 sm:px-8 sm:py-8 md:flex-row md:items-end md:justify-between">
-        <div className="space-y-3">
+      {/* Nedräkningen står bredvid först när bandet är brett nog, så att hälsningen och knapparna aldrig bryts under den. */}
+      <div className="relative flex flex-col gap-6 px-5 py-6 sm:px-8 sm:py-8 @3xl:flex-row @3xl:items-end @3xl:justify-between">
+        <div className="space-y-3 @3xl:shrink-0">
           <p className="text-sm text-yta-stark-muted">{datumrubrik(idag)}</p>
           <div className="space-y-1">
             <h1 id="hem-rubrik" className="text-[2rem] leading-tight text-yta-stark-foreground lg:text-[2.75rem]">
@@ -106,9 +107,10 @@ function Valkomstband({ namn, idag, nasta }: { namn: string; idag: string; nasta
           </div>
         </div>
         {nasta && nedrakning && (
-          <div className="md:text-right">
-            <p className="text-sm text-yta-stark-muted">Nästa tur: {nasta.namn}</p>
-            <p className="font-heading text-[3rem] leading-none font-semibold text-hjortron tabular-nums lg:text-[4.5rem]">{nedrakning.varde}</p>
+          <div className="min-w-0 @3xl:max-w-sm @3xl:text-right">
+            <p className="text-sm text-yta-stark-muted">Nästa tur</p>
+            <p className="font-heading text-xl leading-snug font-semibold break-words text-yta-stark-foreground lg:text-2xl">{nasta.namn}</p>
+            <p className="mt-1 font-heading text-[3rem] leading-none font-semibold text-hjortron tabular-nums lg:text-[4.5rem]">{nedrakning.varde}</p>
             <p className="text-sm text-yta-stark-muted">{nedrakning.text}</p>
           </div>
         )}
