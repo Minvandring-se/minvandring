@@ -37,6 +37,11 @@ Skandinavisk, lugn och naturnära, som en välgjord fjällkarta. Allt ska gå at
 - `rounded-full`: brickor, avatarer och förloppslister.
 - `rounded-md` och `rounded-lg` är samma som `knapp` och `yta`, så att äldre klasser följer med. Använd de nya namnen i ny kod.
 
+## Bildkort och sökfält
+
+- Kort med bild på översiktssidorna (turkortet, turens översikt, Mina matplaner, recepten och tipsen) använder `Bildkort` (`src/components/ui/bildkort.tsx`). Brett kort: texten till vänster och bilden till höger (40 procent) med en båge i kortets färg. Smalt kort: bilden överst, 200 px, som tonar ut mot texten. Kort som går att trycka på lyfts vid hovring och fokus.
+- Alla sökfält använder `SokFalt` (`src/components/ui/sokfalt.tsx`) med samma utseende som i Matkatalogen. Skriv inga egna sökfält.
+
 ## Två accentfärger: rost och hjortron
 
 - Grönt (`primary`) bär appen. Resten är neutralt.

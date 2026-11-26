@@ -2,6 +2,7 @@ import { Link } from 'react-router'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { Illustration } from '@/components/illustrationer/Illustration'
 import { Matflikar } from '@/components/mat/Matflikar'
+import { Bildkort } from '@/components/ui/bildkort'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { GUIDER, lastid, tipsadress, type Guide } from '@/lib/tips'
 import { cn } from '@/lib/utils'
@@ -55,16 +56,20 @@ export function Mattips() {
 /** Ett kort för en artikel: bild, lästid, rubrik och, på det stora kortet, ingressen. Hela kortet är en länk. */
 function Artikelkort({ guide, stor = false }: { guide: Guide; stor?: boolean }) {
   return (
-    <Link
-      to={tipsadress(guide.nyckel)}
-      className={cn('lyft flex h-full flex-col overflow-hidden rounded-lg border border-border bg-card', fokus)}
-    >
-      <Illustration namn={guide.nyckel} className={cn('w-full', stor ? 'aspect-[16/9] lg:aspect-[3/1]' : 'aspect-[4/3] sm:aspect-[16/7]')} />
-      <span className={cn('flex flex-1 flex-col gap-1.5', stor ? 'p-5' : 'p-4')}>
-        <span className="text-sm text-muted-foreground">{lastid(guide)} min läsning</span>
-        <span className={cn('font-heading font-semibold break-words text-primary', stor ? 'text-2xl' : 'text-lg')}>{guide.rubrik}</span>
-        {stor && <span className="text-muted-foreground">{guide.ingress}</span>}
-      </span>
-    </Link>
+    <Bildkort klickbar className="h-full" bild={<Illustration namn={guide.nyckel} className="absolute inset-0 size-full" />} textKlass={cn('flex-1 gap-1.5 pt-1', stor ? 'px-5 pb-5 @2xl:p-7' : 'px-4 pb-4 @2xl:p-6')}>
+      <span className="text-sm text-muted-foreground">{lastid(guide)} min läsning</span>
+      {/* Länken täcker hela kortet, så att det går att trycka var som helst på det. */}
+      <Link
+        to={tipsadress(guide.nyckel)}
+        className={cn(
+          'font-heading font-semibold break-words text-primary',
+          stor ? 'text-2xl' : 'text-lg',
+          'after:absolute after:inset-0 after:rounded-[1.375rem] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ring',
+        )}
+      >
+        {guide.rubrik}
+      </Link>
+      {stor && <span className="text-muted-foreground">{guide.ingress}</span>}
+    </Bildkort>
   )
 }
