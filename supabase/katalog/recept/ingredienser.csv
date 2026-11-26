@@ -1,24 +1,24 @@
 recept_id,ordning,ingrediens,mangd,enhet,packas,kommentar,livsmedel_nummer,varukatalog,gram
 aprikosgrot,1,Snabbhavregryn,6,msk,hemma,,702,,33.4
 aprikosgrot,2,Mjölkpulver,2,msk,hemma,,4537,,12.5
-aprikosgrot,3,Torkade aprikoser,1,msk,hemma,hackade,599,,8
+aprikosgrot,3,Torkade aprikoser,1,msk,hemma,hackade,,Saltå Kvarn | Aprikoser 200 g,8
 aprikosgrot,4,Socker,0.25,tsk,hemma,efter smak,1892,,1
-aprikosgrot,5,Kanel,0.5,krm,hemma,,2306,,
+aprikosgrot,5,Kanel,0.5,krm,hemma,,,Santa Maria | Kanel malen påse 55 g,
 aprikosgrot,6,Ghee,1,tsk,separat,,7269,,5
 aprikosgrot,7,Valnötter,1,msk,separat,hackade,1576,,7.1
 aprikosgrot,8,Vatten,1.2,dl,pa_plats,,1953,,
 appelgranola,1,Havregryn,4.8,dl,hemma,,702,,187.2
-appelgranola,2,Kanel,1,tsk,hemma,,2306,,3
+appelgranola,2,Kanel,1,tsk,hemma,,,Santa Maria | Kanel malen påse 55 g,3
 appelgranola,3,Honung,2,msk,hemma,,1896,,42
 appelgranola,4,Rapsolja,2,msk,hemma,,2189,,28
-appelgranola,5,Chiafrön,2,msk,hemma,,6157,,18.5
+appelgranola,5,Chiafrön,2,msk,hemma,,,Risenta | Chiafrön 300 g,18.5
 appelgranola,6,Torkat äpple,2.4,dl,hemma,hackat,611,,48
 appelgranola,7,Mjölkpulver,8,msk,hemma,2 msk per portion,4537,,50
 appelgranola,8,Vatten,4.8,dl,pa_plats,"1,2 dl per portion",1953,,
 fullkornsrisgrot,1,"Fullkornsris, kokt och torkat",0.6,dl,hemma,grovmalt,2478,,
 fullkornsrisgrot,2,Mjölkpulver,2,msk,hemma,,4537,,12.5
 fullkornsrisgrot,3,Farinsocker,1,msk,hemma,,1893,,11
-fullkornsrisgrot,4,Kanel,0.25,tsk,hemma,,2306,,0.8
+fullkornsrisgrot,4,Kanel,0.25,tsk,hemma,,,Santa Maria | Kanel malen påse 55 g,0.8
 fullkornsrisgrot,5,Frystorkat äpple,2,msk,hemma,tärnat,611,,3
 fullkornsrisgrot,6,"Linfrö, malda",1,tsk,hemma,,1567,,2.1
 fullkornsrisgrot,7,Ghee,1,tsk,separat,,7269,,5
@@ -30,22 +30,22 @@ havreplattar,4,Bakpulver,0.25,tsk,hemma,,1981,,1
 havreplattar,5,Socker,1,tsk,hemma,efter smak,1892,,4
 havreplattar,6,Ghee,2,tsk,separat,"till stekning, egen mängd",7269,,10
 havreplattar,7,Vatten,1.2,dl,pa_plats,,1953,,
-kall-barmusli,1,Müsli,1.5,dl,hemma,,2024,,69
+kall-barmusli,1,Müsli,1.5,dl,hemma,,,AXA | Frukt müsli,69
 kall-barmusli,2,Mjölkpulver,3,msk,hemma,,4537,,18.8
-kall-barmusli,3,Torkade bär,2,msk,hemma,,,,20
+kall-barmusli,3,Torkade bär,2,msk,hemma,,,Coop | Blåbär torkade 70 g,20
 kall-barmusli,4,Vatten,2,dl,pa_plats,kallt dricksvatten,1953,,
-jordnotstortilla,1,Tortillabröd,2,st,separat,,5974,,80
-jordnotstortilla,2,Jordnötssmör,2,msk,separat,,1559,,33.8
-jordnotstortilla,3,Sylt,2,msk,separat,gärna i portionsförpackning,,,42.5
+jordnotstortilla,1,Tortillabröd,2,st,separat,,,Santa Maria | Tortilla Original Medium 8 st 320 g,80
+jordnotstortilla,2,Jordnötssmör,2,msk,separat,,,Green Choice | Jordnötssmör Creamy 1000 g,33.8
+jordnotstortilla,3,Sylt,2,msk,separat,gärna i portionsförpackning,,BOB | Sylt Jordgubb Squeezy Lättsockrad 390 g,42.5
 pastasallad,1,Makaroner,2.4,dl,hemma,ca 110 g torra,845,,110
 pastasallad,2,Kikärter,1,st,hemma,"burk, ca 420 g",3815,,240
 pastasallad,3,Röd paprika,0.5,st,hemma,,351,,59.5
 pastasallad,4,Rödlök,0.6,dl,hemma,tärnad,4947,,40
 pastasallad,5,Gurka,0.6,dl,hemma,tärnad,339,,30
 pastasallad,6,Körsbärstomater,10,st,hemma,,4937,,170
-pastasallad,7,Vitlökspulver,0.75,tsk,hemma,,,,2.3
-pastasallad,8,Oregano,0.75,tsk,hemma,,,,0.8
-pastasallad,9,Salt,0.5,tsk,hemma,,2883,,3
+pastasallad,7,Vitlökspulver,0.75,tsk,hemma,,,Santa Maria | Vitlökspulver 49 g,2.3
+pastasallad,8,Oregano,0.75,tsk,hemma,,,Santa Maria | Oregano 5 g,0.8
+pastasallad,9,Salt,0.5,tsk,hemma,,,Falksalt | Finkornigt Hushållssalt utan jod 600 g,3
 pastasallad,10,Olivolja,2,msk,separat,,35,,28
 pastasallad,11,Citronpulver,1,st,separat,portionspåse,,,0.8
 pastasallad,12,Vatten,4,dl,pa_plats,"2 dl per portion, kallt dricksvatten",1953,,
@@ -56,139 +56,139 @@ bonsallad,4,Majs,0.6,dl,hemma,fryst,347,,41.4
 bonsallad,5,Paprika,0.6,dl,hemma,tärnad,351,,37.8
 bonsallad,6,Koriander,0.5,st,hemma,knippe,7193,,50
 bonsallad,7,Spiskummin,0.5,tsk,hemma,,7199,,1.1
-bonsallad,8,Chilipulver,0.25,tsk,hemma,,,,0.7
-bonsallad,9,Salt,0.25,tsk,hemma,,2883,,1.5
+bonsallad,8,Chilipulver,0.25,tsk,hemma,,,Santa Maria | Chilipulver 41 g,0.7
+bonsallad,9,Salt,0.25,tsk,hemma,,,Falksalt | Finkornigt Hushållssalt utan jod 600 g,1.5
 bonsallad,10,Limepulver,1,st,separat,portionspåse,,,0.8
 bonsallad,11,Olivolja,1,msk,separat,,35,,14
 bonsallad,12,Vatten,2,dl,pa_plats,kallt dricksvatten,1953,,
-paprikahummus,1,Sesamfrön,3,msk,hemma,,1573,,30
+paprikahummus,1,Sesamfrön,3,msk,hemma,,,Risenta | Sesamfrön Skalade 350 g,30
 paprikahummus,2,Kikärter,1,st,hemma,"burk, ca 390 g",3815,,240
-paprikahummus,3,Rostad röd paprika,1.2,dl,hemma,"ca 100 g, vatteninlagd",,,100
+paprikahummus,3,Rostad röd paprika,1.2,dl,hemma,"ca 100 g, vatteninlagd",,Sevan | Rostad Paprikafilé 480 g,100
 paprikahummus,4,Vitlöksklyftor,2,st,hemma,,371,,6
 paprikahummus,5,Citronsaft,4,tsk,hemma,,645,,20.6
-paprikahummus,6,Salt,1,tsk,hemma,,2883,,6
+paprikahummus,6,Salt,1,tsk,hemma,,,Falksalt | Finkornigt Hushållssalt utan jod 600 g,6
 paprikahummus,7,Vatten,1.2,dl,hemma,till mixningen,1953,,120
 paprikahummus,8,Olivolja,3,msk,separat,1 msk per portion,35,,42
-paprikahummus,9,Knäckebröd,6,st,separat,"eller kex, egen mängd",,,77.4
+paprikahummus,9,Knäckebröd,6,st,separat,"eller kex, egen mängd",,Wasa | Husman 260 g,77.4
 paprikahummus,10,Vatten,0.5,dl,pa_plats,"per portion, efter konsistens",1953,,
-tonfiskwrap,1,Tortillabröd,2,st,separat,,5974,,80
-tonfiskwrap,2,Tonfisk i olja,1,st,separat,"burk eller påse, ca 120 g",1275,,120
-tonfiskwrap,3,Majonnäs,1,msk,separat,"portionsförpackning, valfritt",50,,13.8
+tonfiskwrap,1,Tortillabröd,2,st,separat,,,Santa Maria | Tortilla Original Medium 8 st 320 g,80
+tonfiskwrap,2,Tonfisk i olja,1,st,separat,"burk eller påse, ca 120 g",,Eldorado | Tonfisk i olja 170 g,120
+tonfiskwrap,3,Majonnäs,1,msk,separat,"portionsförpackning, valfritt",,Kavli | Äkta majonnäs 275 g,13.8
 tonfiskwrap,4,Paprika,0.5,st,separat,,351,,59.5
 tonfiskwrap,5,Gurka,0.25,st,separat,,339,,100
-bonwrap,1,Tortillabröd,2,st,separat,,5974,,80
-bonwrap,2,Kokta bönor,1.5,dl,separat,i tetra eller påse,,,106.3
-bonwrap,3,Tacokrydda,1,tsk,hemma,valfritt,,,
+bonwrap,1,Tortillabröd,2,st,separat,,,Santa Maria | Tortilla Original Medium 8 st 320 g,80
+bonwrap,2,Kokta bönor,1.5,dl,separat,i tetra eller påse,,GoGreen | Svarta bönor 230 g,106.3
+bonwrap,3,Tacokrydda,1,tsk,hemma,valfritt,,Santa Maria | Taco Spice Mix Original 28 g,
 bonwrap,4,Paprika,0.5,st,separat,,351,,59.5
 bonwrap,5,Gurka,0.25,st,separat,,339,,100
-tortellini,1,Färsk tortellini,125,g,separat,"kylvara, bara första kvällen",,,
-tortellini,2,Pancetta,40,g,separat,kylvara,,,
+tortellini,1,Färsk tortellini,125,g,separat,"kylvara, bara första kvällen",,ICA | Pasta Tortellini Ost och Skinka Färsk 500 g,
+tortellini,2,Pancetta,40,g,separat,kylvara,,Zeta | Pancetta 160 g,
 tortellini,3,Körsbärstomater,6,st,separat,,4937,,102
 tortellini,4,Vatten,4,dl,pa_plats,,1953,,
-currycouscous,1,Kokosmjölk,5.3,dl,separat,,1566,,530
+currycouscous,1,Kokosmjölk,5.3,dl,separat,,,Santa Maria | Coconut Milk Light 250 ml,530
 currycouscous,2,Couscous,5.3,dl,separat,,831,,424
-currycouscous,3,Grönsaksbuljong,1,st,hemma,"tärning, eller 1,3 tärning",545,,10
+currycouscous,3,Grönsaksbuljong,1,st,hemma,"tärning, eller 1,3 tärning",,Knorr | Grönsaksbuljong 12 x 10 g,10
 currycouscous,4,Soltorkade tomater,8,st,hemma,,,,16
 currycouscous,5,"Kikärter, kokta",5.3,dl,separat,,3762,,367.3
-currycouscous,6,Curry,2.5,msk,hemma,,,,15.8
+currycouscous,6,Curry,2.5,msk,hemma,,,Santa Maria | Curry 34 g,15.8
 currycouscous,7,Olivolja,2,msk,separat,egen mängd,35,,28
-currycouscous,8,Salt,1,krm,hemma,efter smak,2883,,
-currycouscous,9,Svartpeppar,1,krm,hemma,efter smak,,,
+currycouscous,8,Salt,1,krm,hemma,efter smak,,Falksalt | Finkornigt Hushållssalt utan jod 600 g,
+currycouscous,9,Svartpeppar,1,krm,hemma,efter smak,,Santa Maria | Svartpeppar malen 31 g,
 rotmos-korv,1,Rotmospulver,30,g,separat,en portion,,,
-rotmos-korv,2,Torkad korv,50,g,separat,hel,,,
-rotmos-korv,3,Rostad lök,0.5,dl,separat,,2058,,11.7
+rotmos-korv,2,Torkad korv,50,g,separat,hel,,Ridderheims | Hot Amigo 50 g,
+rotmos-korv,3,Rostad lök,0.5,dl,separat,,,ICA | Rostad lök 400 g,11.7
 rotmos-korv,4,Matolja,0.5,dl,separat,minska om du vill,2189,,45
 rotmos-korv,5,Vatten,2,dl,pa_plats,,1953,,
 bulgurgryta,1,Bulgur,1,dl,hemma,,829,,80
-bulgurgryta,2,Salt,1,krm,hemma,,2883,,
+bulgurgryta,2,Salt,1,krm,hemma,,,Falksalt | Finkornigt Hushållssalt utan jod 600 g,
 bulgurgryta,3,Torkad morot,5,g,hemma,,,,
-bulgurgryta,4,Torkad purjolök,1,g,hemma,,,,
+bulgurgryta,4,Torkad purjolök,1,g,hemma,,,Kryddlandet | Purjolöksflingor 25 g,
 bulgurgryta,5,Basilika,0.5,tsk,hemma,,379,,
 bulgurgryta,6,Mjölkpulver,1,msk,hemma,,4537,,6.3
-bulgurgryta,7,Tabasco,1,tsk,separat,,,,4.7
-bulgurgryta,8,Ölkorv,50,g,separat,,,,
+bulgurgryta,7,Tabasco,1,tsk,separat,,,Tabasco | Original Pepper Sauce 57 ml,4.7
+bulgurgryta,8,Ölkorv,50,g,separat,,,Ridderheims | Hot Amigo 50 g,
 bulgurgryta,9,Matolja,0.25,dl,separat,,2189,,22.5
 bulgurgryta,10,Vatten,3,dl,pa_plats,,1953,,
 falafel,1,Couscous,0.5,dl,separat,,831,,40
-falafel,2,Salt,1,krm,separat,,2883,,
-falafel,3,Falafelmix,0.5,dl,separat,,,,
+falafel,2,Salt,1,krm,separat,,,Falksalt | Finkornigt Hushållssalt utan jod 600 g,
+falafel,3,Falafelmix,0.5,dl,separat,,,Sevan | Falafelmix Original 200 g,
 falafel,4,Matolja,0.5,dl,separat,till stekning,2189,,45
-falafel,5,Ajvar,2,msk,separat,,417,,25
-falafel,6,Solroskärnor,0.5,dl,separat,,1574,,31
+falafel,5,Ajvar,2,msk,separat,,,Podravka | Ajvar Mild 690 g,25
+falafel,6,Solroskärnor,0.5,dl,separat,,,Risenta | Solroskärnor 400 g,31
 falafel,7,Vatten,2.5,dl,pa_plats,"1,5 dl till falafeln, 1 dl till couscousen",1953,,
 couscous-jordnot,1,Couscous,1,dl,hemma,,831,,80
-couscous-jordnot,2,Buljongtärning,0.5,st,hemma,smulad,,,5
+couscous-jordnot,2,Buljongtärning,0.5,st,hemma,smulad,,Knorr | Grönsaksbuljong 12 x 10 g,5
 couscous-jordnot,3,Torkad lök,1,msk,hemma,,,,5
 couscous-jordnot,4,Olivolja,1,msk,separat,,35,,14
-couscous-jordnot,5,Jordnötter,0.5,dl,separat,,1560,,29.6
+couscous-jordnot,5,Jordnötter,0.5,dl,separat,,,Eldorado | Jordnötter rostade osaltade 200 g,29.6
 couscous-jordnot,6,Vatten,1.5,dl,pa_plats,,1953,,
 tacoris,1,"Bönmos, torkat snabbkokt",56,g,hemma,,,,
 tacoris,2,Snabbris,42,g,hemma,,2484,,
-tacoris,3,Tacokrydda,6,g,hemma,,,,
+tacoris,3,Tacokrydda,6,g,hemma,,,Santa Maria | Taco Spice Mix Original 28 g,
 tacoris,4,Ost,28,g,separat,gärna lagrad cheddar,78,,
-tacoris,5,Majschips,28,g,separat,,1581,,
+tacoris,5,Majschips,28,g,separat,,,Santa Maria | Tortilla Chips Salted 185 g,
 tacoris,6,Vatten,3,dl,pa_plats,mer för en lösare rätt,1953,,
-jordnotsnudlar,1,Ramennudlar,84,g,separat,utan kryddpåsen,,,
-jordnotsnudlar,2,Cashewnötter,22,g,separat,,1557,,
-jordnotsnudlar,3,Jordnötssmör,36,g,hemma,,1559,,
+jordnotsnudlar,1,Ramennudlar,84,g,separat,utan kryddpåsen,,ICA Asia | Ramennudlar 200 g,
+jordnotsnudlar,2,Cashewnötter,22,g,separat,,,Eldorado | Cashewnötter rostade osaltade 300 g,
+jordnotsnudlar,3,Jordnötssmör,36,g,hemma,,,Green Choice | Jordnötssmör Creamy 1000 g,
 jordnotsnudlar,4,Rostad sesamolja,6,g,hemma,,38,,
-jordnotsnudlar,5,Sojasås,6,g,hemma,,909,,
-jordnotsnudlar,6,Kokosmjölkspulver,3,g,hemma,,,,
-jordnotsnudlar,7,Vitlökspulver,1,g,hemma,,,,
+jordnotsnudlar,5,Sojasås,6,g,hemma,,,Kikkoman | Naturligt bryggd sojasås 150 ml,
+jordnotsnudlar,6,Kokosmjölkspulver,3,g,hemma,,,Kryddlandet | Kokosmjölkspulver 60 g,
+jordnotsnudlar,7,Vitlökspulver,1,g,hemma,,,Santa Maria | Vitlökspulver 49 g,
 jordnotsnudlar,8,Ingefärspulver,0.3,g,hemma,,2269,,
-jordnotsnudlar,9,Sriracha,1,g,hemma,valfritt,,,
+jordnotsnudlar,9,Sriracha,1,g,hemma,valfritt,,Flying Goose | Sriracha Chilisås 455 ml,
 jordnotsnudlar,10,Limepulver,0.5,g,hemma,,,,
 jordnotsnudlar,11,Vatten,2.4,dl,pa_plats,minst,1953,,
 havregryta,1,Havregryn,42,g,hemma,,702,,
 havregryta,2,Torkade ärter,11,g,hemma,,,,
-havregryta,3,Grönsaksbuljong,8,g,hemma,pulver,545,,
+havregryta,3,Grönsaksbuljong,8,g,hemma,pulver,,Kung Markatta | Grönsaksbuljong i pulver 130 g,
 havregryta,4,Citronpulver,3,g,hemma,,,,
-havregryta,5,Torkad timjan,3,g,hemma,,,,
-havregryta,6,Vitlökspulver,3,g,hemma,,,,
+havregryta,5,Torkad timjan,3,g,hemma,,,Santa Maria | Timjan 15 g,
+havregryta,6,Vitlökspulver,3,g,hemma,,,Santa Maria | Vitlökspulver 49 g,
 havregryta,7,Olivolja,25,g,separat,,35,,
 havregryta,8,Torkad svamp,6,g,separat,,,,
-havregryta,9,Cashewnötter,22,g,separat,,1557,,
+havregryta,9,Cashewnötter,22,g,separat,,,Eldorado | Cashewnötter rostade osaltade 300 g,
 havregryta,10,Parmesan,20,g,separat,,103,,
 havregryta,11,"Bacon, färdigstekt och smulat",22,g,separat,,1004,,
 havregryta,12,Vatten,2.4,dl,pa_plats,,1953,,
 svamprisotto,1,Risottoris,1,dl,hemma,,2057,,80
 svamprisotto,2,Torkad svamp,10,g,hemma,,,,
 svamprisotto,3,Torkad lök,1,msk,hemma,,,,5
-svamprisotto,4,Buljongtärning,0.5,st,hemma,smulad,,,5
+svamprisotto,4,Buljongtärning,0.5,st,hemma,smulad,,Knorr | Grönsaksbuljong 12 x 10 g,5
 svamprisotto,5,Parmesan,20,g,separat,,103,,
 svamprisotto,6,Vatten,3.5,dl,pa_plats,,1953,,
 appelringar,1,Äpplen,10,st,hemma,,588,,1820
 appelringar,2,Citronsaft,1,dl,hemma,egen mängd,645,,103.1
 appelringar,3,Vatten,1,dl,hemma,,1953,,100
-notmix,1,"Jordnötter, rostade",2.4,dl,hemma,,1561,,142
+notmix,1,"Jordnötter, rostade",2.4,dl,hemma,,,Eldorado | Jordnötter rostade osaltade 200 g,142
 notmix,2,Jordnötter med skal (Spanish),2.4,dl,hemma,,1560,,142
-notmix,3,Cashewnötter,2.4,dl,hemma,,1557,,113
-notmix,4,Russin,2.4,dl,hemma,,610,,144
-notmix,5,Ljusa russin,2.4,dl,hemma,,610,,144
-notmix,6,Torkade tranbär,2.4,dl,hemma,,4049,,114
+notmix,3,Cashewnötter,2.4,dl,hemma,,,Eldorado | Cashewnötter rostade osaltade 300 g,113
+notmix,4,Russin,2.4,dl,hemma,,,Saltå Kvarn | Russin 250 g,144
+notmix,5,Ljusa russin,2.4,dl,hemma,,,Sevan | Gula russin 300 g,144
+notmix,6,Torkade tranbär,2.4,dl,hemma,,,ICA Gott Liv | Tranbär torkade 150 g,114
 havrerutor,1,Havregryn,2,dl,hemma,,702,,78
-havrerutor,2,Jordnötssmör,1,dl,hemma,,1559,,112.5
-havrerutor,3,Lönnsirap,2,msk,hemma,eller honung,,,39
-havrerutor,4,Torkade aprikoser,0.5,dl,hemma,hackade,599,,26.7
-havrerutor,5,Solroskärnor,0.5,dl,hemma,,1574,,31
+havrerutor,2,Jordnötssmör,1,dl,hemma,,,Green Choice | Jordnötssmör Creamy 1000 g,112.5
+havrerutor,3,Lönnsirap,2,msk,hemma,eller honung,,ICA | Lönnsirap 250 g,39
+havrerutor,4,Torkade aprikoser,0.5,dl,hemma,hackade,,Saltå Kvarn | Aprikoser 200 g,26.7
+havrerutor,5,Solroskärnor,0.5,dl,hemma,,,Risenta | Solroskärnor 400 g,31
 havrerutor,6,Vaniljpulver,0.5,tsk,hemma,valfritt,,,1
-nutellarulle,1,Tortillabröd,1,st,separat,,5974,,40
-nutellarulle,2,Hasselnötskräm,2,msk,separat,t.ex. Nutella,,,40
-kvallskakao,1,Kakaopulver,1,tsk,hemma,,7054,,2
+nutellarulle,1,Tortillabröd,1,st,separat,,,Santa Maria | Tortilla Original Medium 8 st 320 g,40
+nutellarulle,2,Hasselnötskräm,2,msk,separat,t.ex. Nutella,,Ferrero | Nutella 630 g,40
+kvallskakao,1,Kakaopulver,1,tsk,hemma,,,Kung Markatta | Kakao 250 g,2
 kvallskakao,2,Socker,2,tsk,hemma,efter smak,1892,,8
-kvallskakao,3,Mörk choklad 70 %,10,g,hemma,riven,6907,,
+kvallskakao,3,Mörk choklad 70 %,10,g,hemma,riven,,Lindt | Excellence 70% Kakao Mörk Choklad 100 g,
 kvallskakao,4,Mjölkpulver,2,msk,hemma,,4537,,12.5
 kvallskakao,5,Majsstärkelse,0.5,tsk,hemma,,1945,,1.2
-kvallskakao,6,Salt,0.5,krm,hemma,,2883,,
-kvallskakao,7,Cayennepeppar,0.5,krm,hemma,en liten nypa,,,
+kvallskakao,6,Salt,0.5,krm,hemma,,,Falksalt | Finkornigt Hushållssalt utan jod 600 g,
+kvallskakao,7,Cayennepeppar,0.5,krm,hemma,en liten nypa,,Santa Maria | Cayennepeppar 30 g,
 kvallskakao,8,Vatten,2.4,dl,pa_plats,,1953,,
 matchalatte,1,Mjölkpulver,1,msk,hemma,,4537,,6.3
-matchalatte,2,Matchapulver,1,tsk,hemma,,,,2
+matchalatte,2,Matchapulver,1,tsk,hemma,,,Renée Voltaire | Matcha Ceremonial Grade 30 g,2
 matchalatte,3,Socker,1,tsk,hemma,efter smak,1892,,4
 matchalatte,4,Vatten,2.4,dl,pa_plats,,1953,,
-blodapelsin,1,Blodapelsinjuice,5,dl,hemma,,641,,516.7
-blodapelsin,2,Nyponskalspulver,1,msk,hemma,,,,
+blodapelsin,1,Blodapelsinjuice,5,dl,hemma,,,Brämhults | Säsongens Blodapelsin 850 ml,516.7
+blodapelsin,2,Nyponskalspulver,1,msk,hemma,,,Risenta | Nyponskalsmjöl 500 g,
 blodapelsin,3,Honung,2,msk,hemma,,1896,,42
-blodapelsin,4,Kanelstänger,2,st,hemma,,2306,,4
+blodapelsin,4,Kanelstänger,2,st,hemma,,,Santa Maria | Kanel hel påse 22 g,4
 blabarssoppa,1,"Blåbärssoppa, pulver",2.5,msk,separat,snabbpulver för varmt vatten,,,
 blabarssoppa,2,Vatten,2,dl,pa_plats,"hett, från termosen",1953,,
