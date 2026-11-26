@@ -17,7 +17,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://arcteryx.com/se/en/shop/womens/cerium-hoody-0554
 - Packvikt i katalogen: 290 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 2. Klättermusen Rå Hood Jacket Dam
@@ -25,7 +25,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://www.klattermusen.com/en-us/women/shop-all-jackets/down-insulated-jackets/10534-ra-hood-jacket-ws-warm-sand/
 - Packvikt i katalogen: 770 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 3. La Sportiva Lumina 100 Down Jkt M
@@ -33,7 +33,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://www.lasportiva.com/en/down-jacket-mountaineering-lumina-100-down-jkt-m-man-zamj091
 - Packvikt i katalogen: 170 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 4. Mountain Equipment Senja Jacket Dam
@@ -41,7 +41,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://www.mountain-equipment.com/products/senja-womens-jacket
 - Packvikt i katalogen: 570 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 5. Patagonia Down Sweater Jacket Herr
@@ -49,7 +49,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://eu.patagonia.com/se/en/product/mens-down-sweater-insulated-jacket/84675.html
 - Packvikt i katalogen: 369 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 6. Rab Mythic Ultra Down Jacket Herr
@@ -57,7 +57,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://rab.equipment/uk/mythic-ultra-jacket
 - Packvikt i katalogen: 537 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 7. The North Face Summit Breithorn Hoodie Herr
@@ -65,7 +65,7 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://www.thenorthface.com/en-us/p/mens/mens-jackets-and-vests/mens-insulated-and-down-300771/mens-summit-breithorn-hoodie-NF0A87ZM
 - Packvikt i katalogen: 416 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
 
 ### 8. Tierra Tarrekaise Down Jacket 2.0 W
@@ -73,5 +73,5 @@ Samma urval går att återskapa med: npm run katalog -- --stickprov 2026-11-25-n
 - Källa: https://www.tierra.com/se/sv-se/dam/overdelar/jackor/tarrekaise-down-jacket-20-w/
 - Packvikt i katalogen: 569 g
 - Minvikt i katalogen: saknas
-- [ ] stämmer   [ ] fel
+- [x] stämmer   [ ] fel
 - Anteckning:
