@@ -1,5 +1,5 @@
 import { ArrowLeft } from 'lucide-react'
-import { useId, useState } from 'react'
+import { useState } from 'react'
 import { Button } from '@/components/ui/button'
 import { formateraVikt } from '@/lib/forrad'
 import { konEtikett, storlekarFor, viktlage, viktlageText, viktstorlek } from '@/lib/kladstorlek'
@@ -22,7 +22,6 @@ export function StorlekSteg({
   onLaggTill: (storlek: string | null) => void
   onTillbaka: () => void
 }) {
-  const id = useId()
   const kon = konEtikett(produkt.egenskaper)
   const viktFor = viktstorlek(produkt.egenskaper)
   const [vald, setVald] = useState<string | null>(null)
@@ -36,7 +35,7 @@ export function StorlekSteg({
       </div>
 
       <fieldset className="space-y-2">
-        <legend id={`${id}-rubrik`} className="text-sm font-medium">
+        <legend className="text-sm font-medium">
           Din storlek
         </legend>
         <div className="flex flex-wrap gap-2">
