@@ -154,7 +154,7 @@ describe('tolkaEgenskap', () => {
 
 describe('underkategorier utan egna egenskaper', () => {
   it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar, kök och kokkärl har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa', 'mellanlager', 'isolering', 'regnklader'])
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa', 'understall', 'mellanlager', 'isolering', 'regnklader'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
@@ -884,6 +884,14 @@ describe('egenskaper för kläder', () => {
   it('godkänner en komplett dunjacka och regnjacka', () => {
     expect(valideraEgenskaper('isolering', dunjacka)).toEqual({ fel: [], varningar: [] })
     expect(valideraEgenskaper('regnklader', regnjacka)).toEqual({ fel: [], varningar: [] })
+  })
+
+  it('godkänner en underställströja i ull och visar plagget på svenska', () => {
+    const troja = { kon: 'dam', viktstorlek: 'S', material: 'ull', plagg: 'langarmad', tygvikt_gm2: 200 }
+    expect(valideraEgenskaper('understall', troja)).toEqual({ fel: [], varningar: [] })
+    expect(visaEgenskaper('understall', troja).find((r) => r.nyckel === 'plagg')?.varde).toBe('Långärmad')
+    expect(viktstorlekText('understall', troja)).toBe('Dam, vikt i storlek S')
+    expect(valideraEgenskaper('understall', { ...troja, material: 'fleece' }).fel.map((f) => f.split(':')[0])).toEqual(['material'])
   })
 
   it('godkänner en fleecetröja och visar plagget på svenska', () => {
