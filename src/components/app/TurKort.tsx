@@ -1,12 +1,13 @@
 import { CalendarDays, ChevronRight, MapPin } from 'lucide-react'
 import { Link } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
+import { Bildkort, Kortbild } from '@/components/ui/bildkort'
 import { Bricka } from '@/components/ui/bricka'
 import { Namnbrickor } from '@/components/app/Namnbricka'
 import { knappStil } from '@/components/ui/knappStil'
 import { Nyckeltal } from '@/components/ui/nyckeltal'
 import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
-import { arstidFor, arstidsbild, type Arstid } from '@/lib/arstid'
+import { arstidFor, arstidsbild } from '@/lib/arstid'
 import { avfardEtikett, dagarVarde, datumIntervall, datumrad, deltagareText } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
 
@@ -26,33 +27,6 @@ export interface TurMedDeltagare {
 const FRAN_LISTA = { franLista: true }
 
 /**
- * Bilden för turens årstid. På dator till höger med en mjuk båge i kortets färg över bildens vänstra kant. I mobil överst, cirka 200 px hög, och tonar ut nedåt mot texten.
- * Dekorativ, så alt är tomt. Bara det första kortet på sidan laddar bilden direkt.
- */
-function Arstidsbild({ arstid, forst }: { arstid: Arstid; forst: boolean }) {
-  const { src, srcSet } = arstidsbild(arstid)
-  return (
-    <div className="relative h-[200px] md:order-2 md:h-full md:min-h-80">
-      <img
-        src={src}
-        srcSet={srcSet}
-        sizes="(min-width: 768px) 40vw, 100vw"
-        alt=""
-        loading={forst ? 'eager' : 'lazy'}
-        decoding="async"
-        className="absolute inset-0 size-full object-cover"
-      />
-      {/* Bågen: textdelen buktar ut över bildens vänstra kant. Samma färg som kortet (fill-card). */}
-      <svg aria-hidden viewBox="0 0 100 300" preserveAspectRatio="none" className="absolute inset-y-0 -left-px hidden h-full w-[5.5rem] fill-card md:block">
-        <path d="M0 0 H38 C 92 70, 92 230, 38 300 H0 Z" />
-      </svg>
-      {/* I mobil tonar bilden ut nedåt mot textdelen, i kortets färg. */}
-      <div aria-hidden className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-card to-transparent md:hidden" />
-    </div>
-  )
-}
-
-/**
  * Det stora kortet för nästa (eller pågående) tur, som turens huvud: text till vänster och bilden för turens årstid
  * till höger på dator, bilden överst i mobil. Den rostfärgade etiketten säger hur långt det är kvar.
  */
@@ -67,50 +41,49 @@ export function NastaTurKort({ tur, idag }: { tur: TurMedDeltagare; idag: string
   }))
   const etikett = avfardEtikett(tur, idag)
   return (
-    <article
+    <Bildkort
       aria-labelledby={`nasta-${tur.id}`}
-      className="lyft relative grid overflow-hidden rounded-[1.375rem] border border-border bg-card md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
+      klickbar
+      bild={<Kortbild {...arstidsbild(arstidFor(tur.avresa))} forst />}
+      textKlass="gap-3 px-5 pt-1 pb-5 sm:px-7 sm:pb-7 @2xl:pt-7"
     >
-      <Arstidsbild arstid={arstidFor(tur.avresa)} forst />
-      <div className="flex min-w-0 flex-col gap-3 px-5 pt-1 pb-5 sm:px-7 sm:pb-7 md:order-1 md:pt-7">
-        <div className="flex flex-wrap items-center gap-2">
-          <span className="text-sm font-semibold text-muted-foreground">Nästa tur</span>
-          {etikett && (
-            <Bricka ton="rost" stor>
-              {etikett}
-            </Bricka>
-          )}
-        </div>
-        <h2 id={`nasta-${tur.id}`} className="text-2xl leading-tight font-bold break-words hyphens-auto lg:text-3xl">
-          {tur.namn}
-        </h2>
-        {tur.destination && <p className="text-muted-foreground break-words">{tur.destination}</p>}
-        <Nyckeltal
-          varden={[
-            { etikett: 'Datum', varde: datumIntervall(tur.avresa, tur.hemkomst) },
-            { etikett: 'Vandringsdagar', varde: dagarVarde(tur.dagar) },
-          ]}
-        />
-        <div className="mt-auto flex flex-wrap items-center justify-between gap-4 pt-1">
-          <div className="flex min-w-0 items-center gap-3">
-            <Namnbrickor personer={personer} />
-            <span className="text-sm text-muted-foreground">{deltagareText(tur.deltagare)}</span>
-          </div>
-          {/* Länken täcker hela kortet, så att det går att trycka var som helst på det. Sidans huvudknapp. */}
-          <Link
-            to={`/tur/${tur.id}`}
-            state={FRAN_LISTA}
-            className={cn(
-              knappStil(),
-              // Fokusringen visas runt hela kortet, innanför kanten, eftersom hela kortet går att trycka på.
-              'after:absolute after:inset-0 after:rounded-[1.375rem] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ring',
-            )}
-          >
-            Öppna turen<span className="sr-only"> {tur.namn}</span>
-          </Link>
-        </div>
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-sm font-semibold text-muted-foreground">Nästa tur</span>
+        {etikett && (
+          <Bricka ton="rost" stor>
+            {etikett}
+          </Bricka>
+        )}
       </div>
-    </article>
+      <h2 id={`nasta-${tur.id}`} className="text-2xl leading-tight font-bold break-words hyphens-auto lg:text-3xl">
+        {tur.namn}
+      </h2>
+      {tur.destination && <p className="text-muted-foreground break-words">{tur.destination}</p>}
+      <Nyckeltal
+        varden={[
+          { etikett: 'Datum', varde: datumIntervall(tur.avresa, tur.hemkomst) },
+          { etikett: 'Vandringsdagar', varde: dagarVarde(tur.dagar) },
+        ]}
+      />
+      <div className="mt-auto flex flex-wrap items-center justify-between gap-4 pt-1">
+        <div className="flex min-w-0 items-center gap-3">
+          <Namnbrickor personer={personer} />
+          <span className="text-sm text-muted-foreground">{deltagareText(tur.deltagare)}</span>
+        </div>
+        {/* Länken täcker hela kortet, så att det går att trycka var som helst på det. Sidans huvudknapp. */}
+        <Link
+          to={`/tur/${tur.id}`}
+          state={FRAN_LISTA}
+          className={cn(
+            knappStil(),
+            // Fokusringen visas runt hela kortet, innanför kanten, eftersom hela kortet går att trycka på.
+            'after:absolute after:inset-0 after:rounded-[1.375rem] focus-visible:outline-none focus-visible:after:outline-2 focus-visible:after:-outline-offset-2 focus-visible:after:outline-ring',
+          )}
+        >
+          Öppna turen<span className="sr-only"> {tur.namn}</span>
+        </Link>
+      </div>
+    </Bildkort>
   )
 }
 
