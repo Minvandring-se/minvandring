@@ -2,6 +2,7 @@ import { HemVy, type Inspiration } from '@/components/hem/HemVy'
 import { useApp } from '@/components/app/appKontext'
 import { useHem } from '@/hooks/useHem'
 import { useLardomar } from '@/hooks/useLardomar'
+import { useMinVanlank } from '@/hooks/useVanner'
 import { useReceptkatalog } from '@/hooks/useReceptkatalog'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { arstidFor } from '@/lib/arstid'
@@ -10,8 +11,8 @@ import { guideFor } from '@/lib/tips'
 import { lokaltDatum } from '@/lib/turlista'
 
 /**
- * Hem, första sidan efter inloggning. Hämtar turerna, Att göra för nästa tur, den senaste egna lärdomen och
- * receptkatalogen, och visar dem med HemVy. Tipset väljs efter årstiden för nästa tur, eller för i dag utan tur.
+ * Hem, första sidan efter inloggning. Hämtar turerna, Att göra för nästa tur, den senaste egna lärdomen,
+ * receptkatalogen och vänlänken, och visar dem med HemVy. Tipset väljs efter årstiden för nästa tur, eller för i dag utan tur.
  */
 export function Hem() {
   useSidtitel('Hem')
@@ -20,6 +21,7 @@ export function Hem() {
   const { turer, nasta, attgora } = useHem(anvandarId)
   const { lage } = useLardomar()
   const recept = useReceptkatalog()
+  const vanlank = useMinVanlank(anvandarId)
 
   const senaste = lage.lage === 'klar' ? lage.lardomar[0] : undefined
   const veckans = Array.isArray(recept) ? veckansRecept(recept, idag) : null
@@ -31,5 +33,5 @@ export function Hem() {
     tips: guide ? { nyckel: guide.nyckel, rubrik: guide.rubrik, etikett: tipsval.etikett } : null,
   }
 
-  return <HemVy namn={namn} idag={idag} turer={turer} nasta={nasta} attgora={attgora} inspiration={inspiration} />
+  return <HemVy namn={namn} idag={idag} turer={turer} nasta={nasta} attgora={attgora} inspiration={inspiration} vanlank={vanlank} />
 }

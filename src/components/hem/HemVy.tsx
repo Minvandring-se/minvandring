@@ -5,7 +5,6 @@ import { Skelett } from '@/components/app/Laddar'
 import { NastaTurKort } from '@/components/app/TurKort'
 import { Ikon, type IkonNamn } from '@/components/ikoner/Ikon'
 import { Button } from '@/components/ui/button'
-import { Input } from '@/components/ui/input'
 import { KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { knappStil } from '@/components/ui/knappStil'
 import { Hojdkurvor } from '@/components/ui/sokruta'
@@ -13,14 +12,12 @@ import type { HemTur } from '@/hooks/useHem'
 import { bandNedrakning, datumrubrik, fornamn, type Attgora } from '@/lib/hem'
 import { receptadress } from '@/lib/receptkatalog'
 import { tipsadress } from '@/lib/tips'
+import { vanlankAdress, type Vanlank } from '@/lib/vanner'
 import { cn } from '@/lib/utils'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 const kort = 'rounded-[1.375rem] border border-border bg-card p-5 sm:p-6'
 const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4', fokus)
-
-/** Länken som delas och skickas i inbjudan. */
-export const APPLANK = 'https://www.minvandring.se'
 
 export interface Inspiration {
   lardom: { text: string } | null
@@ -29,7 +26,7 @@ export interface Inspiration {
 }
 
 /**
- * Sidan Hem: välkomstbandet (sidans enda mörkgröna yta), nästa tur, Att göra, inspirationen, Bjud in vänner, Hitta
+ * Sidan Hem: välkomstbandet (sidans enda mörkgröna yta), nästa tur, Att göra, inspirationen, Lägg till vänner, Hitta
  * din nästa vandring och genvägar. Utan turer visas en guide i tre steg i stället för nästa tur och Att göra. Allt
  * kommer in som props, så att sidan går att rita utan databas.
  */
@@ -40,6 +37,7 @@ export function HemVy({
   nasta,
   attgora,
   inspiration,
+  vanlank,
 }: {
   namn: string
   idag: string
@@ -47,6 +45,8 @@ export function HemVy({
   nasta: HemTur | null
   attgora: Attgora[] | null | 'fel'
   inspiration: Inspiration
+  /** Ens vänlänk, eller null medan den hämtas eller om den inte gick att hämta. Då visas bara länken till Vänner. */
+  vanlank: Vanlank | null
 }) {
   const utanTurer = Array.isArray(turer) && turer.length === 0
   return (
@@ -68,7 +68,7 @@ export function HemVy({
       )}
 
       <div className="grid gap-6 lg:grid-cols-2">
-        <BjudIn />
+        <LaggTillVanner vanlank={vanlank} />
         <HittaVandring />
       </div>
 
@@ -79,7 +79,7 @@ export function HemVy({
 
 const harInspiration = (i: Inspiration) => !!(i.lardom || i.recept || i.tips)
 
-/** Välkomstbandet: datum, hälsningen, Ny tur och Bjud in vänner, och nedräkningen till nästa tur när det finns en. */
+/** Välkomstbandet: datum, hälsningen, Ny tur och Lägg till vänner, och nedräkningen till nästa tur när det finns en. */
 function Valkomstband({ namn, idag, nasta }: { namn: string; idag: string; nasta: HemTur | null }) {
   const nedrakning = nasta ? bandNedrakning(nasta, idag) : null
   const hej = fornamn(namn)
@@ -100,9 +100,9 @@ function Valkomstband({ namn, idag, nasta }: { namn: string; idag: string; nasta
               <Plus className="size-4" aria-hidden />
               Ny tur
             </Link>
-            <a href="#bjud-in" className={knappStil({ variant: 'kant-stark' })}>
-              Bjud in vänner
-            </a>
+            <Link to="/vanner" className={knappStil({ variant: 'kant-stark' })}>
+              Lägg till vänner
+            </Link>
           </div>
         </div>
         {nasta && nedrakning && (
@@ -210,68 +210,64 @@ function Inspirationsrad({ ikon, etikett, children }: { ikon: IkonNamn; etikett:
 }
 
 /**
- * Bjud in vänner till MinVandring: ett mejl i ens eget mejlprogram (mailto:), en länk att kopiera eller dela.
- * Appen skickar inga mejl själv och sparar inga adresser. Till en tur bjuder man in inne i turen.
+ * Lägg till vänner: din vänlänk att kopiera eller dela, och en länk till sidan Vänner, där man också kan skicka en
+ * förfrågan till en mejladress. Till en tur bjuder man in inne i turen.
  */
-function BjudIn() {
+function LaggTillVanner({ vanlank }: { vanlank: Vanlank | null }) {
   const id = useId()
-  const [epost, setEpost] = useState('')
-  const [kopierad, setKopierad] = useState(false)
+  const [status, setStatus] = useState('')
   const kanDela = typeof navigator !== 'undefined' && typeof navigator.share === 'function'
-  const amne = 'Följ med och planera vandringar på MinVandring'
-  const text = `Hej! Jag planerar vandringar på MinVandring och vill gärna att du är med. Skapa ett konto här, så kan jag bjuda in dig till våra turer: ${APPLANK}`
+  const adress = vanlank ? vanlankAdress(vanlank.kod) : null
 
   async function kopiera() {
+    if (!adress) return
     try {
-      await navigator.clipboard.writeText(APPLANK)
-      setKopierad(true)
+      await navigator.clipboard.writeText(adress)
+      setStatus('Länken är kopierad.')
     } catch {
-      setKopierad(false)
+      setStatus('Det gick inte att kopiera. Öppna Vänner och kopiera länken där.')
     }
   }
 
   return (
-    <section id="bjud-in" aria-labelledby={`${id}-rubrik`} className={cn(kort, 'scroll-mt-6 space-y-4')}>
+    <section aria-labelledby={`${id}-rubrik`} className={cn(kort, 'space-y-4')}>
       <div className="flex items-center gap-3">
         <Ikon namn="inbjudan" storlek={28} className="text-primary" />
         <h2 id={`${id}-rubrik`} className="text-xl">
-          Bjud in vänner
+          Lägg till vänner
         </h2>
       </div>
       <p className="max-w-prose text-muted-foreground">
-        Planera ihop med dem du vandrar med. De skapar ett eget konto, och sedan bjuder du in dem från turens sida.
+        Skicka din vänlänk till dem du vandrar med. Den som öppnar den och trycker Bli vänner blir din vän direkt.
       </p>
-      <form
-        className="space-y-2"
-        onSubmit={(e) => {
-          e.preventDefault()
-          window.location.href = `mailto:${encodeURIComponent(epost.trim())}?subject=${encodeURIComponent(amne)}&body=${encodeURIComponent(text)}`
-        }}
-      >
-        <label htmlFor={`${id}-epost`} className="block text-sm font-medium">
-          Mejladress
-        </label>
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <Input id={`${id}-epost`} type="email" autoComplete="off" placeholder="namn@exempel.se" value={epost} onChange={(e) => setEpost(e.target.value)} className="sm:flex-1" />
-          <Button type="submit">Skicka mejl</Button>
-        </div>
-        <p className="text-xs text-muted-foreground">Mejlet öppnas i ditt eget mejlprogram. MinVandring sparar inte adressen.</p>
-      </form>
-      <div className="flex flex-wrap items-center gap-2">
-        <Button variant="outline" onClick={() => void kopiera()}>
-          <Copy className="size-4" aria-hidden />
-          Kopiera länk
-        </Button>
-        {kanDela && (
-          <Button variant="outline" onClick={() => void navigator.share({ title: 'MinVandring', text, url: APPLANK }).catch(() => undefined)}>
-            <Share2 className="size-4" aria-hidden />
-            Dela
+      {adress && (
+        <div className="flex flex-wrap items-center gap-2">
+          <Button variant="outline" onClick={() => void kopiera()}>
+            <Copy className="size-4" aria-hidden />
+            Kopiera min vänlänk
           </Button>
-        )}
-        <span role="status" className="text-sm font-medium text-primary">
-          {kopierad && 'Länken är kopierad'}
-        </span>
-      </div>
+          {kanDela && (
+            <Button
+              variant="outline"
+              onClick={() =>
+                void navigator
+                  .share({ title: 'MinVandring', text: 'Bli min vän på MinVandring, så kan vi planera vandringar ihop.', url: adress })
+                  .catch(() => undefined)
+              }
+            >
+              <Share2 className="size-4" aria-hidden />
+              Dela
+            </Button>
+          )}
+        </div>
+      )}
+      <p role="status" className="text-sm font-medium text-primary empty:hidden">
+        {status}
+      </p>
+      <Link to="/vanner" className={lankKlass}>
+        Till Vänner
+        <ArrowRight className="size-4" aria-hidden />
+      </Link>
     </section>
   )
 }
@@ -337,12 +333,12 @@ function KomIgang() {
       ),
     },
     {
-      rubrik: 'Bjud in vänner',
-      text: 'Be dem du vandrar med att skapa ett konto, så kan du bjuda in dem till turen.',
+      rubrik: 'Lägg till vänner',
+      text: 'Skicka din vänlänk till dem du vandrar med. Till en tur bjuder du in från turens sida.',
       knapp: (
-        <a href="#bjud-in" className={knappStil({ variant: 'outline' })}>
-          Bjud in vänner
-        </a>
+        <Link to="/vanner" className={knappStil({ variant: 'outline' })}>
+          Till Vänner
+        </Link>
       ),
     },
     {
