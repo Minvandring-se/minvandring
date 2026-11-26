@@ -4,11 +4,13 @@ import type { AppKontext } from '@/components/app/appKontext'
 import { Bottenmeny } from '@/components/app/Bottenmeny'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Namnbricka } from '@/components/app/Namnbricka'
+import { Notisklocka } from '@/components/app/Notisklocka'
 import { Sidomeny } from '@/components/app/Sidomeny'
 import { Felgrans } from '@/components/Felgrans'
 import { Logotyp } from '@/components/Logotyp'
 import { Sidfot } from '@/components/Sidfot'
 import { useDinaTurer } from '@/hooks/useDinaTurer'
+import { useNotiser } from '@/hooks/useNotiser'
 import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
 import { useSession } from '@/hooks/useSession'
 import { aktivSida } from '@/lib/meny'
@@ -27,6 +29,8 @@ export function AppSkal() {
   const aktiv = aktivSida(pathname)
   const anvandarId = session?.user.id ?? ''
   const { turer: dinaTurer } = useDinaTurer(anvandarId, pathname)
+  // Hämtas en gång här och delas av klockan i mobilens sidhuvud och klockan på dator.
+  const notiser = useNotiser(anvandarId)
   const oppenTurId = /^\/tur\/([^/]+)/.exec(pathname)?.[1] ?? null
   const [namn, setNamn] = useState('')
   const [bildUppdaterad, setBildUppdaterad] = useState<string | null>(null)
@@ -75,15 +79,26 @@ export function AppSkal() {
       </div>
 
       <div className="flex min-h-dvh min-w-0 flex-col">
-        {/* Kompakt sidhuvud i mobil */}
-        <header className="flex items-center justify-between border-b border-border bg-card/80 px-4 py-2 backdrop-blur lg:hidden print:hidden">
+        {/* Kompakt sidhuvud i mobil. z-30, eftersom backdrop-blur gör huvudet till en egen nivå: utan den hamnar
+            notislistan bakom innehållet. */}
+        <header className="relative z-30 flex items-center justify-between border-b border-border bg-card/80 px-4 py-2 backdrop-blur lg:hidden print:hidden">
           <Link to="/hem" className={cn('flex min-h-11 items-center rounded-md', fokus)}>
             <Logotyp />
           </Link>
-          <Link to="/profil" aria-label="Din profil" className={cn('flex size-11 items-center justify-center rounded-full', fokus)}>
-            <Namnbricka namn={namn || session?.user.email || '?'} bild={minBild} laddar={bildLaddar} />
-          </Link>
+          <div className="flex items-center gap-1">
+            <Notisklocka {...notiser} />
+            <Link to="/profil" aria-label="Din profil" className={cn('flex size-11 items-center justify-center rounded-full', fokus)}>
+              <Namnbricka namn={namn || session?.user.email || '?'} bild={minBild} laddar={bildLaddar} />
+            </Link>
+          </div>
         </header>
+
+        {/* Notisklockan uppe till höger på dator, i samma bredd som innehållet. */}
+        <div className="hidden px-10 pt-3 lg:block 2xl:px-14 3xl:px-16 print:hidden">
+          <div className="mx-auto flex w-full max-w-[75rem] justify-end">
+            <Notisklocka {...notiser} />
+          </div>
+        </div>
 
         {!supabase && (
           <div className="m-4 rounded-md bg-accent-soft p-4 text-sm">
@@ -97,7 +112,7 @@ export function AppSkal() {
         <main
           id="innehall"
           tabIndex={-1}
-          className="w-full flex-1 px-4 pt-5 pb-8 outline-none sm:px-6 lg:px-10 lg:pt-8 lg:pb-12 2xl:px-14 2xl:pt-10 3xl:px-16 3xl:pt-12 3xl:text-[1.0625rem]"
+          className="w-full flex-1 px-4 pt-5 pb-8 outline-none sm:px-6 lg:px-10 lg:pt-1 lg:pb-12 2xl:px-14 2xl:pt-2 3xl:px-16 3xl:pt-4 3xl:text-[1.0625rem]"
         >
           <div className="mx-auto w-full max-w-[75rem]">
             <Felgrans aterstall={pathname}>
