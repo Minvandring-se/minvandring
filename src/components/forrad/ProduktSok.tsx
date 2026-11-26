@@ -1,9 +1,11 @@
-import { ChevronDown, Plus } from 'lucide-react'
+import { Check, ChevronDown, History, Plus } from 'lucide-react'
 import { useEffect, useId, useState } from 'react'
 import { Kategoriikon } from '@/components/forrad/Kategoriikon'
 import { Laddfel } from '@/components/app/Laddfel'
+import { FranTur } from '@/components/forrad/FranTur'
 import { Granskad } from '@/components/forrad/Granskad'
 import { KokSteg } from '@/components/forrad/KokSteg'
+import { SnabbEgenSak } from '@/components/forrad/SnabbEgenSak'
 import { StorlekSteg } from '@/components/forrad/StorlekSteg'
 import { granskning } from '@/lib/granskning'
 import { arKlader, viktstorlekText } from '@/lib/produktegenskaper'
@@ -33,13 +35,15 @@ import { cn } from '@/lib/utils'
 interface Props {
   /** Produkterna som redan ligger i förrådet, för att visa det i träfflistan. */
   finnsRedan: ReadonlySet<string>
-  /** En produkt har lagts i förrådet. */
+  /** Förrådets saker, för att se vad som redan finns när man hämtar från en tur. */
+  forrad: readonly { namn: string; produkt_id: string | null }[]
+  /** En sak har lagts i förrådet. Rutan står kvar, så att man kan lägga till fler. */
   onTillagd: (sakId: string, namn: string) => void
   /** Kategorin som är vald när rutan öppnas, till exempel från en uppmaning i De fyra tunga. */
   startKategori?: KategoriNyckel
   /** Underkategorin som är vald när rutan öppnas, och som följer med till Lägg till egen sak. */
   startUnderkategori?: UnderkategoriNyckel
-  /** Användaren vill skriva in saken själv. Söktexten följer med som namn, och den valda kategorin som förval. */
+  /** Användaren vill skriva in saken själv med alla uppgifter. Namnet följer med, och den valda kategorin som förval. */
   onEgen: (soktext: string, kategori?: KategoriNyckel, underkategori?: UnderkategoriNyckel) => void
 }
 
@@ -58,7 +62,7 @@ const radKlass =
  * Första steget i Lägg till: välj kategori och märke och sök i produktkatalogen.
  * Varje modell är en rad. Har den flera storlekar väljer man en av dem, annars läggs saken till direkt.
  */
-export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTillagd, onEgen }: Props) {
+export function ProduktSok({ finnsRedan, forrad, startKategori, startUnderkategori, onTillagd, onEgen }: Props) {
   const id = useId()
   const [text, setText] = useState('')
   const [kategori, setKategori] = useState<KategoriNyckel | ''>(startKategori ?? '')
@@ -74,6 +78,17 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
   const [kokSteg, setKokSteg] = useState<{ sakId: string; namn: string; produktId: string } | null>(null)
   // Ett klädesplagg som ska läggas till. Först väljer man sin storlek.
   const [storlekFor, setStorlekFor] = useState<Produkt | null>(null)
+  // Sökningen, en ny egen sak med bara namn och vikt, eller saker från en tur.
+  const [vy, setVy] = useState<'sok' | 'egen' | 'tur'>('sok')
+  // Produkterna som har lagts till sedan rutan öppnades, och det senaste som lades till.
+  const [nyss, setNyss] = useState<ReadonlySet<string>>(new Set())
+  const [senast, setSenast] = useState('')
+
+  function tillagd(sakId: string, namn: string, produktId?: string) {
+    if (produktId) setNyss((n) => new Set(n).add(produktId))
+    setSenast(`${namn} ligger nu i ditt förråd.`)
+    onTillagd(sakId, namn)
+  }
 
 
   // Märkena hämtas en gång per kategori och underkategori.
@@ -153,8 +168,9 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
       return
     }
     const sakId = (data as { id: string }).id
+    setStorlekFor(null)
+    tillagd(sakId, sak.namn, p.id)
     if ((KOKVARMARE as readonly string[]).includes(p.underkategori)) setKokSteg({ sakId, namn: sak.namn, produktId: p.id })
-    else onTillagd(sakId, sak.namn)
   }
 
   // Resultatet gäller bara om det hör till det som är valt just nu.
@@ -165,7 +181,19 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
   const valdEtikett = (kategori && underkategoriFor(kategori, underkategori)?.etikett) || (kategori ? kategoriFor(kategori).etikett : '')
   const upptagen = laggerTill !== null
 
-  if (kokSteg) return <KokSteg {...kokSteg} onKlar={() => onTillagd(kokSteg.sakId, kokSteg.namn)} />
+  if (kokSteg) return <KokSteg {...kokSteg} onKlar={() => setKokSteg(null)} />
+  if (vy === 'tur')
+    return (
+      <FranTur
+        forrad={forrad}
+        onTillbaka={() => setVy('sok')}
+        onTillagda={(saker) => {
+          for (const s of saker) onTillagd(s.sakId, s.namn)
+          setSenast(saker.length === 1 ? `${saker[0].namn} ligger nu i ditt förråd.` : `${saker.length} saker ligger nu i ditt förråd.`)
+          setVy('sok')
+        }}
+      />
+    )
   if (storlekFor)
     return (
       <div className="space-y-3">
@@ -181,6 +209,10 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
   return (
     // Ligger i en Panel, som har rubriken och stängknappen.
     <div className="@container space-y-4">
+      <p role="status" className={cn('flex items-center gap-2 rounded-md bg-hjortron-soft px-3 py-2 text-sm font-medium text-hjortron-strong', !senast && 'sr-only')}>
+        {senast && <Check className="size-4 shrink-0" aria-hidden />}
+        {senast}
+      </p>
       {/*
         När rutan är bred nog står kategori och märke i en smal kolumn bredvid sökningen och träffarna.
         Annars ligger allt i en kolumn. Det är samma fält i båda lägena, så söktext och val finns kvar när bredden ändras.
@@ -292,6 +324,7 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
                       rubrik={produktnamn(m)}
                       underrad={m.varianter[0].version}
                       finnsRedan={finnsRedan.has(m.varianter[0].id)}
+                      nyss={nyss.has(m.varianter[0].id)}
                       upptagen={upptagen}
                       onValj={valj}
                     />
@@ -301,6 +334,7 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
                       utfalld={utfalld === m.nyckel}
                       onVaxla={() => setUtfalld((u) => (u === m.nyckel ? null : m.nyckel))}
                       finnsRedan={finnsRedan}
+                      nyss={nyss}
                       upptagen={upptagen}
                       onValj={valj}
                     />
@@ -322,20 +356,38 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
       )}
 
       {/* Ligger utanför listan, så att den syns utan att man scrollar i träffarna. */}
-      <div className="flex flex-wrap items-center gap-x-2 border-t border-border pt-3 text-sm">
-        <span className="text-muted-foreground">Hittar du den inte?</span>
-        <button
-          type="button"
-          onClick={() => onEgen(text, kategori || undefined, (kategori && underkategori) || undefined)}
-          className="inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
-        >
-          <Plus className="size-4" aria-hidden />
-          Ny egen sak
-        </button>
+      <div className="space-y-3 border-t border-border pt-3">
+        {vy === 'egen' ? (
+          <SnabbEgenSak
+            startnamn={text}
+            kategori={kategori || undefined}
+            underkategori={(kategori && underkategori) || undefined}
+            onTillagd={(sakId, namn) => tillagd(sakId, namn)}
+            onFler={(namn) => onEgen(namn, kategori || undefined, (kategori && underkategori) || undefined)}
+          />
+        ) : (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <span className="text-muted-foreground">Hittar du den inte?</span>
+            <button type="button" onClick={() => setVy('egen')} className={lank}>
+              <Plus className="size-4" aria-hidden />
+              Ny egen sak
+            </button>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <span className="text-muted-foreground">Har du redan en packlista?</span>
+          <button type="button" onClick={() => setVy('tur')} className={lank}>
+            <History className="size-4" aria-hidden />
+            Hämta från en tur
+          </button>
+        </div>
       </div>
     </div>
   )
 }
+
+const lank =
+  'inline-flex min-h-11 items-center gap-1.5 font-semibold text-primary underline underline-offset-4 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
 /** En produkt som läggs till med ett tryck: en modell med en enda variant, eller en storlek i en utfälld modell. */
 function Produktrad({
@@ -343,6 +395,7 @@ function Produktrad({
   rubrik,
   underrad,
   finnsRedan,
+  nyss = false,
   upptagen,
   indragen,
   onValj,
@@ -351,6 +404,8 @@ function Produktrad({
   rubrik: string
   underrad?: string | null
   finnsRedan: boolean
+  /** Lades till sedan rutan öppnades. */
+  nyss?: boolean
   upptagen: boolean
   indragen?: boolean
   onValj: (p: Produkt) => void
@@ -367,7 +422,14 @@ function Produktrad({
           </span>
           {underrad && <span className="block text-sm break-words text-muted-foreground">{underrad}</span>}
           {storlek && <span className="block text-sm break-words text-muted-foreground">{storlek}</span>}
-          {finnsRedan && <span className="block text-sm text-muted-foreground">Finns redan i ditt förråd</span>}
+          {nyss ? (
+            <span className="flex items-center gap-1 text-sm font-medium text-primary">
+              <Check className="size-4" aria-hidden />
+              Tillagd
+            </span>
+          ) : (
+            finnsRedan && <span className="block text-sm text-muted-foreground">Finns redan i ditt förråd</span>
+          )}
         </span>
         <span className="shrink-0 text-sm font-medium">{formateraVikt(produkt.packvikt_g)}</span>
         <Plus className="size-4 shrink-0 text-muted-foreground" aria-hidden />
@@ -384,6 +446,7 @@ function Modellrad({
   utfalld,
   onVaxla,
   finnsRedan,
+  nyss,
   upptagen,
   onValj,
 }: {
@@ -391,6 +454,7 @@ function Modellrad({
   utfalld: boolean
   onVaxla: () => void
   finnsRedan: ReadonlySet<string>
+  nyss: ReadonlySet<string>
   upptagen: boolean
   onValj: (p: Produkt) => void
 }) {
@@ -404,7 +468,7 @@ function Modellrad({
           <span className="block font-medium break-words">{produktnamn(modell)}</span>
           <span className="block text-sm text-muted-foreground">
             {varianterText(modell, formateraVikt)}
-            {antalIForradet > 0 && ', finns redan i ditt förråd'}
+            {modell.varianter.some((v) => nyss.has(v.id)) ? ', tillagd' : antalIForradet > 0 && ', finns redan i ditt förråd'}
           </span>
         </span>
         <span className="shrink-0 text-sm font-medium">från {formateraVikt(modell.varianter[0].packvikt_g)}</span>
@@ -413,7 +477,7 @@ function Modellrad({
       <ul id={id} hidden={!utfalld} aria-label={`Varianter av ${produktnamn(modell)}`} className="divide-y divide-border border-t border-border bg-muted/40">
         {modell.varianter.map((v) => (
           <li key={v.id}>
-            <Produktrad produkt={v} rubrik={variantnamn(v)} finnsRedan={finnsRedan.has(v.id)} upptagen={upptagen} indragen onValj={onValj} />
+            <Produktrad produkt={v} rubrik={variantnamn(v)} finnsRedan={finnsRedan.has(v.id)} nyss={nyss.has(v.id)} upptagen={upptagen} indragen onValj={onValj} />
           </li>
         ))}
       </ul>
