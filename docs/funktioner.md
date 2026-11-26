@@ -9,7 +9,7 @@ Status:
 - **Senare**: en egen modul längre fram.
 - **Idé**: inte bestämt.
 
-Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor och mallar, Dagbok, Statistik och Vandringskompisar) som det kommer att se ut, med etiketten ”Kommer snart”. Exempelinnehållet ligger i `src/lib/exempeldata.ts` och tas bort när modulen byggs på riktigt.
+Det som inte finns visas i turens översikt och på sidorna i menyn (Dagbok och Statistik) som det kommer att se ut, med etiketten ”Kommer snart”. Exempelinnehållet ligger i `src/lib/exempeldata.ts` och tas bort när modulen byggs på riktigt.
 
 ## Turen
 
@@ -45,7 +45,8 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Buren vikt | Senare |
 | Packläge att bocka av | Senare |
 | Utskrivbar packlista | Senare |
-| Mallar och import från LighterPack | Senare |
+| Packlistor och mallar | Finns: Spara som mall och Från mall i turens packning, och dina mallar under Packlistor |
+| Färdiga mallar från MinVandring, delade mallar och import från LighterPack | Senare |
 | Dela packlistan med länk | Senare |
 
 ## Mat

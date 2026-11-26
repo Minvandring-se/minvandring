@@ -29,10 +29,10 @@ describe('menyns sidor', () => {
     expect(SIDOR.hem.till).toBe('/hem')
     expect(MENYGRUPPER.map((g) => [g.rubrik, g.sidor.map((s) => SIDOR[s].namn)])).toEqual([
       ['Planera', ['Mina turer', 'Matplanering']],
-      ['Utrustning', ['Mitt förråd', 'Utrustningskatalog']],
+      ['Utrustning', ['Mitt förråd', 'Packlistor', 'Utrustningskatalog']],
       ['Vandrare', ['Vänner']],
       ['Minnen', ['Kom ihåg till nästa tur']],
-      ['Kommer snart', ['Packlistor och mallar', 'Dagbok', 'Statistik']],
+      ['Kommer snart', ['Dagbok', 'Statistik']],
     ])
     // Allt i Kommer snart är inte byggt, och allt som inte är byggt ligger där.
     const snart = MENYGRUPPER.find((g) => g.nyckel === 'snart')!.sidor
@@ -52,10 +52,10 @@ describe('menyns sidor', () => {
     // Sidorna heter likadant i mobilens meny som i sidomenyn.
     for (const f of FLIKAR) if (f.typ === 'sida') expect(f.namn).toBe(SIDOR[f.sida].namn)
     expect(MER.map((g) => [g.rubrik, g.sidor])).toEqual([
-      ['Utrustning', ['utrustning']],
+      ['Utrustning', ['packlistor', 'utrustning']],
       ['Vandrare', ['vanner']],
       ['Minnen', ['kom-ihag']],
-      ['Kommer snart', ['packlistor', 'dagbok', 'statistik']],
+      ['Kommer snart', ['dagbok', 'statistik']],
       ['Konto', ['installningar']],
     ])
     // Hela menyn i samma ordning: flikarna och sedan Mer följer sidomenyns ordning.

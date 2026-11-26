@@ -1,6 +1,6 @@
 import type { ReactNode } from 'react'
 import { SidRubrik } from '@/components/app/SidRubrik'
-import { Dagboksexempel, Mallexempel } from '@/components/planerade/Exempelsidor'
+import { Dagboksexempel } from '@/components/planerade/Exempelsidor'
 import { Statistikexempel } from '@/components/planerade/Statistikexempel'
 import { KommerSnart, KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { useSidtitel } from '@/hooks/useSidtitel'
@@ -8,7 +8,6 @@ import { SIDOR, type Sida } from '@/lib/meny'
 
 /** Exemplet på varje planerad sida. Innehållet ligger i src/lib/exempeldata.ts. */
 const EXEMPEL: Partial<Record<Sida, ReactNode>> = {
-  packlistor: <Mallexempel />,
   dagbok: <Dagboksexempel />,
   statistik: <Statistikexempel />,
 }

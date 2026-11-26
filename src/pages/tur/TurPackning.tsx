@@ -1,12 +1,14 @@
-import { Plus, X } from 'lucide-react'
+import { ClipboardList, Plus, X } from 'lucide-react'
 import { useMemo, useState } from 'react'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Gruppbehov } from '@/components/packning/Gruppbehov'
+import { LaggTillFranMall } from '@/components/packning/LaggTillFranMall'
 import { LaggTillUtrustning } from '@/components/packning/LaggTillUtrustning'
 import { Packrad } from '@/components/packning/Packrad'
 import { Packsummering } from '@/components/packning/Packsummering'
+import { SparaSomMall } from '@/components/packning/SparaSomMall'
 import { ValjEgenModell } from '@/components/packning/ValjEgenModell'
 import { useTur } from '@/components/tur/turKontext'
 import { FlikAntal } from '@/components/ui/bricka'
@@ -79,7 +81,7 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
   const mat = useMatplan(tur.id)
   const forrad = useMittForrad()
   const [filter, setFilter] = useState<Packfilter>(mittId ? 'min' : 'alla')
-  const [panel, setPanel] = useState<{ typ: 'lagg-till' } | { typ: 'egen'; rad: PackradRad } | null>(null)
+  const [panel, setPanel] = useState<{ typ: 'lagg-till' } | { typ: 'fran-mall' } | { typ: 'spara-mall' } | { typ: 'egen'; rad: PackradRad } | null>(null)
   const [fel, setFel] = useState<string | null>(null)
   const [sparar, setSparar] = useState(false)
 
@@ -122,7 +124,7 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
   return (
     <div className="space-y-5">
       {!kanAndra && (
-        <p className="text-muted-foreground">Du är läsare. Du kan bocka av det du packar, välja din egen modell och ta med gemensamma saker. Ägare och redigerare ändrar listan.</p>
+        <p className="text-muted-foreground">Du är läsare. Du kan bocka av det du packar, välja din egen modell, ta med gemensamma saker och spara listan som mall. Ägare och redigerare ändrar listan.</p>
       )}
 
       {rader.length > 0 && <Packsummering personer={personvikter} mat={mat.lage.lage} />}
@@ -145,10 +147,16 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
         rubrik="Packlistan"
         atgard={
           kanAndra && mittId ? (
-            <Button onClick={() => setPanel({ typ: 'lagg-till' })}>
-              <Plus className="size-4 text-hjortron-ikon" aria-hidden />
-              Lägg till utrustning
-            </Button>
+            <div className="flex flex-wrap gap-2">
+              <Button variant="outline" onClick={() => setPanel({ typ: 'fran-mall' })}>
+                <ClipboardList className="size-4" aria-hidden />
+                Från mall
+              </Button>
+              <Button onClick={() => setPanel({ typ: 'lagg-till' })}>
+                <Plus className="size-4 text-hjortron-ikon" aria-hidden />
+                Lägg till utrustning
+              </Button>
+            </div>
           ) : undefined
         }
       >
@@ -205,6 +213,15 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
             </div>
           ))
         )}
+
+        {rader.length > 0 && mittId && (
+          <div className="border-t border-border pt-3">
+            <Button variant="ghost" className="-ml-3" onClick={() => setPanel({ typ: 'spara-mall' })}>
+              <ClipboardList className="size-4" aria-hidden />
+              Spara som mall
+            </Button>
+          </div>
+        )}
       </Sektion>
 
       {/* Felet syns längst ner på skärmen, nära det man just tryckte på, också långt ner i listan. */}
@@ -241,6 +258,10 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
           }}
         />
       )}
+
+      {panel?.typ === 'fran-mall' && <LaggTillFranMall turId={tur.id} onTillagd={laddaOm} onStang={() => setPanel(null)} />}
+
+      {panel?.typ === 'spara-mall' && <SparaSomMall turId={tur.id} forslag={tur.namn} onStang={() => setPanel(null)} />}
 
       {panel?.typ === 'egen' && mittId && (
         <ValjEgenModell
