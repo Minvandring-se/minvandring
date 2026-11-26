@@ -70,4 +70,18 @@ export default defineConfig({
   resolve: {
     alias: { '@': path.resolve(import.meta.dirname, './src') },
   },
+  build: {
+    rolldownOptions: {
+      output: {
+        // React och Supabase i egna filer. De ändras sällan, så webbläsaren kan behålla dem när appen får en ny version,
+        // och huvudfilen håller sig under 500 kB. Sidorna för inloggade hämtas för sig (React.lazy i src/App.tsx).
+        codeSplitting: {
+          groups: [
+            { name: 'react', test: /node_modules[\\/](react|react-dom|react-router|scheduler)[\\/]/ },
+            { name: 'supabase', test: /node_modules[\\/](@supabase|iceberg-js|tslib)[\\/]/ },
+          ],
+        },
+      },
+    },
+  },
 })

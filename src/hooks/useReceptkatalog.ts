@@ -47,8 +47,11 @@ export function useReceptkatalog(): Katalogrecept[] | null | 'fel' {
   return recept
 }
 
-/** Bara namnen på MinVandrings recept, i namnordning, för skafferiet. null medan de hämtas, 'fel' om det inte gick. */
-export function useReceptkatalognamn(): { id: string; namn: string }[] | null | 'fel' {
+/**
+ * Bara namnen på MinVandrings recept, i namnordning, för skafferiet. null medan de hämtas, 'fel' om det inte gick.
+ * Ett nytt värde på forsok hämtar dem igen.
+ */
+export function useReceptkatalognamn(forsok = 0): { id: string; namn: string }[] | null | 'fel' {
   const [namn, setNamn] = useState<{ id: string; namn: string }[] | null | 'fel'>(null)
   useEffect(() => {
     if (!supabase) return
@@ -63,7 +66,7 @@ export function useReceptkatalognamn(): { id: string; namn: string }[] | null | 
     return () => {
       aktuell = false
     }
-  }, [])
+  }, [forsok])
   return namn
 }
 

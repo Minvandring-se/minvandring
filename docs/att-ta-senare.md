@@ -1,15 +1,5 @@
 # Att ta senare
 
-## JS-filen är över 500 kB
-
-`npm run build` varnar för att `assets/index-*.js` är större än 500 kB (cirka 545 kB, 159 kB gzip). Det gäller när nycklarna i `.env.local` finns med, för då kommer Supabase-klienten med i bygget. Utan nycklar är filen cirka 326 kB.
-
-Inget är trasigt. Startsidan blir bara lite långsammare att ladda i mobilen.
-
-Möjliga åtgärder när vi tar det:
-- Ladda sidorna bakom inloggning (Mina turer, Tur, Profil) med `React.lazy`, så att startsidan inte behöver dem.
-- Se om Supabase-klienten kan laddas först när den behövs.
-
 ## Min utrustning
 
 Idé från Hikt (deras "Gear Closet"). Varje person har en egen lista över sin utrustning med namn, kategori, vikt och typ. Man lägger in sina prylar en gång och väljer sedan vad som ska med på varje tur.
@@ -49,16 +39,13 @@ Att ta ställning till: ska appen tillåta produkter som bara har minvikt? I dag
 
 Att göra: gå igenom Outnorths utelämnade produkter med regeln om butikens sida som reserv för vikt, temperaturer och mått (se skillen `katalog`), främst Urberg och Sydvang. De utelämnades i genomgången 2026-11-22 för att tillverkarens produktsida saknar verifierbar vikt.
 
-### Kopplingen till packlistan (inte byggd)
+### Kopplingen till packlistan
 
-- "Hämta från Mitt förråd" i packlistan: kryssrutor grupperade per kategori. Valda saker kopieras in i `packrader` och bärs av den som hämtar dem.
-- `packrader` får `forradssak_id` (nullable, on delete set null) för att visa "redan tillagd" och undvika dubbletter.
-- `packrader.kategori` använder samma nycklar som förrådet. I dag är den fritext med förvalet 'Övrigt', så befintliga rader behöver flyttas över till nycklarna i samma migrering.
-- En rad skriven direkt i packlistan kan sparas till Mitt förråd med ett klick.
-- Bara owner och editor får hämta in saker (`kan_andra`).
-- Vem som helst i turen ser en hämtad rad, men aldrig resten av förrådet. Kopian i `packrader` är det enda gruppen når.
-- Kryssrutorna "Går åt under turen" och "Jag har den på mig" från förrådets formulär används också i packlistan. Där ska de gå att ändra per tur, till exempel regnjackan som ibland är på och ibland ligger i ryggsäcken. Valet i förrådet är bara förvalet när saken hämtas in.
-- När "Hämta från Mitt förråd" finns ska texten i förrådets tomma läge få tillbaka löftet: "Lägg in din utrustning en gång, välj sedan vad som ska med på varje vandring." Tills dess står det "så har du koll på vad du har och vad allt väger", eftersom appen inte ska lova det som inte finns.
+Byggt: Lägg till i packlistan hämtar saker ur förrådet och kopierar in dem i `packrader` med namn och vikt (`src/components/packning/LaggTillUtrustning.tsx`), och man väljer om man bär saken själv, åt gruppen eller om alla har var sin. En ny sak kan skrivas in där. `packrader.kategori` och `underkategori` använder förrådets nycklar, bara owner och editor lägger till, och gruppen ser bara kopian. I förrådet hämtar Hämta från en tur det man bar i en tur.
+
+Kvar:
+- `packrader.forradssak_id` (nullable, on delete set null) för att visa "redan tillagd". I dag finns bara varningen för dubbletter (`dubbletter` i `src/lib/packlista.ts`).
+- Kryssrutorna "Går åt under turen" och "Jag har den på mig" går inte att ändra per tur i packlistan, till exempel regnjackan som ibland är på och ibland ligger i ryggsäcken. Valet i förrådet följer med när saken hämtas in.
 
 ## Smarta tips i packlistan
 
@@ -130,9 +117,9 @@ Att lösa innan:
 
 ## Radera kontot, och profilbilden med det
 
-Appen har inget sätt att radera sitt konto i dag. Den som vill sluta får mejla oss.
+Appen har inget sätt att radera sitt konto i dag. Den som vill sluta får mejla oss. Databasen är förberedd: när en rad i `auth.users` tas bort försvinner personens deltagarrader med kostbehov, ätare och bockar, en ensam ägare ersätts av nästa deltagare med konto, och en tur utan andra konton raderas (`public.konto_raderas` i `20261125210001_konto_och_matregler.sql`).
 
-När kontoradering byggs ska profilbilden tas bort samtidigt. Den ligger i Supabase Storage (bucketen `profilbilder`, filen `<user_id>/bild`) och försvinner inte av sig själv när raden i `auth.users` tas bort, till skillnad från profilen, deltagarraderna och förrådet som följer med genom främmande nycklar. Tills dess: ta bort filen för hand i Storage när ett konto raderas.
+När kontoradering byggs i appen ska profilbilden tas bort samtidigt. Den ligger i Supabase Storage (bucketen `profilbilder`, filen `<user_id>/bild`) och försvinner inte av sig själv. Tills dess: ta bort filen för hand i Storage när ett konto raderas.
 
 Profilbilden visas med signerade adresser som gäller i en timme. En turkamrat som tas bort ur en tur kan alltså ha en adress som fungerar upp till en timme till.
 
@@ -158,7 +145,7 @@ Inte kontrollerat än: tomt förråd, tangentbordsfokus och den utfällda detalj
 
 Idé: ge dem som fiskar eller jagar på vandringen plats för det i appen. Tre delar, i den ordning de bör byggas:
 
-1. **Kategorierna Fiske och Jakt i Mitt förråd**, så att man kan lägga in egna saker. Kategorinycklarna läggs till både i databasen och i `src/lib/forrad.ts`, och testet i `supabase/rls.test.ts` ska fortsätta stämma.
+1. **Kategorierna Fiske och Jakt i Mitt förråd**, så att man kan lägga in egna saker. Fiske finns som underkategori (`fiske` i `src/lib/forrad.ts`), men inte Jakt. Kategorinycklarna läggs till både i databasen och i `src/lib/forrad.ts`, och testet i `supabase/rls.test.ts` ska fortsätta stämma.
 2. **Påminnelser i Kom ihåg till nästa vandring** om fiskekort, jaktkort och jakttider, så att man minns att ordna dem före turen.
 3. **Eventuellt en liten katalog för resespön och fjällspön.** Inga vapen i katalogen.
 
@@ -199,10 +186,6 @@ Villkor och källor:
 ## Katalogen: Nordisk och OMM
 
 Nordisks produktsidor säger inte vad "Official weight" är och anger ingen temperaturstandard för sovsäckarna, så raderna har totalvikten i `packvikt_g` och `ej_angiven`. Fråga Nordisk (eller läs deras FAQ) vad den officiella vikten och temperaturerna bygger på. Nordisk-tälten som redan ligger i katalogen har trimvikten som minvikt. OMM Mountain Raid utelämnades eftersom OMM bara anger Leanweight, "all extras removed", utan att säga vilka delar som avses för sovsäckarna.
-
-## Kostbehov när ett konto tas bort
-
-I dag går ett konto i `auth.users` inte att ta bort så länge det är deltagare i en tur. Den främmande nyckeln `deltagare.user_id` sätter null, men triggern `skydda_deltagare` stoppar det bytet. När vi tillåter att konton tas bort (se Radera kontot ovan) ska de känsliga `kostbehov` raderas samtidigt, till exempel med `on delete cascade` på deltagaren eller en trigger som tar bort kostbehoven när `user_id` blir null. Annars blir raden en person utan konto, och då ligger kostbehoven kvar och syns för alla i turen utan att någon kan ta bort dem, fast samtycket inte längre går att återkalla. Lägg till ett test i `supabase/rls.test.ts` när det byggs.
 
 ## Utrustningskatalogen: rangordning och gruppering i databasen
 
@@ -266,3 +249,15 @@ Performance Advisor (läst 2026-11-26 med `npx supabase db advisors --remote --t
 - **Främmande nycklar utan index (31 st):** lägg index på de nycklar som används när en tur eller ett konto tas bort, främst `packrader.tur_id`, `ingredienser.tur_id`, `deltagare.user_id`, `anteckningar.user_id`, `lardomar.tur_id`, `turer.skapad_av`, `notiser.fran_user_id`, och nycklarna på `(…, tur_id)` för `maltider` (`ratt_id`, `bars_av`), `maltid_atare`, `inkop_klart` och `packstatus`. De andra kan vänta.
 
 Kör advisorn igen efter migreringen. Ändringarna i policyerna ska ha tester i `supabase/rls.test.ts`, även om reglerna inte ändras: kör hela sviten och kontrollera att inga tester behöver ändras. Varningarna om `SECURITY DEFINER`-funktioner och tabeller med RLS men utan policyer i Security Advisor är avsiktliga, se avsnittet om databasen i `CLAUDE.md`.
+
+## Receptsidan: Försök igen när recepten inte går att hämta
+
+Matkatalogen och skafferiet visar Försök igen när hämtningen misslyckas (`Laddfel`), men receptsidan och listan med MinVandrings recept visar bara en text om att ladda om sidan. `useReceptkatalog` i `src/hooks/useReceptkatalog.ts` saknar omhämtning. Ge hooken ett `forsokIgen` som i `useMatkatalog` och visa `Laddfel` i `MinvandringsRecept` och på `Receptsida`.
+
+## Notisklockan: gränsen på 30 räknas före dolda vänförfrågningar
+
+Klockan hämtar de 30 senaste notiserna (`ANTAL_I_KLOCKAN` i `src/lib/notiser.ts`) och döljer sedan notiser om vänförfrågningar som inte gäller längre (`synligaNotiser`). Listan kan därför visa färre än 30 fast det finns äldre notiser. Bestäm om filtreringen ska ske i databasen (till exempel en vy eller ett villkor på `vanforfragan_id` i frågan), så att gränsen gäller de synliga notiserna.
+
+## Webbläsarens bekräftelseruta i stället för appens egen dialog
+
+Ta bort vän, Ta bort grupp och Ny länk på Vänner använder webbläsarens `confirm`, liksom resten av appen (till exempel anteckningar, lärdomar, packlistor, att göra, deltagare och inbjudan). Rutan ser olika ut i olika webbläsare och går inte att styla. Den kan bytas mot en egen bekräftelsedialog i appens stil, en komponent som alla ställena använder.

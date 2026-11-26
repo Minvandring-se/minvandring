@@ -10,13 +10,6 @@ export const REDO_FOR_AVFARD = {
   ejKlart: ['Packning, 68 % klart', 'Middag dag 3 och 4', 'Färdplan till någon hemma'],
 }
 
-export const ATT_GORA: { text: string; vem: string; nar: string; klar: boolean; bradskar?: boolean }[] = [
-  { text: 'Boka nattåg till Abisko', vem: 'Erik', nar: 'Klart', klar: true },
-  { text: 'Boka STF-stugor, natt 1, 2 och 4', vem: 'Anna', nar: 'Senast 1 aug', klar: false, bradskar: true },
-  { text: 'Köp två gaspatroner i Abisko', vem: 'Erik', nar: 'På plats', klar: false },
-  { text: 'Skriv ut fjällkartan', vem: 'Anna', nar: 'Senast 10 aug', klar: false },
-]
-
 export const RESAN = [
   { riktning: 'dit' as const, rubrik: 'Dit: nattåg till Abisko', nar: 'Ons 11 aug, kväll' },
   { riktning: 'hem' as const, rubrik: 'Hem: buss från Nikkaluokta', nar: 'Ons 18 aug, eftermiddag' },
@@ -137,14 +130,6 @@ export const STATISTIK = {
     { namn: 'Ett andra vattenfilter', varde: '90 g' },
   ],
 }
-
-/** Packlistor och mallar: färdiga mallar och era egna från tidigare turer. */
-export const MALLAR: { namn: string; fran: string; saker: number; basvikt: string }[] = [
-  { namn: 'Fjälltur sommar', fran: 'Färdig mall', saker: 46, basvikt: '7,8 kg' },
-  { namn: 'Fjälltur vinter', fran: 'Färdig mall', saker: 58, basvikt: '11,2 kg' },
-  { namn: 'Helg i skogen med hund', fran: 'Er mall, från Sörmlandsleden 2025', saker: 34, basvikt: '6,1 kg' },
-  { namn: 'Stugtur i fjällen', fran: 'Färdig mall', saker: 31, basvikt: '4,9 kg' },
-]
 
 /** Dagbok: en tidslinje för en tur. */
 export const DAGBOK = {

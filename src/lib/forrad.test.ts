@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   KATEGORIER,
   antalGranskade,
+  vaxlaAlla,
   arKategori,
   arUnderkategori,
   storstaVinsten,
@@ -624,5 +625,13 @@ describe('antalGranskade', () => {
 
   it('räknar inte en sak med egen vikt', () => {
     expect(antalGranskade([fran(katalogprodukt({ granskad: '2026-11-01' }), 1750)])).toBe(0)
+  })
+})
+
+describe('vaxlaAlla', () => {
+  it('väljer alla när någon saknas och avmarkerar alla när alla redan är valda', () => {
+    expect([...vaxlaAlla(new Set(['a']), ['a', 'b'])].sort()).toEqual(['a', 'b'])
+    expect([...vaxlaAlla(new Set(['a', 'b', 'c']), ['a', 'b'])]).toEqual(['c'])
+    expect([...vaxlaAlla(new Set(['c']), [])]).toEqual(['c'])
   })
 })

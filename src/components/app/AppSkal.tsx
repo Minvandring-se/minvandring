@@ -62,6 +62,7 @@ export function AppSkal() {
       (s) => {
         const ny = new URLSearchParams(s)
         ny.delete('ny')
+        ny.delete('grupp')
         return ny
       },
       { replace: true },
@@ -139,7 +140,7 @@ export function AppSkal() {
               }
             >
               <Outlet context={kontext} />
-              {nyTur && <NyTurRuta anvandarId={anvandarId} onStang={stangNyTur} />}
+              {nyTur && <NyTurRuta anvandarId={anvandarId} grupp={sok.get('grupp')} onStang={stangNyTur} />}
             </Suspense>
             </Felgrans>
           </div>

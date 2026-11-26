@@ -9,7 +9,7 @@ Status:
 - **Senare**: en egen modul längre fram.
 - **Idé**: inte bestämt.
 
-Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor och mallar, Dagbok, Statistik och Vandringskompisar) som det kommer att se ut, med etiketten ”Kommer snart”. Exempelinnehållet ligger i `src/lib/exempeldata.ts` och tas bort när modulen byggs på riktigt.
+Det som inte finns visas i turens översikt och på sidorna i menyn (Dagbok och Statistik) som det kommer att se ut, med etiketten ”Kommer snart”. Exempelinnehållet ligger i `src/lib/exempeldata.ts` och tas bort när modulen byggs på riktigt.
 
 ## Turen
 
@@ -45,7 +45,9 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Buren vikt | Senare |
 | Packläge att bocka av | Senare |
 | Utskrivbar packlista | Senare |
-| Mallar och import från LighterPack | Senare |
+| Packlistor och mallar | Finns: Spara som mall och Från mall i turens packning, och dina mallar under Packlistor |
+| Färdiga mallar från MinVandring | Finns: tre startmallar (Fjälltur sommar med tält, Stugtur i fjällen, Helg i skogen) under Packlistor och i Från mall |
+| Delade mallar och import från LighterPack | Senare |
 | Dela packlistan med länk | Senare |
 
 ## Mat
@@ -56,7 +58,8 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Egna rätter med ingredienser | Finns |
 | Matkatalog med frystorkade och lufttorkade påsar | Finns, fylls på med data från Astra |
 | Egen sida för matkatalogen med sökning, filter, sortering och panel | Finns (`/matplanering/katalog`) |
-| Matkatalogen i tre delar: påsar, märkesvaror och livsmedel, med måltider och grupper som rutor | Finns, illustrationerna är platshållare tills Astras bilder kommer (`src/components/illustrationer/Illustration.tsx`) |
+| Matkatalogen i tre delar: påsar, märkesvaror och livsmedel, med måltider och grupper som rutor | Finns, med Astras bilder i rutorna (`public/katalog/`, `npm run katalogbilder`) |
+| Torka själv i Matkatalogen: 30 recept och 20 råvaruguider att torka hemma, och Kom igång med grundmetod och säkerhet | Finns (`?del=torka` och `/matplanering/katalog/torka-sjalv/<namn>`), innehållet i `src/lib/torkasjalvdata.ts`. Äpple och banan har en gemensam sida med receptet |
 | Mina matplaner: nästa tur överst och hur många måltider som saknas i varje tur | Finns (`/matplanering`) |
 | Inköpslista med ansvarig | Finns |
 | Kcal, protein och matvikt per person och dag | Finns |
@@ -84,8 +87,9 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Notisklockan uppe till höger: när någon går med i turen via länken | Finns |
 | Vänner: förfrågan via mejladress, vänlänk, godkänn och neka i notisklockan (`/vanner`) | Finns |
 | Lägg till vänner i en tur, och vänner eller samma vänner som i en tidigare tur när en ny tur skapas | Finns |
-| Grupper, mejl och påminnelser | Nästa, i steg enligt planen för notiser |
-| Att göra med ansvarig och datum | Senare |
+| Grupper: spara vänner som en grupp, ny tur med gruppen och gruppen i en tur | Finns |
+| Mejl och påminnelser | Nästa, i steg enligt planen för notiser |
+| Att göra med ansvarig och datum | Finns: Att göra i gruppen på turens översikt, med förslag, och egna uppgifter under Att göra på Hem |
 | Omröstning om datum och led | Senare |
 | Senaste i gruppen | Senare |
 | Delade kostnader | Senare |

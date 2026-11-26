@@ -4,7 +4,6 @@ import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
-import { Illustration } from '@/components/illustrationer/Illustration'
 import { Kostfilterval } from '@/components/mat/Kostfilterval'
 import { Matflikar } from '@/components/mat/Matflikar'
 import { Bricka } from '@/components/ui/bricka'
@@ -13,6 +12,7 @@ import { Delval } from '@/components/ui/delval'
 import { AktivaFilter, Filterpanel, Sokrad, Sokruta, type AktivtFilter } from '@/components/ui/sokruta'
 import { LaggISkafferi } from '@/components/mat/LaggISkafferi'
 import { PasNamn } from '@/components/mat/PasNamn'
+import { TorkaSjalv } from '@/components/mat/TorkaSjalv'
 import { Panel } from '@/components/ui/panel'
 import { Select } from '@/components/ui/select'
 import { Specrutor } from '@/components/ui/specrutor'
@@ -31,6 +31,7 @@ import {
   delFranAdress,
   filterFranAdress,
   filterTillAdress,
+  katalogbild,
   KATALOGDELAR,
   KATALOGMALTIDER,
   kostbrickor,
@@ -60,6 +61,8 @@ const tal = (n: number) => n.toLocaleString('sv-SE')
 
 /** De aktiva filtren som etiketter: kostvalen, allergenerna och märket (bara för påsar). */
 function aktivaKostfilter(f: Katalogfilter, del: Katalogdel, andra: (a: Partial<Katalogfilter>) => void): AktivtFilter[] {
+  // Kostfiltret gäller inte Torka själv, där kost och allergener inte är kända.
+  if (del === 'torka') return []
   return [
     ...f.val.map((v) => ({ nyckel: `val-${v}`, text: kostvalsetikett(v), onTaBort: () => andra({ val: f.val.filter((x) => x !== v) }) })),
     ...f.utan.map((a) => ({ nyckel: `utan-${a}`, text: `Utan ${allergenetikett(a).toLowerCase()}`, onTaBort: () => andra({ utan: f.utan.filter((x) => x !== a) }) })),
@@ -69,7 +72,7 @@ function aktivaKostfilter(f: Katalogfilter, del: Katalogdel, andra: (a: Partial<
 const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4', fokus)
 
 /**
- * Matkatalogen i tre delar: påsar, märkesvaror och livsmedel. Överst en mörkgrön ruta med sökfältet,
+ * Matkatalogen i fyra delar: påsar, märkesvaror, livsmedel och Torka själv (recept och råvaror att torka hemma). Överst en mörkgrön ruta med sökfältet,
  * sedan delarna, filtret och måltiderna eller grupperna som rutor. Listan är tom tills man har sökt eller valt en ruta.
  * Delen, måltiden, gruppen, filtret och sorteringen står i adressen.
  *
@@ -107,21 +110,21 @@ export function Matkatalog() {
         rad={antal && `${uppraknade([`${tal(antal.pasar)} påsar`, `${tal(antal.varor)} märkesvaror`, `${tal(antal.livsmedel)} livsmedel`])}.`}
         sok={sok}
         onSok={setSok}
-        placeholder="Till exempel viltgryta eller gröt"
+        placeholder={del === 'torka' ? 'Till exempel linschili eller äpple' : 'Till exempel viltgryta eller gröt'}
       />
 
       <Sokrad
         flikar={<Delval etikett="Sök bland" delar={KATALOGDELAR} vald={del} onValj={(d) => setParametrar(bytDel(d, parametrar), { replace: true })} />}
         antalFilter={aktivaFilter}
-        onFilter={() => setFilterOppet(true)}
+        onFilter={del === 'torka' ? undefined : () => setFilterOppet(true)}
+        kompakt
       />
       <AktivaFilter filter={aktivaKostfilter(filter, del, andraFilter)} onRensaAllt={() => andraFilter({ val: [], utan: [], marke: '' })} />
 
       {del === 'pasar' && <Pasdel sok={sok} filter={filter} andraFilter={andraFilter} filterOppet={filterOppet} onStangFilter={() => setFilterOppet(false)} />}
-      {del !== 'pasar' && (
-        <Naringsdel del={del} sok={sok} grupp={grupp} valjGrupp={valjGrupp} kost={kost} />
-      )}
-      {del !== 'pasar' && filterOppet && (
+      {(del === 'varor' || del === 'livsmedel') && <Naringsdel del={del} sok={sok} grupp={grupp} valjGrupp={valjGrupp} kost={kost} />}
+      {del === 'torka' && <TorkaSjalv sok={sok} />}
+      {(del === 'varor' || del === 'livsmedel') && filterOppet && (
         <Filterpanel visa={VISA[del]} onStang={() => setFilterOppet(false)} harFilter={aktivaFilter > 0} onRensaAllt={() => andraFilter({ val: [], utan: [], marke: '' })}>
           <Filterinnehall kost={kost} onKost={(f) => andraFilter({ val: [...f.val], utan: [...f.utan] })} />
         </Filterpanel>
@@ -147,10 +150,13 @@ function Filterinnehall({ kost, onKost, marke }: { kost: Kostfilter; onKost: (f:
 }
 
 /** Texten på Visa-knappen i filterpanelen. */
-const VISA: Record<Katalogdel, string> = { pasar: 'Visa påsarna', varor: 'Visa varorna', livsmedel: 'Visa livsmedlen' }
+const VISA: Record<Exclude<Katalogdel, 'torka'>, string> = { pasar: 'Visa påsarna', varor: 'Visa varorna', livsmedel: 'Visa livsmedlen' }
 
-/** En ruta för en måltid eller grupp: illustration, namn och antal. Vald när den är tryckt. */
-function Ruta({ nyckel, namn, antal, vald, onValj }: { nyckel: string; namn: string; antal: string | null; vald: boolean; onValj: () => void }) {
+/**
+ * En ruta för en måltid eller grupp: bild, namn och antal. Vald när den är tryckt. Bilden är 5:3 med motivet i mitten
+ * och visas som 5:2 på dator, där den tomma bakgrunden över och under skärs bort.
+ */
+function Ruta({ bild, namn, antal, vald, onValj }: { bild: string; namn: string; antal: string | null; vald: boolean; onValj: () => void }) {
   return (
     <li>
       <button
@@ -162,7 +168,15 @@ function Ruta({ nyckel, namn, antal, vald, onValj }: { nyckel: string; namn: str
           vald ? 'border-primary ring-1 ring-primary' : 'border-border',
         )}
       >
-        <Illustration namn={nyckel} className="aspect-[5/3] w-full md:aspect-[5/2]" />
+        <img
+          src={`/katalog/${bild}-480.webp`}
+          srcSet={`/katalog/${bild}-480.webp 480w, /katalog/${bild}-960.webp 960w`}
+          sizes="(min-width: 768px) 25vw, 50vw"
+          alt=""
+          loading="lazy"
+          decoding="async"
+          className="aspect-[5/3] w-full object-cover md:aspect-[5/2]"
+        />
         <span className="flex flex-1 flex-col gap-0.5 px-3 py-2.5">
           <span className="font-semibold break-words">{namn}</span>
           {antal && <span className="text-sm text-muted-foreground tabular-nums">{antal}</span>}
@@ -276,7 +290,7 @@ function Pasdel({
         {KATALOGMALTIDER.map((m) => (
           <Ruta
             key={m.nyckel}
-            nyckel={m.nyckel}
+            bild={katalogbild('pasar', m.nyckel)}
             namn={m.etikett}
             antal={antalText(perMaltid[m.nyckel], 'påse', 'påsar')}
             vald={filter.maltid === m.nyckel}
@@ -351,7 +365,7 @@ function Naringsdel({ del, sok, grupp, valjGrupp, kost }: { del: 'varor' | 'livs
     <>
       <Rutor rubrik={text.rubrik}>
         {rutor.map((r) => (
-          <Ruta key={r.nyckel} nyckel={r.nyckel} namn={r.etikett} antal={antalText(antal[r.nyckel], text.en, text.flera)} vald={giltig === r.nyckel} onValj={() => valjGrupp(r.nyckel)} />
+          <Ruta key={r.nyckel} bild={katalogbild(del, r.nyckel)} namn={r.etikett} antal={antalText(antal[r.nyckel], text.en, text.flera)} vald={giltig === r.nyckel} onValj={() => valjGrupp(r.nyckel)} />
         ))}
       </Rutor>
 

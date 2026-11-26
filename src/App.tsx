@@ -1,6 +1,5 @@
-import { lazy, type ReactNode } from 'react'
+import { lazy, Suspense, type ReactNode } from 'react'
 import { Link, Navigate, Route, Routes, useLocation } from 'react-router'
-import { AppSkal } from '@/components/app/AppSkal'
 import { Felgrans } from '@/components/Felgrans'
 import { Layout } from '@/components/Layout'
 import { RullaUpp } from '@/components/RullaUpp'
@@ -13,8 +12,10 @@ import { NyttLosenord } from '@/pages/NyttLosenord'
 import { SkapaKonto } from '@/pages/SkapaKonto'
 import { Start } from '@/pages/Start'
 
-// Sidorna för inloggade ligger i egna JS-filer och hämtas först när de behövs.
-// Startsidan, sidorna för konto och inloggning samt integritetssidan ligger kvar i huvudfilen.
+// Sidorna för inloggade ligger i egna JS-filer och hämtas först när de behövs, liksom ramen med sidomenyn
+// (höjdkurvorna och ikonerna är stora). Startsidan, sidorna för konto och inloggning samt integritetssidan ligger kvar
+// i huvudfilen.
+const AppSkal = lazy(() => import('@/components/app/AppSkal').then((m) => ({ default: m.AppSkal })))
 const Hem = lazy(() => import('@/pages/Hem').then((m) => ({ default: m.Hem })))
 const HittaVandring = lazy(() => import('@/pages/HittaVandring').then((m) => ({ default: m.HittaVandring })))
 const MinaTurer = lazy(() => import('@/pages/MinaTurer').then((m) => ({ default: m.MinaTurer })))
@@ -27,11 +28,13 @@ const TurEtapper = lazy(() => import('@/pages/tur/TurEtapper').then((m) => ({ de
 const TurPackning = lazy(() => import('@/pages/tur/TurPackning').then((m) => ({ default: m.TurPackning })))
 const TurInkopslista = lazy(() => import('@/pages/tur/TurInkopslista').then((m) => ({ default: m.TurInkopslista })))
 const TurAnteckningar = lazy(() => import('@/pages/tur/TurAnteckningar').then((m) => ({ default: m.TurAnteckningar })))
+const Packlistor = lazy(() => import('@/pages/Packlistor').then((m) => ({ default: m.Packlistor })))
 const KomIhag = lazy(() => import('@/pages/KomIhag').then((m) => ({ default: m.KomIhag })))
 const TurKommerSnart = lazy(() => import('@/pages/tur/TurKommerSnart').then((m) => ({ default: m.TurKommerSnart })))
 const Installningar = lazy(() => import('@/pages/Installningar').then((m) => ({ default: m.Installningar })))
 const Matplanering = lazy(() => import('@/pages/Matplanering').then((m) => ({ default: m.Matplanering })))
 const Matkatalog = lazy(() => import('@/pages/Matkatalog').then((m) => ({ default: m.Matkatalog })))
+const Torkapost = lazy(() => import('@/pages/Torkapost').then((m) => ({ default: m.Torkapost })))
 const Skafferi = lazy(() => import('@/pages/Skafferi').then((m) => ({ default: m.Skafferi })))
 const Recept = lazy(() => import('@/pages/Recept').then((m) => ({ default: m.Recept })))
 const Mattips = lazy(() => import('@/pages/Mattips').then((m) => ({ default: m.Mattips })))
@@ -42,7 +45,7 @@ const VanLank = lazy(() => import('@/pages/VanLank').then((m) => ({ default: m.V
 const PlaneradSida = lazy(() => import('@/pages/PlaneradSida').then((m) => ({ default: m.PlaneradSida })))
 
 /** Sidorna i menyn som inte är byggda än. De visar vad sidan blir, med "Kommer snart". */
-const PLANERADE = ['packlistor', 'dagbok', 'statistik'] as const
+const PLANERADE = ['dagbok', 'statistik'] as const
 const Utrustningskatalog = lazy(() => import('@/pages/Utrustningskatalog').then((m) => ({ default: m.Utrustningskatalog })))
 
 function Laddar({ text = 'Hämtar …' }: { text?: string }) {
@@ -70,6 +73,9 @@ export default function App() {
       <RullaUpp />
       {/* Fångar fel på sidorna utan sidomeny. De inloggade sidorna har en egen felgräns inne i ramen. */}
       <Felgrans aterstall={pathname}>
+      {/* Medan en sidas fil hämtas visas en tom yta, utan text som blinkar förbi. Inne i ramen har sidorna en egen
+          laddning med platshållare. */}
+      <Suspense fallback={<div aria-busy className="min-h-dvh" />}>
       <Routes>
         <Route path="/" element={<Start />} />
         <Route path="/logga-in" element={<LoggaIn />} />
@@ -95,6 +101,7 @@ export default function App() {
             <Route path="*" element={<TurOversikt />} />
           </Route>
           <Route path="/forrad" element={<Forrad />} />
+          <Route path="/packlistor" element={<Packlistor />} />
           <Route path="/kom-ihag" element={<KomIhag />} />
           <Route path="/hem" element={<Hem />} />
           <Route path="/hitta-vandring" element={<HittaVandring />} />
@@ -103,6 +110,7 @@ export default function App() {
           <Route path="/utrustning" element={<Utrustningskatalog />} />
           <Route path="/matplanering" element={<Matplanering />} />
           <Route path="/matplanering/katalog" element={<Matkatalog />} />
+          <Route path="/matplanering/katalog/torka-sjalv/:slug" element={<Torkapost />} />
           <Route path="/matplanering/skafferi" element={<Skafferi />} />
           <Route path="/matplanering/recept" element={<Recept />} />
           <Route path="/matplanering/recept/:id" element={<Receptsida />} />
@@ -124,6 +132,7 @@ export default function App() {
           }
         />
       </Routes>
+      </Suspense>
       </Felgrans>
     </Layout>
   )

@@ -33,7 +33,7 @@ export function NastaTurMat({ tur, status }: { tur: DinTur; status: Matstatus | 
       ton="stark"
       bild={<Matfoto turId={tur.id} />}
       // Utan sken: bilden ligger redan till höger, och skenet skulle synas som en kant mot bågen och toningen.
-      bakgrund={<Hojdkurvor variant="tur" sken={false} className="-z-10" />}
+      bakgrund={<Hojdkurvor variant="tur" sken={false} />}
       textKlass="gap-4 px-6 pt-1 pb-6 sm:px-8 sm:pb-8 @2xl:p-8">
       <p className="text-sm text-yta-stark-muted lg:text-[0.9375rem]">Nästa tur</p>
       <h2 id={id} className="text-[1.875rem] leading-tight wrap-anywhere lg:text-[2.75rem]">

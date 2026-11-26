@@ -44,11 +44,11 @@ export const SIDOR: Record<Sida, Menysida> = {
   },
   packlistor: {
     sida: 'packlistor',
-    namn: 'Packlistor och mallar',
+    namn: 'Packlistor',
     till: '/packlistor',
-    byggd: false,
-    beskrivning: 'Färdiga listor att starta från',
-    blir: 'Färdiga packlistor att starta en tur från, och era egna mallar från tidigare turer.',
+    byggd: true,
+    beskrivning: 'Dina mallar från tidigare turer',
+    blir: '',
   },
   forrad: { sida: 'forrad', namn: 'Mitt förråd', till: '/forrad', byggd: true, beskrivning: 'Dina egna saker', blir: '' },
   utrustning: {
@@ -128,10 +128,10 @@ export const GRUPPSTART: Partial<Record<Gruppnyckel, Sida>> = { planera: 'turer'
 
 export const MENYGRUPPER: readonly Menygrupp[] = [
   { nyckel: 'planera', rubrik: 'Planera', sidor: ['turer', 'matplanering'] },
-  { nyckel: 'utrustning', rubrik: 'Utrustning', sidor: ['forrad', 'utrustning'] },
+  { nyckel: 'utrustning', rubrik: 'Utrustning', sidor: ['forrad', 'packlistor', 'utrustning'] },
   { nyckel: 'vandrare', rubrik: 'Vandrare', sidor: ['vanner'] },
   { nyckel: 'minnen', rubrik: 'Minnen', sidor: ['kom-ihag'] },
-  { nyckel: 'snart', rubrik: 'Kommer snart', sidor: ['packlistor', 'dagbok', 'statistik'] },
+  { nyckel: 'snart', rubrik: 'Kommer snart', sidor: ['dagbok', 'statistik'] },
 ]
 
 /** Gruppen som en sida ligger i. null för Hem, Profil och Inställningar. */

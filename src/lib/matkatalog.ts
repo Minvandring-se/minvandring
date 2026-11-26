@@ -158,13 +158,23 @@ export function pristext(p: Pick<Matprodukt, 'pris_sek_ca'>): string | null {
 
 // ─── Delarna: påsar, märkesvaror och livsmedel ───────────────────────────────
 
-export type Katalogdel = 'pasar' | 'varor' | 'livsmedel'
+export type Katalogdel = 'pasar' | 'varor' | 'livsmedel' | 'torka'
 
 export const KATALOGDELAR: readonly { nyckel: Katalogdel; namn: string }[] = [
   { nyckel: 'pasar', namn: 'Påsar' },
   { nyckel: 'varor', namn: 'Märkesvaror' },
   { nyckel: 'livsmedel', namn: 'Livsmedel' },
+  { nyckel: 'torka', namn: 'Torka själv' },
 ]
+
+/**
+ * Bilden till en ruta i katalogen, utan storlek och filändelse: public/katalog/<namn>-480.webp och -960.webp.
+ * Görs med npm run katalogbilder. Påsarnas och märkesvarornas frukost och mellanmål har olika bilder.
+ */
+export function katalogbild(del: Exclude<Katalogdel, 'torka'>, nyckel: string): string {
+  const prefix = { pasar: 'maltid', varor: 'varor', livsmedel: 'livsmedel' }[del]
+  return `${prefix}-${nyckel.replaceAll('_', '-')}`
+}
 
 /** Delen som står i adressen (?del=varor). Påsar när den saknas eller är okänd. */
 export function delFranAdress(p: URLSearchParams): Katalogdel {
@@ -172,10 +182,13 @@ export function delFranAdress(p: URLSearchParams): Katalogdel {
   return KATALOGDELAR.some((d) => d.nyckel === del) ? (del as Katalogdel) : 'pasar'
 }
 
-/** Byter del i adressen. Måltiden, gruppen och den öppna påsen hör till delen och tas bort. Kostfiltret följer med. */
+/**
+ * Byter del i adressen. Måltiden, gruppen, den öppna påsen och fliken och kategorin i Torka själv hör till delen och tas
+ * bort. Kostfiltret följer med.
+ */
 export function bytDel(del: Katalogdel, forut: URLSearchParams): URLSearchParams {
   const p = new URLSearchParams(forut)
-  for (const n of ['del', 'maltid', 'grupp', 'pase']) p.delete(n)
+  for (const n of ['del', 'maltid', 'grupp', 'pase', 'flik', 'kategori']) p.delete(n)
   if (del !== 'pasar') p.set('del', del)
   return p
 }

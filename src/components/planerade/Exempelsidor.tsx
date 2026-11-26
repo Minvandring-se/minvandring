@@ -1,31 +1,9 @@
-import { ClipboardList, ImageIcon } from 'lucide-react'
-import { DAGBOK, MALLAR } from '@/lib/exempeldata'
+import { ImageIcon } from 'lucide-react'
+import { DAGBOK } from '@/lib/exempeldata'
 
 // Exemplen på sidorna i menyn som inte är byggda än. De visas inerta under "Kommer snart" (PlaneradSida).
 
 const kort = 'rounded-lg border border-border bg-card'
-
-/** Packlistor och mallar: några mallar att starta en tur från. */
-export function Mallexempel() {
-  return (
-    <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-      {MALLAR.map((m) => (
-        <li key={m.namn} className={`${kort} flex items-start gap-3.5 p-4`}>
-          <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-            <ClipboardList className="size-5" aria-hidden />
-          </span>
-          <div className="min-w-0 flex-1">
-            <p className="font-heading text-lg font-semibold">{m.namn}</p>
-            <p className="text-sm text-muted-foreground">{m.fran}</p>
-            <p className="mt-2 text-sm">
-              {m.saker} saker, basvikt {m.basvikt}
-            </p>
-          </div>
-        </li>
-      ))}
-    </ul>
-  )
-}
 
 /** Dagbok: en tidslinje per tur. */
 export function Dagboksexempel() {
