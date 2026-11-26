@@ -4526,6 +4526,9 @@ describe('egna rätter hemma och favoritrecept', () => {
     await forvantaFel(som(SIV, (tx) => tx.query('update public.skafferiratter set recept_id = $1 where id = $2', [tagesRecept, sivsRatt])))
     // En stjärna ändras inte, den läggs till eller tas bort.
     await forvantaFel(som(SIV, (tx) => tx.query(`update public.receptfavoriter set receptkatalog_id = 'havregryta'`)))
+    // Åt andra hållet: Tage kan inte koppla en rätt eller en stjärna till Sivs recept.
+    await forvantaFel(som(TAGE, (tx) => tx.query(`insert into public.skafferiratter (namn, recept_id) values ('Lånad', $1)`, [sivsRecept])))
+    await forvantaFel(som(TAGE, (tx) => tx.query('insert into public.receptfavoriter (recept_id) values ($1)', [sivsRecept])))
   })
 
   it('går inte att nå utan inloggning, och har bara de avsedda rättigheterna', async () => {
@@ -4569,6 +4572,18 @@ describe('egna rätter hemma och favoritrecept', () => {
     const r = await db.query<{ recept_id: string | null; user_id: string }>('select recept_id, user_id from public.skafferiratter where id = $1', [sivsRatt])
     expect(r.rows).toEqual([{ recept_id: null, user_id: SIV }])
     expect((await db.query('select 1 from public.receptfavoriter where user_id = $1 and recept_id is not null', [SIV])).rows).toHaveLength(0)
+  })
+
+  it('när ett av MinVandrings recept tas bort finns rätten kvar utan koppling, och stjärnan försvinner', async () => {
+    await db.query(
+      "insert into public.receptkatalog (id, namn, maltid, portioner, kok_kravs, torkning_hemma, beskrivning, mangder, inspirerat_av, inspirerat_av_url, status) values ('skafferitest', 'Test', 'middag', 1, true, false, 'Text', 'egna', 'Någon', 'https://x.se', 'otestat')",
+    )
+    const ratt = await som(SIV, (tx) => tx.query<{ id: string }>(`insert into public.skafferiratter (namn, receptkatalog_id) values ('Från katalogen', 'skafferitest') returning id`))
+    await som(SIV, (tx) => tx.query(`insert into public.receptfavoriter (receptkatalog_id) values ('skafferitest')`))
+    await db.query(`delete from public.receptkatalog where id = 'skafferitest'`)
+    const r = await db.query('select receptkatalog_id from public.skafferiratter where id = $1', [ratt.rows[0].id])
+    expect(r.rows).toEqual([{ receptkatalog_id: null }])
+    expect((await db.query(`select 1 from public.receptfavoriter where receptkatalog_id = 'skafferitest'`)).rows).toHaveLength(0)
   })
 
   it('försvinner med kontot', async () => {

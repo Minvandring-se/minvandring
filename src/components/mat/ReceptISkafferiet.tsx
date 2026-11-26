@@ -12,7 +12,7 @@ import { cn } from '@/lib/utils'
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
 /**
- * Receptet i ens skafferi: en stjärna som gör det till en favorit, och Lägg som hemma för en rätt man har lagat efter
+ * Receptet i ens skafferi: en stjärna som gör det till en favorit, och Lägg i skafferiet för en rätt man har lagat efter
  * receptet. Båda är personliga och syns bara i ens eget skafferi.
  */
 export function ReceptISkafferiet({ koppling, namn }: { koppling: Receptkoppling; namn: string }) {
@@ -37,7 +37,7 @@ export function ReceptISkafferiet({ koppling, namn }: { koppling: Receptkoppling
         </Button>
         <Button variant="outline" disabled={!redo} onClick={() => setOppen(true)}>
           <PackagePlus className="size-4" aria-hidden />
-          Lägg som hemma
+          Lägg i skafferiet
         </Button>
       </div>
       {fel && (
@@ -45,9 +45,9 @@ export function ReceptISkafferiet({ koppling, namn }: { koppling: Receptkoppling
           Det gick inte att spara. Kontrollera uppkopplingen och försök igen.
         </p>
       )}
-      {skafferi === 'fel' && <p className="text-sm text-destructive">Det gick inte att hämta ditt skafferi.</p>}
+      {skafferi === 'fel' && <p className="text-sm text-destructive">Det gick inte att hämta ditt skafferi. Ladda om sidan och försök igen.</p>}
       {oppen && redo && (
-        <Panel mitten etikett={`Lägg ${namn} som hemma`} onStang={() => setOppen(false)} rubrik={<h2 className="text-2xl">Lägg som hemma</h2>}>
+        <Panel mitten etikett={`Lägg ${namn} i skafferiet`} onStang={() => setOppen(false)} rubrik={<h2 className="text-2xl">Lägg i skafferiet</h2>}>
           <div className="space-y-4">
             <p className="text-sm text-muted-foreground">
               Har du lagat rätten och har den hemma, till exempel torkad i frysen? Den syns i{' '}

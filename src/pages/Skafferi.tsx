@@ -386,7 +386,7 @@ function Del({ rubrik, visaRubrik, children }: { rubrik: string; visaRubrik: boo
   )
 }
 
-/** Ett recept i en lista: namnet öppnar receptet, och till höger Lägg som hemma och stjärnan. */
+/** Ett recept i en lista: namnet öppnar receptet, och till höger Lägg i skafferiet och stjärnan. */
 function Receptlistrad({ recept, stjarna, onLaggTill }: { recept: Receptrad; stjarna: ReactNode; onLaggTill: (l: LaggTill) => void }) {
   return (
     <li className="flex items-center gap-1 pr-1">
@@ -396,8 +396,8 @@ function Receptlistrad({ recept, stjarna, onLaggTill }: { recept: Receptrad; stj
       </Link>
       <button
         type="button"
-        aria-label={`Lägg ${recept.namn} som hemma`}
-        title="Lägg som hemma"
+        aria-label={`Lägg ${recept.namn} i skafferiet`}
+        title="Lägg i skafferiet"
         onClick={() => onLaggTill({ typ: 'ratt', forval: { namn: recept.namn, nyckel: kopplingsnyckel(radKoppling(recept.koppling)) } })}
         className={cn('flex size-11 shrink-0 items-center justify-center rounded-full text-muted-foreground hover:bg-muted hover:text-foreground', fokus)}
       >
@@ -552,7 +552,7 @@ function Hemmarad({
   const [ar, setAr] = useState(sparat.ar)
   const [datumfel, setDatumfel] = useState<string | null>(null)
   const datum = datumrad(bastFore, idag)
-  const ord = antalRubrik === 'Antal' ? 'antalet' : 'portionerna'
+  const ord = antalRubrik === 'Antal' ? 'antal' : 'portioner'
 
   function andraDatum(m: string, a: string) {
     setManad(m)
@@ -594,14 +594,14 @@ function Hemmarad({
           <div className="space-y-1">
             <p className="text-sm font-medium">{antalRubrik}</p>
             <div role="group" aria-label={`${antalRubrik} ${etikett}`} className="flex items-center gap-1">
-              <Button variant="outline" size="ikon" aria-label={`Minska ${ord} ${etikett}`} disabled={antal <= 1} onClick={() => gor(() => onAntal(antal - 1))}>
+              <Button variant="outline" size="ikon" aria-label={`Minska ${ord} för ${etikett}`} disabled={antal <= 1} onClick={() => gor(() => onAntal(antal - 1))}>
                 <Minus className="size-4" aria-hidden />
               </Button>
               <span aria-live="polite" className="min-w-10 text-center font-semibold tabular-nums">
                 {antal}
                 <span className="sr-only"> hemma</span>
               </span>
-              <Button variant="outline" size="ikon" aria-label={`Öka ${ord} ${etikett}`} disabled={antal >= MAX_ANTAL} onClick={() => gor(() => onAntal(antal + 1))}>
+              <Button variant="outline" size="ikon" aria-label={`Öka ${ord} för ${etikett}`} disabled={antal >= MAX_ANTAL} onClick={() => gor(() => onAntal(antal + 1))}>
                 <Plus className="size-4" aria-hidden />
               </Button>
             </div>

@@ -113,7 +113,7 @@ export function LaggRattHemma({
         )}
         {befintlig && !namnfel && (
           <p id={`${id}-finns`} className="text-sm text-muted-foreground">
-            Du har {portionertext(befintlig.portioner)} hemma. Portionerna läggs till och det tidigaste bäst före gäller.
+            Du har {portionertext(befintlig.portioner)} hemma. Det du lägger till räknas ihop med det, och det tidigaste bäst före gäller.
           </p>
         )}
       </div>
@@ -121,13 +121,13 @@ export function LaggRattHemma({
       <div className="space-y-1">
         <p className="text-sm font-medium">Portioner</p>
         <div role="group" aria-label="Portioner att lägga till" className="flex items-center gap-1">
-          <Button variant="outline" size="ikon" aria-label="Färre portioner" disabled={portioner <= 1} onClick={() => setPortioner((p) => Math.max(1, p - 1))}>
+          <Button variant="outline" size="ikon" aria-label="Minska portioner" disabled={portioner <= 1} onClick={() => setPortioner((p) => Math.max(1, p - 1))}>
             <Minus className="size-4" aria-hidden />
           </Button>
           <span aria-live="polite" className="min-w-10 text-center font-semibold tabular-nums">
             {portioner}
           </span>
-          <Button variant="outline" size="ikon" autoFocus={!!forval} aria-label="Fler portioner" disabled={portioner >= MAX_ANTAL} onClick={() => setPortioner((p) => Math.min(MAX_ANTAL, p + 1))}>
+          <Button variant="outline" size="ikon" autoFocus={!!forval} aria-label="Öka portioner" disabled={portioner >= MAX_ANTAL} onClick={() => setPortioner((p) => Math.min(MAX_ANTAL, p + 1))}>
             <Plus className="size-4" aria-hidden />
           </Button>
         </div>

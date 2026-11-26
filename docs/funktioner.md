@@ -66,7 +66,7 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Packlistor 
 | Förslag med näringsvärden från Livsmedelsverket när man skriver ingredienser i egna rätter och recept | Finns |
 | Kostinformation för egna rätter | Senare |
 | Skafferi: påsar hemma med antal och bäst före, och favoriter | Finns (`/matplanering/skafferi`), personligt. Hemma, Favoriter och Recept som tre delar, sortering och kompakta rader som fälls ut |
-| Skafferi: egna rätter hemma och favoritrecept | Finns. En egen rätt hemma har portioner och bäst före och kan kopplas till ett recept. Läggs till i skafferiet eller med Lägg som hemma på ett recept, och väljs under Egna rätter i Välj rätt: den läggs i turen utan ingredienser och bärs av den som väljer den. Stjärna på egna recept och MinVandrings recept |
+| Skafferi: egna rätter hemma och favoritrecept | Finns. En egen rätt hemma har portioner och bäst före och kan kopplas till ett recept. Läggs till i skafferiet eller med Lägg i skafferiet på ett recept, och väljs under Egna rätter i Välj rätt: den läggs i turen utan ingredienser och bärs av den som väljer den. Stjärna på egna recept och MinVandrings recept |
 | Favoriter och det man har hemma först i Välj rätt, och "Köp 2 (du har 1 hemma)" i inköpslistan | Finns |
 | Egna recept på kontot, att lägga in i vilken tur som helst (kopieras till turen) | Finns (`/matplanering/recept`), personligt |
 | Spara en egen rätt i en tur som recept | Finns |
