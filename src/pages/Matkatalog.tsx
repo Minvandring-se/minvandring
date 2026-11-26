@@ -194,7 +194,7 @@ function Sokruta({
           </h1>
           <p className="min-h-6 px-1 text-yta-stark-muted">{antal && `${uppraknade([`${tal(antal.pasar)} påsar`, `${tal(antal.varor)} märkesvaror`, `${tal(antal.livsmedel)} livsmedel`])}.`}</p>
         </div>
-        <SokFalt etikett="Sök" doldEtikett ton="stark" varde={sok} onAndra={onSok} onKlar={onKlar} placeholder="Till exempel viltgryta eller gröt" className="max-w-2xl" />
+        <SokFalt etikett="Sök" doldEtikett varde={sok} onAndra={onSok} onKlar={onKlar} placeholder="Till exempel viltgryta eller gröt" className="max-w-2xl" />
         <div role="group" aria-label="Snabbval" className="flex flex-wrap gap-2">
           {snabbval.map((s) => (
             <button

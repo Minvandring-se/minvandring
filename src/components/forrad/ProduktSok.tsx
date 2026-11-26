@@ -1,12 +1,12 @@
-import { ChevronDown, Plus, Search } from 'lucide-react'
-import { useEffect, useId, useRef, useState } from 'react'
+import { ChevronDown, Plus } from 'lucide-react'
+import { useEffect, useId, useState } from 'react'
 import { Laddfel } from '@/components/app/Laddfel'
 import { Granskad } from '@/components/forrad/Granskad'
 import { KokSteg } from '@/components/forrad/KokSteg'
 import { StorlekSteg } from '@/components/forrad/StorlekSteg'
 import { granskning } from '@/lib/granskning'
 import { arKlader, viktstorlekText } from '@/lib/produktegenskaper'
-import { Input } from '@/components/ui/input'
+import { SokFalt } from '@/components/ui/sokfalt'
 import { Select } from '@/components/ui/select'
 import { KATEGORIER, arKategori, arUnderkategori, formateraVikt, kategoriFor, underkategoriFor, underkategorierFor, type KategoriNyckel, type UnderkategoriNyckel } from '@/lib/forrad'
 import {
@@ -59,7 +59,6 @@ const radKlass =
  */
 export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTillagd, onEgen }: Props) {
   const id = useId()
-  const falt = useRef<HTMLInputElement>(null)
   const [text, setText] = useState('')
   const [kategori, setKategori] = useState<KategoriNyckel | ''>(startKategori ?? '')
   const [underkategori, setUnderkategori] = useState<UnderkategoriNyckel | ''>(startKategori && startUnderkategori ? startUnderkategori : '')
@@ -75,7 +74,6 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
   // Ett klädesplagg som ska läggas till. Först väljer man sin storlek.
   const [storlekFor, setStorlekFor] = useState<Produkt | null>(null)
 
-  useEffect(() => falt.current?.focus(), [])
 
   // Märkena hämtas en gång per kategori och underkategori.
   const valt = `${kategori}|${underkategori}`
@@ -253,30 +251,7 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
       </div>
 
       <div className="min-w-0 space-y-4">
-      <div className="space-y-1">
-        <label htmlFor={`${id}-sok`} className="block text-sm font-medium">
-          Sök i katalogen på märke, modell eller version
-        </label>
-        <div className="relative">
-          <Search className="pointer-events-none absolute top-1/2 left-3 size-5 -translate-y-1/2 text-muted-foreground" aria-hidden />
-          <Input
-            id={`${id}-sok`}
-            ref={falt}
-            data-autofokus
-            type="search"
-            autoComplete="off"
-            enterKeyHint="search"
-            maxLength={80}
-            className="pl-10"
-            value={text}
-            onChange={(e) => setText(e.target.value)}
-            aria-describedby={`${id}-sokhjalp`}
-          />
-        </div>
-        <p id={`${id}-sokhjalp`} className="text-sm text-muted-foreground">
-          Välj en träff, så fylls vikt och uppgifter i åt dig.
-        </p>
-      </div>
+      <SokFalt etikett="Sök i katalogen på märke, modell eller version" varde={text} onAndra={setText} autofokus hjalp="Välj en träff, så fylls vikt och uppgifter i åt dig." />
 
       <div className="space-y-2">
         <div aria-live="polite" className="text-sm text-muted-foreground">
