@@ -52,8 +52,9 @@ create trigger vanforfragningar_konto_raderas before delete on auth.users
   for each row execute function public.vanforfragningar_konto_raderas();
 
 -- ─── Spärrar mellan två personer ─────────────────────────────────────────────
--- Från den som frågar till mottagaren: när mottagaren nekade (inga nya notiser på 30 dagar) och när mottagaren
--- senast fick en notis från den som frågar (högst en per dygn).
+-- Från den som frågar till mottagaren: när mottagaren nekade eller tog bort den som frågar som vän (inga nya notiser
+-- och ingen vänskap via vänlänken på 30 dagar), och när mottagaren senast fick en notis från den som frågar (högst en
+-- per dygn).
 create table public.vanparsparr (
   fran_user_id uuid not null references auth.users (id) on delete cascade,
   till_user_id uuid not null references auth.users (id) on delete cascade,
@@ -248,7 +249,9 @@ begin
   if exists (select 1 from public.vanforfragningar f where f.fran_user_id = anvandare and f.till_epost = adress) then
     return;
   end if;
-  select u.id into mottagare from auth.users u where lower(u.email) = adress and u.id <> anvandare limit 1;
+  -- Bara en bekräftad adress räknas. En obekräftad behandlas som en adress utan konto.
+  select u.id into mottagare from auth.users u
+   where lower(u.email) = adress and u.email_confirmed_at is not null and u.id <> anvandare limit 1;
   if mottagare is not null then
     perform public.las_vanpar(anvandare, mottagare);
   end if;
@@ -372,7 +375,8 @@ end;
 $$;
 
 -- Ägaren till en giltig länk, eller null. En felaktig eller gammal kod räknas, och efter 10 på en timme stoppas det.
--- Null i stället för ett fel, så att försöket sparas.
+-- Null i stället för ett fel, så att försöket sparas. Har ägaren nekat eller tagit bort den som öppnar länken inom
+-- 30 dagar fungerar länken inte för hen, precis som en felaktig länk, så att det inte avslöjar något.
 create function public.vanlank_agare(kod text) returns uuid
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -386,7 +390,12 @@ begin
   if (select count(*) from public.vanforsok f where f.user_id = anvandare and f.typ = 'lank' and f.tid > now() - interval '1 hour') >= 10 then
     raise exception 'För många försök. Vänta en stund och försök igen.';
   end if;
-  select l.user_id into agare from public.vanlankar l where l.kod = lower(btrim(vanlank_agare.kod)) and l.giltig_till > now();
+  select l.user_id into agare from public.vanlankar l
+   where l.kod = lower(btrim(vanlank_agare.kod)) and l.giltig_till > now()
+     and not exists (
+       select 1 from public.vanparsparr s
+        where s.fran_user_id = anvandare and s.till_user_id = l.user_id and s.nekad > now() - interval '30 days'
+     );
   if agare is null then
     insert into public.vanforsok (user_id, typ) values (anvandare, 'lank');
   end if;
@@ -436,8 +445,9 @@ end;
 $$;
 
 -- ─── Ta bort en vän ──────────────────────────────────────────────────────────
--- Tar bort vänskapen och ens egna notiser om den. Gör ingenting om ni inte är vänner. Förfrågningar och spärrar
--- rörs inte, och den andra får ingen notis.
+-- Tar bort vänskapen och ens egna notiser om den. Gör ingenting om ni inte är vänner. Den borttagna kan inte bli vän
+-- igen via ens vänlänk eller ge en ny notis på 30 dagar (en spärr som efter ett nej). Förfrågningar rörs inte, och den
+-- andra får ingen notis.
 create function public.ta_bort_van(person uuid) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -448,6 +458,8 @@ begin
   if not found then
     return;
   end if;
+  insert into public.vanparsparr (fran_user_id, till_user_id, nekad) values (person, anvandare, now())
+  on conflict (fran_user_id, till_user_id) do update set nekad = now();
   delete from public.notiser n where n.user_id = anvandare and n.fran_user_id = person and n.typ in ('van_godkand', 'van_via_lank');
 end;
 $$;

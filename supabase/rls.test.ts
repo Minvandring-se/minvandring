@@ -65,7 +65,8 @@ async function nyDatabas(migreringar: (fil: string) => boolean = () => true): Pr
     create role authenticated nologin;
     create schema extensions;
     create schema auth;
-    create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}');
+    -- email_confirmed_at som i Supabase: tom tills adressen är bekräftad. Testanvändarna är bekräftade om inget annat sägs.
+    create table auth.users (id uuid primary key, email text, raw_user_meta_data jsonb default '{}', email_confirmed_at timestamptz default now());
     create function auth.uid() returns uuid language sql stable as
       $$ select nullif(current_setting('request.jwt.claim.sub', true), '')::uuid $$;
     grant usage on schema auth to authenticated, anon;
@@ -4503,6 +4504,7 @@ describe('vänner', () => {
   const KIM = '00000000-0000-0000-0000-0000000002ab'
   const LEO = '00000000-0000-0000-0000-0000000002ac'
   const MIA = '00000000-0000-0000-0000-0000000002ad'
+  const NOR = '00000000-0000-0000-0000-0000000002ae'
   const NAMN: Record<string, string> = {
     [ANNA]: 'Anna', [BO]: 'Bo', [CIA]: 'Cia', [DAN]: 'Dan', [EVA]: 'Eva', [FIA]: 'Fia', [GUS]: 'Gus', [HUGO]: 'Hugo', [IDA]: 'Ida', [JON]: 'Jon', [KIM]: 'Kim', [LEO]: 'Leo', [MIA]: 'Mia',
   }
@@ -4594,6 +4596,20 @@ describe('vänner', () => {
     expect(await skickade(ANNA)).toEqual([epost(ANNA), 'bo@vanner.s', epost(BO), 'ingen@vanner.se'].sort())
     expect(await vannotiser(ANNA)).toEqual([])
     await forvantaFel(skicka(ANNA, 'inte en adress'))
+  })
+
+  it('en obekräftad adress behandlas som en adress utan konto', async () => {
+    await db.query(`insert into auth.users (id, email, email_confirmed_at) values ($1, 'obekraftad@vanner.se', null)`, [NOR])
+    const notiser = await allaNotisrader(NOR)
+    await skicka(ANNA, 'obekraftad@vanner.se')
+    expect(await allaNotisrader(NOR)).toBe(notiser)
+    expect(await inkommande(NOR)).toEqual([])
+    const rader = await skickadeRader(ANNA)
+    const obekraftad = rader.find((x) => x.visas === 'obekraftad@vanner.se')!
+    const utanKonto = rader.find((x) => x.visas === 'ingen@vanner.se')!
+    expect(Object.keys(obekraftad)).toEqual(Object.keys(utanKonto))
+    const intern = await db.query<{ till_user_id: string | null }>(`select till_user_id from public.vanforfragningar where till_epost = 'obekraftad@vanner.se'`)
+    expect(intern.rows).toEqual([{ till_user_id: null }])
   })
 
   it('den som skickar får bara adressen, tiden och id:t', async () => {
@@ -4817,6 +4833,26 @@ describe('vänner', () => {
     expect(await bliVan(FIA, gammal.kod)).toBeNull()
     expect(await antalPar(CIA, FIA)).toBe(0)
     expect(await lankInfo(FIA, ny.kod)).toMatchObject({ namn: 'Cia' })
+  })
+
+  it('den som har tagits bort som vän kan inte bli vän igen via länken på 30 dagar, och ser samma sak som för en felaktig länk', async () => {
+    expect(await antalPar(CIA, EVA)).toBe(1)
+    const { kod } = await lank(CIA)
+    await taBort(CIA, EVA)
+    expect(await antalPar(CIA, EVA)).toBe(0)
+    const forsok = async () => (await db.query(`select 1 from public.vanforsok where user_id = $1 and typ = 'lank'`, [EVA])).rows.length
+    const fore = await forsok()
+    expect(await lankInfo(EVA, kod)).toBeNull()
+    expect(await bliVan(EVA, kod)).toBeNull()
+    expect(await forsok()).toBe(fore + 2)
+    expect(await antalPar(CIA, EVA)).toBe(0)
+    // En förfrågan från Eva ger inte heller någon notis.
+    await skicka(EVA, epost(CIA))
+    expect((await vannotiser(CIA)).filter((n) => n.typ === 'vanforfragan' && n.fran_user_id === EVA)).toEqual([])
+    // Länken fungerar fortfarande för andra, och efter 30 dagar för Eva igen.
+    expect(await lankInfo(GUS, kod)).toMatchObject({ namn: 'Cia' })
+    await db.query(`update public.vanparsparr set nekad = nekad - interval '31 days' where fran_user_id = $1 and till_user_id = $2`, [EVA, CIA])
+    expect(await bliVan(EVA, kod)).toBe(CIA)
   })
 
   it('ingen annan ser ens vänner, förfrågningar eller vänlänk', async () => {
