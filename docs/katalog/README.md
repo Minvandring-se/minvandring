@@ -28,7 +28,7 @@ Filerna här ligger medvetet utanför `supabase/katalog/`, så att `npm run kata
 | Vattenrening | ✓ 2026-11-23 | ✓ 2026-11-23 | ✓ 2026-11-23 | ✓ 2026-11-23 | ✓ 2026-11-23 |
 | Vandringsstavar | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 |
 | Pannlampor | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 |
-| Kläder (fleece från Patagonia och Rab 2026-11-26) | ✓ 2026-11-25 (dunjackor, regnkläder), 2026-11-26 (fleece: Fjällräven, Tierra, Houdini) | – | – | – | – |
+| Kläder (fleece från Patagonia och Rab 2026-11-26) | ✓ 2026-11-25 (dunjackor, regnkläder), 2026-11-26 (fleece: Fjällräven, Tierra, Houdini; underställ: Fjällräven, Tierra, Houdini, Woolpower) | – | – | – | – |
 
 Kök har också gåtts igenom direkt hos tillverkarna: gaspatroner från Primus, MSR och Jetboil (2026-11-24) och Trangias kokkärl, stekpannor, kokset och kittlar från trangia.se (2026-11-25). Outnorths kastruller, kokset och stekpannor från andra märken gicks igenom samma dag.
 

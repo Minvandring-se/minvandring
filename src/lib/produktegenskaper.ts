@@ -312,6 +312,8 @@ export const MEMBRANLAGER = ['2', '2,5', '3'] as const
 /** Syntet är vadderade mellanlager som Polartec Alpha och PrimaLoft Active. Fleece räknas för sig. */
 export const MELLANLAGERMATERIAL = ['fleece', 'ull', 'syntet', 'blandat'] as const
 export const MELLANLAGERPLAGG = ['troja', 'jacka', 'vast'] as const
+export const UNDERSTALLSMATERIAL = ['ull', 'syntet', 'blandat'] as const
+export const UNDERSTALLSPLAGG = ['langarmad', 'kortarmad', 'byxor'] as const
 
 /**
  * Gemensamt för kläder. Tillverkarna anger oftast en vikt för en storlek, och den står i viktstorlek, till exempel
@@ -356,8 +358,18 @@ const MELLANLAGER: Egenskap[] = [
   { nyckel: 'tyg', etikett: 'Tyg', sort: 'text' },
 ]
 
+/** Underställ: tröjor och byxor närmast kroppen. Tygvikten (till exempel 150, 200 eller 250 g/m² för merino) säger hur varmt det är. */
+const UNDERSTALL: Egenskap[] = [
+  ...PLAGG,
+  { nyckel: 'material', etikett: 'Material', sort: 'val', val: UNDERSTALLSMATERIAL, forJamforelse: true, viktig: true },
+  { nyckel: 'plagg', etikett: 'Plagg', sort: 'val', val: UNDERSTALLSPLAGG, forJamforelse: true, viktig: true },
+  { nyckel: 'tygvikt_gm2', etikett: 'Tygvikt', sort: 'heltal', min: 50, max: 500, enhet: 'g/m²', forJamforelse: true },
+  // Fri text, till exempel "Halv dragkedja" eller "Rund hals".
+  { nyckel: 'tyg', etikett: 'Tyg', sort: 'text' },
+]
+
 /** Underkategorier med kläder, där vikten gäller en viss storlek. */
-const KLADER: readonly string[] = ['mellanlager', 'isolering', 'regnklader']
+const KLADER: readonly string[] = ['understall', 'mellanlager', 'isolering', 'regnklader']
 
 /** Är underkategorin kläder, där vikten gäller en viss storlek och kön? */
 export function arKlader(underkategori: string | null | undefined): boolean {
@@ -466,6 +478,7 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   rening: VATTENRENING,
   stavar: STAVAR,
   pannlampa: PANNLAMPA,
+  understall: UNDERSTALL,
   mellanlager: MELLANLAGER,
   isolering: ISOLERING,
   regnklader: REGNKLADER,
@@ -579,6 +592,8 @@ export function valideraEgenskaper(underkategori: string, egenskaper: Record<str
 /** Hur värdena i ett val visas. Det som inte står här visas med stor första bokstav. */
 const VALNAMN: Record<string, string> = {
   troja: 'Tröja',
+  langarmad: 'Långärmad',
+  kortarmad: 'Kortärmad',
   vast: 'Väst',
   geodetiskt: 'Geodetiskt',
   stavtalt: 'Stavtält',
