@@ -6,6 +6,7 @@ import { Laddfel } from '@/components/app/Laddfel'
 import { SidRubrik } from '@/components/app/SidRubrik'
 import { Button } from '@/components/ui/button'
 import { Sektion } from '@/components/ui/sektion'
+import { Grupper } from '@/components/vanner/Grupper'
 import { LaggTillVan } from '@/components/vanner/LaggTillVan'
 import { Personrad } from '@/components/vanner/Personrad'
 import { useProfilbilder } from '@/hooks/useProfilbilder'
@@ -111,6 +112,10 @@ function Innehall({ listor, onAndrad }: { listor: Vanlistor; onAndrad: () => voi
             ))
           )}
         </Del>
+
+        <div className="lg:col-start-1">
+          <Grupper vanner={vanner} />
+        </div>
 
         {vandratIhop.length > 0 && (
           <Del rubrik="Ni har vandrat ihop" text="Personer från era turer som inte är dina vänner än." className="lg:col-start-2">

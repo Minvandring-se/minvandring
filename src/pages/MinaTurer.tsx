@@ -16,10 +16,12 @@ import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { VanVal } from '@/components/vanner/VanVal'
 import { useSidtitel } from '@/hooks/useSidtitel'
+import { useGrupper } from '@/hooks/useGrupper'
 import { laggTillVannerITur, useMinaVanner } from '@/hooks/useVanner'
 import { supabase } from '@/lib/supabase'
 import { delaUppTurer, flerTurer, halsning, lokaltDatum } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
+import { valjGrupp } from '@/lib/grupper'
 import { sammaSom, turerMedVanner } from '@/lib/vanner'
 
 export function MinaTurer() {
@@ -87,7 +89,7 @@ export function MinaTurer() {
         </p>
       )}
 
-      {formularOppet && <NyTurFormular turer={turer ?? []} onStang={() => visaFormular(false)} />}
+      {formularOppet && <NyTurFormular turer={turer ?? []} grupp={sok.get('grupp')} onStang={() => visaFormular(false)} />}
 
       {turer === null ? (
         <Laddar text="Hämtar dina turer">
@@ -186,10 +188,11 @@ export function MinaTurer() {
 }
 
 /**
- * Kort formulär för en ny tur: namnet, och de vänner som ska med, eller samma vänner som i en tidigare tur. Resten
- * fylls i inne i turen. Vännerna läggs till direkt som redigerare när turen har skapats.
+ * Kort formulär för en ny tur: namnet, och de vänner som ska med. Vännerna kan fyllas i från en grupp eller från en
+ * tidigare tur, och från gruppen i adressen (?grupp=, från Ny tur med gruppen på sidan Vänner). Resten fylls i inne i
+ * turen. Vännerna läggs till direkt som redigerare när turen har skapats.
  */
-function NyTurFormular({ turer, onStang }: { turer: readonly TurMedDeltagare[]; onStang: () => void }) {
+function NyTurFormular({ turer, grupp, onStang }: { turer: readonly TurMedDeltagare[]; grupp: string | null; onStang: () => void }) {
   const navigate = useNavigate()
   const id = useId()
   const falt = useRef<HTMLInputElement>(null)
@@ -198,8 +201,19 @@ function NyTurFormular({ turer, onStang }: { turer: readonly TurMedDeltagare[]; 
   const [fel, setFel] = useState('')
   const vanner = useMinaVanner(true)
   const [valda, setValda] = useState<Set<string>>(new Set())
-  const [sammaSomTur, setSammaSomTur] = useState('')
+  const { grupper } = useGrupper()
+  // Det valda i Fyll i från: g:<grupp> eller t:<tur>.
+  const [fran, setFran] = useState(grupp ? `g:${grupp}` : '')
+  const [forifyllt, setForifyllt] = useState(!grupp)
   const tidigare = Array.isArray(vanner) ? turerMedVanner(turer, vanner).slice(0, 10) : []
+  const minaGrupper = Array.isArray(grupper) ? grupper.filter((g) => g.medlemmar.length > 0) : []
+  // Gruppen från adressen fylls i när vännerna och grupperna har hämtats, en gång.
+  if (!forifyllt && Array.isArray(vanner) && Array.isArray(grupper)) {
+    setForifyllt(true)
+    const g = grupper.find((x) => x.id === grupp)
+    if (g) setValda(valjGrupp(g, vanner))
+    else setFran('')
+  }
 
   useEffect(() => falt.current?.focus(), [])
 
@@ -224,10 +238,14 @@ function NyTurFormular({ turer, onStang }: { turer: readonly TurMedDeltagare[]; 
     navigate(tillagda?.fel ? `/tur/${id}#bjud-in` : `/tur/${id}`)
   }
 
-  function valjTur(turId: string) {
-    setSammaSomTur(turId)
-    const tur = turer.find((t) => t.id === turId)
-    if (tur && Array.isArray(vanner)) setValda(sammaSom(vanner, tur.deltagare))
+  function fyllI(varde: string) {
+    setFran(varde)
+    if (!Array.isArray(vanner)) return
+    const [sort, id] = [varde.slice(0, 2), varde.slice(2)]
+    const g = sort === 'g:' && Array.isArray(grupper) ? grupper.find((x) => x.id === id) : undefined
+    const t = sort === 't:' ? turer.find((x) => x.id === id) : undefined
+    if (g) setValda(valjGrupp(g, vanner))
+    if (t) setValda(sammaSom(vanner, t.deltagare))
   }
 
   return (
@@ -249,18 +267,31 @@ function NyTurFormular({ turer, onStang }: { turer: readonly TurMedDeltagare[]; 
       </div>
       {Array.isArray(vanner) && vanner.length > 0 && (
         <div className="space-y-3 pt-1">
-          {tidigare.length > 0 && (
+          {(minaGrupper.length > 0 || tidigare.length > 0) && (
             <div className="space-y-1">
-              <label htmlFor={`${id}-samma`} className="block text-sm font-medium">
-                Samma vänner som i
+              <label htmlFor={`${id}-fran`} className="block text-sm font-medium">
+                Fyll i vännerna från
               </label>
-              <Select id={`${id}-samma`} value={sammaSomTur} onChange={(e) => valjTur(e.target.value)}>
-                <option value="">Välj en tidigare tur</option>
-                {tidigare.map((t) => (
-                  <option key={t.id} value={t.id}>
-                    {t.namn}
-                  </option>
-                ))}
+              <Select id={`${id}-fran`} value={fran} onChange={(e) => fyllI(e.target.value)}>
+                <option value="">Välj en grupp eller en tidigare tur</option>
+                {minaGrupper.length > 0 && (
+                  <optgroup label="Grupper">
+                    {minaGrupper.map((g) => (
+                      <option key={g.id} value={`g:${g.id}`}>
+                        {g.namn}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
+                {tidigare.length > 0 && (
+                  <optgroup label="Samma som i">
+                    {tidigare.map((t) => (
+                      <option key={t.id} value={`t:${t.id}`}>
+                        {t.namn}
+                      </option>
+                    ))}
+                  </optgroup>
+                )}
               </Select>
             </div>
           )}
