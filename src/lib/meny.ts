@@ -1,7 +1,9 @@
-// Menyns delar, samlade på ett ställe. Sidomenyn på dator visar grupperna, och bottenmenyn i mobil visar de
-// viktigaste som flikar och resten i bladen Minnen och Mer. Sidor som inte är byggda visar "Kommer snart".
+// Menyns delar, samlade på ett ställe. Sidomenyn på dator visar Hem och grupperna, och bottenmenyn i mobil visar Hem
+// och de viktigaste sidorna som flikar och resten i bladet Mer, med samma grupper och i samma ordning som sidomenyn.
+// Sidor som inte är byggda ligger i gruppen Kommer snart.
 
 export type Sida =
+  | 'hem'
   | 'turer'
   | 'matplanering'
   | 'packlistor'
@@ -30,6 +32,7 @@ export interface Menysida {
 }
 
 export const SIDOR: Record<Sida, Menysida> = {
+  hem: { sida: 'hem', namn: 'Hem', till: '/hem', byggd: true, beskrivning: 'Nästa tur och det som är kvar att göra', blir: '' },
   turer: { sida: 'turer', namn: 'Mina turer', till: '/turer', byggd: true, beskrivning: 'Alla dina turer', blir: '' },
   matplanering: {
     sida: 'matplanering',
@@ -118,32 +121,61 @@ export const UNDERSIDOR: Partial<Record<Sida, readonly Undersida[]>> = {
   ],
 }
 
-/** Grupperna i sidomenyn på dator, i ordning. */
-export const MENYGRUPPER: readonly { rubrik: string; sidor: readonly Sida[] }[] = [
-  { rubrik: 'Planera', sidor: ['turer', 'matplanering', 'packlistor'] },
-  { rubrik: 'Utrustning', sidor: ['forrad', 'utrustning'] },
-  { rubrik: 'Minnen', sidor: ['dagbok', 'kom-ihag', 'statistik'] },
-  { rubrik: 'Folk', sidor: ['kompisar'] },
+export type Gruppnyckel = 'planera' | 'utrustning' | 'minnen' | 'snart'
+
+export interface Menygrupp {
+  nyckel: Gruppnyckel
+  rubrik: string
+  sidor: readonly Sida[]
+}
+
+/** Grupperna i sidomenyn på dator, i ordning, under Hem. Kommer snart samlar sidorna som inte är byggda. */
+export const MENYGRUPPER: readonly Menygrupp[] = [
+  { nyckel: 'planera', rubrik: 'Planera', sidor: ['turer', 'matplanering'] },
+  { nyckel: 'utrustning', rubrik: 'Utrustning', sidor: ['forrad', 'utrustning'] },
+  { nyckel: 'minnen', rubrik: 'Minnen', sidor: ['kom-ihag'] },
+  { nyckel: 'snart', rubrik: 'Kommer snart', sidor: ['packlistor', 'dagbok', 'statistik', 'kompisar'] },
 ]
 
-/** Bladen som öppnas nerifrån i mobil. */
-export type Blad = 'minnen' | 'mer'
+/** Gruppen som en sida ligger i. null för Hem, Profil och Inställningar. */
+export function gruppFor(sida: Sida | null): Gruppnyckel | null {
+  return MENYGRUPPER.find((g) => sida !== null && g.sidor.includes(sida))?.nyckel ?? null
+}
 
-/** Flikarna i bottenmenyn i mobil. Minnen och Mer öppnar ett blad i stället för en sida. */
+/** Grupperna som är öppna när sidan visas: gruppen med den aktiva sidan. Kommer snart är stängd om den inte är aktiv. */
+export function oppnaGrupper(aktiv: Sida | null): Set<Gruppnyckel> {
+  const grupp = gruppFor(aktiv)
+  return new Set(grupp ? [grupp] : [])
+}
+
+/** Bladen som öppnas nerifrån i mobil. */
+export type Blad = 'mer'
+
+/** Flikarna i bottenmenyn i mobil. Mer öppnar ett blad i stället för en sida. */
 export type Flik = { typ: 'sida'; sida: Sida; namn: string } | { typ: 'blad'; blad: Blad; namn: string }
 
 export const FLIKAR: readonly Flik[] = [
+  { typ: 'sida', sida: 'hem', namn: 'Hem' },
   { typ: 'sida', sida: 'turer', namn: 'Mina turer' },
   { typ: 'sida', sida: 'matplanering', namn: 'Matplanering' },
   { typ: 'sida', sida: 'forrad', namn: 'Mitt förråd' },
-  { typ: 'blad', blad: 'minnen', namn: 'Minnen' },
   { typ: 'blad', blad: 'mer', namn: 'Mer' },
 ]
 
-/** Innehållet i bladen i mobil. */
+const FLIKSIDOR = new Set(FLIKAR.flatMap((f) => (f.typ === 'sida' ? [f.sida] : [])))
+
+/**
+ * Bladet Mer i mobil: sidorna som inte är flikar, med samma grupper och i samma ordning som sidomenyn, och sist
+ * Inställningar (Profil nås från bilden överst).
+ */
+export const MER: readonly { rubrik: string; sidor: readonly Sida[] }[] = [
+  ...MENYGRUPPER.map((g) => ({ rubrik: g.rubrik, sidor: g.sidor.filter((s) => !FLIKSIDOR.has(s)) })).filter((g) => g.sidor.length > 0),
+  { rubrik: 'Konto', sidor: ['installningar'] },
+]
+
+/** Innehållet i bladen i mobil, i ordning. */
 export const BLAD: Record<Blad, readonly Sida[]> = {
-  minnen: ['dagbok', 'kom-ihag', 'statistik'],
-  mer: ['packlistor', 'utrustning', 'kompisar', 'installningar'],
+  mer: MER.flatMap((g) => g.sidor),
 }
 
 /**
@@ -152,7 +184,7 @@ export const BLAD: Record<Blad, readonly Sida[]> = {
  */
 export function bladIState(state: unknown): { blad: Blad; steg: boolean } | null {
   const s = state as { blad?: unknown; steg?: unknown } | null
-  if (s?.blad !== 'minnen' && s?.blad !== 'mer') return null
+  if (s?.blad !== 'mer') return null
   return { blad: s.blad, steg: s.steg === true }
 }
 

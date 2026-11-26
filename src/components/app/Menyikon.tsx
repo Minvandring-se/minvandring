@@ -7,6 +7,7 @@ import type { Sida } from '@/lib/meny'
  * sidor som inte har någon egen (Kom ihåg, Inställningar och Profil).
  */
 const MENYIKON: Record<Sida, IkonNamn | LucideIcon> = {
+  hem: 'hem',
   turer: 'mina-turer',
   matplanering: 'matplanering',
   packlistor: 'packlistor',

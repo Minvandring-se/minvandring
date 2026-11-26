@@ -77,7 +77,7 @@ export function AppSkal() {
       <div className="flex min-h-dvh min-w-0 flex-col">
         {/* Kompakt sidhuvud i mobil */}
         <header className="flex items-center justify-between border-b border-border bg-card/80 px-4 py-2 backdrop-blur lg:hidden print:hidden">
-          <Link to="/turer" className={cn('flex min-h-11 items-center rounded-md', fokus)}>
+          <Link to="/hem" className={cn('flex min-h-11 items-center rounded-md', fokus)}>
             <Logotyp />
           </Link>
           <Link to="/profil" aria-label="Din profil" className={cn('flex size-11 items-center justify-center rounded-full', fokus)}>
