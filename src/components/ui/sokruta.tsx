@@ -3,27 +3,45 @@ import { useId, type ReactNode } from 'react'
 import { FlikAntal } from '@/components/ui/bricka'
 import { Button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
+import { BANDKURVOR, SOKKURVOR, TURKURVOR } from '@/components/ui/kurvdata'
 import { SokFalt } from '@/components/ui/sokfalt'
 import { cn } from '@/lib/utils'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
-/** Höjdkurvor som bakgrund i den gröna rutan: svaga, lugna linjer och ett mjukt sken uppe till höger. Också i bandet på Hem. */
-export function Hojdkurvor() {
+/** Terrängerna i de mörkgröna ytorna: bandet på Hem, sökrutan och kortet Nästa tur. Var och en har sin egen viewBox. */
+const TERRANGER = {
+  band: { bredd: 600, hojd: 190, linjer: BANDKURVOR },
+  sok: { bredd: 600, hojd: 160, linjer: SOKKURVOR },
+  tur: { bredd: 600, hojd: 150, linjer: TURKURVOR },
+} as const
+
+/**
+ * Höjdkurvor som bakgrund i en mörkgrön yta: svaga linjer från en egen terräng per sorts yta, med topparna till höger
+ * så att texten står på en lugn yta, och ett mjukt sken uppe till höger. Utan sken ritas bara linjerna, för kort där
+ * en bild redan ligger till höger.
+ */
+export function Hojdkurvor({ variant, sken = true, className }: { variant: keyof typeof TERRANGER; sken?: boolean; className?: string }) {
   const id = useId()
+  const { bredd, hojd, linjer } = TERRANGER[variant]
   return (
-    <svg viewBox="0 0 358 260" preserveAspectRatio="xMidYMid slice" aria-hidden className="absolute inset-0 size-full">
-      <defs>
-        <radialGradient id={`${id}-sken`} cx="0.85" cy="0.1" r="0.9">
-          <stop offset="0" style={{ stopColor: 'var(--color-yta-stark-linje)' }} />
-          <stop offset="1" style={{ stopColor: 'var(--color-yta-stark)' }} />
-        </radialGradient>
-      </defs>
-      <rect width="358" height="260" fill={`url(#${id}-sken)`} />
-      {Array.from({ length: 12 }, (_, i) => {
-        const y = 30 + i * 22
-        return <path key={y} d={`M-20 ${y} C 60 ${y - 18}, 120 ${y + 14}, 190 ${y - 6} S 320 ${y - 22}, 380 ${y}`} fill="none" className="stroke-yta-stark-foreground" strokeOpacity="0.07" strokeWidth="1.2" />
-      })}
+    <svg viewBox={`0 0 ${bredd} ${hojd}`} preserveAspectRatio="xMidYMid slice" aria-hidden className={cn('pointer-events-none absolute inset-0 size-full', className)}>
+      {sken && (
+        <>
+          <defs>
+            <radialGradient id={`${id}-sken`} cx="0.85" cy="0.1" r="0.9">
+              <stop offset="0" style={{ stopColor: 'var(--color-yta-stark-linje)' }} />
+              <stop offset="1" style={{ stopColor: 'var(--color-yta-stark)' }} />
+            </radialGradient>
+          </defs>
+          <rect width={bredd} height={hojd} fill={`url(#${id}-sken)`} />
+        </>
+      )}
+      <g fill="none" className="stroke-yta-stark-foreground" strokeOpacity="0.07" strokeWidth="1.2" strokeLinejoin="round">
+        {linjer.map((d, i) => (
+          <path key={i} d={d} />
+        ))}
+      </g>
     </svg>
   )
 }
@@ -57,7 +75,7 @@ export function Sokruta({
   const Rubrik = rubrikniva === 1 ? 'h1' : 'h2'
   return (
     <section aria-labelledby={id} className={cn('relative overflow-hidden rounded-yta bg-yta-stark text-yta-stark-foreground', className)}>
-      <Hojdkurvor />
+      <Hojdkurvor variant="sok" />
       <div className="relative flex flex-col gap-4 px-3 pt-6 pb-5 sm:px-6">
         <div className="space-y-1.5">
           <Rubrik id={id} className="px-1 text-[1.875rem] leading-tight text-yta-stark-foreground lg:text-[2.25rem]">
