@@ -1,6 +1,6 @@
 import { ChevronDown, ExternalLink, LayoutGrid, List, NotebookPen, Pencil, Plus, RotateCcw, Trash2, Undo2 } from 'lucide-react'
 import { Kategoriikon } from '@/components/forrad/Kategoriikon'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
@@ -282,8 +282,16 @@ export function Forrad() {
           </div>
         )
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className={cn('grid grid-cols-1 gap-6', !valjer && 'lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]')}>
           <div className="min-w-0 space-y-6">
+            {valjer ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-primary-soft px-4 py-2">
+                <h2 className="font-sans text-base font-semibold">Välj det du vill ta bort</h2>
+                <Button variant="outline" onClick={avslutaVal}>
+                  Klar
+                </Button>
+              </div>
+            ) : (
             <Verktyg
               val={val}
               onVal={setVal}
@@ -295,6 +303,7 @@ export function Forrad() {
                 setValjer(true)
               }}
             />
+            )}
 
             {visade.length === 0 ? (
               <TomtLage
@@ -310,11 +319,11 @@ export function Forrad() {
               <Lista delar={delar} sortering={val.sortering} onSaknad={(s) => oppnaSok(s.kategori, s.underkategori)} {...radhjalp} />
             )}
 
-            <FyllPaFler kategorier={fler} onValj={(k) => oppnaSok(k)} />
+            {!valjer && <FyllPaFler kategorier={fler} onValj={(k) => oppnaSok(k)} />}
           </div>
 
           {/* På dator en egen kolumn till höger som stannar kvar när man scrollar. I mobil efter listan. */}
-          <aside aria-label="Översikt" className="space-y-5 lg:sticky lg:top-6">
+          <aside aria-label="Översikt" hidden={valjer} className="space-y-5 lg:sticky lg:top-6">
             {/* Ett vitt kort, eftersom sökrutan är sidans enda mörkgröna yta. Överst i översikten på dator, under listan i mobil. */}
             <HelaForradet summa={summa} granskade={antalGranskade(alla)} />
             <ViktPerKategori summa={summa} />
@@ -327,6 +336,7 @@ export function Forrad() {
       {valjer && (
         <Valrad
           antal={valda.size}
+          viktG={alla.reduce((g, s) => g + (valda.has(s.id) && s.vikt_g !== null ? s.antal * s.vikt_g : 0), 0)}
           allaValda={visade.length > 0 && visade.every((s) => valda.has(s.id))}
           onValjAlla={() => setValda((v) => vaxlaAlla(v, visade.map((s) => s.id)))}
           onTaBort={() => {
@@ -351,11 +361,25 @@ const fastRad =
   'fixed inset-x-3 bottom-[calc(4rem+1px+env(safe-area-inset-bottom)+0.75rem)] z-30 mx-auto flex max-w-xl flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2 pl-4 shadow-soft lg:bottom-4'
 
 /** Raden i valläget: hur många som är valda, Välj alla, Ta bort och Avbryt. */
-function Valrad({ antal, allaValda, onValjAlla, onTaBort, onAvbryt }: { antal: number; allaValda: boolean; onValjAlla: () => void; onTaBort: () => void; onAvbryt: () => void }) {
+function Valrad({
+  antal,
+  viktG,
+  allaValda,
+  onValjAlla,
+  onTaBort,
+  onAvbryt,
+}: {
+  antal: number
+  viktG: number
+  allaValda: boolean
+  onValjAlla: () => void
+  onTaBort: () => void
+  onAvbryt: () => void
+}) {
   return (
     <div role="region" aria-label="Ta bort saker" className={fastRad}>
       <p className="mr-auto text-sm font-medium" aria-live="polite">
-        {antal === 0 ? 'Välj saker att ta bort' : antal === 1 ? '1 vald' : `${antal} valda`}
+        {antal === 0 ? 'Inget valt' : `${antal === 1 ? '1 vald' : `${antal} valda`}${viktG > 0 ? `, ${formateraVikt(viktG)}` : ''}`}
       </p>
       <Button variant="ghost" onClick={onValjAlla}>
         {allaValda ? 'Avmarkera alla' : 'Välj alla'}
@@ -595,15 +619,17 @@ function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; 
   const lista = grupp ? sortera(grupp.saker, sortering) : []
   const valet = radhjalp.val
   const ids = lista.map((s) => s.id)
-  const allaIKategorin = ids.length > 0 && valet !== null && ids.every((id) => valet.valda.has(id))
   return (
     <Sektion
       rubrik={kategori.etikett}
       atgard={
         valet && ids.length > 0 ? (
-          <Button variant="ghost" className="-mr-3" onClick={() => valet.onVaxla(ids)} aria-label={`${allaIKategorin ? 'Avmarkera' : 'Välj'} alla i ${kategori.etikett.toLowerCase()}`}>
-            {allaIKategorin ? 'Avmarkera alla' : 'Välj alla'}
-          </Button>
+          <ValjAllaRuta
+            etikett={kategori.etikett}
+            valda={ids.filter((id) => valet.valda.has(id)).length}
+            av={ids.length}
+            onVaxla={() => valet.onVaxla(ids)}
+          />
         ) : grupp ? (
           <p className="flex gap-3 text-[13px] text-muted-foreground tabular-nums">
             <span>{antalText(grupp.antal)}</span>
@@ -659,10 +685,24 @@ function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; 
   )
 }
 
+/** Kryssrutan vid en kategori i valläget: vald när alla är valda, med ett streck när bara några är det. */
+function ValjAllaRuta({ etikett, valda, av, onVaxla }: { etikett: string; valda: number; av: number; onVaxla: () => void }) {
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = valda > 0 && valda < av
+  }, [valda, av])
+  return (
+    <label className="-mr-2 flex min-h-11 cursor-pointer items-center gap-2 px-2 text-sm font-medium">
+      Välj alla
+      <input ref={ref} type="checkbox" checked={valda === av} onChange={onVaxla} aria-label={`Välj alla i ${etikett.toLowerCase()}`} className="size-5 accent-primary" />
+    </label>
+  )
+}
+
 /** En sak i valläget: en kryssruta med namnet och vikten. */
 function Valbar({ sak, vald, onVaxla }: { sak: Forradssak; vald: boolean; onVaxla: () => void }) {
   return (
-    <label className="flex min-h-14 cursor-pointer items-center gap-3 px-4 py-2 hover:bg-muted">
+    <label className={cn('flex min-h-14 cursor-pointer items-center gap-3 px-4 py-2', vald ? 'bg-primary-soft' : 'hover:bg-muted')}>
       <input type="checkbox" checked={vald} onChange={onVaxla} className="size-5 shrink-0 accent-primary" />
       <span className="min-w-0 flex-1 font-semibold break-words">
         {sak.namn}
@@ -892,7 +932,7 @@ function Utfalld({ sak, alla, onAndra, onAndrad, onTaBort }: { sak: Forradssak; 
             {aterstaller ? 'Återställer …' : 'Återställ till katalogens vikt'}
           </Button>
         )}
-        <TaBortSak sak={sak} alla={alla} onTaBort={onTaBort} />
+        <TaBortSak onTaBort={onTaBort} />
       </div>
       {fel && (
         <p role="alert" className="text-sm text-destructive">
