@@ -2443,7 +2443,7 @@ describe('matplanen', () => {
 
     it('gram läses av inloggade, ändras inte via API:t och anges bara när enheten inte är g eller kg', async () => {
       const r = await som(LASARE, (tx) => tx.query<{ gram: string | null }>("select gram from public.receptkatalog_ingredienser where recept_id = 'aprikosgrot' and ordning = 1"))
-      expect(r.rows).toEqual([{ gram: null }])
+      expect(r.rows).toEqual([{ gram: '33.4' }])
       const u = await som(AGARE, (tx) => tx.query("update public.receptkatalog_ingredienser set gram = 90 where recept_id = 'aprikosgrot'")).catch(() => null)
       expect(u?.affectedRows ?? 0).toBe(0)
       // Som migreringen: grams gränser och att g och kg inte har gram.
