@@ -8,12 +8,13 @@ import { Flikrad } from '@/components/ui/flikrad'
 import { KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { knappStil } from '@/components/ui/knappStil'
 import { Nyckeltal } from '@/components/ui/nyckeltal'
-import { Turbild } from '@/components/ui/turbild'
+import { Bildkort, Kortbild } from '@/components/ui/bildkort'
 import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
 import { ROLLNAMN, kanAndra, type Roll } from '@/lib/roller'
 import { aktivTurdel, TURDELAR, turdelAdress } from '@/lib/turdelar'
 import { avfardEtikett, dagarVarde, datumIntervall, deltagarNamn, lokaltDatum } from '@/lib/turlista'
 import type { DeltagareRad, Tur } from '@/lib/typer'
+import { arstidFor, arstidsbild } from '@/lib/arstid'
 import { cn } from '@/lib/utils'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
@@ -63,59 +64,62 @@ export function TurHuvud({ tur, deltagare, minRoll }: { tur: Tur; deltagare: Del
         </div>
       </div>
 
-      <section aria-labelledby="tur-namn" className="md:grid md:grid-cols-2 md:overflow-hidden md:rounded-[1.375rem] md:border md:border-border md:bg-card">
-        <div className="relative md:order-2">
-          <Turbild turId={tur.id} className="h-52 w-full rounded-lg sm:h-64 md:h-full md:min-h-96 md:rounded-none" />
-          {/* I mobil: Tillbaka och Bjud in som runda knappar på bilden. */}
-          <div className="absolute inset-x-2 top-2 flex justify-between md:hidden">
-            <TillbakaLank aria-label="Tillbaka till Mina turer" className={cn('flex size-11 items-center justify-center rounded-full bg-card/90 text-foreground shadow-soft', fokus)}>
-              <ChevronLeft className="size-5" aria-hidden />
-            </TillbakaLank>
-            {farBjudaIn && (
-              <Link to={bjudIn} state={state} aria-label="Bjud in" className={cn('flex size-11 items-center justify-center rounded-full bg-card/90 text-foreground shadow-soft', fokus)}>
-                <UserPlus className="size-5" aria-hidden />
-              </Link>
-            )}
-          </div>
-        </div>
-
-        <div className="relative mx-2 -mt-8 flex flex-col gap-3 rounded-[1.375rem] border border-border bg-card p-5 md:order-1 md:m-0 md:justify-center md:gap-3.5 md:rounded-none md:border-0 md:p-8 lg:p-9">
-          {(etikett || minRoll) && (
-            <div className="flex flex-wrap gap-2">
-              {etikett && (
-                <Bricka ton="rost" stor>
-                  {etikett}
-                </Bricka>
+      <Bildkort
+        element="section"
+        aria-labelledby="tur-namn"
+        bild={<Kortbild {...arstidsbild(arstidFor(tur.avresa))} forst />}
+        paBilden={
+          <>
+            {/* I mobil: Tillbaka och Bjud in som runda knappar på bilden. */}
+            <div className="absolute inset-x-2 top-2 flex justify-between md:hidden">
+              <TillbakaLank aria-label="Tillbaka till Mina turer" className={cn('flex size-11 items-center justify-center rounded-full bg-card/90 text-foreground shadow-soft', fokus)}>
+                <ChevronLeft className="size-5" aria-hidden />
+              </TillbakaLank>
+              {farBjudaIn && (
+                <Link to={bjudIn} state={state} aria-label="Bjud in" className={cn('flex size-11 items-center justify-center rounded-full bg-card/90 text-foreground shadow-soft', fokus)}>
+                  <UserPlus className="size-5" aria-hidden />
+                </Link>
               )}
-              {minRoll && <Bricka stor>Du är {ROLLNAMN[minRoll].toLowerCase()}</Bricka>}
             </div>
-          )}
-          {/* Långa ord avstavas på svenska (lang="sv") i stället för att brytas mitt i. */}
-          <h1 id="tur-namn" className="text-3xl leading-tight font-semibold break-words hyphens-auto lg:text-4xl xl:text-5xl xl:leading-[1.05]">
-            {tur.namn}
-          </h1>
-          {tur.destination && <p className="text-muted-foreground break-words lg:text-lg">{tur.destination}</p>}
-          <Nyckeltal
-            className="mt-1"
-            varden={[
-              { etikett: 'Datum', varde: datumIntervall(tur.avresa, tur.hemkomst) },
-              { etikett: 'Vandringsdagar', varde: dagarVarde(tur.dagar) },
-            ]}
-          />
-          {personer.length > 0 && (
-            // Leder till Deltagare på översikten, även från de andra flikarna.
-            <Link
-              to={`${turdelAdress(tur.id, 'oversikt')}#deltagare`}
-              replace
-              state={state}
-              className={cn('flex min-h-11 items-center gap-3 self-start rounded-md text-sm text-muted-foreground hover:text-foreground', fokus)}
-            >
-              <Namnbrickor personer={personer} />
-              <span className="min-w-0">{deltagarNamn(deltagare)}</span>
-            </Link>
-          )}
-        </div>
-      </section>
+          </>
+        }
+        textKlass="gap-3 px-5 pt-1 pb-5 @2xl:justify-center @2xl:gap-3.5 @2xl:p-8"
+      >
+        {(etikett || minRoll) && (
+          <div className="flex flex-wrap gap-2">
+            {etikett && (
+              <Bricka ton="rost" stor>
+                {etikett}
+              </Bricka>
+            )}
+            {minRoll && <Bricka stor>Du är {ROLLNAMN[minRoll].toLowerCase()}</Bricka>}
+          </div>
+        )}
+        {/* Långa ord avstavas på svenska (lang="sv") i stället för att brytas mitt i. */}
+        <h1 id="tur-namn" className="text-3xl leading-tight font-semibold break-words hyphens-auto lg:text-4xl xl:text-5xl xl:leading-[1.05]">
+          {tur.namn}
+        </h1>
+        {tur.destination && <p className="text-muted-foreground break-words lg:text-lg">{tur.destination}</p>}
+        <Nyckeltal
+          className="mt-1"
+          varden={[
+            { etikett: 'Datum', varde: datumIntervall(tur.avresa, tur.hemkomst) },
+            { etikett: 'Vandringsdagar', varde: dagarVarde(tur.dagar) },
+          ]}
+        />
+        {personer.length > 0 && (
+          // Leder till Deltagare på översikten, även från de andra flikarna.
+          <Link
+            to={`${turdelAdress(tur.id, 'oversikt')}#deltagare`}
+            replace
+            state={state}
+            className={cn('flex min-h-11 items-center gap-3 self-start rounded-md text-sm text-muted-foreground hover:text-foreground', fokus)}
+          >
+            <Namnbrickor personer={personer} />
+            <span className="min-w-0">{deltagarNamn(deltagare)}</span>
+          </Link>
+        )}
+      </Bildkort>
 
       <TurFlikar turId={tur.id} />
     </div>

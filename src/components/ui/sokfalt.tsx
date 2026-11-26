@@ -1,11 +1,11 @@
 import { Search, X } from 'lucide-react'
-import { useId, useRef, type KeyboardEvent } from 'react'
+import { useEffect, useId, useRef, type KeyboardEvent, type ReactNode } from 'react'
 import { cn } from '@/lib/utils'
 
 /**
- * Sökfältet: 56 px högt, text 17 px, förstoringsglas till vänster och en knapp som tömmer fältet. Tonen stark är för
- * den mörkgröna ytan (ljust fält med mörk text i båda lägena). Etiketten syns, eller läses bara av skärmläsare med
- * doldEtikett.
+ * Sökfältet, samma överallt: 56 px högt, text 17 px, ljus yta med mörk text i både ljust och mörkt läge, förstoringsglas
+ * till vänster och en knapp som tömmer fältet. Fokus syns både på ljusa sidor (ring) och på den mörkgröna ytan i
+ * Matkatalogen (hjortron). Etiketten syns, eller läses bara av skärmläsare med doldEtikett.
  */
 export function SokFalt({
   etikett,
@@ -14,7 +14,8 @@ export function SokFalt({
   onAndra,
   onKlar,
   placeholder,
-  ton = 'vanlig',
+  hjalp,
+  autofokus = false,
   className,
 }: {
   etikett: string
@@ -24,12 +25,18 @@ export function SokFalt({
   /** När man trycker Enter eller lämnar fältet, till exempel för att spara sökningen. */
   onKlar?: (text: string) => void
   placeholder?: string
-  ton?: 'vanlig' | 'stark'
+  /** En kort hjälptext under fältet, som skärmläsare läser med fältet. */
+  hjalp?: ReactNode
+  /** Fältet får fokus när det visas, också i en dialog (data-autofokus). */
+  autofokus?: boolean
   className?: string
 }) {
   const id = useId()
   const falt = useRef<HTMLInputElement>(null)
-  const stark = ton === 'stark'
+
+  useEffect(() => {
+    if (autofokus) falt.current?.focus()
+  }, [autofokus])
 
   function tangent(e: KeyboardEvent<HTMLInputElement>) {
     if (e.key === 'Enter') onKlar?.(varde)
@@ -41,7 +48,7 @@ export function SokFalt({
         {etikett}
       </label>
       <div className="relative">
-        <Search className={cn('pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2', stark ? 'text-sokfalt-foreground' : 'text-muted-foreground')} aria-hidden />
+        <Search className="pointer-events-none absolute top-1/2 left-3.5 size-5 -translate-y-1/2 text-sokfalt-foreground" aria-hidden />
         <input
           ref={falt}
           id={id}
@@ -51,17 +58,16 @@ export function SokFalt({
           maxLength={80}
           placeholder={placeholder}
           value={varde}
+          data-autofokus={autofokus || undefined}
+          aria-describedby={hjalp ? `${id}-hjalp` : undefined}
           onChange={(e) => onAndra(e.target.value)}
           onKeyDown={tangent}
           onBlur={() => onKlar?.(varde)}
           className={cn(
-            'h-14 w-full rounded-ruta pl-11 text-[17px]',
+            'h-14 w-full rounded-ruta border border-sokfalt-foreground/25 bg-sokfalt pl-11 text-[17px] text-sokfalt-foreground shadow-soft placeholder:text-sokfalt-foreground/60',
             varde ? 'pr-12' : 'pr-3',
             '[&::-webkit-search-cancel-button]:appearance-none',
-            'focus-visible:outline-3 focus-visible:outline-offset-2',
-            stark
-              ? 'bg-sokfalt text-sokfalt-foreground shadow-lyft placeholder:text-sokfalt-foreground/60 focus-visible:outline-hjortron'
-              : 'border border-muted-foreground/70 bg-card focus-visible:border-ring focus-visible:outline-ring',
+            'focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-3 focus-visible:outline-offset-2 focus-visible:outline-hjortron',
           )}
         />
         {varde && (
@@ -72,15 +78,17 @@ export function SokFalt({
               onAndra('')
               falt.current?.focus()
             }}
-            className={cn(
-              'absolute top-1/2 right-1.5 flex size-11 -translate-y-1/2 items-center justify-center rounded-full focus-visible:outline-2 focus-visible:outline-ring',
-              stark ? 'text-sokfalt-foreground/70 hover:text-sokfalt-foreground' : 'text-muted-foreground hover:text-foreground',
-            )}
+            className="absolute top-1/2 right-1.5 flex size-11 -translate-y-1/2 items-center justify-center rounded-full text-sokfalt-foreground/70 hover:text-sokfalt-foreground focus-visible:outline-2 focus-visible:outline-ring"
           >
             <X className="size-5" aria-hidden />
           </button>
         )}
       </div>
+      {hjalp && (
+        <p id={`${id}-hjalp`} className="text-sm text-muted-foreground">
+          {hjalp}
+        </p>
+      )}
     </div>
   )
 }

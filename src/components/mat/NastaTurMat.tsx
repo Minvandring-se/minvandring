@@ -2,6 +2,7 @@ import { ArrowRight } from 'lucide-react'
 import { useId, useState } from 'react'
 import { Link } from 'react-router'
 import { Skelett } from '@/components/app/Laddar'
+import { Bildkort } from '@/components/ui/bildkort'
 import { knappStil } from '@/components/ui/knappStil'
 import { Turbild } from '@/components/ui/turbild'
 import { dagensDatum } from '@/lib/datum'
@@ -25,29 +26,26 @@ export function NastaTurMat({ tur, status }: { tur: DinTur; status: Matstatus | 
   const till = forsta ? maltidsAdress(tur.id, forsta.dag.dag, forsta.maltid) : turdelAdress(tur.id, 'mat')
 
   return (
-    <section aria-labelledby={id} className="grid overflow-hidden rounded-yta bg-yta-stark text-yta-stark-foreground md:grid-cols-2">
-      <div className="flex min-w-0 flex-col gap-4 p-6 sm:p-8 lg:p-10">
-        <p className="text-sm text-yta-stark-muted lg:text-[0.9375rem]">Nästa tur</p>
-        <h2 id={id} className="text-[1.875rem] leading-tight wrap-anywhere lg:text-[2.75rem]">
-          {tur.namn}
-        </h2>
-        {/* Två rader under 380 px, annars en rad med en tunn linje emellan. */}
-        <ul className="flex flex-col gap-y-1 text-[0.9375rem] text-yta-stark-muted min-[23.75rem]:flex-row lg:text-base">
-          <li className="min-[23.75rem]:pr-4">{datumIntervall(tur.avresa, tur.hemkomst)}</li>
-          {tur.dagar !== null && (
-            <li className="min-[23.75rem]:border-l min-[23.75rem]:border-yta-stark-linje min-[23.75rem]:pl-4">
-              {tur.dagar} {tur.dagar === 1 ? 'vandringsdag' : 'vandringsdagar'}
-            </li>
-          )}
-        </ul>
-        <Status tur={tur} status={status} avslutad={avslutad} />
-        <Link to={till} className={cn(knappStil({ variant: 'ljus', size: 'lg' }), 'mt-1 w-full sm:w-auto sm:self-start')}>
-          {klar || avslutad ? 'Öppna matplanen' : 'Planera maten'}
-          <ArrowRight className="size-[1.125rem]" aria-hidden />
-        </Link>
-      </div>
-      <Matfoto turId={tur.id} />
-    </section>
+    <Bildkort element="section" aria-labelledby={id} ton="stark" bild={<Matfoto turId={tur.id} />} textKlass="gap-4 px-6 pt-1 pb-6 sm:px-8 sm:pb-8 @2xl:p-8">
+      <p className="text-sm text-yta-stark-muted lg:text-[0.9375rem]">Nästa tur</p>
+      <h2 id={id} className="text-[1.875rem] leading-tight wrap-anywhere lg:text-[2.75rem]">
+        {tur.namn}
+      </h2>
+      {/* Två rader under 380 px, annars en rad med en tunn linje emellan. */}
+      <ul className="flex flex-col gap-y-1 text-[0.9375rem] text-yta-stark-muted min-[23.75rem]:flex-row lg:text-base">
+        <li className="min-[23.75rem]:pr-4">{datumIntervall(tur.avresa, tur.hemkomst)}</li>
+        {tur.dagar !== null && (
+          <li className="min-[23.75rem]:border-l min-[23.75rem]:border-yta-stark-linje min-[23.75rem]:pl-4">
+            {tur.dagar} {tur.dagar === 1 ? 'vandringsdag' : 'vandringsdagar'}
+          </li>
+        )}
+      </ul>
+      <Status tur={tur} status={status} avslutad={avslutad} />
+      <Link to={till} className={cn(knappStil({ variant: 'ljus', size: 'lg' }), 'mt-1 w-full sm:w-auto sm:self-start')}>
+        {klar || avslutad ? 'Öppna matplanen' : 'Planera maten'}
+        <ArrowRight className="size-[1.125rem]" aria-hidden />
+      </Link>
+    </Bildkort>
   )
 }
 
@@ -73,11 +71,11 @@ function Status({ tur, status, avslutad }: { tur: DinTur; status: Matstatus | nu
   )
 }
 
-/** Fotot av stekpannan över elden (Ivan Shemereko, Unsplash). Ett liggande utsnitt i två storlekar. */
+/** Fotot av stekpannan över elden (Ivan Shemereko, Unsplash), i två storlekar. Fyller bildkortets bildruta. */
 function Matfoto({ turId }: { turId: string }) {
   const [fel, setFel] = useState(false)
   return (
-    <div className="relative order-first h-44 sm:h-56 md:order-none md:h-auto md:min-h-80">
+    <>
       {fel ? (
         <Turbild turId={turId} className="absolute inset-0 size-full" />
       ) : (
@@ -93,6 +91,6 @@ function Matfoto({ turId }: { turId: string }) {
           className="absolute inset-0 size-full object-cover object-[50%_45%]"
         />
       )}
-    </div>
+    </>
   )
 }
