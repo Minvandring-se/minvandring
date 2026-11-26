@@ -25,6 +25,8 @@ export interface Forradssak {
   produkter?: ForradsProdukt | null
   /** Brännaren eller det kompletta köket ett kokkärl eller bränsle hör till i ens kök, när listan hämtas med det. */
   kok_id?: string | null
+  /** Ens egen storlek på ett klädesplagg, när listan hämtas med den. */
+  storlek?: string | null
 }
 
 /** Det som förrådet visar om produkten en sak kommer från. */

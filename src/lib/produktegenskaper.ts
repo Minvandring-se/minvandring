@@ -359,6 +359,11 @@ const MELLANLAGER: Egenskap[] = [
 /** Underkategorier med kläder, där vikten gäller en viss storlek. */
 const KLADER: readonly string[] = ['mellanlager', 'isolering', 'regnklader']
 
+/** Är underkategorin kläder, där vikten gäller en viss storlek och kön? */
+export function arKlader(underkategori: string | null | undefined): boolean {
+  return !!underkategori && KLADER.includes(underkategori)
+}
+
 /**
  * Kön och storleken vikten gäller för ett klädesplagg, kort, till exempel "Herr, vikt i storlek M". Saknar
  * tillverkaren storlek står det att storleken inte anges. null för allt som inte är kläder.

@@ -58,7 +58,8 @@ import {
 import { arKok, arKokdel, kokdelar, kokForDel } from '@/lib/forradskok'
 import { granskning } from '@/lib/granskning'
 import { felrapportLank } from '@/lib/kontakt'
-import { viktstorlekText } from '@/lib/produktegenskaper'
+import { arKlader } from '@/lib/produktegenskaper'
+import { forradsStorlekText, konEtikett, viktstorlek } from '@/lib/kladstorlek'
 import { supabase } from '@/lib/supabase'
 import type { Forradssak } from '@/lib/typer'
 import { cn } from '@/lib/utils'
@@ -96,7 +97,7 @@ export function Forrad() {
   useEffect(() => {
     supabase
       ?.from('forradssaker')
-      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, skapad, kok_id, produkter(id, marke, modell, packvikt_g, kontrollerad, granskad, kalla_typ, version, underkategori, minvikt_g, kalla, egenskaper)')
+      .select('id, produkt_id, namn, kategori, underkategori, antal, vikt_g, typ, notering, skapad, kok_id, storlek, produkter(id, marke, modell, packvikt_g, kontrollerad, granskad, kalla_typ, version, underkategori, minvikt_g, kalla, egenskaper)')
       .then(({ data, error }) => {
         setLaddfel(!!error)
         if (!error) setSaker((data as unknown as Forradssak[] | null) ?? [])
@@ -499,11 +500,22 @@ function Prick() {
 
 const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4', fokus)
 
+/**
+ * För kläder ur katalogen: kön, ens storlek och om katalogens vikt gäller den, till exempel "Herr, storlek L · vikten gäller M".
+ * Med egen vikt visas bara kön och storlek.
+ */
+function kladrad(sak: Forradssak): string | null {
+  const p = sak.produkter
+  if (!p || !arKlader(p.underkategori)) return null
+  if (viktjamforelse(sak).egen) return [konEtikett(p.egenskaper), sak.storlek ? `storlek ${sak.storlek}` : null].filter(Boolean).join(', ') || null
+  return forradsStorlekText(konEtikett(p.egenskaper), sak.storlek ?? null, viktstorlek(p.egenskaper))
+}
+
 /** Versionen och underkategorin under namnet, som var sin liten etikett, till exempel Regular och Sovsäck. */
 function Underrad({ sak, kok }: { sak: Forradssak; kok?: string | null }) {
   const under = underkategoriFor(sak.kategori, sak.underkategori)?.etikett ?? kategoriFor(sak.kategori).etikett
   // Kön och storleken katalogens vikt gäller, för kläder ur katalogen.
-  const storlek = sak.produkter && !viktjamforelse(sak).egen ? viktstorlekText(sak.produkter.underkategori, sak.produkter.egenskaper) : null
+  const storlek = kladrad(sak)
   return (
     <span className="mt-1 flex flex-wrap gap-1.5">
       {[sak.produkter?.version, under, storlek, kok].filter(Boolean).map((text) => (

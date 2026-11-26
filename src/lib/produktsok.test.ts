@@ -14,6 +14,8 @@ import {
   sokfilter,
   sokord,
   sorteraTraffar,
+  variantnamn,
+  varianterText,
   visasText,
 } from './produktsok'
 import type { Produkt } from './typer'
@@ -202,6 +204,24 @@ describe('grupperaModeller', () => {
     expect(grupperaModeller([a, b])[0].varianter.map((v) => v.version)).toEqual(['A', 'B'])
     const nycklar = grupperaModeller([regular, akto, lang]).map((m) => m.nyckel)
     expect(new Set(nycklar).size).toBe(nycklar.length)
+  })
+
+  it('slår ihop kläder som heter M och W sist till en modell, men inte annan utrustning', () => {
+    const herr = produkt('Fjällräven', 'Keb Fleece Hoodie M', { id: 'h', kategori: 'klader', underkategori: 'mellanlager', packvikt_g: 516, egenskaper: { kon: 'herr' } })
+    const dam = produkt('Fjällräven', 'Keb Fleece Hoodie W', { id: 'd', kategori: 'klader', underkategori: 'mellanlager', packvikt_g: 465, egenskaper: { kon: 'dam' } })
+    const [m, ...resten] = grupperaModeller([herr, dam])
+    expect(resten).toEqual([])
+    expect(m.modell).toBe('Keb Fleece Hoodie')
+    expect(m.varianter.map(variantnamn)).toEqual(['Dam', 'Herr'])
+    expect(varianterText(m, (g) => `${g} g`)).toBe('Dam 465 g · Herr 516 g')
+    expect(grupperaModeller([produkt('X', 'Tält M'), produkt('X', 'Tält W')])).toHaveLength(2)
+    expect(varianterText(grupperaModeller([regular, lang])[0], (g) => `${g} g`)).toBe('2 storlekar')
+  })
+
+  it('ger varianten ett namn: versionen, för kläder kön, annars Utan storlek', () => {
+    expect(variantnamn({ version: 'Long', underkategori: 'sovsack', egenskaper: {} })).toBe('Long')
+    expect(variantnamn({ version: null, underkategori: 'isolering', egenskaper: { kon: 'dam' } })).toBe('Dam')
+    expect(variantnamn({ version: null, underkategori: 'talt', egenskaper: { kon: 'dam' } })).toBe('Utan storlek')
   })
 
   it('ändrar inte listan den får in, och ger en tom lista för inga produkter', () => {

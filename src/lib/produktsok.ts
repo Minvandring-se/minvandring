@@ -1,6 +1,8 @@
 // Sökningen i produktkatalogen: vilka ord som söks, filtret till databasen, ordningen på träffarna
 // och hur en träff blir en sak i förrådet. Rena funktioner utan databas.
 import { KATEGORIER, MAX_NAMN, arKategori, forvaldTyp, kategoriForUnder, type Forval, type SakVarden, type UnderkategoriNyckel } from './forrad'
+import { arKlader } from './produktegenskaper'
+import { konEtikett, utanKon } from './kladstorlek'
 import type { Produkt } from './typer'
 
 /** Kortaste söktexten som ger en sökning. */
@@ -110,10 +112,12 @@ export interface Modell<P extends Produkt = Produkt> {
 export function grupperaModeller<P extends Produkt>(produkter: P[]): Modell<P>[] {
   const modeller = new Map<string, Modell<P>>()
   for (const p of produkter) {
-    const nyckel = `${p.marke.trim().toLowerCase()}|${p.modell.trim().toLowerCase()}`
+    // Kläder heter ofta samma sak med M eller W sist. De blir en modell där man väljer herr eller dam.
+    const modell = arKlader(p.underkategori) ? utanKon(p.modell) : p.modell.trim()
+    const nyckel = `${p.marke.trim().toLowerCase()}|${modell.toLowerCase()}`
     const m = modeller.get(nyckel)
     if (m) m.varianter.push(p)
-    else modeller.set(nyckel, { nyckel, marke: p.marke, modell: p.modell, varianter: [p] })
+    else modeller.set(nyckel, { nyckel, marke: p.marke, modell, varianter: [p] })
   }
   for (const m of modeller.values()) {
     m.varianter.sort((a, b) => a.packvikt_g - b.packvikt_g || (a.version ?? '').localeCompare(b.version ?? '', 'sv', { numeric: true }))
@@ -179,4 +183,15 @@ export function antalText(antal: number): string {
 /** "Visar 100 av 214 produkter" när bara en del av träffarna visas, annars bara antalet. */
 export function visasText(visas: number, totalt: number): string {
   return visas < totalt ? `Visar ${visas} av ${antalText(totalt)}` : antalText(totalt)
+}
+
+/** Det en variant heter i listan: versionen, för kläder utan version herr eller dam, annars "Utan storlek". */
+export function variantnamn(p: Pick<Produkt, 'version' | 'underkategori' | 'egenskaper'>): string {
+  return p.version?.trim() || (arKlader(p.underkategori) ? konEtikett(p.egenskaper) : null) || 'Utan storlek'
+}
+
+/** Raden under en modell med flera varianter: "Herr 533 g · Dam 429 g" för kläder, annars antalet storlekar. */
+export function varianterText(m: Modell, vikt: (g: number) => string): string {
+  if (m.varianter.every((v) => arKlader(v.underkategori)) && m.varianter.length <= 3) return m.varianter.map((v) => `${variantnamn(v)} ${vikt(v.packvikt_g)}`).join(' · ')
+  return `${m.varianter.length} storlekar`
 }

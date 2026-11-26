@@ -3,8 +3,9 @@ import { useEffect, useId, useRef, useState } from 'react'
 import { Laddfel } from '@/components/app/Laddfel'
 import { Granskad } from '@/components/forrad/Granskad'
 import { KokSteg } from '@/components/forrad/KokSteg'
+import { StorlekSteg } from '@/components/forrad/StorlekSteg'
 import { granskning } from '@/lib/granskning'
-import { viktstorlekText } from '@/lib/produktegenskaper'
+import { arKlader, viktstorlekText } from '@/lib/produktegenskaper'
 import { Input } from '@/components/ui/input'
 import { Select } from '@/components/ui/select'
 import { KATEGORIER, arKategori, arUnderkategori, formateraVikt, kategoriFor, underkategoriFor, underkategorierFor, type KategoriNyckel, type UnderkategoriNyckel } from '@/lib/forrad'
@@ -18,6 +19,8 @@ import {
   sokfilter,
   sokord,
   sorteraTraffar,
+  variantnamn,
+  varianterText,
   type Marke,
   type Modell,
 } from '@/lib/produktsok'
@@ -69,6 +72,8 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
   const [fel, setFel] = useState('')
   // En brännare eller ett komplett kök som just har lagts i förrådet. Då visas kokkärl och bränsle som passar.
   const [kokSteg, setKokSteg] = useState<{ sakId: string; namn: string; produktId: string } | null>(null)
+  // Ett klädesplagg som ska läggas till. Först väljer man sin storlek.
+  const [storlekFor, setStorlekFor] = useState<Produkt | null>(null)
 
   useEffect(() => falt.current?.focus(), [])
 
@@ -128,12 +133,21 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
     setUtfalld(null)
   }
 
-  async function laggTill(p: Produkt) {
+  function valj(p: Produkt) {
+    if (arKlader(p.underkategori)) {
+      setFel('')
+      setStorlekFor(p)
+    } else void laggTill(p, null)
+  }
+
+  async function laggTill(p: Produkt, storlek: string | null) {
     if (!supabase || laggerTill) return
     setLaggerTill(p.id)
     setFel('')
     const sak = sakFranProdukt(p)
-    const { data, error } = await supabase.from('forradssaker').insert(sak).select('id').single()
+    // Storleken skickas bara när den är vald, så att en sak utan storlek sparas likadant som förut.
+    const rad: typeof sak & { storlek?: string } = storlek ? { ...sak, storlek } : sak
+    const { data, error } = await supabase.from('forradssaker').insert(rad).select('id').single()
     setLaggerTill(null)
     if (error || !data) {
       setFel('Det gick inte att lägga till. Kontrollera uppkopplingen och försök igen.')
@@ -153,6 +167,17 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
   const upptagen = laggerTill !== null
 
   if (kokSteg) return <KokSteg {...kokSteg} onKlar={() => onTillagd(kokSteg.sakId, kokSteg.namn)} />
+  if (storlekFor)
+    return (
+      <div className="space-y-3">
+        <StorlekSteg produkt={storlekFor} sparar={upptagen} onLaggTill={(s) => void laggTill(storlekFor, s)} onTillbaka={() => setStorlekFor(null)} />
+        {fel && (
+          <p role="alert" className="text-sm text-destructive">
+            {fel}
+          </p>
+        )}
+      </div>
+    )
 
   return (
     // Ligger i en Panel, som har rubriken och stängknappen.
@@ -292,7 +317,7 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
                       underrad={m.varianter[0].version}
                       finnsRedan={finnsRedan.has(m.varianter[0].id)}
                       upptagen={upptagen}
-                      onValj={laggTill}
+                      onValj={valj}
                     />
                   ) : (
                     <Modellrad
@@ -301,7 +326,7 @@ export function ProduktSok({ finnsRedan, startKategori, startUnderkategori, onTi
                       onVaxla={() => setUtfalld((u) => (u === m.nyckel ? null : m.nyckel))}
                       finnsRedan={finnsRedan}
                       upptagen={upptagen}
-                      onValj={laggTill}
+                      onValj={valj}
                     />
                   )}
                 </li>
@@ -404,17 +429,17 @@ function Modellrad({
         <span className="min-w-0 flex-1">
           <span className="block font-medium break-words">{produktnamn(modell)}</span>
           <span className="block text-sm text-muted-foreground">
-            {modell.varianter.length} storlekar
+            {varianterText(modell, formateraVikt)}
             {antalIForradet > 0 && ', finns redan i ditt förråd'}
           </span>
         </span>
         <span className="shrink-0 text-sm font-medium">från {formateraVikt(modell.varianter[0].packvikt_g)}</span>
         <ChevronDown className={cn('size-5 shrink-0 text-muted-foreground transition-transform', utfalld && 'rotate-180')} aria-hidden />
       </button>
-      <ul id={id} hidden={!utfalld} aria-label={`Storlekar av ${produktnamn(modell)}`} className="divide-y divide-border border-t border-border bg-muted/40">
+      <ul id={id} hidden={!utfalld} aria-label={`Varianter av ${produktnamn(modell)}`} className="divide-y divide-border border-t border-border bg-muted/40">
         {modell.varianter.map((v) => (
           <li key={v.id}>
-            <Produktrad produkt={v} rubrik={v.version || 'Utan storlek'} finnsRedan={finnsRedan.has(v.id)} upptagen={upptagen} indragen onValj={onValj} />
+            <Produktrad produkt={v} rubrik={variantnamn(v)} finnsRedan={finnsRedan.has(v.id)} upptagen={upptagen} indragen onValj={onValj} />
           </li>
         ))}
       </ul>
