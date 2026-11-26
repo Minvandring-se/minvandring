@@ -8,7 +8,7 @@ import { Bildkort } from '@/components/ui/bildkort'
 import { Bricka } from '@/components/ui/bricka'
 import { useReceptkatalog } from '@/hooks/useReceptkatalog'
 import { passarFilter, TOMT_FILTER, type Kostfilter } from '@/lib/kost'
-import { kostdelar, kostForRecept, RECEPTMALTID_ETIKETT, receptadress, receptbrickor, type Katalogrecept } from '@/lib/receptkatalog'
+import { kcalPerPortion, kostdelar, kostForRecept, RECEPTMALTID_ETIKETT, receptadress, receptbrickor, type Katalogrecept } from '@/lib/receptkatalog'
 import { cn } from '@/lib/utils'
 
 /** En länk som täcker hela bildkortet, med fokusringen runt kortet. */
@@ -28,6 +28,12 @@ export function Receptbrickor({ recept }: { recept: Katalogrecept }) {
       {recept.status === 'otestat' && <Bricka ton="rost">Inte provlagat av oss än</Bricka>}
     </span>
   )
+}
+
+/** Kcal på kortet, "ca 650 kcal", när den går att räkna. */
+function kcalText(r: Katalogrecept): string | null {
+  const kcal = kcalPerPortion(r)
+  return kcal === null ? null : `ca ${kcal.toLocaleString('sv-SE')} kcal`
 }
 
 /** MinVandrings recept som kort, med kostfilter. Ett tryck öppnar receptet på en egen sida. */
@@ -57,7 +63,7 @@ export function MinvandringsRecept() {
           {visade.map((r) => (
             <li key={r.id}>
               <Bildkort klickbar lagBild className="h-full" bild={<Illustration namn={r.id} className="absolute inset-0 size-full" />} textKlass="flex-1 gap-2 px-4 pt-1 pb-4 @2xl:p-6">
-                <span className="text-sm text-muted-foreground">{RECEPTMALTID_ETIKETT[r.maltid]}</span>
+                <span className="text-sm text-muted-foreground">{[RECEPTMALTID_ETIKETT[r.maltid], kcalText(r)].filter(Boolean).join(', ')}</span>
                 {/* Länken täcker hela kortet, så att det går att trycka var som helst på det. */}
                 <Link to={receptadress(r.id)} className={cn(tackande, 'font-heading text-lg font-semibold break-words text-primary')}>
                   {r.namn}

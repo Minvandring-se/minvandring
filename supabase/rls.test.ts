@@ -2399,6 +2399,22 @@ describe('matplanen', () => {
       expect(s.rows[0].n).toBeGreaterThan(0)
     })
 
+    it('gram läses av inloggade, ändras inte via API:t och anges bara när enheten inte är g eller kg', async () => {
+      const r = await som(LASARE, (tx) => tx.query<{ gram: string | null }>("select gram from public.receptkatalog_ingredienser where recept_id = 'aprikosgrot' and ordning = 1"))
+      expect(r.rows).toEqual([{ gram: null }])
+      const u = await som(AGARE, (tx) => tx.query("update public.receptkatalog_ingredienser set gram = 90 where recept_id = 'aprikosgrot'")).catch(() => null)
+      expect(u?.affectedRows ?? 0).toBe(0)
+      // Som migreringen: grams gränser och att g och kg inte har gram.
+      await forvantaFel(db.query("update public.receptkatalog_ingredienser set gram = 0 where recept_id = 'aprikosgrot' and ordning = 1"))
+      await db.query('begin')
+      try {
+        await db.query("update public.receptkatalog_ingredienser set gram = 90 where recept_id = 'aprikosgrot' and ordning = 1")
+        await forvantaFel(db.query("update public.receptkatalog_ingredienser set mangd = 90, enhet = 'g' where recept_id = 'aprikosgrot' and ordning = 1"))
+      } finally {
+        await db.query('rollback')
+      }
+    })
+
     it('ingen ändrar via API:t, anon når ingenting och RLS är påslaget', async () => {
       await forvantaFel(
         som(AGARE, (tx) =>

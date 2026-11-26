@@ -382,6 +382,8 @@ export interface Receptkatalogingrediens {
   /** hemma: i påsen hemma. separat: packas för sig. pa_plats: vatten, som inte köps eller bärs. */
   packas: 'hemma' | 'separat' | 'pa_plats'
   kommentar: string | null
+  /** Vikten i gram för hela mängden, när enheten inte är g eller kg. Behövs för att räkna kcal. */
+  gram: number | null
   /** Livsmedlet eller märkesvaran som ger allergener och näring. Utan koppling är ingrediensen okänd. */
   livsmedel_nummer: number | null
   varukatalog_id: string | null
