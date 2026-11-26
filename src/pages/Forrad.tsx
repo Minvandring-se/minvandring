@@ -1,6 +1,6 @@
-import { ChevronDown, ExternalLink, LayoutGrid, List, NotebookPen, Pencil, Plus, RotateCcw } from 'lucide-react'
+import { ChevronDown, ExternalLink, LayoutGrid, List, NotebookPen, Pencil, Plus, RotateCcw, Trash2, Undo2 } from 'lucide-react'
 import { Kategoriikon } from '@/components/forrad/Kategoriikon'
-import { useEffect, useId, useState } from 'react'
+import { useEffect, useId, useRef, useState } from 'react'
 import { useLocation, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
@@ -22,10 +22,12 @@ import { AktivaFilter, Filterpanel, Sokrad, Sokruta, type AktivtFilter } from '@
 import { Select } from '@/components/ui/select'
 import { Panel } from '@/components/ui/panel'
 import { Sektion } from '@/components/ui/sektion'
+import { useBortagning } from '@/hooks/useBortagning'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { FORRAD_EXEMPEL } from '@/lib/exempeldata'
 import {
   antalGranskade,
+  vaxlaAlla,
   flerKategorier,
   formateraVikt,
   kategoriFor,
@@ -122,7 +124,16 @@ export function Forrad() {
   }
 
   // Översikten räknas alltid på hela förrådet, oavsett sök och filter.
-  const alla = saker ?? []
+  // Det som just tagits bort och kan ångras visas inte.
+  const bort = useBortagning(hamtaOm)
+  const alla = (saker ?? []).filter((s) => !bort.dolda.has(s.id))
+  // Valläget, där man bockar för saker och tar bort dem på en gång.
+  const [valjer, setValjer] = useState(false)
+  const [valda, setValda] = useState<ReadonlySet<string>>(new Set())
+  const avslutaVal = () => {
+    setValjer(false)
+    setValda(new Set())
+  }
   const summa = summeraForrad(alla)
 
   // Sök, kategori, sortering och vy sparas i adressen, så att de finns kvar vid omladdning.
@@ -131,7 +142,17 @@ export function Forrad() {
   const setVal = (nytt: Listval) => setParametrar(adressFranVal(nytt), { replace: true })
   const visade = filtrera(alla, val)
   const oppenSak = oppet !== null && 'sakId' in oppet ? oppet.sakId : null
-  const radhjalp: Radhjalp = { vy: val.vy, alla, oppenSak, onOppna: (sakId) => setOppet({ sakId }), onKlar: klar, onAndrad: hamtaOm, onAvbryt: () => setOppet(null) }
+  const radhjalp: Radhjalp = {
+    vy: val.vy,
+    alla,
+    oppenSak,
+    onOppna: (sakId) => setOppet({ sakId }),
+    onKlar: klar,
+    onAndrad: hamtaOm,
+    onAvbryt: () => setOppet(null),
+    val: valjer ? { valda, onVaxla: (ids) => setValda((v) => vaxlaAlla(v, ids)) } : null,
+    onTaBort: (sakId) => bort.taBort([sakId]),
+  }
   const ny = oppet !== null && 'ny' in oppet ? oppet.ny : null
   // En sak som just sparats men som sök eller filter döljer. Då går formuläret för att ändra den inte att öppna i listan.
   const dold = tillagd !== null && doljsAvFiltret(tillagd.sakId, alla, visade)
@@ -164,10 +185,10 @@ export function Forrad() {
   const fler = heltForrad ? flerKategorier(alla) : []
 
   return (
-    <div className="space-y-6">
+    <div className={cn('space-y-6', (valjer || bort.vantar.length > 0) && 'pb-24')}>
       <SidRubrik rubrik="Mitt förråd" text="Allt du äger för vandring, samlat på ett ställe." knappar={laggTillKnapp} />
 
-      {saker && saker.length > 0 && <Sokdel val={val} onVal={setVal} saker={saker} />}
+      {alla.length > 0 && <Sokdel val={val} onVal={setVal} saker={alla} />}
 
       {sok && (
         <Panel
@@ -251,7 +272,7 @@ export function Forrad() {
           <Skelett className="h-20 rounded-lg" />
           <Skelett className="h-20 rounded-lg" />
         </Laddar>
-      ) : saker.length === 0 ? (
+      ) : alla.length === 0 ? (
         // Ett tomt förråd börjar med de fyra tunga som tomma rutor, och knapparna för fler kategorier.
         !ny && (
           <div className="space-y-6">
@@ -261,9 +282,28 @@ export function Forrad() {
           </div>
         )
       ) : (
-        <div className="grid grid-cols-1 gap-6 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]">
+        <div className={cn('grid grid-cols-1 gap-6', !valjer && 'lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start lg:gap-8 xl:grid-cols-[minmax(0,1fr)_22rem]')}>
           <div className="min-w-0 space-y-6">
-            <Verktyg val={val} onVal={setVal} saker={saker} visas={visade.length} />
+            {valjer ? (
+              <div className="flex flex-wrap items-center justify-between gap-3 rounded-lg bg-primary-soft px-4 py-2">
+                <h2 className="font-sans text-base font-semibold">Välj det du vill ta bort</h2>
+                <Button variant="outline" onClick={avslutaVal}>
+                  Klar
+                </Button>
+              </div>
+            ) : (
+            <Verktyg
+              val={val}
+              onVal={setVal}
+              saker={alla}
+              visas={visade.length}
+              valjer={valjer}
+              onValj={() => {
+                setOppet(null)
+                setValjer(true)
+              }}
+            />
+            )}
 
             {visade.length === 0 ? (
               <TomtLage
@@ -279,11 +319,11 @@ export function Forrad() {
               <Lista delar={delar} sortering={val.sortering} onSaknad={(s) => oppnaSok(s.kategori, s.underkategori)} {...radhjalp} />
             )}
 
-            <FyllPaFler kategorier={fler} onValj={(k) => oppnaSok(k)} />
+            {!valjer && <FyllPaFler kategorier={fler} onValj={(k) => oppnaSok(k)} />}
           </div>
 
           {/* På dator en egen kolumn till höger som stannar kvar när man scrollar. I mobil efter listan. */}
-          <aside aria-label="Översikt" className="space-y-5 lg:sticky lg:top-6">
+          <aside aria-label="Översikt" hidden={valjer} className="space-y-5 lg:sticky lg:top-6">
             {/* Ett vitt kort, eftersom sökrutan är sidans enda mörkgröna yta. Överst i översikten på dator, under listan i mobil. */}
             <HelaForradet summa={summa} granskade={antalGranskade(alla)} />
             <ViktPerKategori summa={summa} />
@@ -292,6 +332,78 @@ export function Forrad() {
           </aside>
         </div>
       )}
+
+      {valjer && (
+        <Valrad
+          antal={valda.size}
+          viktG={alla.reduce((g, s) => g + (valda.has(s.id) && s.vikt_g !== null ? s.antal * s.vikt_g : 0), 0)}
+          allaValda={visade.length > 0 && visade.every((s) => valda.has(s.id))}
+          onValjAlla={() => setValda((v) => vaxlaAlla(v, visade.map((s) => s.id)))}
+          onTaBort={() => {
+            bort.taBort([...valda])
+            avslutaVal()
+          }}
+          onAvbryt={avslutaVal}
+        />
+      )}
+      {!valjer && bort.vantar.length > 0 && <Angrarad antal={bort.vantar.length} sekunder={bort.sekunder} onAngra={bort.angra} />}
+      {bort.fel && (
+        <p role="alert" className="text-sm text-destructive">
+          Det gick inte att ta bort. Sakerna finns kvar. Kontrollera uppkopplingen och försök igen.
+        </p>
+      )}
+    </div>
+  )
+}
+
+/** Fast längst ner, ovanför bottenmenyn i mobil. */
+const fastRad =
+  'fixed inset-x-3 bottom-[calc(4rem+1px+env(safe-area-inset-bottom)+0.75rem)] z-30 mx-auto flex max-w-xl flex-wrap items-center gap-2 rounded-lg border border-border bg-card p-2 pl-4 shadow-soft lg:bottom-4'
+
+/** Raden i valläget: hur många som är valda, Välj alla, Ta bort och Avbryt. */
+function Valrad({
+  antal,
+  viktG,
+  allaValda,
+  onValjAlla,
+  onTaBort,
+  onAvbryt,
+}: {
+  antal: number
+  viktG: number
+  allaValda: boolean
+  onValjAlla: () => void
+  onTaBort: () => void
+  onAvbryt: () => void
+}) {
+  return (
+    <div role="region" aria-label="Ta bort saker" className={fastRad}>
+      <p className="mr-auto text-sm font-medium" aria-live="polite">
+        {antal === 0 ? 'Inget valt' : `${antal === 1 ? '1 vald' : `${antal} valda`}${viktG > 0 ? `, ${formateraVikt(viktG)}` : ''}`}
+      </p>
+      <Button variant="ghost" onClick={onValjAlla}>
+        {allaValda ? 'Avmarkera alla' : 'Välj alla'}
+      </Button>
+      <Button variant="ghost" onClick={onAvbryt}>
+        Avbryt
+      </Button>
+      <Button variant="outline" className="text-destructive" disabled={antal === 0} onClick={onTaBort}>
+        <Trash2 className="size-4" aria-hidden />
+        Ta bort
+      </Button>
+    </div>
+  )
+}
+
+/** Raden efter en borttagning: hur många som togs bort och Ångra, som går att trycka på tills tiden har gått. */
+function Angrarad({ antal, sekunder, onAngra }: { antal: number; sekunder: number; onAngra: () => void }) {
+  return (
+    <div role="status" className={fastRad}>
+      <p className="mr-auto text-sm font-medium">{antal === 1 ? '1 sak borttagen' : `${antal} saker borttagna`}</p>
+      <Button variant="outline" onClick={onAngra}>
+        <Undo2 className="size-4" aria-hidden />
+        Ångra ({sekunder})
+      </Button>
     </div>
   )
 }
@@ -374,6 +486,10 @@ interface Radhjalp {
   /** Något har sparats direkt från raden, så listan ska hämtas igen. */
   onAndrad: () => void
   onAvbryt: () => void
+  /** Valläget: de valda sakerna och att välja eller avmarkera några. null när man inte väljer. */
+  val: { valda: ReadonlySet<string>; onVaxla: (ids: string[]) => void } | null
+  /** Tar bort en sak, med Ångra. */
+  onTaBort: (sakId: string) => void
 }
 
 /**
@@ -419,7 +535,21 @@ function Sokdel({ val, onVal, saker }: { val: Listval; onVal: (val: Listval) => 
 }
 
 /** Raden precis ovanför listan: sortering, val mellan lista och rutnät, och hur mycket som visas när ett filter är på. */
-function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: Listval) => void; saker: Forradssak[]; visas: number }) {
+function Verktyg({
+  val,
+  onVal,
+  saker,
+  visas,
+  valjer,
+  onValj,
+}: {
+  val: Listval
+  onVal: (val: Listval) => void
+  saker: Forradssak[]
+  visas: number
+  valjer: boolean
+  onValj: () => void
+}) {
   const id = useId()
   return (
     <section aria-label="Sortera och visa" className="space-y-2">
@@ -436,6 +566,10 @@ function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: List
             ))}
           </Select>
         </div>
+        <Button variant="ghost" className="ml-auto text-destructive" disabled={valjer} onClick={onValj}>
+          <Trash2 className="size-4" aria-hidden />
+          Ta bort saker
+        </Button>
         <div role="group" aria-label="Visning" className="flex w-fit gap-1 rounded-lg bg-muted p-1">
           {(
             [
@@ -483,11 +617,20 @@ function Verktyg({ val, onVal, saker, visas }: { val: Listval; onVal: (val: List
 function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; sortering: Listval['sortering']; onSaknad: (s: SaknadGrundsak) => void } & Radhjalp) {
   const { kategori, grupp, saknade } = del
   const lista = grupp ? sortera(grupp.saker, sortering) : []
+  const valet = radhjalp.val
+  const ids = lista.map((s) => s.id)
   return (
     <Sektion
       rubrik={kategori.etikett}
       atgard={
-        grupp ? (
+        valet && ids.length > 0 ? (
+          <ValjAllaRuta
+            etikett={kategori.etikett}
+            valda={ids.filter((id) => valet.valda.has(id)).length}
+            av={ids.length}
+            onVaxla={() => valet.onVaxla(ids)}
+          />
+        ) : grupp ? (
           <p className="flex gap-3 text-[13px] text-muted-foreground tabular-nums">
             <span>{antalText(grupp.antal)}</span>
             <span>{formateraVikt(grupp.viktG)}</span>
@@ -517,10 +660,12 @@ function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; 
                 oppen && 'p-2',
               )}
             >
-              {oppen ? (
+              {valet ? (
+                <Valbar sak={sak} vald={valet.valda.has(sak.id)} onVaxla={() => valet.onVaxla([sak.id])} />
+              ) : oppen ? (
                 <SakFormular sak={sak} onKlar={radhjalp.onKlar} onAvbryt={radhjalp.onAvbryt} />
               ) : (
-                <Sakrad sak={sak} alla={radhjalp.alla} vy={radhjalp.vy} onAndra={() => radhjalp.onOppna(sak.id)} onAndrad={radhjalp.onAndrad} />
+                <Sakrad sak={sak} alla={radhjalp.alla} vy={radhjalp.vy} onAndra={() => radhjalp.onOppna(sak.id)} onAndrad={radhjalp.onAndrad} onTaBort={() => radhjalp.onTaBort(sak.id)} />
               )}
             </li>
           )
@@ -537,6 +682,34 @@ function Kategoridel({ del, sortering, onSaknad, ...radhjalp }: { del: Listdel; 
         </ul>
       )}
     </Sektion>
+  )
+}
+
+/** Kryssrutan vid en kategori i valläget: vald när alla är valda, med ett streck när bara några är det. */
+function ValjAllaRuta({ etikett, valda, av, onVaxla }: { etikett: string; valda: number; av: number; onVaxla: () => void }) {
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (ref.current) ref.current.indeterminate = valda > 0 && valda < av
+  }, [valda, av])
+  return (
+    <label className="-mr-2 flex min-h-11 cursor-pointer items-center gap-2 px-2 text-sm font-medium">
+      Välj alla
+      <input ref={ref} type="checkbox" checked={valda === av} onChange={onVaxla} aria-label={`Välj alla i ${etikett.toLowerCase()}`} className="size-5 accent-primary" />
+    </label>
+  )
+}
+
+/** En sak i valläget: en kryssruta med namnet och vikten. */
+function Valbar({ sak, vald, onVaxla }: { sak: Forradssak; vald: boolean; onVaxla: () => void }) {
+  return (
+    <label className={cn('flex min-h-14 cursor-pointer items-center gap-3 px-4 py-2', vald ? 'bg-primary-soft' : 'hover:bg-muted')}>
+      <input type="checkbox" checked={vald} onChange={onVaxla} className="size-5 shrink-0 accent-primary" />
+      <span className="min-w-0 flex-1 font-semibold break-words">
+        {sak.namn}
+        {sak.antal > 1 && <span className="font-normal text-muted-foreground"> × {sak.antal}</span>}
+      </span>
+      <span className="shrink-0 text-sm tabular-nums">{sak.vikt_g === null ? 'Ingen vikt' : formateraVikt(sak.antal * sak.vikt_g)}</span>
+    </label>
   )
 }
 
@@ -579,7 +752,7 @@ function Underrad({ sak, kok }: { sak: Forradssak; kok?: string | null }) {
  * En sak i listan eller rutnätet: ikonen för kategorin, namnet, version och kategori, vikten stort till höger och
  * anteckningen på en egen rad i hela kortets bredd. Ett tryck fäller ut katalogens uppgifter, anteckningen och knapparna Ändra och Ta bort.
  */
-function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: Forradssak[]; vy: Vy; onAndra: () => void; onAndrad: () => void }) {
+function Sakrad({ sak, alla, vy, onAndra, onAndrad, onTaBort }: { sak: Forradssak; alla: Forradssak[]; vy: Vy; onAndra: () => void; onAndrad: () => void; onTaBort: () => void }) {
   const id = useId()
   const [utfalld, setUtfalld] = useState(false)
   const { egen } = viktjamforelse(sak)
@@ -671,14 +844,14 @@ function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: F
         )}
       </button>
       <div id={id} hidden={!utfalld} className="border-t border-border bg-muted/40 px-4 py-4">
-        {utfalld && <Utfalld sak={sak} alla={alla} onAndra={onAndra} onAndrad={onAndrad} />}
+        {utfalld && <Utfalld sak={sak} alla={alla} onAndra={onAndra} onAndrad={onAndrad} onTaBort={onTaBort} />}
       </div>
     </>
   )
 }
 
 /** Den utfällda delen av en sak: katalogens uppgifter med granskningsnivån, din sak och anteckning, Ändra och Ta bort, och det som kommer. */
-function Utfalld({ sak, alla, onAndra, onAndrad }: { sak: Forradssak; alla: Forradssak[]; onAndra: () => void; onAndrad: () => void }) {
+function Utfalld({ sak, alla, onAndra, onAndrad, onTaBort }: { sak: Forradssak; alla: Forradssak[]; onAndra: () => void; onAndrad: () => void; onTaBort: () => void }) {
   const id = useId()
   const [visaAlla, setVisaAlla] = useState(false)
   const [aterstaller, setAterstaller] = useState(false)
@@ -759,7 +932,7 @@ function Utfalld({ sak, alla, onAndra, onAndrad }: { sak: Forradssak; alla: Forr
             {aterstaller ? 'Återställer …' : 'Återställ till katalogens vikt'}
           </Button>
         )}
-        <TaBortSak sak={sak} alla={alla} onBorttagen={onAndrad} />
+        <TaBortSak onTaBort={onTaBort} />
       </div>
       {fel && (
         <p role="alert" className="text-sm text-destructive">

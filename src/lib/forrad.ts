@@ -628,3 +628,17 @@ export function flerKategorier(saker: readonly Forradssak[]): { nyckel: Kategori
   const finns = new Set(saker.map((s) => kategoriFor(s.kategori).nyckel))
   return FLER_KATEGORIER.filter((k) => !finns.has(k)).map((nyckel) => ({ nyckel, etikett: kategoriFor(nyckel).etikett }))
 }
+
+/**
+ * Välj eller avmarkera flera på en gång, till exempel alla i en kategori: är alla redan valda avmarkeras de,
+ * annars väljs alla.
+ */
+export function vaxlaAlla(valda: ReadonlySet<string>, ids: readonly string[]): Set<string> {
+  const ny = new Set(valda)
+  const allaValda = ids.length > 0 && ids.every((id) => ny.has(id))
+  for (const id of ids) {
+    if (allaValda) ny.delete(id)
+    else ny.add(id)
+  }
+  return ny
+}
