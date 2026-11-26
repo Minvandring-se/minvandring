@@ -175,7 +175,7 @@ export function Forrad() {
           onStang={stangSok}
           fot={
             <Button className="w-full" variant={iRutan.length > 0 ? 'default' : 'outline'} onClick={stangSok}>
-              {iRutan.length === 0 ? 'Stäng' : `Klar, ${antalText(iRutan.length)} tillagda`}
+              {iRutan.length === 0 ? 'Stäng' : iRutan.length === 1 ? 'Klar, 1 sak tillagd' : `Klar, ${iRutan.length} saker tillagda`}
             </Button>
           }
         >

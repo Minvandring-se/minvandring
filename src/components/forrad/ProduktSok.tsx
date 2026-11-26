@@ -285,6 +285,33 @@ export function ProduktSok({ finnsRedan, forrad, startKategori, startUnderkatego
 
       <div className="min-w-0 space-y-4">
       <SokFalt etikett="Sök i katalogen på märke, modell eller version" varde={text} onAndra={setText} autofokus hjalp="Välj en träff, så fylls vikt och uppgifter i åt dig." />
+      {/* Ovanför träffarna, så att det syns utan att man scrollar förbi en lång lista i mobilen. */}
+      <div className="space-y-1">
+        {vy === 'egen' ? (
+          <SnabbEgenSak
+            startnamn={text}
+            kategori={kategori || undefined}
+            underkategori={(kategori && underkategori) || undefined}
+            onTillagd={(sakId, namn) => tillagd(sakId, namn)}
+            onFler={(namn) => onEgen(namn, kategori || undefined, (kategori && underkategori) || undefined)}
+          />
+        ) : (
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+            <span className="text-muted-foreground">Hittar du den inte?</span>
+            <button type="button" onClick={() => setVy('egen')} className={lank}>
+              <Plus className="size-4" aria-hidden />
+              Ny egen sak
+            </button>
+          </div>
+        )}
+        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
+          <span className="text-muted-foreground">Har du redan en packlista?</span>
+          <button type="button" onClick={() => setVy('tur')} className={lank}>
+            <History className="size-4" aria-hidden />
+            Hämta från en tur
+          </button>
+        </div>
+      </div>
 
       <div className="space-y-2">
         <div aria-live="polite" className="text-sm text-muted-foreground">
@@ -355,33 +382,6 @@ export function ProduktSok({ finnsRedan, forrad, startKategori, startUnderkatego
         </p>
       )}
 
-      {/* Ligger utanför listan, så att den syns utan att man scrollar i träffarna. */}
-      <div className="space-y-3 border-t border-border pt-3">
-        {vy === 'egen' ? (
-          <SnabbEgenSak
-            startnamn={text}
-            kategori={kategori || undefined}
-            underkategori={(kategori && underkategori) || undefined}
-            onTillagd={(sakId, namn) => tillagd(sakId, namn)}
-            onFler={(namn) => onEgen(namn, kategori || undefined, (kategori && underkategori) || undefined)}
-          />
-        ) : (
-          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-            <span className="text-muted-foreground">Hittar du den inte?</span>
-            <button type="button" onClick={() => setVy('egen')} className={lank}>
-              <Plus className="size-4" aria-hidden />
-              Ny egen sak
-            </button>
-          </div>
-        )}
-        <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm">
-          <span className="text-muted-foreground">Har du redan en packlista?</span>
-          <button type="button" onClick={() => setVy('tur')} className={lank}>
-            <History className="size-4" aria-hidden />
-            Hämta från en tur
-          </button>
-        </div>
-      </div>
     </div>
   )
 }
