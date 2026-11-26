@@ -120,7 +120,8 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
           const jag = d.user_id === mittUserId
           const harKonto = d.user_id !== null
           return (
-            <li key={d.id} className="flex min-h-14 items-center gap-3 py-2">
+            // I mobil ligger rollen på en egen rad under namnet, så att namnet får plats. Från sm på samma rad.
+            <li key={d.id} className="flex min-h-14 flex-wrap items-center gap-x-3 gap-y-1 py-2 sm:flex-nowrap">
               {d.typ === 'hund' ? (
                 <span className="inline-flex size-9 shrink-0 items-center justify-center">
                   <Dog className="size-5 text-primary" role="img" aria-label="Hund" />
@@ -130,32 +131,35 @@ export function Deltagarlista({ tur, deltagare, bilder, minRoll, mittUserId, onA
                 <Namnbricka namn={d.namn} bild={d.user_id ? bilder[d.user_id] : null} laddar={!!d.user_id && !arProfilbildHamtad(d.user_id)} />
               )}
               <div className="min-w-0 flex-1">
-                <p className="truncate font-medium">
+                <p className="font-medium break-words">
                   {d.namn}
                   {jag && <span className="font-normal text-muted-foreground"> (du)</span>}
                 </p>
                 {!harKonto && d.typ === 'person' && <p className="text-sm text-muted-foreground">Har inte gått med själv</p>}
               </div>
 
-              {harKonto &&
-                (arAgare(minRoll) ? (
-                  <Select
-                    aria-label={`Roll för ${d.namn}`}
-                    className="w-auto shrink-0 px-2"
-                    value={d.roll}
-                    onChange={(e) => bytRoll(d.id, e.target.value as Roll)}
-                  >
-                    {ROLLER.map((r) => (
-                      <option key={r} value={r}>
-                        {ROLLNAMN[r]}
-                      </option>
-                    ))}
-                  </Select>
-                ) : (
-                  <span className="rounded-full bg-primary-soft px-3 py-1 text-sm font-medium">
-                    {ROLLNAMN[d.roll]}
-                  </span>
-                ))}
+              {harKonto && (
+                <div className="order-last w-full pl-12 sm:order-none sm:w-auto sm:shrink-0 sm:pl-0">
+                  {arAgare(minRoll) ? (
+                    <Select
+                      aria-label={`Roll för ${d.namn}`}
+                      className="w-auto px-2"
+                      value={d.roll}
+                      onChange={(e) => bytRoll(d.id, e.target.value as Roll)}
+                    >
+                      {ROLLER.map((r) => (
+                        <option key={r} value={r}>
+                          {ROLLNAMN[r]}
+                        </option>
+                      ))}
+                    </Select>
+                  ) : (
+                    <span className="inline-block rounded-full bg-primary-soft px-3 py-1 text-sm font-medium">
+                      {ROLLNAMN[d.roll]}
+                    </span>
+                  )}
+                </div>
+              )}
 
               {minRoll && kanTaBort(minRoll, { id: d.id, roll: d.roll, userId: d.user_id }, mittUserId, alla) && (
                 <Button

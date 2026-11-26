@@ -48,7 +48,6 @@ import {
   type Katalogfilter,
   type Naringskort,
 } from '@/lib/matkatalog'
-import { laggTillSokning, SENASTE_NYCKEL, tolkaSenaste } from '@/lib/senastesok'
 import { manadOchAr, SKAFFERISTATUS_TEXT, skafferistatus } from '@/lib/skafferi'
 import { lokaltDatum } from '@/lib/turlista'
 import { laddfelText } from '@/lib/texter'
@@ -59,16 +58,8 @@ import { cn } from '@/lib/utils'
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4', fokus)
 
-function lasSenaste(): string[] {
-  try {
-    return tolkaSenaste(window.localStorage.getItem(SENASTE_NYCKEL))
-  } catch {
-    return []
-  }
-}
-
 /**
- * Matkatalogen i tre delar: påsar, märkesvaror och livsmedel. Överst en mörkgrön ruta med sökfältet och snabbval,
+ * Matkatalogen i tre delar: påsar, märkesvaror och livsmedel. Överst en mörkgrön ruta med sökfältet,
  * sedan delarna, filtret och måltiderna eller grupperna som rutor. Listan är tom tills man har sökt eller valt en ruta.
  * Delen, måltiden, gruppen, filtret och sorteringen står i adressen.
  *
@@ -78,7 +69,6 @@ function lasSenaste(): string[] {
 export function Matkatalog() {
   useSidtitel('Matkatalog')
   const [sok, setSok] = useState('')
-  const [senaste, setSenaste] = useState<string[]>(lasSenaste)
   const [filterOppet, setFilterOppet] = useState(false)
   const [parametrar, setParametrar] = useSearchParams()
   const del = delFranAdress(parametrar)
@@ -99,32 +89,10 @@ export function Matkatalog() {
     setParametrar(p, { replace: true })
   }
 
-  function sparaSokning(text: string) {
-    const ny = laggTillSokning(senaste, text)
-    if (ny.join('|') === senaste.join('|')) return
-    setSenaste(ny)
-    try {
-      window.localStorage.setItem(SENASTE_NYCKEL, JSON.stringify(ny))
-    } catch {
-      // Går det inte att spara (privat läge) blir det inga senaste sökningar.
-    }
-  }
-
-  const glutenfritt = filter.val.includes('glutenfri')
-  const snabbval: { namn: string; vald?: boolean; gor: () => void }[] = [
-    {
-      namn: 'Frukost',
-      vald: del === 'pasar' && filter.maltid === 'frukost',
-      gor: () => setParametrar(filterTillAdress({ ...filter, maltid: filter.maltid === 'frukost' && del === 'pasar' ? '' : 'frukost' }, bytDel('pasar', parametrar)), { replace: true }),
-    },
-    { namn: 'Glutenfritt', vald: glutenfritt, gor: () => andraFilter({ val: glutenfritt ? filter.val.filter((v) => v !== 'glutenfri') : [...filter.val, 'glutenfri'] }) },
-    ...senaste.map((s) => ({ namn: s, gor: () => setSok(s) })),
-  ]
-
   return (
     <div className="space-y-6">
       <Matflikar />
-      <Sokruta antal={antal} sok={sok} onSok={setSok} onKlar={sparaSokning} snabbval={snabbval} />
+      <Sokruta antal={antal} sok={sok} onSok={setSok} />
 
       <div className="flex items-center gap-2">
         <Delval etikett="Sök bland" delar={KATALOGDELAR} vald={del} onValj={(d) => setParametrar(bytDel(d, parametrar), { replace: true })} className="flex-1" />
@@ -169,19 +137,15 @@ function Hojdkurvor() {
   )
 }
 
-/** Den mörkgröna rutan överst: rubriken, hur mycket som finns, sökfältet och snabbvalen. */
+/** Den mörkgröna rutan överst: rubriken, hur mycket som finns och sökfältet. */
 function Sokruta({
   antal,
   sok,
   onSok,
-  onKlar,
-  snabbval,
 }: {
   antal: Katalogantal | null
   sok: string
   onSok: (s: string) => void
-  onKlar: (s: string) => void
-  snabbval: readonly { namn: string; vald?: boolean; gor: () => void }[]
 }) {
   const tal = (n: number) => n.toLocaleString('sv-SE')
   return (
@@ -194,23 +158,7 @@ function Sokruta({
           </h1>
           <p className="min-h-6 px-1 text-yta-stark-muted">{antal && `${uppraknade([`${tal(antal.pasar)} påsar`, `${tal(antal.varor)} märkesvaror`, `${tal(antal.livsmedel)} livsmedel`])}.`}</p>
         </div>
-        <SokFalt etikett="Sök" doldEtikett varde={sok} onAndra={onSok} onKlar={onKlar} placeholder="Till exempel viltgryta eller gröt" className="max-w-2xl" />
-        <div role="group" aria-label="Snabbval" className="flex flex-wrap gap-2">
-          {snabbval.map((s) => (
-            <button
-              key={s.namn}
-              type="button"
-              aria-pressed={s.vald}
-              onClick={s.gor}
-              className={cn(
-                'inline-flex min-h-11 items-center rounded-full px-4 text-sm text-yta-stark-foreground transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-yta-stark-foreground',
-                s.vald ? 'bg-yta-stark-foreground/30 font-semibold' : 'bg-yta-stark-foreground/15 hover:bg-yta-stark-foreground/25',
-              )}
-            >
-              {s.namn}
-            </button>
-          ))}
-        </div>
+        <SokFalt etikett="Sök" doldEtikett varde={sok} onAndra={onSok} placeholder="Till exempel viltgryta eller gröt" className="max-w-2xl" />
       </div>
     </section>
   )
