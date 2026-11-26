@@ -68,6 +68,22 @@ export const svaraVanforfragan = (forfragan: string, ja: boolean) => anropa('sva
 export const angraVanforfragan = (forfragan: string) => anropa('angra_vanforfragan', { forfragan })
 export const taBortVan = (person: string) => anropa('ta_bort_van', { person })
 
+/** Ens vänlänk, till kortet Lägg till vänner på Hem. null medan den hämtas eller om den inte gick att hämta. */
+export function useMinVanlank(anvandarId: string): Vanlank | null {
+  const [lank, setLank] = useState<Vanlank | null>(null)
+  useEffect(() => {
+    if (!supabase || !anvandarId) return
+    let aktuell = true
+    supabase.rpc('min_vanlank').then(({ data, error }) => {
+      if (aktuell && !error) setLank((data as Vanlank[])[0] ?? null)
+    })
+    return () => {
+      aktuell = false
+    }
+  }, [anvandarId])
+  return lank
+}
+
 /** En ny vänlänk. Den gamla slutar fungera. */
 export async function nyVanlank(): Promise<Vanlank | null> {
   if (!supabase) return null

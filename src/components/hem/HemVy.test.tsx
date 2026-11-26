@@ -11,7 +11,7 @@ const ingenInspiration: Inspiration = { lardom: null, recept: null, tips: null }
 const rita = (props: Partial<Parameters<typeof HemVy>[0]> = {}) =>
   renderToStaticMarkup(
     <MemoryRouter>
-      <HemVy namn="Oscar Edmelin" idag="2026-11-26" turer={[]} nasta={null} attgora={null} inspiration={ingenInspiration} {...props} />
+      <HemVy namn="Oscar Edmelin" idag="2026-11-26" turer={[]} nasta={null} attgora={null} inspiration={ingenInspiration} vanlank={null} {...props} />
     </MemoryRouter>,
   )
 
@@ -22,14 +22,17 @@ describe('Hem', () => {
     expect(html).toContain('Hej Oscar!')
     expect(html).toContain('Planera ditt nästa äventyr.')
     expect(html).toContain('Ny tur')
-    expect(html).toContain('href="#bjud-in"')
+    // Knappen i bandet leder till Vänner.
+    expect(html).toContain('Lägg till vänner')
+    expect(html).toContain('href="/vanner"')
+    expect(html).not.toContain('#bjud-in')
     expect(html).not.toContain('till avfärd')
     expect(html).not.toContain('Nästa tur:')
   })
 
   it('visar guiden i tre steg i stället för Nästa tur och Att göra för en ny användare', () => {
     const html = rita()
-    for (const t of ['Kom igång', 'Skapa en tur', 'Bjud in vänner', 'Packa och planera maten', 'Till Mitt förråd']) expect(html).toContain(t)
+    for (const t of ['Kom igång', 'Skapa en tur', 'Lägg till vänner', 'Till Vänner', 'Packa och planera maten', 'Till Mitt förråd']) expect(html).toContain(t)
     expect(html).not.toContain('Att göra')
   })
 
@@ -42,12 +45,14 @@ describe('Hem', () => {
     expect(html).not.toContain('Kom ihåg från förra turen')
   })
 
-  it('har Bjud in vänner, Hitta din nästa vandring och genvägarna', () => {
+  it('har Lägg till vänner, Hitta din nästa vandring och genvägarna', () => {
     const html = rita()
-    expect(html).toContain('id="bjud-in"')
-    expect(html).toContain('Skicka mejl')
-    expect(html).toContain('Kopiera länk')
-    expect(html).toContain('från turens sida')
+    expect(html).toContain('Skicka din vänlänk')
+    expect(html).not.toContain('Skicka mejl')
+    expect(html).not.toContain('mailto:')
+    // Utan vänlänk (medan den hämtas) visas bara länken till Vänner.
+    expect(html).not.toContain('Kopiera min vänlänk')
+    expect(rita({ vanlank: { kod: '0123456789abcdef0123456789abcdef', giltig_till: '2026-12-03T12:00:00Z' } })).toContain('Kopiera min vänlänk')
     expect(html).toContain('href="/hitta-vandring"')
     expect(html).toContain('Kommer snart')
     for (const g of ['/matplanering', '/forrad', '/utrustning', '/matplanering/skafferi']) expect(html).toContain(`href="${g}"`)
