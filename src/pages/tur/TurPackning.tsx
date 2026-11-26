@@ -259,7 +259,7 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
         />
       )}
 
-      {panel?.typ === 'fran-mall' && <LaggTillFranMall turId={tur.id} onTillagd={laddaOm} onStang={() => setPanel(null)} />}
+      {panel?.typ === 'fran-mall' && <LaggTillFranMall turId={tur.id} sist={Math.max(0, ...rader.map((r) => r.sortering))} onTillagd={laddaOm} onStang={() => setPanel(null)} />}
 
       {panel?.typ === 'spara-mall' && <SparaSomMall turId={tur.id} forslag={tur.namn} onStang={() => setPanel(null)} />}
 
