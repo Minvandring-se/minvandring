@@ -5199,6 +5199,65 @@ describe('vänner i turer', () => {
     expect(r.rows).toHaveLength(0)
   })
 
+  it('ta bort och lägga till igen ger ingen ny notis, varken när ägaren tar bort eller när man lämnar själv', async () => {
+    expect(await laggTill(ASA, tur, [ELLA])).toBe(1)
+    await som(ASA, (tx) => tx.query('delete from public.deltagare where tur_id = $1 and user_id = $2', [tur, ELLA]))
+    expect(await laggTill(ASA, tur, [ELLA])).toBe(1)
+    await som(ELLA, (tx) => tx.query('delete from public.deltagare where tur_id = $1 and user_id = $2', [tur, ELLA]))
+    expect(await laggTill(ASA, tur, [ELLA])).toBe(1)
+    // Notisen försvann när Ella togs bort, och ingen ny kom.
+    expect(await tillagdNotiser(ELLA)).toHaveLength(0)
+  })
+
+  it('högst tre notiser per dygn från samma person, räknat över alla turer', async () => {
+    const forut = (await tillagdNotiser(CECILIA)).length
+    for (let i = 0; i < 4; i++) {
+      const t = await skapaTur(ASA, `Extratur ${i}`)
+      expect(await laggTill(ASA, t, [CECILIA])).toBe(1)
+    }
+    // Cecilia fick en notis om Kungsleden tidigare samma dygn, så två till ryms.
+    expect((await tillagdNotiser(CECILIA)).length).toBe(forut + 2)
+  })
+
+  it('en tur som inte finns, tomma listor och null', async () => {
+    await forvantaFel(laggTill(ASA, crypto.randomUUID(), [ELLA]))
+    expect(await laggTill(ASA, tur, [])).toBe(0)
+    expect(await som(ASA, (tx) => tx.query<{ a: number }>('select public.lagg_till_vanner($1, null) as a', [tur])).then((r) => r.rows[0].a)).toBe(0)
+  })
+
+  it('efter funktionen är undantaget borta, även i samma transaktion', async () => {
+    await forvantaFel(
+      som(ASA, async (tx) => {
+        await tx.query('select public.lagg_till_vanner($1, $2)', [tur, [ELLA]])
+        const r = await tx.query<{ v: string }>(`select coalesce(current_setting('minvandring.lagg_till_vanner', true), '') as v`)
+        expect(r.rows[0].v).toBe('')
+        return tx.query('insert into public.deltagare (tur_id, user_id, namn) values ($1, $2, $3)', [tur, GOSTA, 'Gösta'])
+      }),
+    )
+  })
+
+  it('undantaget släpper inte igenom att en platshållare får någon annans konto', async () => {
+    const r = await som(ASA, (tx) =>
+      tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn, typ) values ($1, 'Platshållare', 'person') returning id`, [tur]),
+    )
+    await forvantaFel(
+      som(ASA, async (tx) => {
+        await tx.query(`select set_config('minvandring.lagg_till_vanner', $1, true)`, [tur])
+        return tx.query('update public.deltagare set user_id = $2 where id = $1', [r.rows[0].id, GOSTA])
+      }),
+    )
+  })
+
+  it('en vän som har tagits bort kan inte läggas till', async () => {
+    await som(ASA, (tx) => tx.query('select public.ta_bort_van($1)', [DAVID]))
+    expect(await laggTill(ASA, tur, [DAVID])).toBe(0)
+  })
+
+  it('en redigerare som har tagits bort ur turen kan inte lägga till sina vänner', async () => {
+    await som(ASA, (tx) => tx.query('delete from public.deltagare where tur_id = $1 and user_id = $2', [tur, BO]))
+    await forvantaFel(laggTill(BO, tur, [FILIP]))
+  })
+
   it('notistyperna är desamma som i src/lib/notiser.ts', async () => {
     const r = await db.query<{ def: string }>(
       `select pg_get_constraintdef(c.oid) as def from pg_constraint c where c.conrelid = 'public.notiser'::regclass and c.contype = 'c' and pg_get_constraintdef(c.oid) like '%typ%'`,

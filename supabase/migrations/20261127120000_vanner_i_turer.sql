@@ -26,10 +26,27 @@ end;
 $$;
 revoke execute on function public.ny_deltagare_utan_konto() from public, anon, authenticated;
 
+-- ─── Gränsen för notiser ─────────────────────────────────────────────────────
+-- När någon senast lade till en vän i en tur. Rensas inte när deltagaren tas bort, så att ta bort och lägga till
+-- igen inte ger nya notiser. Ingen roll når tabellen, bara funktionen nedan.
+create table public.tillagd_sparr (
+  fran_user_id uuid not null references auth.users (id) on delete cascade,
+  till_user_id uuid not null references auth.users (id) on delete cascade,
+  tur_id uuid not null references public.turer (id) on delete cascade,
+  senaste timestamptz not null default now(),
+  primary key (fran_user_id, till_user_id, tur_id)
+);
+create index tillagd_sparr_till on public.tillagd_sparr (till_user_id);
+create index tillagd_sparr_tur on public.tillagd_sparr (tur_id);
+
+revoke all on public.tillagd_sparr from public, anon, authenticated;
+alter table public.tillagd_sparr enable row level security;
+
 -- ─── Lägg till vänner i en tur ───────────────────────────────────────────────
 -- Lägger till de av personerna som är den inloggades vänner och inte redan är med. Andra hoppas över utan fel, så
 -- att funktionen inte avslöjar något om dem. Ger antalet som lades till. Högst 50 åt gången.
--- Notisen kommer högst en gång per dygn för samma tur från samma person, även om någon lämnar och läggs till igen.
+-- Notisen kommer högst en gång per dygn för samma tur från samma person, även om någon lämnar eller tas bort och
+-- läggs till igen, och högst tre gånger per dygn från samma person räknat över alla turer.
 create function public.lagg_till_vanner(tur uuid, personer uuid[]) returns integer
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -49,22 +66,24 @@ begin
     raise exception 'Högst 50 åt gången';
   end if;
   select t.namn into turnamn from public.turer t where t.id = tur;
-  avsandare := public.profilnamn(anvandare);
+  avsandare := coalesce(public.profilnamn(anvandare), 'Någon');
+  delete from public.tillagd_sparr where senaste <= now() - interval '1 day';
   perform set_config('minvandring.lagg_till_vanner', tur::text, true);
   for p in select distinct x from unnest(personer) x where x is not null and x <> anvandare loop
     continue when not public.ar_vanner(anvandare, p);
     continue when exists (select 1 from public.deltagare d where d.tur_id = tur and d.user_id = p);
     insert into public.deltagare (tur_id, user_id, namn, roll, sortering)
     values (
-      tur, p, public.profilnamn(p), 'editor',
+      tur, p, coalesce(public.profilnamn(p), 'Ny deltagare'), 'editor',
       (select coalesce(max(d.sortering), 0) + 1 from public.deltagare d where d.tur_id = tur)
     );
     antal := antal + 1;
     if not exists (
-      select 1 from public.notiser n
-       where n.user_id = p and n.tur_id = tur and n.fran_user_id = anvandare and n.typ = 'tillagd_i_tur'
-         and n.skapad > now() - interval '1 day'
-    ) then
+      select 1 from public.tillagd_sparr s where s.fran_user_id = anvandare and s.till_user_id = p and s.tur_id = tur
+    ) and (
+      select count(*) from public.tillagd_sparr s where s.fran_user_id = anvandare and s.till_user_id = p
+    ) < 3 then
+      insert into public.tillagd_sparr (fran_user_id, till_user_id, tur_id) values (anvandare, p, tur);
       insert into public.notiser (user_id, typ, text, lank, fran_user_id, tur_id)
       values (p, 'tillagd_i_tur', avsandare || ' lade till dig i ' || turnamn, '/tur/' || tur, anvandare, tur);
     end if;
