@@ -7,7 +7,7 @@ import { knappStil } from '@/components/ui/knappStil'
 import { useSession } from '@/hooks/useSession'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { supabase } from '@/lib/supabase'
-import { vanfel, type Vanlankinfo } from '@/lib/vanner'
+import { VANNER_I_TURER, vanfel, type Vanlankinfo } from '@/lib/vanner'
 
 const FEL_LANK = 'Vänlänken fungerar inte. Den kan ha gått ut eller bytts ut. Be om en ny länk.'
 
@@ -100,7 +100,7 @@ export function VanLank() {
         <h1 className="text-2xl break-words">{info.namn}</h1>
       </div>
       <p className="text-muted-foreground">
-        Som vänner ser ni varandras namn och profilbild, och vilka turer ni har haft ihop. Allt annat är fortfarande privat.
+        Som vänner ser ni varandras namn och profilbild, och vilka turer ni har haft ihop. Allt annat är fortfarande privat. {VANNER_I_TURER}
       </p>
       <div className="flex flex-wrap gap-2">
         <Button disabled={gar} onClick={() => void bliVanner(info.namn)}>

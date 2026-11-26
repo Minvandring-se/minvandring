@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { giltigTillText, kontrolleraVanadress, skickadText, turerIhopText, vanfel, vanlankAdress } from './vanner'
+import { VANNER_I_TURER, giltigTillText, kontrolleraVanadress, sammaSom, skickadText, tillagdaText, turerIhopText, turerMedVanner, vanfel, vanlankAdress, vannerUtanfor } from './vanner'
 
 describe('turerIhopText', () => {
   it('räknar turerna och visar den senaste', () => {
@@ -50,5 +50,38 @@ describe('skickadText', () => {
     expect(skickadText('2026-11-27T09:00:00+01:00', nu)).toBe('Förfrågan skickad för 3 tim sedan')
     expect(skickadText('2026-11-26T09:00:00+01:00', nu)).toBe('Förfrågan skickad i går')
     expect(skickadText('2026-11-20T09:00:00+01:00', nu)).toBe('Förfrågan skickad den 20 nov')
+  })
+})
+
+describe('vänner i turer', () => {
+  const vanner = [{ user_id: 'a' }, { user_id: 'b' }, { user_id: 'c' }]
+
+  it('vannerUtanfor tar bort dem som redan är med', () => {
+    expect(vannerUtanfor(vanner, ['b', null, 'x']).map((v) => v.user_id)).toEqual(['a', 'c'])
+  })
+
+  it('sammaSom väljer vännerna som var med i en annan tur', () => {
+    expect([...sammaSom(vanner, [{ user_id: 'c' }, { user_id: null }, { user_id: 'jag' }, {}])]).toEqual(['c'])
+  })
+
+  it('turerMedVanner visar bara turer med minst en vän, senast skapad först', () => {
+    const turer = [
+      { id: '1', skapad: '2026-01-01', deltagare: [{ user_id: 'a' }] },
+      { id: '2', skapad: '2026-06-01', deltagare: [{ user_id: 'x' }] },
+      { id: '3', skapad: '2026-09-01', deltagare: [{ user_id: 'b' }, { user_id: null }] },
+    ]
+    expect(turerMedVanner(turer, vanner).map((t) => t.id)).toEqual(['3', '1'])
+  })
+
+  it('tillagdaText', () => {
+    expect(tillagdaText(0)).toBe('Ingen ny lades till. De kan redan vara med i turen.')
+    expect(tillagdaText(1, 'Anna')).toBe('Anna är tillagd i turen.')
+    expect(tillagdaText(3)).toBe('3 vänner är tillagda i turen.')
+  })
+})
+
+describe('VANNER_I_TURER', () => {
+  it('säger att vänner kan lägga till en i turer och att man alltid kan lämna', () => {
+    expect(VANNER_I_TURER).toBe('Vänner kan lägga till dig i sina turer. Du kan alltid lämna en tur.')
   })
 })

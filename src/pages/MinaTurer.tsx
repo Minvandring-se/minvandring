@@ -13,10 +13,14 @@ import { NastaTurKort, TurRadKort, type TurMedDeltagare } from '@/components/app
 import { glomTurlistan, mindTurlista, minnsTurlistan } from '@/components/app/turlistaMinne'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
+import { Select } from '@/components/ui/select'
+import { VanVal } from '@/components/vanner/VanVal'
 import { useSidtitel } from '@/hooks/useSidtitel'
+import { laggTillVannerITur, useMinaVanner } from '@/hooks/useVanner'
 import { supabase } from '@/lib/supabase'
 import { delaUppTurer, flerTurer, halsning, lokaltDatum } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
+import { sammaSom, turerMedVanner } from '@/lib/vanner'
 
 export function MinaTurer() {
   const { namn: mittNamn, anvandarId, profilHamtad } = useApp()
@@ -83,7 +87,7 @@ export function MinaTurer() {
         </p>
       )}
 
-      {formularOppet && <NyTurFormular onStang={() => visaFormular(false)} />}
+      {formularOppet && <NyTurFormular turer={turer ?? []} onStang={() => visaFormular(false)} />}
 
       {turer === null ? (
         <Laddar text="Hämtar dina turer">
@@ -181,14 +185,21 @@ export function MinaTurer() {
   )
 }
 
-/** Kort formulär för en ny tur: bara namnet. Resten fylls i inne i turen. */
-function NyTurFormular({ onStang }: { onStang: () => void }) {
+/**
+ * Kort formulär för en ny tur: namnet, och de vänner som ska med, eller samma vänner som i en tidigare tur. Resten
+ * fylls i inne i turen. Vännerna läggs till direkt som redigerare när turen har skapats.
+ */
+function NyTurFormular({ turer, onStang }: { turer: readonly TurMedDeltagare[]; onStang: () => void }) {
   const navigate = useNavigate()
   const id = useId()
   const falt = useRef<HTMLInputElement>(null)
   const [namn, setNamn] = useState('')
   const [skapar, setSkapar] = useState(false)
   const [fel, setFel] = useState('')
+  const vanner = useMinaVanner(true)
+  const [valda, setValda] = useState<Set<string>>(new Set())
+  const [sammaSomTur, setSammaSomTur] = useState('')
+  const tidigare = Array.isArray(vanner) ? turerMedVanner(turer, vanner).slice(0, 10) : []
 
   useEffect(() => falt.current?.focus(), [])
 
@@ -201,13 +212,22 @@ function NyTurFormular({ onStang }: { onStang: () => void }) {
     // och innan dess släpper databasen inte fram turen till någon.
     const id = crypto.randomUUID()
     const { error } = await supabase.from('turer').insert({ id, namn: namn.trim() })
-    setSkapar(false)
     if (error) {
+      setSkapar(false)
       setFel('Det gick inte att skapa turen. Kontrollera uppkopplingen och försök igen.')
       return
     }
+    // Gick det inte att lägga till vännerna öppnas inbjudan i turen, så att man kan försöka igen där.
+    const tillagda = valda.size > 0 ? await laggTillVannerITur(id, [...valda]) : null
+    setSkapar(false)
     glomTurlistan()
-    navigate(`/tur/${id}`)
+    navigate(tillagda?.fel ? `/tur/${id}#bjud-in` : `/tur/${id}`)
+  }
+
+  function valjTur(turId: string) {
+    setSammaSomTur(turId)
+    const tur = turer.find((t) => t.id === turId)
+    if (tur && Array.isArray(vanner)) setValda(sammaSom(vanner, tur.deltagare))
   }
 
   return (
@@ -227,7 +247,31 @@ function NyTurFormular({ onStang }: { onStang: () => void }) {
           {skapar ? 'Skapar …' : 'Skapa turen'}
         </Button>
       </div>
-      <p className="text-sm text-muted-foreground">Datum, startpunkt och deltagare lägger du till inne i turen.</p>
+      {Array.isArray(vanner) && vanner.length > 0 && (
+        <div className="space-y-3 pt-1">
+          {tidigare.length > 0 && (
+            <div className="space-y-1">
+              <label htmlFor={`${id}-samma`} className="block text-sm font-medium">
+                Samma vänner som i
+              </label>
+              <Select id={`${id}-samma`} value={sammaSomTur} onChange={(e) => valjTur(e.target.value)}>
+                <option value="">Välj en tidigare tur</option>
+                {tidigare.map((t) => (
+                  <option key={t.id} value={t.id}>
+                    {t.namn}
+                  </option>
+                ))}
+              </Select>
+            </div>
+          )}
+          <VanVal rubrik="Vänner som ska med" vanner={vanner} valda={valda} onAndra={setValda} />
+        </div>
+      )}
+      <p className="text-sm text-muted-foreground">
+        {Array.isArray(vanner) && vanner.length > 0
+          ? 'Vännerna läggs till som redigerare och får en notis. Datum, startpunkt och fler deltagare lägger du till inne i turen.'
+          : 'Datum, startpunkt och deltagare lägger du till inne i turen.'}
+      </p>
       {fel && <p className="text-sm text-destructive">{fel}</p>}
     </form>
   )

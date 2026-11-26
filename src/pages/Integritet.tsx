@@ -90,6 +90,8 @@ export function Integritet() {
           Dina vänner ser ditt namn, din profilbild och vilka turer ni har haft ihop, men inget annat. Den som skickar en förfrågan till
           en mejladress får aldrig veta om adressen har ett konto hos oss. Den som har din vänlänk kan bli din vän direkt, så dela den
           bara med dem du vill ha som vänner. Du kan göra en ny länk när som helst, och då slutar den gamla att fungera.
+          Vänner kan lägga till dig i sina turer. Du syns då för alla i turen med namn och bild, som när du går med via en
+          länk. Du kan alltid lämna en tur, och den som inte vill läggas till kan ta bort vänskapen.
         </p>
       </Avsnitt>
 
