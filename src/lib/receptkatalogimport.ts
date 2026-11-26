@@ -5,7 +5,7 @@ import { arEnhet, type Enhet } from './handla'
 import { lasCsv } from './katalogimport'
 import type { Receptkatalogingrediens, Receptkatalogrecept, Receptkatalogsteg } from './typer'
 
-export const RECEPTKOLUMNER = ['id', 'namn', 'maltid', 'portioner', 'kok_kravs', 'torkning_hemma', 'beskrivning', 'mangder', 'inspirerat_av', 'inspirerat_av_url', 'status'] as const
+export const RECEPTKOLUMNER = ['id', 'namn', 'maltid', 'portioner', 'kok_kravs', 'torkning_hemma', 'beskrivning', 'mangder', 'inspirerat_av', 'inspirerat_av_url', 'status', 'bild'] as const
 export const INGREDIENSKOLUMNER = ['recept_id', 'ordning', 'ingrediens', 'mangd', 'enhet', 'packas', 'kommentar', 'livsmedel_nummer', 'varukatalog', 'gram'] as const
 export const STEGKOLUMNER = ['recept_id', 'steg_nr', 'var', 'steg', 'tid_min'] as const
 
@@ -72,6 +72,7 @@ export function importeraReceptkatalog(filer: { recept: string; ingredienser: st
     const portioner = /^\d{1,2}$/.test(falt.portioner) ? Number(falt.portioner) : 0
     const kok = jaNej(falt.kok_kravs)
     const torkning = jaNej(falt.torkning_hemma)
+    const bild = jaNej(falt.bild)
     const namn = text(falt.namn, 80)
     const beskrivning = text(falt.beskrivning, 300)
     const kalla = text(falt.inspirerat_av, 80)
@@ -88,6 +89,7 @@ export function importeraReceptkatalog(filer: { recept: string; ingredienser: st
       !kalla && 'inspirerat_av saknas',
       !/^https:\/\/\S+$/.test(falt.inspirerat_av_url) && 'inspirerat_av_url ska börja med https://',
       falt.status !== 'otestat' && falt.status !== 'testat' && 'status ska vara otestat eller testat',
+      bild === null && 'bild ska vara ja eller nej',
     ].filter((x): x is string => typeof x === 'string')
     if (radfel.length) {
       fel.push(...radfel.map((f) => `${var_}: ${f}.`))
@@ -105,6 +107,7 @@ export function importeraReceptkatalog(filer: { recept: string; ingredienser: st
       inspirerat_av: kalla!,
       inspirerat_av_url: falt.inspirerat_av_url,
       status: falt.status as Receptkatalogrecept['status'],
+      bild: bild!,
     })
   }
   const receptId = new Set(recept.map((x) => x.id))

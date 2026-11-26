@@ -4,7 +4,7 @@ import type { Katalogrecept } from '@/lib/receptkatalog'
 import { supabase } from '@/lib/supabase'
 import type { Ingrediens, Kostbehov, Ratt, Vara } from '@/lib/typer'
 
-const KOLUMNER = `id, namn, maltid, portioner, kok_kravs, torkning_hemma, beskrivning, mangder, inspirerat_av, inspirerat_av_url, status,
+const KOLUMNER = `id, namn, maltid, portioner, kok_kravs, torkning_hemma, beskrivning, mangder, inspirerat_av, inspirerat_av_url, status, bild,
   ingredienser:receptkatalog_ingredienser(ordning, ingrediens, mangd, enhet, packas, kommentar, gram, livsmedel_nummer, varukatalog_id,
     livsmedel(namn, grupp, allergener, kcal_per_100g, protein_per_100g),
     varukatalog(vegetarisk, vegansk, glutenfri, laktosfri, allergener, spar, kcal_per_100g, protein_per_100g)),

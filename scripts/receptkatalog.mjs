@@ -33,6 +33,10 @@ try {
   )
 
   const imp = importeraReceptkatalog({ recept: las('recept.csv'), ingredienser: las('ingredienser.csv'), steg: las('steg.csv') }, { livsmedel, varor })
+  // Ett recept med bild ska ha alla fyra WebP-filerna i public/recept/ (npm run receptbilder).
+  for (const r of imp.recept.filter((x) => x.bild))
+    for (const fil of ['kort-600', 'kort-1200', 'vy-900', 'vy-1800'])
+      if (!fs.existsSync(path.join(rot, 'public', 'recept', `${r.id}-${fil}.webp`))) imp.fel.push(`recept.csv: ${r.id} har bild ja, men public/recept/${r.id}-${fil}.webp saknas.`)
   for (const f of imp.fel) console.log(`FEL: ${f}`)
   const kopplade = imp.ingredienser.filter((i) => i.livsmedel_nummer !== null || i.varukatalog !== null).length
   const vatten = imp.ingredienser.filter((i) => i.packas === 'pa_plats').length

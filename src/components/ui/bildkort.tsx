@@ -16,6 +16,7 @@ export function Bildkort({
   ton = 'kort',
   klickbar = false,
   lagBild = false,
+  ljusBild = false,
   element: Element = 'article',
   className,
   textKlass,
@@ -29,6 +30,11 @@ export function Bildkort({
   klickbar?: boolean
   /** Lägre bild i mobil (120 px i stället för 200 px), för listor där fler kort ska synas per skärm. */
   lagBild?: boolean
+  /**
+   * Bilden har en ljus botten (receptbilderna). I mörkt läge tonas den då inte ut mot det mörka kortet, eftersom
+   * övergången blir ett grumligt band. Bilden slutar i stället med en rak kant.
+   */
+  ljusBild?: boolean
   element?: 'article' | 'section' | 'div'
   className?: string
   textKlass?: string
@@ -56,7 +62,10 @@ export function Bildkort({
           >
             <path d="M0 0 H38 C 92 70, 92 230, 38 300 H0 Z" />
           </svg>
-          <div aria-hidden className={cn('absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t to-transparent @2xl:hidden', stark ? 'from-yta-stark' : 'from-card')} />
+          <div
+            aria-hidden
+            className={cn('absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t to-transparent @2xl:hidden', stark ? 'from-yta-stark' : 'from-card', ljusBild && 'mork:hidden')}
+          />
           {paBilden}
         </div>
         <div className={cn('flex min-w-0 flex-col @2xl:order-1', textKlass)}>{children}</div>

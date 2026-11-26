@@ -2,8 +2,8 @@ import { useMemo, useState } from 'react'
 import { Link } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { TomtLage } from '@/components/app/TomtLage'
-import { Illustration } from '@/components/illustrationer/Illustration'
 import { Kostfilterval } from '@/components/mat/Kostfilterval'
+import { Receptbild } from '@/components/mat/Receptbild'
 import { Bildkort } from '@/components/ui/bildkort'
 import { Bricka } from '@/components/ui/bricka'
 import { useReceptkatalog } from '@/hooks/useReceptkatalog'
@@ -62,7 +62,7 @@ export function MinvandringsRecept() {
         <ul className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
           {visade.map((r) => (
             <li key={r.id}>
-              <Bildkort klickbar lagBild className="h-full" bild={<Illustration namn={r.id} className="absolute inset-0 size-full" />} textKlass="flex-1 gap-2 px-4 pt-1 pb-4 @2xl:p-6">
+              <Bildkort klickbar lagBild ljusBild={r.bild} className="h-full" bild={<Receptbild recept={r} typ="kort" className="absolute inset-0 size-full" />} textKlass="flex-1 gap-2 px-4 pt-1 pb-4 @2xl:p-6">
                 <span className="text-sm text-muted-foreground">{[RECEPTMALTID_ETIKETT[r.maltid], kcalText(r)].filter(Boolean).join(', ')}</span>
                 {/* Länken täcker hela kortet, så att det går att trycka var som helst på det. */}
                 <Link to={receptadress(r.id)} className={cn(tackande, 'font-heading text-lg font-semibold break-words text-primary')}>

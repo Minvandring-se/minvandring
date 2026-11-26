@@ -370,6 +370,8 @@ export interface Receptkatalogrecept {
   inspirerat_av_url: string
   /** otestat tills någon av grundarna har lagat rätten. */
   status: 'otestat' | 'testat'
+  /** Om receptet har en bild i public/recept/ (<id>-kort-600.webp och så vidare). Annars visas platshållaren. */
+  bild: boolean
 }
 
 /** En ingrediens i ett recept i katalogen, för hela receptet (alla portioner). */
