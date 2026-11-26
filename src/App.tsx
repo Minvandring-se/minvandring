@@ -24,6 +24,8 @@ const TurMat = lazy(() => import('@/pages/tur/TurMat').then((m) => ({ default: m
 const TurEtapper = lazy(() => import('@/pages/tur/TurEtapper').then((m) => ({ default: m.TurEtapper })))
 const TurPackning = lazy(() => import('@/pages/tur/TurPackning').then((m) => ({ default: m.TurPackning })))
 const TurInkopslista = lazy(() => import('@/pages/tur/TurInkopslista').then((m) => ({ default: m.TurInkopslista })))
+const TurAnteckningar = lazy(() => import('@/pages/tur/TurAnteckningar').then((m) => ({ default: m.TurAnteckningar })))
+const KomIhag = lazy(() => import('@/pages/KomIhag').then((m) => ({ default: m.KomIhag })))
 const TurKommerSnart = lazy(() => import('@/pages/tur/TurKommerSnart').then((m) => ({ default: m.TurKommerSnart })))
 const Installningar = lazy(() => import('@/pages/Installningar').then((m) => ({ default: m.Installningar })))
 const Matplanering = lazy(() => import('@/pages/Matplanering').then((m) => ({ default: m.Matplanering })))
@@ -34,7 +36,7 @@ const Mattips = lazy(() => import('@/pages/Mattips').then((m) => ({ default: m.M
 const PlaneradSida = lazy(() => import('@/pages/PlaneradSida').then((m) => ({ default: m.PlaneradSida })))
 
 /** Sidorna i menyn som inte är byggda än. De visar vad sidan blir, med "Kommer snart". */
-const PLANERADE = ['packlistor', 'dagbok', 'kom-ihag', 'statistik', 'kompisar'] as const
+const PLANERADE = ['packlistor', 'dagbok', 'statistik', 'kompisar'] as const
 const Utrustningskatalog = lazy(() => import('@/pages/Utrustningskatalog').then((m) => ({ default: m.Utrustningskatalog })))
 
 function Laddar({ text = 'Hämtar …' }: { text?: string }) {
@@ -79,12 +81,14 @@ export default function App() {
             <Route path="mat" element={<TurMat />} />
             <Route path="etapper" element={<TurEtapper />} />
             <Route path="packning" element={<TurPackning />} />
+            <Route path="anteckningar" element={<TurAnteckningar />} />
             <Route path="mat/inkopslista" element={<TurInkopslista />} />
             {/* Flikarna som inte är byggda än. Okända delar visar översikten. */}
             <Route path=":del" element={<TurKommerSnart />} />
             <Route path="*" element={<TurOversikt />} />
           </Route>
           <Route path="/forrad" element={<Forrad />} />
+          <Route path="/kom-ihag" element={<KomIhag />} />
           <Route path="/profil" element={<Profil />} />
           <Route path="/installningar" element={<Installningar />} />
           <Route path="/utrustning" element={<Utrustningskatalog />} />

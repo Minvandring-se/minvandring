@@ -1,6 +1,6 @@
 import { ClipboardList, ImageIcon, UserPlus } from 'lucide-react'
 import { Namnbricka } from '@/components/app/Namnbricka'
-import { DAGBOK, KOMPISAR, LARDOMAR, MALLAR } from '@/lib/exempeldata'
+import { DAGBOK, KOMPISAR, MALLAR } from '@/lib/exempeldata'
 
 // Exemplen på sidorna i menyn som inte är byggda än. De visas inerta under "Kommer snart" (PlaneradSida).
 
@@ -48,27 +48,6 @@ export function Dagboksexempel() {
         ))}
       </ol>
     </section>
-  )
-}
-
-/** Kom ihåg till nästa: lärdomarna grupperade efter ämne. */
-export function Lardomsexempel() {
-  return (
-    <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-      {LARDOMAR.map((g) => (
-        <section key={g.amne} className={`${kort} p-5`}>
-          <h2 className="mb-2 text-lg">{g.amne}</h2>
-          <ul className="divide-y divide-border">
-            {g.rader.map((r) => (
-              <li key={r.text} className="py-2.5">
-                <p>{r.text}</p>
-                <p className="text-sm text-muted-foreground">Från {r.tur}</p>
-              </li>
-            ))}
-          </ul>
-        </section>
-      ))}
-    </div>
   )
 }
 

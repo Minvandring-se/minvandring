@@ -14,7 +14,6 @@ import {
   FARDPLAN,
   GEMENSAM_UTRUSTNING,
   HOJDPROFIL,
-  KOM_IHAG,
   KOSTNADER,
   MAT_PER_DAG,
   OMROSTNING,
@@ -86,21 +85,6 @@ export function RedoForAvfard({ className }: Props) {
             </div>
           </div>
         </div>
-      </KommerSnart>
-    </Sektion>
-  )
-}
-
-export function KomIhag({ className }: Props) {
-  return (
-    <Sektion rubrik="Kom ihåg till den här turen" overrubrik={KOM_IHAG.fran} variant="accent" kommerSnart className={className}>
-      <KommerSnart text="Här visas det ni skrev ner efter förra turen, så att det kommer med i packningen den här gången.">
-        <ul className="list-disc space-y-1 pl-5 text-sm leading-relaxed">
-          {KOM_IHAG.rader.map((r) => (
-            <li key={r}>{r}</li>
-          ))}
-        </ul>
-        <Exempellank className="text-accent-strong">Lägg till i packlistan</Exempellank>
       </KommerSnart>
     </Sektion>
   )
@@ -434,8 +418,8 @@ export function Fardplan({ className }: Props) {
 export function EfterTuren({ className }: Props) {
   return (
     <Sektion rubrik="Efter turen" kommerSnart className={className}>
-      <KommerSnart text="Här kommer dagbok, bilder, vad ni använde och lärdomar till nästa tur.">
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <KommerSnart text="Här kommer dagbok, bilder och vad ni använde.">
+        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           {EFTER_TUREN.map((e) => (
             <div key={e.rubrik} className={cn('rounded-md p-4', e.accent ? 'bg-accent-soft' : 'bg-muted')}>
               <p className={cn('font-semibold', e.accent && 'text-accent-strong')}>{e.rubrik}</p>

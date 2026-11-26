@@ -69,7 +69,7 @@ export const SIDOR: Record<Sida, Menysida> = {
     namn: 'Kom ihåg till nästa tur',
     rubrik: 'Kom ihåg till nästa tur',
     till: '/kom-ihag',
-    byggd: false,
+    byggd: true,
     beskrivning: 'Alla lärdomar samlade',
     blir: 'Lärdomarna från alla turer, sorterade efter ämne, så att de kommer med nästa gång.',
   },
