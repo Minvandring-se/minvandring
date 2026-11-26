@@ -34,6 +34,7 @@ export function Grupper({ vanner }: { vanner: readonly Van[] }) {
       rubrik="Grupper"
       atgard={
         vanner.length > 0 &&
+        Array.isArray(grupper) &&
         formular === null && (
           <Button variant="outline" onClick={() => setFormular('ny')}>
             <Plus className="size-4" aria-hidden />
@@ -50,6 +51,8 @@ export function Grupper({ vanner }: { vanner: readonly Van[] }) {
 
       {formular !== null && Array.isArray(grupper) && (
         <GruppFormular
+          // Formuläret börjar om när man byter grupp, så att namn och vänner aldrig sparas på fel grupp.
+          key={formular === 'ny' ? 'ny' : formular.id}
           grupp={formular === 'ny' ? null : formular}
           grupper={grupper}
           vanner={vanner}

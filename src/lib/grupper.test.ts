@@ -40,6 +40,7 @@ describe('gruppfel', () => {
   it('översätter databasens fel', () => {
     expect(gruppfel('duplicate key value violates unique constraint "grupper_unikt_namn"')).toBe('Du har redan en grupp med det namnet.')
     expect(gruppfel('En grupp kan ha högst 50 vänner')).toBe('En grupp kan ha högst 50 vänner.')
+    expect(gruppfel('Bara vänner kan vara med i en grupp')).toMatch(/inte längre din vän/)
     expect(gruppfel(undefined)).toMatch(/Kontrollera uppkopplingen/)
   })
 })
