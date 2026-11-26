@@ -1,9 +1,12 @@
 import { describe, expect, it } from 'vitest'
+import { HUVUDGRUPPER } from './livsmedelsgrupper'
 import {
   allergentext,
   antalPerMaltid,
   bytDel,
   delFranAdress,
+  KATALOGMALTIDER,
+  katalogbild,
   kortForLivsmedel,
   kortForVara,
   kostbrickor,
@@ -22,6 +25,29 @@ import {
   type Katalogfilter,
 } from './matkatalog'
 import type { Matprodukt } from './typer'
+import { KATEGORIETIKETT } from './varukatalog'
+
+describe('katalogbild', () => {
+  it('ger namn utan understreck och skiljer påsarnas och märkesvarornas frukost', () => {
+    expect(katalogbild('pasar', 'lunch_middag')).toBe('maltid-lunch-middag')
+    expect(katalogbild('pasar', 'frukost')).toBe('maltid-frukost')
+    expect(katalogbild('varor', 'frukost')).toBe('varor-frukost')
+    expect(katalogbild('varor', 'tuber_smaksattning')).toBe('varor-tuber-smaksattning')
+    expect(katalogbild('livsmedel', 'kott')).toBe('livsmedel-kott')
+  })
+
+  it('har båda storlekarna i public/katalog för varje ruta', () => {
+    const namn = [
+      ...KATALOGMALTIDER.map((m) => katalogbild('pasar', m.nyckel)),
+      ...Object.keys(KATEGORIETIKETT).map((k) => katalogbild('varor', k)),
+      ...HUVUDGRUPPER.map((h) => katalogbild('livsmedel', h.nyckel)),
+    ]
+    expect(namn).toHaveLength(23)
+    const filer = new Set(Object.keys(import.meta.glob('../../public/katalog/*.webp')).map((f) => f.split('/').at(-1)))
+    const saknas = namn.flatMap((n) => [480, 960].map((b) => `${n}-${b}.webp`)).filter((f) => !filer.has(f))
+    expect(saknas).toEqual([])
+  })
+})
 
 function pase(id: string, extra: Partial<Matprodukt> = {}): Matprodukt {
   return {
