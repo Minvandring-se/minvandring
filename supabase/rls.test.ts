@@ -148,6 +148,8 @@ describe('funktionerna i public', () => {
     'public.lardom_tur_namn()',
     'public.notis_gick_med()',
     'public.notiser_bort_med_deltagare()',
+    'public.bara_personer_ansvarar()',
+    'public.hund_ansvarar_inte()',
     'public.vanforfragningar_konto_raderas()',
     'public.ar_vanner(uuid, uuid)',
     'public.dolj_forfragningar_mellan(uuid, uuid)',
@@ -176,6 +178,7 @@ describe('funktionerna i public', () => {
     'public.ta_ratt(uuid)',
     'public.slapp_ratt(uuid)',
     'public.ta_med_gemensam(uuid, boolean)',
+    'public.bocka_uppgift(uuid, boolean)',
     'public.ar_van(uuid)',
     'public.ser_profil(uuid)',
     'public.skicka_vanforfragan(text)',
@@ -5616,5 +5619,115 @@ describe('packlistor (mallar)', () => {
   it('anon når ingenting', async () => {
     await forvantaFel(somAnon((tx) => tx.query('select id from public.packmallar')))
     await forvantaFel(somAnon((tx) => tx.query('select id from public.packmallrader')))
+  })
+})
+
+describe('att göra i turen', () => {
+  // Egna användare: Ulla äger turen, Vide är redigerare, Wiktor läsare och Xavi är inte med.
+  const ULLA = '00000000-0000-0000-0000-0000000000d1'
+  const VIDE = '00000000-0000-0000-0000-0000000000d2'
+  const WIKTOR = '00000000-0000-0000-0000-0000000000d3'
+  const XAVI = '00000000-0000-0000-0000-0000000000d4'
+  let tur: string
+  let annanTur: string
+  let ulla: string
+  let wiktor: string
+  let hund: string
+  let wiktorsUppgift: string
+
+  const ny = (vem: string, text: string, ansvarig: string | null = null, t = tur) =>
+    som(vem, (tx) => tx.query<{ id: string }>('insert into public.uppgifter (tur_id, text, ansvarig) values ($1, $2, $3) returning id', [t, text, ansvarig]))
+
+  beforeAll(async () => {
+    await db.exec(
+      `insert into auth.users (id, email) values ('${ULLA}', 'ulla@exempel.se'), ('${VIDE}', 'vide@exempel.se'), ('${WIKTOR}', 'wiktor@exempel.se'), ('${XAVI}', 'xavi@exempel.se');`,
+    )
+    tur = await skapaTur(ULLA, 'Uppgiftstur')
+    const kod = await kodFor(tur)
+    await som(VIDE, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    await som(WIKTOR, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    const d = await db.query<{ id: string; user_id: string }>('select id, user_id from public.deltagare where tur_id = $1', [tur])
+    ulla = d.rows.find((r) => r.user_id === ULLA)!.id
+    wiktor = d.rows.find((r) => r.user_id === WIKTOR)!.id
+    await som(ULLA, (tx) => tx.query(`update public.deltagare set roll = 'viewer' where id = $1`, [wiktor]))
+    hund = (await som(ULLA, (tx) => tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn, typ) values ($1, 'Otto', 'hund') returning id`, [tur]))).rows[0].id
+    annanTur = await skapaTur(XAVI, 'Någon annans tur')
+    wiktorsUppgift = (await ny(ULLA, 'Köp gas', wiktor)).rows[0].id
+  })
+
+  it('alla i turen ser uppgifterna, men inte den som inte är med', async () => {
+    for (const vem of [ULLA, VIDE, WIKTOR]) expect((await som(vem, (tx) => tx.query('select id from public.uppgifter where tur_id = $1', [tur]))).rows.length, vem).toBeGreaterThan(0)
+    expect((await som(XAVI, (tx) => tx.query('select id from public.uppgifter where tur_id = $1', [tur]))).rows).toHaveLength(0)
+  })
+
+  it('ägare och redigerare lägger till, ändrar och tar bort, men inte en läsare eller någon utanför', async () => {
+    const id = (await ny(VIDE, 'Boka stugor')).rows[0].id
+    expect((await som(VIDE, (tx) => tx.query(`update public.uppgifter set klart_till = '2027-07-01', ansvarig = $2 where id = $1`, [id, ulla]))).affectedRows).toBe(1)
+    await forvantaFel(ny(WIKTOR, 'Läsarens uppgift'))
+    await forvantaFel(ny(XAVI, 'Inbrytarens uppgift'))
+    expect((await som(WIKTOR, (tx) => tx.query(`update public.uppgifter set text = 'Ändrad' where id = $1`, [id]))).affectedRows).toBe(0)
+    expect((await som(XAVI, (tx) => tx.query(`delete from public.uppgifter where id = $1`, [id]))).affectedRows).toBe(0)
+    expect((await som(ULLA, (tx) => tx.query('delete from public.uppgifter where id = $1', [id]))).affectedRows).toBe(1)
+  })
+
+  it('texten får inte vara tom eller för lång, och den ansvarige måste vara en person i samma tur', async () => {
+    await forvantaFel(ny(ULLA, '  '))
+    await forvantaFel(ny(ULLA, 'a'.repeat(201)))
+    await forvantaFel(ny(ULLA, 'Hunden ansvarar', hund))
+    const annan = (await db.query<{ id: string }>('select id from public.deltagare where tur_id = $1', [annanTur])).rows[0].id
+    await forvantaFel(ny(ULLA, 'Fel tur', annan))
+    // Samma regler när en befintlig uppgift ändras.
+    await forvantaFel(som(ULLA, (tx) => tx.query('update public.uppgifter set ansvarig = $1 where id = $2', [hund, wiktorsUppgift])))
+    await forvantaFel(som(ULLA, (tx) => tx.query('update public.uppgifter set ansvarig = $1 where id = $2', [annan, wiktorsUppgift])))
+  })
+
+  it('ingen kan flytta en uppgift till en tur där hen inte får ändra', async () => {
+    await forvantaFel(som(ULLA, (tx) => tx.query('update public.uppgifter set tur_id = $1 where id = $2', [annanTur, wiktorsUppgift])))
+  })
+
+  it('en läsare ändrar inte klar direkt och tar inte bort, inte ens sin egen uppgift, men en redigerare tar bort', async () => {
+    expect((await som(WIKTOR, (tx) => tx.query('update public.uppgifter set klar = true where id = $1', [wiktorsUppgift]))).affectedRows).toBe(0)
+    expect((await som(WIKTOR, (tx) => tx.query('delete from public.uppgifter where id = $1', [wiktorsUppgift]))).affectedRows).toBe(0)
+    const id = (await ny(ULLA, 'Tillfällig')).rows[0].id
+    expect((await som(VIDE, (tx) => tx.query('delete from public.uppgifter where id = $1', [id]))).affectedRows).toBe(1)
+  })
+
+  it('den ansvarige, även en läsare, bockar av sin egen uppgift men ingen annans', async () => {
+    const r = await som(WIKTOR, (tx) => tx.query<{ ok: boolean }>('select public.bocka_uppgift($1, true) as ok', [wiktorsUppgift]))
+    expect(r.rows[0].ok).toBe(true)
+    expect((await db.query<{ klar: boolean }>('select klar from public.uppgifter where id = $1', [wiktorsUppgift])).rows[0].klar).toBe(true)
+    const ullas = (await ny(ULLA, 'Skriv ut kartan', ulla)).rows[0].id
+    expect((await som(WIKTOR, (tx) => tx.query<{ ok: boolean }>('select public.bocka_uppgift($1, true) as ok', [ullas]))).rows[0].ok).toBe(false)
+    expect((await som(XAVI, (tx) => tx.query<{ ok: boolean }>('select public.bocka_uppgift($1, true) as ok', [ullas]))).rows[0].ok).toBe(false)
+    expect((await db.query<{ klar: boolean }>('select klar from public.uppgifter where id = $1', [ullas])).rows[0].klar).toBe(false)
+  })
+
+  it('den som tas bort ur turen förlorar åtkomsten och uppgiften blir utan ansvarig', async () => {
+    await som(ULLA, (tx) => tx.query('delete from public.deltagare where id = $1', [wiktor]))
+    expect((await db.query<{ ansvarig: string | null }>('select ansvarig from public.uppgifter where id = $1', [wiktorsUppgift])).rows[0].ansvarig).toBeNull()
+    expect((await som(WIKTOR, (tx) => tx.query('select id from public.uppgifter where tur_id = $1', [tur]))).rows).toHaveLength(0)
+    expect((await som(WIKTOR, (tx) => tx.query<{ ok: boolean }>('select public.bocka_uppgift($1, false) as ok', [wiktorsUppgift]))).rows[0].ok).toBe(false)
+  })
+
+  it('en person som blir hund slutar vara ansvarig', async () => {
+    const p = (await som(ULLA, (tx) => tx.query<{ id: string }>(`insert into public.deltagare (tur_id, namn, typ) values ($1, 'Kim', 'person') returning id`, [tur]))).rows[0].id
+    const id = (await ny(ULLA, 'Kims uppgift', p)).rows[0].id
+    await som(ULLA, (tx) => tx.query(`update public.deltagare set typ = 'hund' where id = $1`, [p]))
+    expect((await db.query<{ ansvarig: string | null }>('select ansvarig from public.uppgifter where id = $1', [id])).rows[0].ansvarig).toBeNull()
+  })
+
+  it('uppgifterna försvinner med turen, och anon når ingenting', async () => {
+    await forvantaFel(somAnon((tx) => tx.query('select id from public.uppgifter')))
+    await forvantaFel(somAnon((tx) => tx.query('select public.bocka_uppgift($1, true)', [wiktorsUppgift])))
+    await som(ULLA, (tx) => tx.query('delete from public.turer where id = $1', [tur]))
+    expect((await db.query('select 1 from public.uppgifter where tur_id = $1', [tur])).rows).toHaveLength(0)
+  })
+
+  it('ligger i Realtime med replica identity default', async () => {
+    const p = await db.query(`select 1 from pg_publication_tables where pubname = 'supabase_realtime' and tablename = 'uppgifter'`)
+    expect(p.rows).toHaveLength(1)
+    // En borttagning skickar bara id, eftersom Realtime skickar borttagningar till alla som lyssnar.
+    const r = await db.query<{ r: string }>(`select relreplident as r from pg_class where oid = 'public.uppgifter'::regclass`)
+    expect(r.rows[0].r).toBe('d')
   })
 })

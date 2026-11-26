@@ -119,7 +119,7 @@ function Valkomstband({ namn, idag, nasta }: { namn: string; idag: string; nasta
   )
 }
 
-const ATTGORA_IKON: Record<Attgora['nyckel'], IkonNamn> = { maltider: 'matpase', gemensamt: 'mitt-forrad', packat: 'packlistor' }
+const ATTGORA_IKON: Record<Attgora['nyckel'], IkonNamn> = { uppgifter: 'deltagare', maltider: 'matpase', gemensamt: 'mitt-forrad', packat: 'packlistor' }
 
 /** Att göra inför nästa tur: högst fyra rader som länkar dit det görs. */
 function AttGora({ tur, rader }: { tur: HemTur; rader: Attgora[] | null | 'fel' }) {

@@ -43,7 +43,7 @@ export function bandNedrakning(tur: Pick<TurIListan, 'avresa'>, idag: string): {
 }
 
 export interface Attgora {
-  nyckel: 'maltider' | 'gemensamt' | 'packat'
+  nyckel: 'uppgifter' | 'maltider' | 'gemensamt' | 'packat'
   text: string
   under: string
   till: string
@@ -51,6 +51,7 @@ export interface Attgora {
 
 /**
  * Att göra inför nästa tur, högst fyra rader, ur det som går att räkna fram:
+ * - ens egna uppgifter i Att göra i gruppen som inte är klara
  * - måltider som saknas i matplanen (länk till den första som saknas)
  * - gemensamma packrader som ska med men som ingen bär (namnen på de första tre)
  * - hur mycket av ens egen packlista som är packat, när något är kvar.
@@ -58,10 +59,17 @@ export interface Attgora {
  */
 export function attGora(
   tur: Pick<TurIListan, 'id' | 'namn'>,
-  data: { mat: Matstatus | null; utanBarare: readonly { namn: string }[]; packat: { packat: number; totalt: number } | null },
+  data: { mat: Matstatus | null; utanBarare: readonly { namn: string }[]; packat: { packat: number; totalt: number } | null; uppgifter?: number },
 ): Attgora[] {
   const ut: Attgora[] = []
-  const { mat, utanBarare, packat } = data
+  const { mat, utanBarare, packat, uppgifter = 0 } = data
+  if (uppgifter > 0)
+    ut.push({
+      nyckel: 'uppgifter',
+      text: uppgifter === 1 ? 'Du har 1 uppgift i gruppen' : `Du har ${uppgifter} uppgifter i gruppen`,
+      under: `Att göra i gruppen, ${tur.namn}`,
+      till: turdelAdress(tur.id, 'oversikt'),
+    })
   if (mat && mat.saknas > 0)
     ut.push({
       nyckel: 'maltider',

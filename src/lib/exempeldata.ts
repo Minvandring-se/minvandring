@@ -10,13 +10,6 @@ export const REDO_FOR_AVFARD = {
   ejKlart: ['Packning, 68 % klart', 'Middag dag 3 och 4', 'Färdplan till någon hemma'],
 }
 
-export const ATT_GORA: { text: string; vem: string; nar: string; klar: boolean; bradskar?: boolean }[] = [
-  { text: 'Boka nattåg till Abisko', vem: 'Erik', nar: 'Klart', klar: true },
-  { text: 'Boka STF-stugor, natt 1, 2 och 4', vem: 'Anna', nar: 'Senast 1 aug', klar: false, bradskar: true },
-  { text: 'Köp två gaspatroner i Abisko', vem: 'Erik', nar: 'På plats', klar: false },
-  { text: 'Skriv ut fjällkartan', vem: 'Anna', nar: 'Senast 10 aug', klar: false },
-]
-
 export const RESAN = [
   { riktning: 'dit' as const, rubrik: 'Dit: nattåg till Abisko', nar: 'Ons 11 aug, kväll' },
   { riktning: 'hem' as const, rubrik: 'Hem: buss från Nikkaluokta', nar: 'Ons 18 aug, eftermiddag' },
