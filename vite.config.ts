@@ -10,7 +10,10 @@ export default defineConfig({
     react(),
     tailwindcss(),
     VitePWA({
+      // autoUpdate: den nya versionen syns nästa gång sidan laddas. Appen registrerar service workern själv i src/lib/uppdatering.ts, som söker
+      // efter nya versioner men aldrig laddar om mitt i något. Därför injiceras ingen registrering här.
       registerType: 'autoUpdate',
+      injectRegister: false,
       includeAssets: ['favicon.svg', 'favicon.ico', 'apple-touch-icon.png'],
       manifest: {
         name: 'MinVandring',
@@ -33,6 +36,10 @@ export default defineConfig({
       },
       workbox: {
         navigateFallback: '/index.html',
+        // Den nya service workern tar över direkt i stället för att vänta tills alla flikar är stängda. Utan dem
+        // väntar den, eftersom pluginet bara sätter dem när det själv registrerar service workern.
+        skipWaiting: true,
+        clientsClaim: true,
       },
     }),
   ],
