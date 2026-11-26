@@ -58,7 +58,8 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Dagbok och 
 | Egna rätter med ingredienser | Finns |
 | Matkatalog med frystorkade och lufttorkade påsar | Finns, fylls på med data från Astra |
 | Egen sida för matkatalogen med sökning, filter, sortering och panel | Finns (`/matplanering/katalog`) |
-| Matkatalogen i tre delar: påsar, märkesvaror och livsmedel, med måltider och grupper som rutor | Finns, illustrationerna är platshållare tills Astras bilder kommer (`src/components/illustrationer/Illustration.tsx`) |
+| Matkatalogen i tre delar: påsar, märkesvaror och livsmedel, med måltider och grupper som rutor | Finns, med Astras bilder i rutorna (`public/katalog/`, `npm run katalogbilder`) |
+| Torka själv i Matkatalogen: 30 recept och 20 råvaruguider att torka hemma, och Kom igång med grundmetod och säkerhet | Finns (`?del=torka` och `/matplanering/katalog/torka-sjalv/<namn>`), innehållet i `src/lib/torkasjalvdata.ts`. Äpple och banan har en gemensam sida med receptet |
 | Mina matplaner: nästa tur överst och hur många måltider som saknas i varje tur | Finns (`/matplanering`) |
 | Inköpslista med ansvarig | Finns |
 | Kcal, protein och matvikt per person och dag | Finns |

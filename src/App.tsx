@@ -34,6 +34,7 @@ const TurKommerSnart = lazy(() => import('@/pages/tur/TurKommerSnart').then((m) 
 const Installningar = lazy(() => import('@/pages/Installningar').then((m) => ({ default: m.Installningar })))
 const Matplanering = lazy(() => import('@/pages/Matplanering').then((m) => ({ default: m.Matplanering })))
 const Matkatalog = lazy(() => import('@/pages/Matkatalog').then((m) => ({ default: m.Matkatalog })))
+const Torkapost = lazy(() => import('@/pages/Torkapost').then((m) => ({ default: m.Torkapost })))
 const Skafferi = lazy(() => import('@/pages/Skafferi').then((m) => ({ default: m.Skafferi })))
 const Recept = lazy(() => import('@/pages/Recept').then((m) => ({ default: m.Recept })))
 const Mattips = lazy(() => import('@/pages/Mattips').then((m) => ({ default: m.Mattips })))
@@ -109,6 +110,7 @@ export default function App() {
           <Route path="/utrustning" element={<Utrustningskatalog />} />
           <Route path="/matplanering" element={<Matplanering />} />
           <Route path="/matplanering/katalog" element={<Matkatalog />} />
+          <Route path="/matplanering/katalog/torka-sjalv/:slug" element={<Torkapost />} />
           <Route path="/matplanering/skafferi" element={<Skafferi />} />
           <Route path="/matplanering/recept" element={<Recept />} />
           <Route path="/matplanering/recept/:id" element={<Receptsida />} />
