@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { aktivSida, aktivUndersida, BLAD, bladIState, FLIKAR, flikAktiv, MENYGRUPPER, SIDOR, UNDERSIDOR } from '@/lib/meny'
+import { aktivSida, aktivUndersida, BLAD, bladIState, FLIKAR, flikAktiv, gruppFor, MENYGRUPPER, MER, oppnaGrupper, SIDOR, UNDERSIDOR } from '@/lib/meny'
 
 describe('menyns sidor', () => {
   it('har sökvägar utan å, ä och ö, och alla är olika', () => {
@@ -25,34 +25,49 @@ describe('menyns sidor', () => {
     for (const s of Object.values(SIDOR).filter((s) => !s.byggd)) expect(s.blir.length).toBeGreaterThan(30)
   })
 
-  it('har grupperna i sidomenyn i rätt ordning', () => {
+  it('har Hem överst och grupperna i sidomenyn i rätt ordning, med det som inte är byggt i Kommer snart', () => {
+    expect(SIDOR.hem.till).toBe('/hem')
     expect(MENYGRUPPER.map((g) => [g.rubrik, g.sidor.map((s) => SIDOR[s].namn)])).toEqual([
-      ['Planera', ['Mina turer', 'Matplanering', 'Packlistor och mallar']],
+      ['Planera', ['Mina turer', 'Matplanering']],
       ['Utrustning', ['Mitt förråd', 'Utrustningskatalog']],
-      ['Minnen', ['Dagbok', 'Kom ihåg till nästa tur', 'Statistik']],
-      ['Folk', ['Vandringskompisar']],
+      ['Minnen', ['Kom ihåg till nästa tur']],
+      ['Kommer snart', ['Packlistor och mallar', 'Dagbok', 'Statistik', 'Vandringskompisar']],
     ])
+    // Allt i Kommer snart är inte byggt, och allt som inte är byggt ligger där.
+    const snart = MENYGRUPPER.find((g) => g.nyckel === 'snart')!.sidor
+    expect(Object.values(SIDOR).filter((s) => !s.byggd).map((s) => s.sida).sort()).toEqual([...snart].sort())
   })
 
-  it('har fem flikar i mobil och bladen Minnen och Mer', () => {
-    expect(FLIKAR.map((f) => f.namn)).toEqual(['Mina turer', 'Matplanering', 'Mitt förråd', 'Minnen', 'Mer'])
+  it('öppnar gruppen med den aktiva sidan, och Kommer snart är stängd annars', () => {
+    expect([...oppnaGrupper('forrad')]).toEqual(['utrustning'])
+    expect([...oppnaGrupper('hem')]).toEqual([])
+    expect([...oppnaGrupper('statistik')]).toEqual(['snart'])
+    expect(gruppFor('kom-ihag')).toBe('minnen')
+    expect(gruppFor('installningar')).toBeNull()
+  })
+
+  it('har fem flikar i mobil och resten i Mer, i samma grupper och ordning som sidomenyn', () => {
+    expect(FLIKAR.map((f) => f.namn)).toEqual(['Hem', 'Mina turer', 'Matplanering', 'Mitt förråd', 'Mer'])
     // Sidorna heter likadant i mobilens meny som i sidomenyn.
     for (const f of FLIKAR) if (f.typ === 'sida') expect(f.namn).toBe(SIDOR[f.sida].namn)
-    // Bladen har sidorna i samma ordning som sidomenyn.
-    const ordning = MENYGRUPPER.flatMap((g) => g.sidor)
-    for (const blad of Object.values(BLAD)) {
-      const plats = blad.filter((s) => ordning.includes(s)).map((s) => ordning.indexOf(s))
-      expect(plats).toEqual([...plats].sort((a, b) => a - b))
-    }
-    expect(BLAD.minnen).toEqual(['dagbok', 'kom-ihag', 'statistik'])
-    expect(BLAD.mer).toEqual(['packlistor', 'utrustning', 'kompisar', 'installningar'])
+    expect(MER.map((g) => [g.rubrik, g.sidor])).toEqual([
+      ['Utrustning', ['utrustning']],
+      ['Minnen', ['kom-ihag']],
+      ['Kommer snart', ['packlistor', 'dagbok', 'statistik', 'kompisar']],
+      ['Konto', ['installningar']],
+    ])
+    // Hela menyn i samma ordning: flikarna och sedan Mer följer sidomenyns ordning.
+    const sidomeny = ['hem', ...MENYGRUPPER.flatMap((g) => g.sidor)]
+    const mobil = [...FLIKAR.flatMap((f) => (f.typ === 'sida' ? [f.sida] : [])), ...BLAD.mer].filter((s) => sidomeny.includes(s))
+    expect(mobil.map((s) => sidomeny.indexOf(s))).toEqual(mobil.map((s) => sidomeny.indexOf(s)).sort((a, b) => a - b))
   })
 })
 
 describe('bladIState', () => {
   it('läser det öppna bladet och om det öppnades i appen', () => {
     expect(bladIState({ blad: 'mer', steg: true })).toEqual({ blad: 'mer', steg: true })
-    expect(bladIState({ blad: 'minnen' })).toEqual({ blad: 'minnen', steg: false })
+    expect(bladIState({ blad: 'mer' })).toEqual({ blad: 'mer', steg: false })
+    expect(bladIState({ blad: 'minnen' })).toBeNull()
     expect(bladIState({ blad: 'annat' })).toBeNull()
     expect(bladIState(null)).toBeNull()
     expect(bladIState('mer')).toBeNull()
@@ -92,13 +107,14 @@ describe('aktivSida och flikAktiv', () => {
     for (const delar of Object.values(UNDERSIDOR)) for (const u of delar!) expect(u.till).toMatch(/^\/[a-z-]+(\/[a-z-]+)?$/)
   })
 
-  it('markerar bladet när en av dess sidor är öppen', () => {
-    const minnen = FLIKAR.find((f) => f.namn === 'Minnen')!
+  it('markerar Mer när en av dess sidor är öppen', () => {
     const mer = FLIKAR.find((f) => f.namn === 'Mer')!
-    expect(flikAktiv(minnen, 'statistik')).toBe(true)
     expect(flikAktiv(mer, 'installningar')).toBe(true)
-    expect(flikAktiv(mer, 'statistik')).toBe(false)
-    expect(flikAktiv(FLIKAR[0], 'turer')).toBe(true)
+    expect(flikAktiv(mer, 'statistik')).toBe(true)
+    expect(flikAktiv(mer, 'forrad')).toBe(false)
+    expect(flikAktiv(FLIKAR[0], 'hem')).toBe(true)
+    expect(flikAktiv(FLIKAR[1], 'turer')).toBe(true)
     expect(flikAktiv(FLIKAR[0], null)).toBe(false)
+    expect(aktivSida('/hem')).toBe('hem')
   })
 })

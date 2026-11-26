@@ -1,20 +1,19 @@
-import { MoreHorizontal, Sparkles, X } from 'lucide-react'
+import { MoreHorizontal, X } from 'lucide-react'
 import { useEffect, useRef, useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router'
 import { Menyikon } from '@/components/app/Menyikon'
-import { Snart } from '@/components/ui/snart'
-import { BLAD, bladIState, FLIKAR, flikAktiv, SIDOR, type Blad, type Sida } from '@/lib/meny'
+import { bladIState, FLIKAR, flikAktiv, MER, SIDOR, type Blad, type Sida } from '@/lib/meny'
 import { cn } from '@/lib/utils'
 
-const BLADIKON = { minnen: Sparkles, mer: MoreHorizontal }
-const BLADRUBRIK: Record<Blad, string> = { minnen: 'Minnen', mer: 'Mer' }
+const BLADIKON = { mer: MoreHorizontal }
+const BLADRUBRIK: Record<Blad, string> = { mer: 'Mer' }
 
 const flikKlass =
   'flex min-h-16 w-full flex-col items-center justify-center gap-0.5 text-xs focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring'
 
 /**
- * Bottenmenyn i mobil, enligt skissen Sidomeny-mobil: Turer, Mat och Förråd går till sin sida, och Minnen och Mer
- * öppnar ett blad nerifrån. Bladet är en modal dialog: fokus flyttas in och tillbaka till fliken, och det stängs
+ * Bottenmenyn i mobil: Hem, Mina turer, Matplanering och Mitt förråd går till sin sida, och Mer öppnar ett blad
+ * nerifrån med resten, i samma grupper och samma ordning som sidomenyn. Bladet är en modal dialog: fokus flyttas in och tillbaka till fliken, och det stängs
  * med Esc, med tryck utanför, med krysset och med tillbaka-knappen.
  */
 export function Bottenmeny({ aktiv }: { aktiv: Sida | null }) {
@@ -167,33 +166,39 @@ export function Bottenmeny({ aktiv }: { aktiv: Sida | null }) {
                   <span className="sr-only">Stäng</span>
                 </button>
               </div>
-              <ul>
-                {BLAD[visat].map((s) => {
-                  const { namn, till, byggd, beskrivning } = SIDOR[s]
-                  return (
-                    <li key={s} className="border-b border-border last:border-b-0">
-                      <Link
-                        to={till}
-                        replace
-                        aria-current={aktiv === s ? 'page' : undefined}
-                        onClick={() => {
-                          gickVidare.current = true
-                        }}
-                        className="flex min-h-14 items-center gap-3.5 rounded-md px-1 py-2 focus-visible:outline-2 focus-visible:outline-ring"
-                      >
-                        <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                          <Menyikon sida={s} storlek={24} />
-                        </span>
-                        <span className="min-w-0 flex-1">
-                          <span className={cn('block text-[0.9375rem]', aktiv === s ? 'font-bold text-primary' : 'font-semibold')}>{namn}</span>
-                          <span className="block text-sm text-muted-foreground">{beskrivning}</span>
-                        </span>
-                        {!byggd && <Snart />}
-                      </Link>
-                    </li>
-                  )
-                })}
-              </ul>
+              <div className="max-h-[60dvh] space-y-3 overflow-y-auto pb-1">
+                {MER.map((g) => (
+                  <section key={g.rubrik} aria-label={g.rubrik}>
+                    <h3 className="pt-1 font-sans text-xs font-semibold text-muted-foreground">{g.rubrik}</h3>
+                    <ul>
+                      {g.sidor.map((s) => {
+                        const { namn, till, beskrivning } = SIDOR[s]
+                        return (
+                          <li key={s} className="border-b border-border last:border-b-0">
+                            <Link
+                              to={till}
+                              replace
+                              aria-current={aktiv === s ? 'page' : undefined}
+                              onClick={() => {
+                                gickVidare.current = true
+                              }}
+                              className="flex min-h-14 items-center gap-3.5 rounded-md px-1 py-2 focus-visible:outline-2 focus-visible:outline-ring"
+                            >
+                              <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
+                                <Menyikon sida={s} storlek={24} />
+                              </span>
+                              <span className="min-w-0 flex-1">
+                                <span className={cn('block text-[0.9375rem]', aktiv === s ? 'font-bold text-primary' : 'font-semibold')}>{namn}</span>
+                                <span className="block text-sm text-muted-foreground">{beskrivning}</span>
+                              </span>
+                            </Link>
+                          </li>
+                        )
+                      })}
+                    </ul>
+                  </section>
+                ))}
+              </div>
             </section>
           )}
           {/* Lika hög som bottenmenyn. Ett tryck här stänger bladet. */}

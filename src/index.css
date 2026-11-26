@@ -48,6 +48,8 @@
   --color-yta-stark-linje: #4b6a5a;
   /* Text och symboler ovanpå foton. Ljus i båda lägena, eftersom fotot inte byter färg. */
   --color-pa-bild: #ffffff;
+  /* Sidomenyn: vit mot den tonade innehållsytan, och i mörkt läge mörkare än innehållet. */
+  --color-meny: #ffffff;
   /* Sökfältet på den mörkgröna ytan. Ljust med mörk text i båda lägena. */
   --color-sokfalt: #f7faf7;
   --color-sokfalt-foreground: #1c2420;
@@ -150,6 +152,7 @@ html[data-tema='mork'] {
   --color-yta-stark-foreground: #e8efe9;
   --color-yta-stark-muted: #a3b3a9;
   --color-yta-stark-linje: #3d5a4c;
+  --color-meny: #090e0c;
   --color-sokfalt: #f7faf7;
   --color-sokfalt-foreground: #1c2420;
   --color-sloja: rgb(0 0 0 / 0.55);
@@ -195,6 +198,7 @@ html[data-tema='mork'] {
     --color-yta-stark-foreground: #e8efe9;
     --color-yta-stark-muted: #a3b3a9;
     --color-yta-stark-linje: #3d5a4c;
+    --color-meny: #090e0c;
     --color-sokfalt: #f7faf7;
     --color-sokfalt-foreground: #1c2420;
     --color-sloja: rgb(0 0 0 / 0.55);
