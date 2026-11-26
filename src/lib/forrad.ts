@@ -630,10 +630,15 @@ export function flerKategorier(saker: readonly Forradssak[]): { nyckel: Kategori
 }
 
 /**
- * Frågan innan alla saker i en kategori tas bort ur förrådet. Döljer sök eller filter några av kategorins saker
- * gäller det bara de som visas, och det sägs i frågan.
+ * Välj eller avmarkera flera på en gång, till exempel alla i en kategori: är alla redan valda avmarkeras de,
+ * annars väljs alla.
  */
-export function rensaFraga(etikett: string, visas: number, iKategorin: number): string {
-  const vilka = visas === iKategorin ? (visas === 1 ? 'den enda saken' : `alla ${visas} saker`) : visas === 1 ? 'den sak som visas' : `de ${visas} saker som visas`
-  return `Ta bort ${vilka} i ${etikett.toLowerCase()} ur ditt förråd? Turer där de redan ligger i packlistan påverkas inte.`
+export function vaxlaAlla(valda: ReadonlySet<string>, ids: readonly string[]): Set<string> {
+  const ny = new Set(valda)
+  const allaValda = ids.length > 0 && ids.every((id) => ny.has(id))
+  for (const id of ids) {
+    if (allaValda) ny.delete(id)
+    else ny.add(id)
+  }
+  return ny
 }

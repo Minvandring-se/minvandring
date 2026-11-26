@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest'
 import {
   KATEGORIER,
   antalGranskade,
-  rensaFraga,
+  vaxlaAlla,
   arKategori,
   arUnderkategori,
   storstaVinsten,
@@ -628,12 +628,10 @@ describe('antalGranskade', () => {
   })
 })
 
-describe('rensaFraga', () => {
-  it('säger hur många som tas bort, och att det bara är de som visas när filtret döljer några', () => {
-    const slut = 'ur ditt förråd? Turer där de redan ligger i packlistan påverkas inte.'
-    expect(rensaFraga('Kläder', 7, 7)).toBe(`Ta bort alla 7 saker i kläder ${slut}`)
-    expect(rensaFraga('Kläder', 1, 1)).toBe(`Ta bort den enda saken i kläder ${slut}`)
-    expect(rensaFraga('Kläder', 3, 7)).toBe(`Ta bort de 3 saker som visas i kläder ${slut}`)
-    expect(rensaFraga('Kläder', 1, 7)).toBe(`Ta bort den sak som visas i kläder ${slut}`)
+describe('vaxlaAlla', () => {
+  it('väljer alla när någon saknas och avmarkerar alla när alla redan är valda', () => {
+    expect([...vaxlaAlla(new Set(['a']), ['a', 'b'])].sort()).toEqual(['a', 'b'])
+    expect([...vaxlaAlla(new Set(['a', 'b', 'c']), ['a', 'b'])]).toEqual(['c'])
+    expect([...vaxlaAlla(new Set(['c']), [])]).toEqual(['c'])
   })
 })
