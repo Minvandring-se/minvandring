@@ -41,7 +41,7 @@ export function Matplanering() {
       ) : turer.length === 0 ? (
         <TomtLage
           kompakt
-          ikon={<Ikon namn="matplanering" storlek={32} />}
+          ikon={<Ikon namn="matplanering" storlek={32} className="text-primary" />}
           rubrik="Du har inga turer än"
           text="Matplanen hör till en tur. Skapa en tur först, så kan ni planera maten i den."
           knapp={

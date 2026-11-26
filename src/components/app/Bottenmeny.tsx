@@ -182,7 +182,7 @@ export function Bottenmeny({ aktiv }: { aktiv: Sida | null }) {
                         className="flex min-h-14 items-center gap-3.5 rounded-md px-1 py-2 focus-visible:outline-2 focus-visible:outline-ring"
                       >
                         <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
-                          <Menyikon sida={s} storlek={20} />
+                          <Menyikon sida={s} storlek={24} />
                         </span>
                         <span className="min-w-0 flex-1">
                           <span className={cn('block text-[0.9375rem]', aktiv === s ? 'font-bold text-primary' : 'font-semibold')}>{namn}</span>

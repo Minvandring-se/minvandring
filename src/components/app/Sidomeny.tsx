@@ -27,7 +27,7 @@ function Menyrad({ sida, aktiv }: { sida: Sida; aktiv: boolean }) {
       )}
     >
       {aktiv && <span aria-hidden className="absolute top-1/2 left-0 h-5 w-1 -translate-y-1/2 rounded-r-full bg-accent" />}
-      <Menyikon sida={sida} storlek={20} aktiv={aktiv} className="shrink-0 3xl:size-[1.375rem]" />
+      <Menyikon sida={sida} storlek={24} aktiv={aktiv} className="shrink-0" />
       {/* Långa namn som Vandringskompisar avstavas, så att de inte går in under "Snart". */}
       <span className="min-w-0 flex-1 hyphens-auto wrap-break-word">{namn}</span>
       {!byggd && <Snart />}

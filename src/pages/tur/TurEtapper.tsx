@@ -196,14 +196,14 @@ function Dag({
           </div>
           {km !== null && (
             <span className="flex shrink-0 items-center gap-1.5 text-base font-semibold tabular-nums">
-              <Ikon namn="distans" storlek={20} />
+              <Ikon namn="distans" className="text-primary" />
               {kmText(km)}
             </span>
           )}
         </div>
         {(natt || etapp?.notering) && (
           <p className="flex gap-2 text-sm break-words text-muted-foreground">
-            {natt && <Ikon namn="overnattning" storlek={20} className="mt-px" />}
+            {natt && <Ikon namn="overnattning" className="-mt-0.5 text-primary" />}
             <span className="min-w-0">
               {natt}
               {natt && kanBokas(etapp?.boende ?? null) && (etapp?.bokad ? '. Bokad' : <span className="font-semibold text-accent-strong">. Inte bokad</span>)}

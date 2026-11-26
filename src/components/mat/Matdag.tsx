@@ -156,7 +156,7 @@ function Maltidsruta({
       )}
     >
       <h3 className="flex flex-wrap items-center gap-x-2 font-sans text-sm font-semibold">
-        <Ikon namn={MALTIDSIKON[maltid]} storlek={20} />
+        <Ikon namn={MALTIDSIKON[maltid]} className="text-primary" />
         {etikett}
         {tom && HUVUDMALTIDER.includes(maltid) && <span className="font-medium text-accent-strong">Saknas</span>}
         {tom && !HUVUDMALTIDER.includes(maltid) && <span className="font-normal text-muted-foreground">Frivilligt</span>}

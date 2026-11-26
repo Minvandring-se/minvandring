@@ -136,7 +136,7 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
                 checked={falt.kategori === nyckel}
                 onChange={() => setFalt((f) => medKategori(f, nyckel))}
               />
-              <Kategoriikon kategori={nyckel} className="group-has-checked:hidden" />
+              <Kategoriikon kategori={nyckel} storlek={24} className="group-has-checked:hidden" />
               <Check className="hidden size-5 shrink-0 group-has-checked:block" aria-hidden />
               {etikett}
             </label>

@@ -82,7 +82,7 @@ export function Inkopslista({
   }
 
   return (
-    <Sektion rubrik="Inköpslista" ikon={<Ikon namn="inkopslista" />} atgard={attKopa.length > 0 && <span className="text-sm text-muted-foreground tabular-nums">{klara} av {attKopa.length} klara</span>}>
+    <Sektion rubrik="Inköpslista" ikon={<Ikon namn="inkopslista" storlek={28} className="text-primary" />} atgard={attKopa.length > 0 && <span className="text-sm text-muted-foreground tabular-nums">{klara} av {attKopa.length} klara</span>}>
       {rader.length === 0 ? (
         <TomtLage kompakt text="Listan fylls på när ni lägger rätter i matplanen." />
       ) : (

@@ -62,7 +62,7 @@ export function Inbjudan({ turId, minRoll }: { turId: string; minRoll: Roll }) {
   return (
     <div className="space-y-2 rounded-md bg-muted p-3">
       <p className="flex items-center gap-2 text-sm font-medium">
-        <Ikon namn="inbjudan" storlek={20} />
+        <Ikon namn="inbjudan" className="text-primary" />
         Dela länken med de som ska med
       </p>
       <p className="text-sm text-muted-foreground">Den som går med via länken blir redigerare. Ägaren kan ändra rollen efteråt.</p>

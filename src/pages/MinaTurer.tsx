@@ -117,7 +117,7 @@ export function MinaTurer() {
           {nasta && <NastaTurKort tur={nasta} idag={idag} />}
 
           {!nasta && (
-            <TomtLage kompakt ikon={<Ikon namn="fjall" storlek={32} />} text="Du har ingen kommande tur. Skapa en ny tur när det är dags att planera nästa." />
+            <TomtLage kompakt ikon={<Ikon namn="fjall" storlek={32} className="text-primary" />} text="Du har ingen kommande tur. Skapa en ny tur när det är dags att planera nästa." />
           )}
 
           {fler.visa && (

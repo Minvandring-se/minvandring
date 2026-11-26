@@ -54,7 +54,7 @@ export function Kostbehov({
         >
           <span className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row sm:items-start sm:gap-4">
             <span className="flex shrink-0 items-center gap-2 pt-0.5 font-semibold">
-              <Ikon namn="allergi" storlek={20} />
+              <Ikon namn="allergi" className="text-primary" />
               Kostbehov
             </span>
             <span id={`${id}-sammanfattning`} className="flex min-w-0 flex-col gap-1.5 font-normal">
