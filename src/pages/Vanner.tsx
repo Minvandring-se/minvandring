@@ -11,7 +11,7 @@ import { Personrad } from '@/components/vanner/Personrad'
 import { useProfilbilder } from '@/hooks/useProfilbilder'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { angraVanforfragan, skickaVanforfraganTill, svaraVanforfragan, taBortVan, useVanner, type Vanlistor } from '@/hooks/useVanner'
-import { skickadText, turerIhopText, vanfel } from '@/lib/vanner'
+import { skickadText, turerIhopText, VANNER_I_TURER, vanfel } from '@/lib/vanner'
 
 /**
  * Sidan Vänner: lägg till en vän, förfrågningar att svara på, dina vänner, de du har vandrat med och förfrågningar
@@ -67,7 +67,7 @@ function Innehall({ listor, onAndrad }: { listor: Vanlistor; onAndrad: () => voi
       {/* Förfrågningarna först i mobil. På dator spänner vännerna över högra spaltens rader. */}
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:grid-rows-[auto_auto_1fr]">
         {forfragningar.length > 0 && (
-          <Del rubrik="Vänförfrågningar" antal={forfragningar.length} className="lg:col-start-2 lg:row-start-1">
+          <Del rubrik="Vänförfrågningar" antal={forfragningar.length} text={VANNER_I_TURER} className="lg:col-start-2 lg:row-start-1">
             {forfragningar.map((f) => (
               <Personrad
                 key={f.id}

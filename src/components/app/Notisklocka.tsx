@@ -6,7 +6,7 @@ import { svaraVanforfragan } from '@/hooks/useVanner'
 import type { Notiser } from '@/hooks/useNotiser'
 import { arAppLank, klockansNamn, notistid, olastaSiffra, type Notis } from '@/lib/notiser'
 import { cn } from '@/lib/utils'
-import { vanfel } from '@/lib/vanner'
+import { VANNER_I_TURER, vanfel } from '@/lib/vanner'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
@@ -174,6 +174,7 @@ function Svar({ forfragan, laddaOm }: { forfragan: string; laddaOm: () => Promis
           Neka
         </Button>
       </div>
+      <p className="text-sm text-muted-foreground">{VANNER_I_TURER}</p>
       {fel && (
         <p role="alert" className="text-sm text-destructive">
           {fel}

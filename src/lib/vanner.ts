@@ -3,6 +3,9 @@
 import { kontrolleraEpost } from '@/lib/konto'
 import { notistid } from '@/lib/notiser'
 
+/** Raden vid Godkänn och Bli vänner, och på integritetssidan: vad det betyder att bli vänner. */
+export const VANNER_I_TURER = 'Vänner kan lägga till dig i sina turer. Du kan alltid lämna en tur.'
+
 /** Adressen som vänlänkar pekar på. Samma som länken i inbjudan på Hem. */
 export const WEBBADRESS = 'https://www.minvandring.se'
 

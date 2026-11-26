@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { giltigTillText, kontrolleraVanadress, sammaSom, skickadText, tillagdaText, turerIhopText, turerMedVanner, vanfel, vanlankAdress, vannerUtanfor } from './vanner'
+import { VANNER_I_TURER, giltigTillText, kontrolleraVanadress, sammaSom, skickadText, tillagdaText, turerIhopText, turerMedVanner, vanfel, vanlankAdress, vannerUtanfor } from './vanner'
 
 describe('turerIhopText', () => {
   it('räknar turerna och visar den senaste', () => {
@@ -77,5 +77,11 @@ describe('vänner i turer', () => {
     expect(tillagdaText(0)).toBe('Ingen ny lades till. De kan redan vara med i turen.')
     expect(tillagdaText(1, 'Anna')).toBe('Anna är tillagd i turen.')
     expect(tillagdaText(3)).toBe('3 vänner är tillagda i turen.')
+  })
+})
+
+describe('VANNER_I_TURER', () => {
+  it('säger att vänner kan lägga till en i turer och att man alltid kan lämna', () => {
+    expect(VANNER_I_TURER).toBe('Vänner kan lägga till dig i sina turer. Du kan alltid lämna en tur.')
   })
 })
