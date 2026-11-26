@@ -20,6 +20,7 @@ export function Bildkort({
   element: Element = 'article',
   className,
   textKlass,
+  bakgrund,
   children,
   ...rest
 }: {
@@ -38,6 +39,8 @@ export function Bildkort({
   element?: 'article' | 'section' | 'div'
   className?: string
   textKlass?: string
+  /** Något som ligger bakom texten, till exempel höjdkurvor. Ska vara absolute och ritas under texten (-z-10). */
+  bakgrund?: ReactNode
   children: ReactNode
 } & Omit<HTMLAttributes<HTMLElement>, 'className' | 'children'>) {
   const stark = ton === 'stark'
@@ -68,7 +71,10 @@ export function Bildkort({
           />
           {paBilden}
         </div>
-        <div className={cn('flex min-w-0 flex-col @2xl:order-1', textKlass)}>{children}</div>
+        <div className={cn('flex min-w-0 flex-col @2xl:order-1', bakgrund && 'relative isolate', textKlass)}>
+          {bakgrund}
+          {children}
+        </div>
       </div>
     </Element>
   )
