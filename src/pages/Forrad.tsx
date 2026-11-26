@@ -542,7 +542,7 @@ function Underrad({ sak, kok }: { sak: Forradssak; kok?: string | null }) {
 
 /**
  * En sak i listan eller rutnätet: ikonen för kategorin, namnet, version och kategori, vikten stort till höger och
- * anteckningen på en egen rad. Ett tryck fäller ut katalogens uppgifter, anteckningen och knappen Ändra.
+ * anteckningen på en egen rad i hela kortets bredd. Ett tryck fäller ut katalogens uppgifter, anteckningen och knappen Ändra.
  */
 function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: Forradssak[]; vy: Vy; onAndra: () => void; onAndrad: () => void }) {
   const id = useId()
@@ -589,7 +589,7 @@ function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: F
         onClick={() => setUtfalld((u) => !u)}
         className={cn(
           'w-full text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring',
-          vy === 'lista' ? 'flex min-h-16 items-start gap-3 px-4 py-3' : 'flex h-full flex-col gap-3 p-4',
+          vy === 'lista' ? 'flex min-h-16 flex-wrap items-start gap-x-3 px-4 py-3' : 'flex h-full flex-col gap-3 p-4',
         )}
       >
         {vy === 'lista' ? (
@@ -598,10 +598,11 @@ function Sakrad({ sak, alla, vy, onAndra, onAndrad }: { sak: Forradssak; alla: F
             <span className="min-w-0 flex-1">
               {namn}
               <Underrad sak={sak} kok={kokText} />
-              {anteckning}
             </span>
             <span className="shrink-0">{vikt}</span>
             <ChevronDown className={cn('mt-2 size-5 shrink-0 text-muted-foreground transition-transform', utfalld && 'rotate-180')} aria-hidden />
+            {/* Anteckningen på en egen rad i hela kortets bredd, så att den inte blir en smal spalt bredvid vikten i mobil. */}
+            {anteckning && <span className="basis-full">{anteckning}</span>}
           </>
         ) : (
           <>

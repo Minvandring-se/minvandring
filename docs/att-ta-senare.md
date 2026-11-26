@@ -238,7 +238,3 @@ Sedan `20261124230000_handlingslista.sql` bygger inköpslistan på `maltider.bar
 ## Matplanen: välja sin egen färg
 
 Färgen per deltagare räknas i dag ut i deltagarnas ordning (`personfarger` i `src/lib/personfarg.ts`, åtta färger i `src/index.css`). Att välja färg själv kräver en kolumn, till exempel `deltagare.farg` med de åtta bokstäverna som tillåtna värden, och att personen själv får ändra den på sin rad. I dag ändrar ingen sin egen rad direkt (se `synka_namn`). Bygg det när någon ber om det.
-
-## Mitt förråd: anteckningen får hela kortets bredd i mobil
-
-I 390 px hamnar anteckningen på en sak i en smal spalt under namnet, med några ord per rad, eftersom vikten och pilen tar plats till höger. Anteckningen ska i stället få hela kortets bredd, under raden med namn, vikt och pil. Gäller raden i listan i `src/pages/Forrad.tsx` (`Sakrad`). Sagt 26 nov 2026, tas efter de pågående PR:erna om menyn och Hem.
