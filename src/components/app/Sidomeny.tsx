@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { DinaTurer } from '@/components/app/DinaTurer'
 import { Skelett } from '@/components/app/Laddar'
 import { Menyikon } from '@/components/app/Menyikon'
+import { Menykurvor } from '@/components/app/Menykurvor'
 import { Namnbricka } from '@/components/app/Namnbricka'
 import { Logotyp } from '@/components/Logotyp'
 import { Sidfot } from '@/components/Sidfot'
@@ -105,57 +106,61 @@ export function Sidomeny({
 
   return (
     <aside className="hidden border-r border-border bg-meny lg:sticky lg:top-0 lg:flex lg:h-dvh lg:flex-col lg:overflow-y-auto">
-      <div className="flex flex-1 flex-col px-4 pt-6 pb-4">
-        <Link to="/hem" className={cn('flex min-h-11 items-center rounded-md px-2', fokus)}>
-          <Logotyp className="text-xl 3xl:text-2xl" />
-        </Link>
-        <nav aria-label="Huvudmeny" className="mt-4">
-          <ul className="space-y-0.5">
-            <li>
-              <Menyrad sida="hem" aktiv={aktiv === 'hem'} />
-            </li>
-            {MENYGRUPPER.map((g) => (
-              <Grupp key={g.nyckel} grupp={g} aktiv={aktiv} oppen={oppna.has(g.nyckel)} onVaxla={() => vaxla(g.nyckel)} />
-            ))}
-          </ul>
-        </nav>
-        <DinaTurer turer={turer} oppenTurId={oppenTurId} />
-      </div>
-
-      <div className="border-t border-border px-4 pt-3 pb-3">
-        <div className="flex items-center gap-1">
-          <Link
-            to="/profil"
-            aria-current={aktiv === 'profil' ? 'page' : undefined}
-            className={cn('flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-lg px-2 transition-colors', fokus, aktiv === 'profil' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
-          >
-            <Namnbricka namn={namn || epost || '?'} bild={bild} laddar={bildLaddar} />
-            {profilHamtad ? (
-              <span className="min-w-0 flex-1">
-                <span className="block truncate font-medium 3xl:text-[1.0625rem]">{namn || 'Din profil'}</span>
-                <span className={cn('block text-xs', aktiv === 'profil' ? 'text-primary-foreground/80' : 'text-muted-foreground')}>Profil</span>
-              </span>
-            ) : (
-              <>
-                <Skelett className="h-4 w-24" />
-                <span className="sr-only">Din profil</span>
-              </>
-            )}
+      {/* Kurvorna följer menyns hela höjd, så att de ligger längst ner även när menyn är högre än skärmen. */}
+      <div className="relative isolate flex flex-1 flex-col">
+        <Menykurvor />
+        <div className="flex flex-1 flex-col px-4 pt-6 pb-4">
+          <Link to="/hem" className={cn('flex min-h-11 items-center rounded-md px-2', fokus)}>
+            <Logotyp className="text-xl 3xl:text-2xl" />
           </Link>
-          <Link
-            to="/installningar"
-            aria-label="Inställningar"
-            aria-current={aktiv === 'installningar' ? 'page' : undefined}
-            className={cn(
-              'flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors',
-              fokus,
-              aktiv === 'installningar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
-            )}
-          >
-            <Settings className="size-5" aria-hidden />
-          </Link>
+          <nav aria-label="Huvudmeny" className="mt-4">
+            <ul className="space-y-0.5">
+              <li>
+                <Menyrad sida="hem" aktiv={aktiv === 'hem'} />
+              </li>
+              {MENYGRUPPER.map((g) => (
+                <Grupp key={g.nyckel} grupp={g} aktiv={aktiv} oppen={oppna.has(g.nyckel)} onVaxla={() => vaxla(g.nyckel)} />
+              ))}
+            </ul>
+          </nav>
+          <DinaTurer turer={turer} oppenTurId={oppenTurId} />
         </div>
-        <Sidfot variant="meny" className="px-3 pt-2 text-xs" />
+
+        <div className="border-t border-border px-4 pt-3 pb-3">
+          <div className="flex items-center gap-1">
+            <Link
+              to="/profil"
+              aria-current={aktiv === 'profil' ? 'page' : undefined}
+              className={cn('flex min-h-12 min-w-0 flex-1 items-center gap-3 rounded-lg px-2 transition-colors', fokus, aktiv === 'profil' ? 'bg-primary text-primary-foreground' : 'hover:bg-muted')}
+            >
+              <Namnbricka namn={namn || epost || '?'} bild={bild} laddar={bildLaddar} />
+              {profilHamtad ? (
+                <span className="min-w-0 flex-1">
+                  <span className="block truncate font-medium 3xl:text-[1.0625rem]">{namn || 'Din profil'}</span>
+                  <span className={cn('block text-xs', aktiv === 'profil' ? 'text-primary-foreground/80' : 'text-muted-foreground')}>Profil</span>
+                </span>
+              ) : (
+                <>
+                  <Skelett className="h-4 w-24" />
+                  <span className="sr-only">Din profil</span>
+                </>
+              )}
+            </Link>
+            <Link
+              to="/installningar"
+              aria-label="Inställningar"
+              aria-current={aktiv === 'installningar' ? 'page' : undefined}
+              className={cn(
+                'flex size-11 shrink-0 items-center justify-center rounded-lg transition-colors',
+                fokus,
+                aktiv === 'installningar' ? 'bg-primary text-primary-foreground' : 'text-muted-foreground hover:bg-muted hover:text-foreground',
+              )}
+            >
+              <Settings className="size-5" aria-hidden />
+            </Link>
+          </div>
+          <Sidfot variant="meny" className="px-3 pt-2 text-xs" />
+        </div>
       </div>
     </aside>
   )

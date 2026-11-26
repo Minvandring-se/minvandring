@@ -231,6 +231,22 @@ export interface Skafferirad {
   bast_fore: string | null
 }
 
+/**
+ * En egen rätt man har lagat och har hemma, i ens eget skafferi, till exempel 5 portioner torkad korvstroganoff.
+ * Kan vara kopplad till ett eget recept eller till ett av MinVandrings recept, aldrig båda.
+ */
+export interface Skafferiratt {
+  id: string
+  namn: string
+  portioner: number
+  bast_fore: string | null
+  recept_id: string | null
+  receptkatalog_id: string | null
+}
+
+/** Receptet en rätt hemma kommer från: ett eget recept eller ett av MinVandrings recept. */
+export type Receptkoppling = { recept_id: string } | { receptkatalog_id: string }
+
 /** En ingrediens i ett eget recept. Gram per portion, kcal och protein per 100 g. */
 export interface Receptrad {
   id: string

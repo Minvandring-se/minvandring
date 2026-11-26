@@ -1,28 +1,40 @@
 import { useCallback, useEffect, useState } from 'react'
 import { bokningarFranRader, nyttAntal, tidigasteDatum, type Bokning, type Bokningstur } from '@/lib/skafferi'
+import { nyaPortioner, type Receptfavoriter } from '@/lib/skafferiratter'
 import { lage, lokaltDatum } from '@/lib/turlista'
 import { supabase } from '@/lib/supabase'
-import type { Skafferirad } from '@/lib/typer'
+import type { Receptkoppling, Skafferiratt, Skafferirad } from '@/lib/typer'
 
 /** Ens eget skafferi och ens favoriter. RLS gör att bara ens egna rader kommer tillbaka, även i en delad tur. */
 export interface Skafferi {
   rader: Skafferirad[]
   /** Påsarnas id. */
   favoriter: Set<string>
+  /** Egna rätter hemma. */
+  ratter: Skafferiratt[]
+  receptfavoriter: Receptfavoriter
 }
 
 export type Skafferilage = Skafferi | null | 'fel'
 
 async function hamtaSkafferi(): Promise<Skafferi | 'fel'> {
   if (!supabase) return 'fel'
-  const [rader, favoriter] = await Promise.all([
+  const [rader, favoriter, ratter, receptfavoriter] = await Promise.all([
     supabase.from('skafferi').select('id, matprodukt_id, antal, bast_fore'),
     supabase.from('matfavoriter').select('matprodukt_id'),
+    supabase.from('skafferiratter').select('id, namn, portioner, bast_fore, recept_id, receptkatalog_id').order('namn'),
+    supabase.from('receptfavoriter').select('recept_id, receptkatalog_id'),
   ])
-  if (rader.error || favoriter.error) return 'fel'
+  if (rader.error || favoriter.error || ratter.error || receptfavoriter.error) return 'fel'
+  const stjarnor = receptfavoriter.data as { recept_id: string | null; receptkatalog_id: string | null }[]
   return {
     rader: rader.data as Skafferirad[],
     favoriter: new Set((favoriter.data as { matprodukt_id: string }[]).map((f) => f.matprodukt_id)),
+    ratter: ratter.data as Skafferiratt[],
+    receptfavoriter: {
+      egna: new Set(stjarnor.flatMap((f) => f.recept_id ?? [])),
+      katalog: new Set(stjarnor.flatMap((f) => f.receptkatalog_id ?? [])),
+    },
   }
 }
 
@@ -171,5 +183,60 @@ export async function sattFavorit(matproduktId: string, favorit: boolean): Promi
     return !error
   }
   const { error } = await supabase.from('matfavoriter').delete().eq('matprodukt_id', matproduktId)
+  return !error
+}
+
+// ─── Egna rätter hemma ─────────────────────────────────────────────────────
+
+/**
+ * Lägger portioner av en egen rätt i skafferiet. Finns en rätt med samma namn hemma läggs portionerna till (högst 999),
+ * det tidigaste bäst före behålls och en ny koppling till ett recept ersätter den gamla. Svarar true när det gick.
+ */
+export async function laggRattISkafferi(
+  namn: string,
+  befintlig: Skafferiratt | undefined,
+  portioner: number,
+  bastFore: string | null,
+  koppling: Receptkoppling | null,
+): Promise<boolean> {
+  if (!supabase) return false
+  const recept = koppling ? { recept_id: null, receptkatalog_id: null, ...koppling } : {}
+  if (befintlig) {
+    return andraSkafferiratt(befintlig.id, {
+      portioner: nyaPortioner(befintlig.portioner, portioner),
+      bast_fore: tidigasteDatum(befintlig.bast_fore, bastFore),
+      ...recept,
+    })
+  }
+  const { error } = await supabase.from('skafferiratter').insert({ namn: namn.trim(), portioner: nyaPortioner(0, portioner), bast_fore: bastFore, ...recept })
+  return !error
+}
+
+/** Ändrar portionerna eller bäst-före-datumet på en rätt hemma. null tar bort datumet. */
+export async function andraSkafferiratt(
+  id: string,
+  andring: { portioner?: number; bast_fore?: string | null; recept_id?: string | null; receptkatalog_id?: string | null },
+): Promise<boolean> {
+  if (!supabase) return false
+  const { data, error } = await supabase.from('skafferiratter').update(andring).eq('id', id).select('id')
+  return !error && data.length === 1
+}
+
+export async function taBortSkafferiratt(id: string): Promise<boolean> {
+  if (!supabase) return false
+  const { data, error } = await supabase.from('skafferiratter').delete().eq('id', id).select('id')
+  return !error && data.length === 1
+}
+
+/** Sätter eller tar bort stjärnan på ett eget recept eller ett av MinVandrings recept. */
+export async function sattReceptfavorit(koppling: Receptkoppling, favorit: boolean): Promise<boolean> {
+  if (!supabase) return false
+  const [kolumn, id] = 'recept_id' in koppling ? (['recept_id', koppling.recept_id] as const) : (['receptkatalog_id', koppling.receptkatalog_id] as const)
+  if (favorit) {
+    const { error } = await supabase.from('receptfavoriter').insert({ recept_id: null, receptkatalog_id: null, ...koppling })
+    // Redan en favorit, till exempel från en annan flik, räknas som att det gick (unik nyckel, 23505).
+    return !error || error.code === '23505'
+  }
+  const { error } = await supabase.from('receptfavoriter').delete().eq(kolumn, id)
   return !error
 }

@@ -85,7 +85,7 @@ function Valkomstband({ namn, idag, nasta }: { namn: string; idag: string; nasta
   const hej = fornamn(namn)
   return (
     <section aria-labelledby="hem-rubrik" className="relative overflow-hidden rounded-[1.375rem] bg-yta-stark text-yta-stark-foreground">
-      <Hojdkurvor />
+      <Hojdkurvor variant="band" />
       <div className="relative flex flex-col gap-6 px-5 py-6 sm:px-8 sm:py-8 md:flex-row md:items-end md:justify-between">
         <div className="space-y-3">
           <p className="text-sm text-yta-stark-muted">{datumrubrik(idag)}</p>

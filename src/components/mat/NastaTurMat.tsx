@@ -4,6 +4,7 @@ import { Link } from 'react-router'
 import { Skelett } from '@/components/app/Laddar'
 import { Bildkort } from '@/components/ui/bildkort'
 import { knappStil } from '@/components/ui/knappStil'
+import { Hojdkurvor } from '@/components/ui/sokruta'
 import { Turbild } from '@/components/ui/turbild'
 import { dagensDatum } from '@/lib/datum'
 import { borjaMed, maltidsAdress, matplanstext, saknasText, type Matstatus } from '@/lib/mat'
@@ -26,7 +27,14 @@ export function NastaTurMat({ tur, status }: { tur: DinTur; status: Matstatus | 
   const till = forsta ? maltidsAdress(tur.id, forsta.dag.dag, forsta.maltid) : turdelAdress(tur.id, 'mat')
 
   return (
-    <Bildkort element="section" aria-labelledby={id} ton="stark" bild={<Matfoto turId={tur.id} />} textKlass="gap-4 px-6 pt-1 pb-6 sm:px-8 sm:pb-8 @2xl:p-8">
+    <Bildkort
+      element="section"
+      aria-labelledby={id}
+      ton="stark"
+      bild={<Matfoto turId={tur.id} />}
+      // Utan sken: bilden ligger redan till höger, och skenet skulle synas som en kant mot bågen och toningen.
+      bakgrund={<Hojdkurvor variant="tur" sken={false} className="-z-10" />}
+      textKlass="gap-4 px-6 pt-1 pb-6 sm:px-8 sm:pb-8 @2xl:p-8">
       <p className="text-sm text-yta-stark-muted lg:text-[0.9375rem]">Nästa tur</p>
       <h2 id={id} className="text-[1.875rem] leading-tight wrap-anywhere lg:text-[2.75rem]">
         {tur.namn}

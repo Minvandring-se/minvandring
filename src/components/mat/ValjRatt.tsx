@@ -16,8 +16,9 @@ import { formateraVikt } from '@/lib/forrad'
 import { filterForGruppen, passarFilter, TOMT_FILTER, varningar, type Behov, type Kostfilter } from '@/lib/kost'
 import { filterknappText, forstaAndraNamn, formateraKcal, kcalPer100g, naringForRader, PASAR_TILL, pasdetaljer, paseMatchar, pasnamn, portionText, type Naring, type TolkadIngrediens } from '@/lib/mat'
 import { rattTillRader, receptMedNamn, receptTillRader } from '@/lib/recept'
-import { bokadText, skafferietForst } from '@/lib/skafferi'
-import type { Ingrediens, Maltid, Matprodukt, Ratt, Recept, Vara } from '@/lib/typer'
+import { bokadText, datumrad, skafferietForst } from '@/lib/skafferi'
+import { portionertext } from '@/lib/skafferiratter'
+import type { Ingrediens, Maltid, Matprodukt, Ratt, Recept, Skafferiratt, Vara } from '@/lib/typer'
 import { SokFalt } from '@/components/ui/sokfalt'
 import { cn } from '@/lib/utils'
 
@@ -67,6 +68,9 @@ export function ValjRatt({
   recept = [],
   finnsRedan = () => null,
   laggISkafferi,
+  ratterHemma = [],
+  jamforMed,
+  onValjHemma,
   onValjPase,
   onValjRecept,
   onSparaSomRecept,
@@ -90,6 +94,12 @@ export function ValjRatt({
   finnsRedan?: (rattId: string) => string | null
   /** Lägger en påse i ens skafferi, från raden i listan. */
   laggISkafferi?: LaggISkafferiFn
+  /** Ens egna rätter hemma vars bäst före inte har passerat vid turens första dag. */
+  ratterHemma?: readonly Skafferiratt[]
+  /** Datumet som bäst före jämförs med, för datumraden. */
+  jamforMed?: string
+  /** Lägger en rätt hemma i måltiden som en egen rätt utan ingredienser, som man bär själv. */
+  onValjHemma?: (r: Skafferiratt) => Promise<boolean>
   onValjPase: (p: Matprodukt) => Promise<boolean>
   /** Kopierar receptet till turen, eller använder en rätt med samma ingredienser, och lägger det i måltiden. */
   onValjRecept?: (r: Recept) => Promise<boolean>
@@ -262,6 +272,26 @@ export function ValjRatt({
               <Button variant="outline" onClick={() => setVy({ typ: 'ny' })}>
                 Ny egen rätt
               </Button>
+              {onValjHemma && ratterHemma.length > 0 && (
+                <div className="space-y-1">
+                  <h3 className="text-sm font-medium">Hemma i ditt skafferi</h3>
+                  <p className="text-sm text-muted-foreground">Du bär rätten själv, och den hamnar inte i inköpslistan.</p>
+                  <ul className="divide-y divide-border">
+                    {ratterHemma.map((r) => {
+                      const datum = jamforMed ? datumrad(r.bast_fore, jamforMed) : null
+                      return (
+                        <li key={r.id} className="py-1">
+                          <button type="button" disabled={valjer} onClick={() => valj(() => onValjHemma(r))} className={cn('min-h-11 w-full rounded-md px-2 py-2 text-left hover:bg-muted', fokus)}>
+                            <span className="block font-medium break-words">{r.namn}</span>
+                            <span className="block text-sm text-muted-foreground tabular-nums">{[`${portionertext(r.portioner)} hemma`, datum?.text].filter(Boolean).join(', ')}</span>
+                          </button>
+                        </li>
+                      )
+                    })}
+                  </ul>
+                  {egna.length > 0 && <h3 className="pt-3 text-sm font-medium">Turens egna rätter</h3>}
+                </div>
+              )}
               {behov.length > 0 && (
                 <p className="text-sm text-muted-foreground">Egna rätter kontrolleras mot kostbehoven bara för ingredienser som du väljer som märkesvara bland förslagen. Andra ingredienser räknas som okända.</p>
               )}

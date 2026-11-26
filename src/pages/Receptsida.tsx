@@ -6,6 +6,7 @@ import { Laddfel } from '@/components/app/Laddfel'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Matflikar } from '@/components/mat/Matflikar'
 import { Receptbrickor } from '@/components/mat/MinvandringsRecept'
+import { ReceptISkafferiet } from '@/components/mat/ReceptISkafferiet'
 import { Receptbild } from '@/components/mat/Receptbild'
 import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
@@ -105,6 +106,7 @@ function Receptet({ recept }: { recept: Katalogrecept }) {
         <h1 className="text-[2rem] leading-tight break-words lg:text-[2.5rem]">{recept.namn}</h1>
         <p className="max-w-prose text-lg">{recept.beskrivning}</p>
         <Receptbrickor recept={recept} />
+        <ReceptISkafferiet koppling={{ receptkatalog_id: recept.id }} namn={recept.namn} />
       </div>
 
       <Atgarder recept={recept} startTur={adress.get('tur') ?? ''} onTurPersoner={(n) => !andrat.current && n > 0 && setPersoner(begransa(n))} />

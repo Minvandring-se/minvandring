@@ -52,7 +52,7 @@ export function LaggTillVan({ lank, onAndrad }: { lank: Vanlank | null; onAndrad
 
   return (
     <section aria-labelledby={`${id}-rubrik`} className="relative overflow-hidden rounded-[1.375rem] bg-yta-stark text-yta-stark-foreground">
-      <Hojdkurvor />
+      <Hojdkurvor variant="band" />
       <div className="relative space-y-5 px-5 py-6 sm:px-8 sm:py-7">
         <div className="space-y-1.5">
           <h2 id={`${id}-rubrik`} className="text-[1.75rem] leading-tight text-yta-stark-foreground lg:text-[2rem]">
