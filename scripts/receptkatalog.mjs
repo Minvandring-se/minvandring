@@ -18,17 +18,18 @@ const args = process.argv.slice(2)
 const vite = await createServer({ root: rot, logLevel: 'error', appType: 'custom', server: { middlewareMode: true, hmr: false, ws: false } })
 try {
   const { importeraReceptkatalog, receptSeedSql, varunyckel } = await vite.ssrLoadModule('/src/lib/receptkatalogimport.ts')
-  const { lasCsv } = await vite.ssrLoadModule('/src/lib/katalogimport.ts')
   const { importeraLivsmedel, godkandaLivsmedel } = await vite.ssrLoadModule('/src/lib/livsmedelimport.ts')
 
   // Bara livsmedel som importen godkänner finns i databasen.
   const livsmedel = new Set(godkandaLivsmedel(importeraLivsmedel(fs.readFileSync(path.join(rot, 'supabase', 'katalog', 'livsmedel', 'livsmedel.csv'), 'utf8'))).map((r) => r.nummer))
+  const { importeraVarukatalog, godkandaVaror } = await vite.ssrLoadModule('/src/lib/varukatalogimport.ts')
+  // Bara märkesvaror som varukatalogens import godkänner finns i databasen.
   const varumapp = path.join(rot, 'supabase', 'katalog', 'varor')
   const varor = new Set(
     fs
       .readdirSync(varumapp)
       .filter((f) => f.endsWith('.csv'))
-      .flatMap((f) => lasCsv(fs.readFileSync(path.join(varumapp, f), 'utf8')).rader.map((r) => varunyckel(r.falt.marke, r.falt.namn))),
+      .flatMap((f) => godkandaVaror(importeraVarukatalog(fs.readFileSync(path.join(varumapp, f), 'utf8'))).map((v) => varunyckel(v.marke, v.namn))),
   )
 
   const imp = importeraReceptkatalog({ recept: las('recept.csv'), ingredienser: las('ingredienser.csv'), steg: las('steg.csv') }, { livsmedel, varor })

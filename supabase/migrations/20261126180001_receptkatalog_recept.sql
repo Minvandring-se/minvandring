@@ -357,3 +357,10 @@ insert into public.receptkatalog_steg (recept_id, steg_nr, var, steg, tid_min) v
   ('blodapelsin', 2, 'hemma', 'Häll den varma drycken i termosen innan du går.', null),
   ('blabarssoppa', 1, 'hemma', 'Fyll termosen med hett vatten och packa pulvret för sig.', null),
   ('blabarssoppa', 2, 'turen', 'Rör ut pulvret i hett vatten enligt påsen.', null);
+
+-- En märkesvara som inte finns i varukatalogen ger en tom koppling. Då stoppas migreringen i stället.
+do $$ begin
+  if (select count(*) from public.receptkatalog_ingredienser where varukatalog_id is not null) <> 0 then
+    raise exception 'En märkesvara i receptkatalogen finns inte i varukatalogen';
+  end if;
+end $$;

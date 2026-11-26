@@ -232,6 +232,13 @@ export function receptSeedSql(imp: Pick<Receptimport, 'recept' | 'ingredienser' 
           insert('receptkatalog_ingredienser', INGREDIENSKOLUMNER_DB, imp.ingredienser, ingrediensvarde),
           '',
           insert('receptkatalog_steg', STEGKOLUMNER, imp.steg, falt),
+          '',
+          '-- En märkesvara som inte finns i varukatalogen ger en tom koppling. Då stoppas migreringen i stället.',
+          'do $$ begin',
+          `  if (select count(*) from public.receptkatalog_ingredienser where varukatalog_id is not null) <> ${imp.ingredienser.filter((i) => i.varukatalog).length} then`,
+          "    raise exception 'En märkesvara i receptkatalogen finns inte i varukatalogen';",
+          '  end if;',
+          'end $$;',
         ]
       : []),
     '',

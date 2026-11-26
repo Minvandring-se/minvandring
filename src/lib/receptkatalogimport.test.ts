@@ -66,5 +66,7 @@ describe('importen av recepten', () => {
     expect(sql).toContain('on conflict (id) do update set')
     expect(sql).toContain("(select v.id from public.varukatalog v where lower(v.marke) = lower('Pågen') and lower(v.namn) = lower('Gifflar'))")
     expect(sql).toContain("'Varm gröt, snabbt.'")
+    // Hittas varan inte stoppas migreringen i stället för att kopplingen blir tom.
+    expect(sql).toContain('where varukatalog_id is not null) <> 1 then')
   })
 })
