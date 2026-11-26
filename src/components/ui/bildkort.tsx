@@ -41,7 +41,10 @@ export function Bildkort({
   element?: 'article' | 'section' | 'div'
   className?: string
   textKlass?: string
-  /** Något som ligger bakom texten, till exempel höjdkurvor. Ska vara absolute och ritas under texten (-z-10). */
+  /**
+   * Något som ligger bakom texten, till exempel höjdkurvor. Lagret täcker textdelen och fortsätter in under bågen och
+   * bilden, som ligger ovanpå, så att det aldrig slutar med en rak kant före bågen. Ska vara absolute inset-0.
+   */
   bakgrund?: ReactNode
   children: ReactNode
 } & Omit<HTMLAttributes<HTMLElement>, 'className' | 'children'>) {
@@ -56,7 +59,12 @@ export function Bildkort({
         className,
       )}
     >
-      <div className="grid h-full grid-rows-[auto_1fr] @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @2xl:grid-rows-none">
+      {bakgrund && (
+        <div aria-hidden className="pointer-events-none absolute inset-0 @2xl:right-[calc(40%-6rem)]">
+          {bakgrund}
+        </div>
+      )}
+      <div className="relative grid h-full grid-rows-[auto_1fr] @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)] @2xl:grid-rows-none">
         <div className={cn('relative @2xl:order-2 @2xl:h-auto @2xl:min-h-72', bildKlass ?? 'h-[200px]')}>
           {bild}
           <svg
@@ -73,8 +81,7 @@ export function Bildkort({
           />
           {paBilden}
         </div>
-        <div className={cn('flex min-w-0 flex-col @2xl:order-1', bakgrund && 'relative isolate', textKlass)}>
-          {bakgrund}
+        <div className={cn('flex min-w-0 flex-col @2xl:order-1', textKlass)}>
           {children}
         </div>
       </div>
