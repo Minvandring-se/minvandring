@@ -56,8 +56,8 @@ export function Integritet() {
           <li>Namn på deltagare utan konto, som någon annan i turen har lagt till, till exempel en kompis eller en hund.</li>
           <li>
             Dina vänner och vänförfrågningar. Skickar du en förfrågan till en mejladress sparar vi adressen, även om den inte har något
-            konto hos oss. Vi skickar inget mejl till adressen. Förfrågan och adressen tas bort 30 dagar efter att förfrågan skickades,
-            eller 30 dagar efter att den nekades.
+            konto hos oss. Vi skickar inget mejl till adressen. Förfrågan och adressen tas bort 30 dagar efter att förfrågan
+            skickades.
           </li>
           <li>
             Dina kostbehov och allergier, om du själv anger dem under Mat i en tur. Det är frivilligt, och bara du kan ange dina. De

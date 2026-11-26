@@ -53,3 +53,11 @@ export function notistid(skapad: string, nu: Date): string {
 export function arAppLank(lank: string | null): lank is string {
   return !!lank && /^\/[^/\\]/.test(lank)
 }
+
+/**
+ * Notiserna som visas. En notis om en vänförfrågan som har besvarats, ångrats eller gått ut har en tom
+ * vanforfragan_id och visas inte. Databasen tar inte bort den, så att ingen annan kan se när den försvann.
+ */
+export function synligaNotiser(notiser: readonly Notis[]): Notis[] {
+  return notiser.filter((n) => n.typ !== 'vanforfragan' || n.vanforfragan_id !== null)
+}

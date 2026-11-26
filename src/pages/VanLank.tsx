@@ -74,7 +74,7 @@ export function VanLank() {
     return (
       <Card className="mx-auto mt-10 max-w-md space-y-4">
         <h1 className="text-2xl break-words">Du och {lage.namn} är vänner</h1>
-        <p className="text-muted-foreground">Nu ser ni varandras namn och bild på sidan Vänner.</p>
+        <p className="text-muted-foreground">Nu ser ni varandras namn, bild och turer ihop på sidan Vänner.</p>
         <Link to="/vanner" className={knappStil()}>
           Till Vänner
         </Link>
@@ -100,7 +100,7 @@ export function VanLank() {
         <h1 className="text-2xl break-words">{info.namn}</h1>
       </div>
       <p className="text-muted-foreground">
-        Som vänner ser ni varandras namn och bild på sidan Vänner. Allt annat är fortfarande privat.
+        Som vänner ser ni varandras namn och profilbild, och vilka turer ni har haft ihop. Allt annat är fortfarande privat.
       </p>
       <div className="flex flex-wrap gap-2">
         <Button disabled={gar} onClick={() => void bliVanner(info.namn)}>

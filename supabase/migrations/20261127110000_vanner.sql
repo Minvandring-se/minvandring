@@ -3,25 +3,28 @@
 --
 -- Tabellerna nås bara genom funktionerna här. Ingen roll har rättigheter på dem, så RLS släpper inte fram något.
 --
--- En förfrågan via mejladress får aldrig avslöja om adressen har ett konto. Den som skickar får alltid samma svar,
--- och ser alltid samma "Väntar på svar" med adressen, vare sig adressen har ett konto, mottagaren har nekat eller
--- ni redan är vänner. En förfrågan försvinner 30 dagar efter att den skickades, och en nekad 30 dagar efter att den
--- nekades. Med den försvinner också mejladressen.
+-- En förfrågan via mejladress får aldrig avslöja om adressen har ett konto. Därför följer den som skickar bara sin
+-- egen rad, och raden beter sig likadant i alla fall: den syns som "Väntar på svar" i exakt 30 dagar från att den
+-- skickades. Den försvinner tidigare bara när den som skickade ångrar, eller när mottagaren godkänner just den.
+-- Ett nej, en vänskap som uppstår på annat sätt eller att mottagaren raderar sitt konto ändrar ingenting i den.
+-- Allt som gäller mottagaren (om hen ser förfrågan, har nekat eller redan har fått en notis) ligger för sig.
+--
+-- Notiser om förfrågningar tas aldrig bort av något den som skickar gör, eftersom Realtime skickar borttagningar
+-- till alla som lyssnar på tabellen. En notis vars förfrågan är borta får en tom vanforfragan_id (en ändring, som
+-- bara går till mottagaren) och visas inte i appen.
 
 -- ─── Förfrågningar ───────────────────────────────────────────────────────────
 create table public.vanforfragningar (
   id uuid primary key default gen_random_uuid(),
   fran_user_id uuid not null references auth.users (id) on delete cascade,
-  -- Mottagarens konto. Tomt när adressen inte har något konto. Den som skickar får aldrig se det.
-  till_user_id uuid references auth.users (id) on delete cascade,
+  -- Mottagarens konto. Tomt när adressen inte har något konto. Den som skickar får aldrig se det. Raderar mottagaren
+  -- sitt konto blir det tomt, och raden med adressen ligger kvar sina 30 dagar.
+  till_user_id uuid references auth.users (id) on delete set null,
   -- Adressen som skrevs, i små bokstäver. Bara när förfrågan skickades via mejladress.
   till_epost text check (char_length(till_epost) <= 254),
   skapad timestamptz not null default now(),
-  -- När mottagaren nekade. Den som skickar ser ingen skillnad.
-  nekad timestamptz,
-  -- När den som skickade ångrade en nekad förfrågan. Raden döljs men finns kvar i 30 dagar, så att ett ångrat och
-  -- omskickat försök inte ger mottagaren en ny notis.
-  angrad timestamptz,
+  -- Om mottagaren ser förfrågan. Sätts bara när den inte är spärrad och ni inte redan är vänner.
+  synlig boolean not null default false,
   check (till_user_id is not null or till_epost is not null),
   check (till_user_id is distinct from fran_user_id)
 );
@@ -32,6 +35,32 @@ create unique index vanforfragningar_en_per_person on public.vanforfragningar (f
 
 revoke all on public.vanforfragningar from public, anon, authenticated;
 alter table public.vanforfragningar enable row level security;
+
+-- En förfrågan till en person (inte till en adress) försvinner när personen raderar sitt konto.
+create function public.vanforfragningar_konto_raderas() returns trigger
+language plpgsql security definer set search_path = '' as $$
+begin
+  delete from public.vanforfragningar where till_user_id = old.id and till_epost is null;
+  return old;
+end;
+$$;
+create trigger vanforfragningar_konto_raderas before delete on auth.users
+  for each row execute function public.vanforfragningar_konto_raderas();
+
+-- ─── Spärrar mellan två personer ─────────────────────────────────────────────
+-- Från den som frågar till mottagaren: när mottagaren nekade (inga nya notiser på 30 dagar) och när mottagaren
+-- senast fick en notis från den som frågar (högst en per dygn).
+create table public.vanparsparr (
+  fran_user_id uuid not null references auth.users (id) on delete cascade,
+  till_user_id uuid not null references auth.users (id) on delete cascade,
+  nekad timestamptz,
+  senaste_notis timestamptz,
+  primary key (fran_user_id, till_user_id)
+);
+create index vanparsparr_till on public.vanparsparr (till_user_id);
+
+revoke all on public.vanparsparr from public, anon, authenticated;
+alter table public.vanparsparr enable row level security;
 
 -- ─── Vänskap ─────────────────────────────────────────────────────────────────
 -- Ett par finns bara en gång, med det minsta id:t först, oavsett vem som frågade.
@@ -71,41 +100,46 @@ revoke all on public.vanforsok from public, anon, authenticated;
 alter table public.vanforsok enable row level security;
 
 -- ─── Notiser om vänner ───────────────────────────────────────────────────────
--- En notis om en förfrågan försvinner med förfrågan: när den besvaras, ångras eller blir för gammal.
-alter table public.notiser add column vanforfragan_id uuid references public.vanforfragningar (id) on delete cascade;
+-- När förfrågan är borta blir vanforfragan_id tom, och appen visar inte notisen.
+alter table public.notiser add column vanforfragan_id uuid references public.vanforfragningar (id) on delete set null;
 create index notiser_vanforfragan_id on public.notiser (vanforfragan_id);
 alter table public.notiser drop constraint notiser_typ_check;
 alter table public.notiser add constraint notiser_typ_check
   check (typ in ('gick_med', 'vanforfragan', 'van_godkand', 'van_via_lank'));
 
 -- ─── Hjälpfunktioner, bara för funktionerna här ──────────────────────────────
+create function public.ar_vanner(a uuid, b uuid) returns boolean
+language sql stable security definer set search_path = '' as $$
+  select exists (select 1 from public.vanskap v where v.user_a = least(a, b) and v.user_b = greatest(a, b));
+$$;
+
+-- Är den inloggade och den andra vänner?
 create function public.ar_van(annan_user_id uuid) returns boolean
 language sql stable security definer set search_path = '' as $$
-  select exists (
-    select 1 from public.vanskap v
-     where v.user_a = least(auth.uid(), annan_user_id) and v.user_b = greatest(auth.uid(), annan_user_id)
-  );
+  select public.ar_vanner(auth.uid(), annan_user_id);
 $$;
 
--- Tar bort förfrågningar som är för gamla, och gamla försök. Notiserna om dem försvinner med dem.
+-- Tar bort förfrågningar som är 30 dagar gamla, spärrar som har gått ut och gamla försök. Notiserna om förfrågningarna
+-- får en tom vanforfragan_id och tas inte bort här.
 create function public.stada_vanner() returns void
 language sql security definer set search_path = '' as $$
-  delete from public.vanforfragningar where coalesce(nekad, skapad) < now() - interval '30 days';
-  delete from public.vanforsok where tid < now() - interval '1 day';
+  delete from public.vanforfragningar where skapad <= now() - interval '30 days';
+  delete from public.vanparsparr
+   where (nekad is null or nekad <= now() - interval '30 days')
+     and (senaste_notis is null or senaste_notis <= now() - interval '1 day');
+  delete from public.vanforsok where tid <= now() - interval '1 day';
 $$;
 
--- Låser paret i transaktionen, så att två som frågar varandra samtidigt hanteras en i taget.
+-- Låser paret i transaktionen, så att två som frågar eller svarar samtidigt hanteras en i taget.
 create function public.las_vanpar(a uuid, b uuid) returns void
 language sql set search_path = '' as $$
-  select pg_advisory_xact_lock(hashtextextended(least(a, b)::text || greatest(a, b)::text, 0));
+  select pg_advisory_xact_lock(hashtextextended('vanpar:' || least(a, b)::text || greatest(a, b)::text, 0));
 $$;
 
--- Gör två personer till vänner en gång, och tar bort förfrågningarna mellan dem (och notiserna om dem).
-create function public.skapa_vanskap(a uuid, b uuid) returns void
-language sql security definer set search_path = '' as $$
-  insert into public.vanskap (user_a, user_b) values (least(a, b), greatest(a, b)) on conflict do nothing;
-  delete from public.vanforfragningar f
-   where (f.fran_user_id = a and f.till_user_id = b) or (f.fran_user_id = b and f.till_user_id = a);
+-- Låser en persons försök, så att anrop samtidigt inte kan passera spärrarna.
+create function public.las_vanforsok(anvandare uuid) returns void
+language sql set search_path = '' as $$
+  select pg_advisory_xact_lock(hashtextextended('vanforsok:' || anvandare::text, 0));
 $$;
 
 create function public.profilnamn(id uuid) returns text
@@ -117,6 +151,7 @@ $$;
 create function public.rakna_vanforfragan(anvandare uuid) returns void
 language plpgsql security definer set search_path = '' as $$
 begin
+  perform public.las_vanforsok(anvandare);
   if (select count(*) from public.vanforsok f where f.user_id = anvandare and f.typ = 'forfragan' and f.tid > now() - interval '1 day') >= 20 then
     raise exception 'För många vänförfrågningar. Vänta till i morgon och försök igen.';
   end if;
@@ -124,54 +159,61 @@ begin
 end;
 $$;
 
--- Det som händer när en ny förfrågan har sparats och mottagaren har ett konto:
--- 1. Har mottagaren redan frågat den som skickar blir de vänner, och mottagaren får "godkände".
--- 2. Är de redan vänner, har mottagaren nekat inom 30 dagar, eller väntar redan en annan förfrågan mellan dem,
---    får mottagaren ingen ny notis. Raden finns kvar som "Väntar på svar" hos den som skickade.
--- 3. Annars får mottagaren notisen "vill bli din vän".
+-- Ska mottagaren få en notis från den som frågar? Inte om hen har nekat inom 30 dagar eller redan har fått en
+-- notis från samma person det senaste dygnet. Sparar tiden när svaret är ja.
+create function public.far_vannotis(fran uuid, till uuid) returns boolean
+language plpgsql security definer set search_path = '' as $$
+declare
+  s public.vanparsparr;
+begin
+  select * into s from public.vanparsparr where fran_user_id = fran and till_user_id = till;
+  if s.senaste_notis > now() - interval '1 day' then
+    return false;
+  end if;
+  insert into public.vanparsparr (fran_user_id, till_user_id, senaste_notis) values (fran, till, now())
+  on conflict (fran_user_id, till_user_id) do update set senaste_notis = now();
+  return true;
+end;
+$$;
+
+-- När en ny förfrågan har sparats och mottagaren har ett konto: mottagaren ser den, och får en notis, om ni inte
+-- redan är vänner och mottagaren inte har nekat inom 30 dagar. Högst en notis per dygn från samma person.
+-- Inget av detta syns för den som skickade.
 create function public.hantera_vanforfragan(forfragan uuid) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
   f public.vanforfragningar;
-  tidigare timestamptz;
 begin
   select * into f from public.vanforfragningar where id = forfragan;
-  if f.till_user_id is null then
+  if f.till_user_id is null or public.ar_vanner(f.fran_user_id, f.till_user_id) then
     return;
   end if;
   if exists (
-    select 1 from public.vanforfragningar r
-     where r.fran_user_id = f.till_user_id and r.till_user_id = f.fran_user_id and r.angrad is null
-  ) then
-    perform public.skapa_vanskap(f.fran_user_id, f.till_user_id);
-    insert into public.notiser (user_id, typ, text, lank, fran_user_id)
-    values (f.till_user_id, 'van_godkand', 'Du och ' || public.profilnamn(f.fran_user_id) || ' är nu vänner', '/vanner', f.fran_user_id);
-    return;
-  end if;
-  if exists (select 1 from public.vanskap v where v.user_a = least(f.fran_user_id, f.till_user_id) and v.user_b = greatest(f.fran_user_id, f.till_user_id)) then
-    return;
-  end if;
-  select max(r.nekad) into tidigare from public.vanforfragningar r
-   where r.fran_user_id = f.fran_user_id and r.till_user_id = f.till_user_id and r.id <> f.id and r.nekad is not null;
-  if tidigare is not null then
-    -- Nekad nyligen: den nya räknas som nekad samtidigt, och mottagaren ser den inte.
-    update public.vanforfragningar set nekad = tidigare where id = f.id;
-    return;
-  end if;
-  if exists (
-    select 1 from public.vanforfragningar r
-     where r.fran_user_id = f.fran_user_id and r.till_user_id = f.till_user_id and r.id <> f.id and r.nekad is null
+    select 1 from public.vanparsparr s
+     where s.fran_user_id = f.fran_user_id and s.till_user_id = f.till_user_id and s.nekad > now() - interval '30 days'
   ) then
     return;
   end if;
-  insert into public.notiser (user_id, typ, text, lank, fran_user_id, vanforfragan_id)
-  values (f.till_user_id, 'vanforfragan', public.profilnamn(f.fran_user_id) || ' vill bli din vän', '/vanner', f.fran_user_id, f.id);
+  update public.vanforfragningar set synlig = true where id = f.id;
+  if public.far_vannotis(f.fran_user_id, f.till_user_id) then
+    insert into public.notiser (user_id, typ, text, lank, fran_user_id, vanforfragan_id)
+    values (f.till_user_id, 'vanforfragan', public.profilnamn(f.fran_user_id) || ' vill bli din vän', '/vanner', f.fran_user_id, f.id);
+  else
+    -- Ingen ny notis, men den senaste notisen från samma person pekar nu på den nya förfrågan om den var dold.
+    update public.notiser set vanforfragan_id = f.id
+     where id = (
+       select n.id from public.notiser n
+        where n.user_id = f.till_user_id and n.fran_user_id = f.fran_user_id and n.typ = 'vanforfragan'
+        order by n.skapad desc limit 1
+     ) and vanforfragan_id is null;
+  end if;
 end;
 $$;
 
 -- ─── Skicka en förfrågan via mejladress ──────────────────────────────────────
 -- Gör samma sak och svarar likadant vare sig adressen har ett konto eller inte. Bara exakt adress, oavsett stora
--- och små bokstäver. En förfrågan till ens egen adress sparas som en adress utan konto.
+-- och små bokstäver. En förfrågan till ens egen adress sparas som en adress utan konto. Samma adress igen medan
+-- förfrågan väntar gör ingenting.
 create function public.skicka_vanforfragan(epost text) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -188,14 +230,12 @@ begin
   end if;
   perform public.rakna_vanforfragan(anvandare);
   perform public.stada_vanner();
+  if exists (select 1 from public.vanforfragningar f where f.fran_user_id = anvandare and f.till_epost = adress) then
+    return;
+  end if;
   select u.id into mottagare from auth.users u where lower(u.email) = adress and u.id <> anvandare limit 1;
   if mottagare is not null then
     perform public.las_vanpar(anvandare, mottagare);
-  end if;
-  -- Samma adress igen: den tidigare raden syns igen om den var ångrad, och inget mer händer.
-  update public.vanforfragningar set angrad = null where fran_user_id = anvandare and till_epost = adress;
-  if found then
-    return;
   end if;
   insert into public.vanforfragningar (fran_user_id, till_user_id, till_epost) values (anvandare, mottagare, adress)
   returning id into ny;
@@ -219,11 +259,9 @@ begin
   perform public.rakna_vanforfragan(anvandare);
   perform public.stada_vanner();
   perform public.las_vanpar(anvandare, person);
-  if public.ar_van(person) then
-    return;
-  end if;
-  update public.vanforfragningar set angrad = null where fran_user_id = anvandare and till_user_id = person and till_epost is null;
-  if found then
+  if public.ar_vanner(anvandare, person) or exists (
+    select 1 from public.vanforfragningar f where f.fran_user_id = anvandare and f.till_user_id = person and f.till_epost is null
+  ) then
     return;
   end if;
   insert into public.vanforfragningar (fran_user_id, till_user_id) values (anvandare, person) returning id into ny;
@@ -232,43 +270,55 @@ end;
 $$;
 
 -- ─── Svara på en förfrågan ───────────────────────────────────────────────────
--- Bara mottagaren svarar. Ja gör er till vänner och ger den som frågade en notis. Nej märker förfrågan som nekad
--- (och andra väntande från samma person), tar bort notisen och säger inget till den som frågade.
+-- Bara mottagaren svarar, och bara på en förfrågan hen ser.
+-- Ja: ni blir vänner, den som frågade får en notis och den förfrågan försvinner hos hen. Andra förfrågningar från
+-- samma person döljs för mottagaren men finns kvar hos den som skickade.
+-- Nej: förfrågningarna från den personen döljs för mottagaren, och den personen kan inte ge en ny notis på 30
+-- dagar. Den som frågade ser ingen skillnad.
 create function public.svara_vanforfragan(forfragan uuid, ja boolean) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
   anvandare uuid := auth.uid();
   fran uuid;
 begin
-  select f.fran_user_id into fran from public.vanforfragningar f
-   where f.id = forfragan and f.till_user_id = anvandare and f.nekad is null;
+  select f.fran_user_id into fran from public.vanforfragningar f where f.id = forfragan and f.till_user_id = anvandare and f.synlig;
   if fran is null then
     raise exception 'Hittar ingen förfrågan';
   end if;
   perform public.las_vanpar(anvandare, fran);
-  if ja then
-    perform public.skapa_vanskap(anvandare, fran);
-    insert into public.notiser (user_id, typ, text, lank, fran_user_id)
-    values (fran, 'van_godkand', public.profilnamn(anvandare) || ' godkände din vänförfrågan', '/vanner', anvandare);
-  else
-    update public.vanforfragningar set nekad = now() where fran_user_id = fran and till_user_id = anvandare and nekad is null;
-    delete from public.notiser n
-     using public.vanforfragningar f
-     where n.vanforfragan_id = f.id and f.fran_user_id = fran and f.till_user_id = anvandare;
+  -- Läses om efter låset, ifall den ångrades under tiden.
+  if not exists (select 1 from public.vanforfragningar f where f.id = forfragan and f.till_user_id = anvandare and f.synlig) then
+    raise exception 'Hittar ingen förfrågan';
   end if;
+  if ja then
+    if not public.ar_vanner(anvandare, fran) then
+      insert into public.vanskap (user_a, user_b) values (least(anvandare, fran), greatest(anvandare, fran));
+      insert into public.notiser (user_id, typ, text, lank, fran_user_id)
+      values (fran, 'van_godkand', public.profilnamn(anvandare) || ' godkände din vänförfrågan', '/vanner', anvandare);
+    end if;
+    delete from public.vanforfragningar where id = forfragan;
+  else
+    insert into public.vanparsparr (fran_user_id, till_user_id, nekad) values (fran, anvandare, now())
+    on conflict (fran_user_id, till_user_id) do update set nekad = now();
+  end if;
+  update public.vanforfragningar set synlig = false where fran_user_id = fran and till_user_id = anvandare;
+  update public.notiser set vanforfragan_id = null
+   where user_id = anvandare and fran_user_id = fran and typ = 'vanforfragan' and vanforfragan_id is not null;
 end;
 $$;
 
 -- ─── Ångra en skickad förfrågan ──────────────────────────────────────────────
--- En väntande tas bort, med notisen. En nekad döljs men finns kvar, så att den fortsätter att stoppa nya notiser.
+-- Tar bort förfrågan, likadant vare sig mottagaren har svarat eller inte. Notisen hos mottagaren döljs.
 create function public.angra_vanforfragan(forfragan uuid) returns void
 language plpgsql security definer set search_path = '' as $$
+declare
+  till uuid;
 begin
-  update public.vanforfragningar set angrad = now()
-   where id = forfragan and fran_user_id = auth.uid() and nekad is not null;
-  if not found then
-    delete from public.vanforfragningar where id = forfragan and fran_user_id = auth.uid();
+  select f.till_user_id into till from public.vanforfragningar f where f.id = forfragan and f.fran_user_id = auth.uid();
+  if till is not null then
+    perform public.las_vanpar(auth.uid(), till);
   end if;
+  delete from public.vanforfragningar where id = forfragan and fran_user_id = auth.uid();
 end;
 $$;
 
@@ -313,6 +363,7 @@ begin
   if anvandare is null then
     raise exception 'Du måste vara inloggad';
   end if;
+  perform public.las_vanforsok(anvandare);
   if (select count(*) from public.vanforsok f where f.user_id = anvandare and f.typ = 'lank' and f.tid > now() - interval '1 hour') >= 10 then
     raise exception 'För många försök. Vänta en stund och försök igen.';
   end if;
@@ -337,7 +388,8 @@ begin
 end;
 $$;
 
--- Bli vän via en länk: direkt, eftersom ägaren själv har delat länken. Ägaren får en notis. Null för en felaktig kod.
+-- Bli vän via en länk: direkt, eftersom ägaren själv har delat länken. Ägaren får en notis, högst en per dygn från
+-- samma person. Förfrågningar mellan er rörs inte. Null för en felaktig kod.
 create function public.bli_van_via_lank(kod text) returns uuid
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -351,27 +403,31 @@ begin
     raise exception 'Det är din egen vänlänk';
   end if;
   perform public.las_vanpar(anvandare, agare);
-  if public.ar_van(agare) then
+  if public.ar_vanner(anvandare, agare) then
     return agare;
   end if;
-  perform public.skapa_vanskap(anvandare, agare);
-  insert into public.notiser (user_id, typ, text, lank, fran_user_id)
-  values (agare, 'van_via_lank', public.profilnamn(anvandare) || ' blev din vän via din vänlänk', '/vanner', anvandare);
+  insert into public.vanskap (user_a, user_b) values (least(anvandare, agare), greatest(anvandare, agare));
+  if public.far_vannotis(anvandare, agare) then
+    insert into public.notiser (user_id, typ, text, lank, fran_user_id)
+    values (agare, 'van_via_lank', public.profilnamn(anvandare) || ' blev din vän via din vänlänk', '/vanner', anvandare);
+  end if;
   return agare;
 end;
 $$;
 
 -- ─── Ta bort en vän ──────────────────────────────────────────────────────────
--- Tar bort vänskapen och förfrågningarna mellan er. Den andra får ingen notis.
+-- Tar bort vänskapen och ens egna notiser om den. Gör ingenting om ni inte är vänner. Förfrågningar och spärrar
+-- rörs inte, och den andra får ingen notis.
 create function public.ta_bort_van(person uuid) returns void
 language plpgsql security definer set search_path = '' as $$
 declare
   anvandare uuid := auth.uid();
 begin
+  perform public.las_vanpar(anvandare, person);
   delete from public.vanskap where user_a = least(anvandare, person) and user_b = greatest(anvandare, person);
-  delete from public.vanforfragningar f
-   where (f.fran_user_id = anvandare and f.till_user_id = person) or (f.fran_user_id = person and f.till_user_id = anvandare);
-  -- Notiserna om vänskapen tas bort hos en själv. Den andras notiser rörs inte.
+  if not found then
+    return;
+  end if;
   delete from public.notiser n where n.user_id = anvandare and n.fran_user_id = person and n.typ in ('van_godkand', 'van_via_lank');
 end;
 $$;
@@ -398,17 +454,22 @@ language sql stable security definer set search_path = '' as $$
    order by 2;
 $$;
 
--- Förfrågningar till mig som väntar på svar, med namnet på den som frågade.
+-- Förfrågningar till mig att svara på: en per person, den senaste, och inte från den som redan är vän.
 create function public.mina_forfragningar() returns table (id uuid, fran_user_id uuid, namn text, skapad timestamptz)
 language sql stable security definer set search_path = '' as $$
-  select f.id, f.fran_user_id, public.profilnamn(f.fran_user_id), f.skapad
-    from public.vanforfragningar f
-   where f.till_user_id = auth.uid() and f.nekad is null and f.skapad > now() - interval '30 days'
-   order by f.skapad desc;
+  select x.id, x.fran_user_id, public.profilnamn(x.fran_user_id), x.skapad
+    from (
+      select distinct on (f.fran_user_id) f.id, f.fran_user_id, f.skapad
+        from public.vanforfragningar f
+       where f.till_user_id = auth.uid() and f.synlig and f.skapad > now() - interval '30 days'
+         and not public.ar_vanner(f.fran_user_id, auth.uid())
+       order by f.fran_user_id, f.skapad desc
+    ) x
+   order by x.skapad desc;
 $$;
 
--- Förfrågningar jag har skickat: adressen, eller namnet för någon jag har vandrat med. Aldrig om adressen har ett
--- konto eller om förfrågan har nekats.
+-- Förfrågningar jag har skickat: adressen, eller namnet för någon jag har vandrat med, och när. Aldrig om adressen
+-- har ett konto, om mottagaren har sett den eller om hen har nekat.
 create function public.mina_skickade() returns table (id uuid, visas text, skapad timestamptz)
 language plpgsql security definer set search_path = '' as $$
 begin
@@ -416,7 +477,7 @@ begin
   return query
   select f.id, coalesce(f.till_epost, public.profilnamn(f.till_user_id)), f.skapad
     from public.vanforfragningar f
-   where f.fran_user_id = auth.uid() and f.angrad is null
+   where f.fran_user_id = auth.uid()
    order by f.skapad desc;
 end;
 $$;
@@ -429,10 +490,10 @@ language sql stable security definer set search_path = '' as $$
     join public.deltagare annan on annan.tur_id = jag.tur_id and annan.user_id is not null and annan.user_id <> jag.user_id
     left join public.profiler p on p.id = annan.user_id
    where jag.user_id = auth.uid()
-     and not public.ar_van(annan.user_id)
+     and not public.ar_vanner(jag.user_id, annan.user_id)
      and not exists (
        select 1 from public.vanforfragningar f
-        where f.fran_user_id = auth.uid() and f.till_user_id = annan.user_id and f.till_epost is null and f.angrad is null
+        where f.fran_user_id = auth.uid() and f.till_user_id = annan.user_id and f.till_epost is null
      )
    group by annan.user_id, p.bild_uppdaterad
    order by 2;
@@ -461,11 +522,14 @@ create policy "profilbilder: läsa sin egen, turkamraters och vänners" on stora
 
 -- ─── Vem får anropa vad ──────────────────────────────────────────────────────
 revoke execute on function
+  public.vanforfragningar_konto_raderas(),
+  public.ar_vanner(uuid, uuid),
   public.stada_vanner(),
   public.las_vanpar(uuid, uuid),
-  public.skapa_vanskap(uuid, uuid),
+  public.las_vanforsok(uuid),
   public.profilnamn(uuid),
   public.rakna_vanforfragan(uuid),
+  public.far_vannotis(uuid, uuid),
   public.hantera_vanforfragan(uuid),
   public.vanlank_agare(text)
 from public, anon, authenticated;

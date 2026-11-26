@@ -30,7 +30,7 @@ export function Vanner() {
 
   return (
     <div className="space-y-6">
-      <SidRubrik rubrik="Vänner" text="Dem du vandrar med, samlade så att det går fort att planera nästa tur." />
+      <SidRubrik rubrik="Vänner" text="Dem du vandrar med, samlade på ett ställe." />
       {lage.lage === 'laddar' && (
         <Laddar text="Hämtar dina vänner">
           <Skelett className="h-56 rounded-[1.375rem]" />
@@ -67,7 +67,7 @@ function Innehall({ listor, onAndrad }: { listor: Vanlistor; onAndrad: () => voi
       {/* Förfrågningarna först i mobil. På dator spänner vännerna över högra spaltens rader. */}
       <div className="grid items-start gap-6 lg:grid-cols-[minmax(0,1.6fr)_minmax(0,1fr)] lg:grid-rows-[auto_auto_1fr]">
         {forfragningar.length > 0 && (
-          <Del rubrik="Förfrågningar" antal={forfragningar.length} className="lg:col-start-2 lg:row-start-1">
+          <Del rubrik="Vänförfrågningar" antal={forfragningar.length} className="lg:col-start-2 lg:row-start-1">
             {forfragningar.map((f) => (
               <Personrad
                 key={f.id}

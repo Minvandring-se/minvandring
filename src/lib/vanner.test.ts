@@ -37,6 +37,7 @@ describe('vanfel', () => {
     expect(vanfel('För många vänförfrågningar. Vänta till i morgon och försök igen.')).toMatch(/Vänta till i morgon/)
     expect(vanfel('För många försök. Vänta en stund och försök igen.')).toMatch(/Vänta en timme/)
     expect(vanfel('Det är din egen vänlänk')).toMatch(/din egen vänlänk/)
+    expect(vanfel('Du måste vara inloggad')).toBe('Du är utloggad. Logga in och försök igen.')
     expect(vanfel(undefined)).toMatch(/Kontrollera uppkopplingen/)
   })
 })

@@ -80,7 +80,8 @@ export function vanfel(meddelande: string | undefined): string {
   if (meddelande?.includes('samma tur')) return 'Ni behöver ha varit med i samma tur.'
   if (meddelande?.includes('egen vänlänk')) return 'Det här är din egen vänlänk. Skicka den till den du vill bli vän med.'
   if (meddelande?.includes('Hittar ingen förfrågan')) return 'Förfrågan finns inte längre.'
-  return 'Det gick inte just nu. Kontrollera uppkopplingen och försök igen.'
+  if (meddelande?.includes('måste vara inloggad')) return 'Du är utloggad. Logga in och försök igen.'
+  return 'Det gick inte att spara just nu. Kontrollera uppkopplingen och försök igen.'
 }
 
 /** "Förfrågan skickad nyss", "för 5 min sedan", "i går" eller "den 24 nov". */

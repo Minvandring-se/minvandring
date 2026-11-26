@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { arAppLank, klockansNamn, notistid, olastaSiffra } from './notiser'
+import { arAppLank, klockansNamn, notistid, olastaSiffra, synligaNotiser, type Notis } from './notiser'
 
 describe('olastaSiffra', () => {
   it('är tom utan olästa och 9+ över nio', () => {
@@ -42,5 +42,15 @@ describe('arAppLank', () => {
     expect(arAppLank('//annan.se')).toBe(false)
     expect(arAppLank('https://annan.se')).toBe(false)
     expect(arAppLank(null)).toBe(false)
+  })
+})
+
+describe('synligaNotiser', () => {
+  const notis = (typ: Notis['typ'], vanforfragan_id: string | null): Notis => ({
+    id: `${typ}-${vanforfragan_id}`, typ, text: 'x', lank: null, tur_id: null, vanforfragan_id, last: null, skapad: '2026-11-27T12:00:00Z',
+  })
+  it('döljer bara notiser om vänförfrågningar som är borta', () => {
+    const alla = [notis('vanforfragan', 'f1'), notis('vanforfragan', null), notis('gick_med', null), notis('van_godkand', null)]
+    expect(synligaNotiser(alla).map((n) => n.id)).toEqual(['vanforfragan-f1', 'gick_med-null', 'van_godkand-null'])
   })
 })

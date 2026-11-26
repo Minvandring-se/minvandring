@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ANTAL_I_KLOCKAN, type Notis } from '@/lib/notiser'
+import { ANTAL_I_KLOCKAN, synligaNotiser, type Notis } from '@/lib/notiser'
 import { supabase } from '@/lib/supabase'
 
 /** null medan notiserna hämtas, 'fel' när de inte gick att hämta. */
@@ -12,7 +12,7 @@ async function hamta(): Promise<Notis[] | null> {
   const { data, error } = await supabase.from('notiser').select(KOLUMNER).order('skapad', { ascending: false }).limit(ANTAL_I_KLOCKAN)
   // PGRST205: tabellen finns inte än (migreringen är inte körd). Då finns inga notiser.
   if (error?.code === 'PGRST205') return []
-  return error ? null : (data as Notis[])
+  return error ? null : synligaNotiser(data as Notis[])
 }
 
 export interface Notiser {
