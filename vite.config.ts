@@ -4,6 +4,9 @@ import react from '@vitejs/plugin-react'
 import { defineConfig } from 'vite'
 import { VitePWA } from 'vite-plugin-pwa'
 
+/** Service workerns sparade svar (CacheStorage). Konfigurationen byggs utan webbläsarens typer. */
+type Sparade = { match: (adress: string, val: { ignoreSearch: boolean }) => Promise<Response | undefined> }
+
 // https://vite.dev/config/
 export default defineConfig({
   plugins: [
@@ -35,7 +38,28 @@ export default defineConfig({
         ],
       },
       workbox: {
-        navigateFallback: '/index.html',
+        // Sidladdningar hämtas från nätet först, så att en ny version kommer vid nästa laddning även om den nya
+        // service workern inte har installerats klart. Svaren sparas inte. Utan nät, eller när nätet inte svarar inom
+        // 3 sekunder, svarar service workern med den förcachade index.html, även för sidor man inte har öppnat förut.
+        // Då passar sidan alltid ihop med filerna i samma version.
+        navigateFallback: null,
+        // Annars svarar förcachningen på / med sin index.html innan regeln nedan får försöka med nätet.
+        directoryIndex: null,
+        runtimeCaching: [
+          {
+            urlPattern: ({ request }) => request.mode === 'navigate',
+            handler: 'NetworkFirst',
+            options: {
+              cacheName: 'sidor',
+              networkTimeoutSeconds: 3,
+              plugins: [
+                { cacheWillUpdate: async () => null },
+                // Funktionen kopieras in i sw.js som text, så den får bara använda det som finns där (caches).
+                { handlerDidError: async () => (await (globalThis as unknown as { caches: Sparade }).caches.match('/index.html', { ignoreSearch: true })) ?? Response.error() },
+              ],
+            },
+          },
+        ],
         // Den nya service workern tar över direkt i stället för att vänta tills alla flikar är stängda. Utan dem
         // väntar den, eftersom pluginet bara sätter dem när det själv registrerar service workern.
         skipWaiting: true,

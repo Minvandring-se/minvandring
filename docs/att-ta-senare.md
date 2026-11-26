@@ -242,3 +242,17 @@ Färgen per deltagare räknas i dag ut i deltagarnas ordning (`personfarger` i `
 ## Skafferiet: boka och räkna ner egna rätter hemma
 
 En egen rätt hemma (`skafferiratter`) läggs i turen som en egen rätt utan ingredienser, men portionerna hemma räknas inte ner och bokas inte till turen, som påsarna gör (`bokningarFranRader` i `src/lib/skafferi.ts`). Det kräver en koppling från turens rätt till den privata raden, till exempel en kolumn på `ratter` som bara ägaren av raden kan läsa betydelsen av, eller att man räknar ner portionerna själv när turen är planerad. Bygg det när någon ber om det.
+
+## Vandringsvana: mer hjälp för den som är ny
+
+Bakgrund: en vän till grundarna vill börja vandra men vet inget om det, och önskade att appen hjälper henne på vägen. Det gäller troligen många som hittar MinVandring.
+
+Idén är en inställning i profilen, "Hur van är du att vandra?", med tre svar: nybörjare, van och erfaren. Nivån styr hjälpen, inte funktionerna. Alla har samma funktioner och kan byta nivå när som helst.
+
+- Nybörjare: packlistan kan starta från en färdig mall, ord som basvikt och förbrukning förklaras där de syns, fler tips visas (till exempel vad man behöver på en första tur, hur långt man orkar gå per dag och hur mycket mat som behövs) och Kom igång på Hem är tydligare.
+- Van: tipsen visas men kortare, och packlistan börjar tom eller från förra turen.
+- Erfaren: inga förklaringar, kompaktare vyer och mer detaljer framme, till exempel vikt per person och fördelning av gemensam utrustning.
+
+Nivån gäller personen, inte turen, eftersom en tur kan ha deltagare med olika vana. Varje person ser hjälpen för sin egen nivå.
+
+Ett första steg kan vara att bara fråga om nivån när man skapar konto och spara svaret (en kolumn på `profiler`), så att den finns när innehållet är klart. Innehållet (mallar och tips per nivå) tas helst fram utifrån vad riktiga nybörjare frågar om. Tips följer reglerna i `src/lib/tips.ts`: varje siffra har en källa, och råden är allmänna. Bygg efter betan.
