@@ -5,6 +5,7 @@ import { matdagar, matstatus } from '@/lib/mat'
 import { packat, statusKarta, utanBarare } from '@/lib/packlista'
 import { supabase } from '@/lib/supabase'
 import { delaUppTurer, lokaltDatum } from '@/lib/turlista'
+import { minaKvar } from '@/lib/uppgifter'
 import type { Maltid, PackradRad, PackstatusRad } from '@/lib/typer'
 
 /** En tur på Hem: som i Mina turer, och med reservdagarna som matplanen räknar med. */
@@ -24,11 +25,12 @@ const PACKSTATUS = 'packrad_id, deltagare_id, tur_id, packad, namn, vikt_g, prod
 
 /** Det som Att göra räknas ur för en tur: måltiderna, packraderna, bockarna och ens egen rad i deltagarna. */
 async function hamtaAttGora(tur: HemTur, anvandarId: string): Promise<Attgora[] | 'fel'> {
-  const [maltider, rader, status, deltagare] = await Promise.all([
+  const [maltider, rader, status, deltagare, uppgifter] = await Promise.all([
     supabase!.from('maltider').select('dag, maltid').eq('tur_id', tur.id),
     supabase!.from('packrader').select(PACKRAD).eq('tur_id', tur.id),
     supabase!.from('packstatus').select(PACKSTATUS).eq('tur_id', tur.id),
     supabase!.from('deltagare').select('id, typ, user_id').eq('tur_id', tur.id),
+    supabase!.from('uppgifter').select('ansvarig, klar').eq('tur_id', tur.id),
   ])
   if (maltider.error || rader.error || status.error || deltagare.error) return 'fel'
   const packrader = (rader.data as PackradRad[] | null) ?? []
@@ -39,6 +41,8 @@ async function hamtaAttGora(tur: HemTur, anvandarId: string): Promise<Attgora[] 
     mat: dagar.length ? matstatus(dagar, (maltider.data as { dag: number; maltid: Maltid }[] | null) ?? []) : null,
     utanBarare: utanBarare(packrader),
     packat: mig ? packat(packrader, statusKarta((status.data as PackstatusRad[] | null) ?? []), mig) : null,
+    // Går uppgifterna inte att hämta (till exempel innan migreringen är körd) visas resten ändå.
+    uppgifter: uppgifter.error ? 0 : minaKvar((uppgifter.data as { ansvarig: string | null; klar: boolean }[] | null) ?? [], mig?.id ?? null),
   })
 }
 

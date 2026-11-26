@@ -88,7 +88,7 @@ Det som inte finns visas i turens översikt och på sidorna i menyn (Dagbok och 
 | Lägg till vänner i en tur, och vänner eller samma vänner som i en tidigare tur när en ny tur skapas | Finns |
 | Grupper: spara vänner som en grupp, ny tur med gruppen och gruppen i en tur | Finns |
 | Mejl och påminnelser | Nästa, i steg enligt planen för notiser |
-| Att göra med ansvarig och datum | Senare |
+| Att göra med ansvarig och datum | Finns: Att göra i gruppen på turens översikt, med förslag, och egna uppgifter under Att göra på Hem |
 | Omröstning om datum och led | Senare |
 | Senaste i gruppen | Senare |
 | Delade kostnader | Senare |

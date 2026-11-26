@@ -4,9 +4,9 @@ import { useNavigate } from 'react-router'
 import { useApp } from '@/components/app/appKontext'
 import { glomTurlistan } from '@/components/app/turlistaMinne'
 import { Deltagarlista } from '@/components/tur/Deltagarlista'
+import { AttGoraITuren } from '@/components/tur/AttGoraITuren'
 import { EtapperIOversikten } from '@/components/tur/EtapperIOversikten'
 import {
-  AttGora,
   DelaOchSpara,
   DeladeKostnader,
   DinVikt,
@@ -79,7 +79,13 @@ export function TurOversikt() {
         <KomIhagIOversikten turId={tur.id} />
 
         <RedoForAvfard className={BRED} />
-        <AttGora className={BRED} />
+        <AttGoraITuren
+          turId={tur.id}
+          deltagare={deltagare}
+          mittId={deltagare.find((d) => d.user_id === mittUserId)?.id ?? null}
+          kanAndra={kanAndra(minRoll)}
+          className={BRED}
+        />
         <ResanDitOchHem />
         <EtapperIOversikten tur={tur} kanAndra={kanAndra(minRoll)} className={BRED} />
         <DinVikt />

@@ -86,3 +86,13 @@ describe('inspirationen', () => {
     for (const t of Object.values(TIPS_FOR_ARSTID)) expect(guideFor(t.nyckel), t.nyckel).not.toBeNull()
   })
 })
+
+describe('attGora med uppgifter', () => {
+  it('visar mina uppgifter först, och inget när jag inte har några', () => {
+    const tur = { id: 't1', namn: 'Kungsleden' }
+    const [u] = attGora(tur, { mat: null, utanBarare: [], packat: null, uppgifter: 2 })
+    expect(u).toEqual({ nyckel: 'uppgifter', text: 'Du har 2 uppgifter i gruppen', under: 'Att göra i gruppen, Kungsleden', till: '/tur/t1' })
+    expect(attGora(tur, { mat: null, utanBarare: [], packat: null, uppgifter: 1 })[0].text).toBe('Du har 1 uppgift i gruppen')
+    expect(attGora(tur, { mat: null, utanBarare: [], packat: null, uppgifter: 0 })).toEqual([])
+  })
+})

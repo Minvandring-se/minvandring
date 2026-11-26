@@ -7,7 +7,6 @@ import { Matare } from '@/components/ui/matare'
 import { Nyckeltal } from '@/components/ui/nyckeltal'
 import { Sektion } from '@/components/ui/sektion'
 import {
-  ATT_GORA,
   DELA_OCH_SPARA,
   DIN_VIKT,
   EFTER_TUREN,
@@ -85,27 +84,6 @@ export function RedoForAvfard({ className }: Props) {
             </div>
           </div>
         </div>
-      </KommerSnart>
-    </Sektion>
-  )
-}
-
-export function AttGora({ className }: Props) {
-  return (
-    <Sektion rubrik="Att göra i gruppen" kommerSnart atgard={<Exempellank>+ Ny uppgift</Exempellank>} className={className}>
-      <KommerSnart text="Här fördelar ni uppgifter, till exempel att boka tåg och stugor, med vem som gör det och när.">
-        <ul className="divide-y divide-border">
-          {ATT_GORA.map((u) => (
-            <li key={u.text} className="grid grid-cols-[1.5rem_minmax(0,1fr)_auto] items-center gap-x-3 gap-y-0.5 py-3 sm:grid-cols-[1.5rem_minmax(0,1fr)_8rem_7rem]">
-              <Bock klar={u.klar} />
-              <span className={cn('min-w-0', u.klar ? 'text-muted-foreground line-through' : 'font-medium')}>{u.text}</span>
-              <span className="col-start-2 text-sm text-muted-foreground sm:col-start-auto">{u.vem}</span>
-              <span className={cn('col-start-3 row-start-1 text-right text-sm sm:col-start-auto sm:row-start-auto', u.bradskar ? 'font-semibold text-accent-strong' : 'text-muted-foreground')}>
-                {u.nar}
-              </span>
-            </li>
-          ))}
-        </ul>
       </KommerSnart>
     </Sektion>
   )
