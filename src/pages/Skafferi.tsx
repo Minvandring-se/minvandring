@@ -72,7 +72,8 @@ export function Skafferi() {
   const { katalog, forsokIgen } = useMatkatalog()
   const { skafferi, laddaOm } = useSkafferi()
   const { recept, laddaOm: laddaOmRecept } = useRecept()
-  const katalogrecept = useReceptkatalognamn()
+  const [receptforsok, setReceptforsok] = useState(0)
+  const katalogrecept = useReceptkatalognamn(receptforsok)
   const [fel, setFel] = useState(false)
   const [laggTill, setLaggTill] = useState<LaggTill>(null)
 
@@ -104,6 +105,7 @@ export function Skafferi() {
             if (katalog === 'fel') forsokIgen()
             if (skafferi === 'fel') laddaOm()
             if (recept === 'fel') laddaOmRecept()
+            if (katalogrecept === 'fel') setReceptforsok((n) => n + 1)
           }}
         />
       ) : laddar ? (

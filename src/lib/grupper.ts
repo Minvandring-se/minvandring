@@ -43,5 +43,6 @@ export function gruppfel(meddelande: string | undefined): string {
   if (meddelande?.includes('grupper_unikt_namn') || meddelande?.includes('duplicate')) return 'Du har redan en grupp med det namnet.'
   if (meddelande?.includes('högst 50')) return 'En grupp kan ha högst 50 vänner.'
   if (meddelande?.includes('Hittar ingen grupp')) return 'Gruppen finns inte längre.'
+  if (meddelande?.includes('Bara vänner')) return 'Någon du valde är inte längre din vän. Ladda om sidan och försök igen.'
   return 'Det gick inte att spara gruppen. Kontrollera uppkopplingen och försök igen.'
 }
