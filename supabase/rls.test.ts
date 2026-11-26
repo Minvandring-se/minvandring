@@ -4198,6 +4198,9 @@ describe('anteckningar och lärdomar', () => {
 
     it('man ändrar bara sina egna, och anteckningen kan inte flyttas', async () => {
       const id = await anteckna(NC, tur, 'Ska ändras')
+      // PGlite har bara millisekunder i now(), så skapandet och ändringen kan få samma tid. Skapad flyttas därför
+      // bakåt, så att jämförelsen nedan inte beror på klockan.
+      await db.query(`update public.anteckningar set skapad = skapad - interval '1 minute' where id = $1`, [id])
       expect((await som(NA, (tx) => tx.query(`update public.anteckningar set text = 'Ägaren ändrade' where id = $1`, [id]))).affectedRows).toBe(0)
       expect((await som(NB, (tx) => tx.query(`update public.anteckningar set text = 'Redigeraren ändrade' where id = $1`, [id]))).affectedRows).toBe(0)
       expect((await som(NC, (tx) => tx.query(`update public.anteckningar set text = 'Ändrad', privat = true where id = $1`, [id]))).affectedRows).toBe(1)
