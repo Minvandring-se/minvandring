@@ -2405,9 +2405,12 @@ describe('matplanen', () => {
       const u = await som(AGARE, (tx) => tx.query("update public.receptkatalog_ingredienser set gram = 90 where recept_id = 'aprikosgrot'")).catch(() => null)
       expect(u?.affectedRows ?? 0).toBe(0)
       // Som migreringen: grams gränser och att g och kg inte har gram.
+      expect((await db.query<{ ok: boolean }>("select has_column_privilege('authenticated', 'public.receptkatalog_ingredienser', 'gram', 'update') as ok")).rows[0].ok).toBe(false)
       await forvantaFel(db.query("update public.receptkatalog_ingredienser set gram = 0 where recept_id = 'aprikosgrot' and ordning = 1"))
+      await forvantaFel(db.query("update public.receptkatalog_ingredienser set gram = 20000.1 where recept_id = 'aprikosgrot' and ordning = 1"))
       await db.query('begin')
       try {
+        await db.query("update public.receptkatalog_ingredienser set gram = 20000 where recept_id = 'aprikosgrot' and ordning = 1")
         await db.query("update public.receptkatalog_ingredienser set gram = 90 where recept_id = 'aprikosgrot' and ordning = 1")
         await forvantaFel(db.query("update public.receptkatalog_ingredienser set mangd = 90, enhet = 'g' where recept_id = 'aprikosgrot' and ordning = 1"))
       } finally {
