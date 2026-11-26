@@ -329,6 +329,12 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
   const { etikett } = kategoriFor(forsta.kategori)
   const flera = modell.varianter.length > 1
   const finns = iForradetFor(modell, iForradet)
+  const vikt = (
+    <span className="font-heading text-lg font-semibold tabular-nums">
+      {flera && <span className="font-sans text-sm font-normal text-muted-foreground">från </span>}
+      {formateraVikt(forsta.packvikt_g)}
+    </span>
+  )
   return (
     <li className="flex h-full flex-col rounded-lg border border-border bg-card">
       <button
@@ -337,21 +343,27 @@ function Produktkort({ modell, iForradet, onOppna }: { modell: Modell<Katalogpro
         onClick={onOppna}
         className="flex w-full flex-1 flex-col gap-2 rounded-lg p-4 text-left transition-colors hover:bg-muted focus-visible:outline-2 focus-visible:-outline-offset-2 focus-visible:outline-ring"
       >
-        <span className="flex w-full items-start gap-3">
+        {/*
+          Namnet får hela bredden, högst två rader och utan att ord bryts mitt i. Från 24rem står vikten till höger om
+          namnet, annars under det, bredvid kategorin.
+        */}
+        <span className="@container flex w-full items-start gap-3">
           <span className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-primary-soft text-primary">
             <Kategoriikon kategori={forsta.kategori as KategoriNyckel} />
           </span>
-          <span className="min-w-0 flex-1">
-            <span className="block font-semibold break-words">{produktnamn(modell)}</span>
-            <span className="block text-sm text-muted-foreground">
-              {flera
-                ? `${etikett}, ${varianterText(modell, formateraVikt)}`
-                : [etikett, forsta.version, viktstorlekText(forsta.underkategori, forsta.egenskaper)].filter(Boolean).join(', ')}
+          <span className="min-w-0 flex-1 space-y-0.5">
+            <span className="flex items-start gap-3">
+              <span className="line-clamp-2 min-w-0 flex-1 font-semibold [overflow-wrap:normal]">{produktnamn(modell).replaceAll('-', '‑')}</span>
+              <span className="hidden shrink-0 @[24rem]:block">{vikt}</span>
             </span>
-          </span>
-          <span className="shrink-0 font-heading text-lg font-semibold tabular-nums">
-            {flera && <span className="font-sans text-sm font-normal text-muted-foreground">från </span>}
-            {formateraVikt(forsta.packvikt_g)}
+            <span className="flex items-start justify-between gap-3">
+              <span className="min-w-0 text-sm text-muted-foreground">
+                {flera
+                  ? `${etikett}, ${varianterText(modell, formateraVikt)}`
+                  : [etikett, forsta.version, viktstorlekText(forsta.underkategori, forsta.egenskaper)].filter(Boolean).join(', ')}
+              </span>
+              <span className="shrink-0 @[24rem]:hidden">{vikt}</span>
+            </span>
           </span>
         </span>
         {flera && (
