@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils'
  * Kortet räknar ut sin form efter sin egen bredd (container query), så samma kort fungerar i en lista och i ett rutnät:
  * - Brett (från 42rem): texten till vänster och bilden till höger, 40 procent av bredden. Textdelen buktar ut över
  *   bildens vänstra kant i en mjuk båge i kortets färg.
- * - Smalt: bilden överst, 200 px hög, och den tonar ut nedåt mot texten i kortets färg.
+ * - Smalt: bilden överst, 200 px hög (120 px i mobil med lagBild), och den tonar ut nedåt mot texten i kortets färg.
  * Kort som går att trycka på (klickbar) lyfts vid hovring och fokus (lyft). Bilden ges som bild och ska fylla sin ruta
  * (absolute inset-0 size-full). Det som ska ligga ovanpå bilden, till exempel knappar, ges som paBilden.
  */
@@ -15,6 +15,7 @@ export function Bildkort({
   paBilden,
   ton = 'kort',
   klickbar = false,
+  lagBild = false,
   element: Element = 'article',
   className,
   textKlass,
@@ -26,6 +27,8 @@ export function Bildkort({
   /** kort: vit yta. stark: den mörkgröna ytan. Bågen och toningen får samma färg som kortet. */
   ton?: 'kort' | 'stark'
   klickbar?: boolean
+  /** Lägre bild i mobil (120 px i stället för 200 px), för listor där fler kort ska synas per skärm. */
+  lagBild?: boolean
   element?: 'article' | 'section' | 'div'
   className?: string
   textKlass?: string
@@ -43,7 +46,7 @@ export function Bildkort({
       )}
     >
       <div className="grid h-full @2xl:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]">
-        <div className="relative h-[200px] @2xl:order-2 @2xl:h-auto @2xl:min-h-72">
+        <div className={cn('relative @2xl:order-2 @2xl:h-auto @2xl:min-h-72', lagBild ? 'h-[120px] md:h-[200px]' : 'h-[200px]')}>
           {bild}
           <svg
             aria-hidden

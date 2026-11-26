@@ -133,9 +133,9 @@ export type Blad = 'minnen' | 'mer'
 export type Flik = { typ: 'sida'; sida: Sida; namn: string } | { typ: 'blad'; blad: Blad; namn: string }
 
 export const FLIKAR: readonly Flik[] = [
-  { typ: 'sida', sida: 'turer', namn: 'Turer' },
-  { typ: 'sida', sida: 'matplanering', namn: 'Mat' },
-  { typ: 'sida', sida: 'forrad', namn: 'Förråd' },
+  { typ: 'sida', sida: 'turer', namn: 'Mina turer' },
+  { typ: 'sida', sida: 'matplanering', namn: 'Matplanering' },
+  { typ: 'sida', sida: 'forrad', namn: 'Mitt förråd' },
   { typ: 'blad', blad: 'minnen', namn: 'Minnen' },
   { typ: 'blad', blad: 'mer', namn: 'Mer' },
 ]

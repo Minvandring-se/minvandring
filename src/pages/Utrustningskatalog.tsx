@@ -3,7 +3,6 @@ import { useEffect, useId, useState } from 'react'
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router'
 import { Laddar, Skelett } from '@/components/app/Laddar'
 import { Laddfel } from '@/components/app/Laddfel'
-import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { Granskad } from '@/components/forrad/Granskad'
 import { Kategorifilter } from '@/components/forrad/Kategorifilter'
@@ -15,7 +14,7 @@ import { Dialog } from '@/components/ui/dialog'
 import { KommerSnartEtikett } from '@/components/ui/kommerSnart'
 import { Panel } from '@/components/ui/panel'
 import { Sektion } from '@/components/ui/sektion'
-import { SokFalt } from '@/components/ui/sokfalt'
+import { AktivaFilter, Filterpanel, Sokrad, Sokruta, type AktivtFilter } from '@/components/ui/sokruta'
 import { Specrutor } from '@/components/ui/specrutor'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { arKategori, formateraVikt, KATEGORIER, kategoriFor, produktdetaljer, underkategoriFor, underkategorierFor, type KategoriNyckel } from '@/lib/forrad'
@@ -94,10 +93,25 @@ export function Utrustningskatalog() {
   // En produkt som öppnas från en länk och inte finns i träfflistan hämtas för sig, med sin modells alla storlekar.
   const [direkt, setDirekt] = useState<{ for: string; modeller: Modell<Katalogprodukt>[]; iForradet: IForradetKarta } | null>(null)
 
+  const [filterOppet, setFilterOppet] = useState(false)
   const [parametrar, setParametrar] = useSearchParams()
   const location = useLocation()
   const navigate = useNavigate()
   const produktId = parametrar.get('produkt')
+
+  function valjKategori(k: string, u: string) {
+    const ny = arKategori(k) ? k : ''
+    setKategori(ny)
+    setUnderkategori(ny && underkategoriFor(ny, u) ? u : '')
+  }
+
+  // Kategorin och underkategorin som etiketter under sökrutan. Kategorin tas bort med sin underkategori.
+  const aktiva: AktivtFilter[] = kategori
+    ? [
+        { nyckel: 'kategori', text: kategoriFor(kategori).etikett, onTaBort: () => valjKategori('', '') },
+        ...(underkategori ? [{ nyckel: 'underkategori', text: underkategorierFor(kategori).find((u) => u.nyckel === underkategori)?.etikett ?? underkategori, onTaBort: () => valjKategori(kategori, '') }] : []),
+      ]
+    : []
 
   const harText = gArAttSoka(text)
   const sokbar = harText || kategori !== ''
@@ -218,32 +232,23 @@ export function Utrustningskatalog() {
 
   return (
     <div className="space-y-6">
-      <SidRubrik
-        rubrik="Utrustningskatalog"
-        text={
-          antal
-            ? `Sök bland ${antal.toLocaleString('sv-SE')} produkter i katalogen och se vad de väger. Lägg till det du har i Mitt förråd.`
-            : 'Sök bland produkterna i katalogen och se vad de väger. Lägg till det du har i Mitt förråd.'
-        }
+      <Sokruta
+        rubrik="Vad letar du efter?"
+        rad={antal ? `Sök bland ${antal.toLocaleString('sv-SE')} produkter och se vad de väger.` : null}
+        sok={text}
+        onSok={setText}
+        etikett="Sök på märke, modell eller version"
+        placeholder="Till exempel Hilleberg Akto"
       />
+      <Sokrad antalFilter={aktiva.length} onFilter={() => setFilterOppet(true)} />
+      <AktivaFilter filter={aktiva} onRensaAllt={() => valjKategori('', '')} />
+      {filterOppet && (
+        <Filterpanel visa="Visa produkterna" onStang={() => setFilterOppet(false)} harFilter={aktiva.length > 0} onRensaAllt={() => valjKategori('', '')}>
+          <Kategorifilter kategorier={KATEGORIER} underkategorier={underkategorierFor(kategori)} kategori={kategori} underkategori={underkategori} onAndra={valjKategori} />
+        </Filterpanel>
+      )}
 
-      <div className="grid gap-4 lg:grid-cols-[minmax(0,1fr)_minmax(0,32rem)]">
-        <SokFalt etikett="Sök på märke, modell eller version" varde={text} onAndra={setText} />
-        <Kategorifilter
-          kategorier={KATEGORIER}
-          underkategorier={underkategorierFor(kategori)}
-          kategori={kategori}
-          underkategori={underkategori}
-          onAndra={(k, u) => {
-            const ny = arKategori(k) ? k : ''
-            setKategori(ny)
-            setUnderkategori(ny && underkategoriFor(ny, u) ? u : '')
-          }}
-        />
-      </div>
-
-
-      {!sokbar && <p className="text-sm text-muted-foreground">Skriv minst två tecken eller välj en kategori.</p>}
+      {!sokbar && <p className="text-sm text-muted-foreground">Skriv minst två tecken eller välj en kategori under Filter.</p>}
       {sokbar && !aktuellt && !modeller && (
         <Laddar text="Hämtar produkter" className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
           <Skelett className="h-28 rounded-lg" />
