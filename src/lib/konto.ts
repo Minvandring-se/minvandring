@@ -3,7 +3,7 @@
 import { KONTAKT_MEJL } from '@/lib/kontakt'
 
 export const MINSTA_LOSENORD = 8
-export const STANDARD_VIDARE = '/turer'
+export const STANDARD_VIDARE = '/hem'
 
 const EPOST = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
 

@@ -45,18 +45,18 @@ describe('sakerVidare', () => {
   })
 
   it('skickar till Mina turer när sökvägen saknas eller pekar ut från appen', () => {
-    expect(sakerVidare(null)).toBe('/turer')
-    expect(sakerVidare('')).toBe('/turer')
-    expect(sakerVidare('https://ond.example')).toBe('/turer')
-    expect(sakerVidare('//ond.example')).toBe('/turer')
-    expect(sakerVidare('/\\ond.example')).toBe('/turer')
-    expect(sakerVidare('javascript:alert(1)')).toBe('/turer')
+    expect(sakerVidare(null)).toBe('/hem')
+    expect(sakerVidare('')).toBe('/hem')
+    expect(sakerVidare('https://ond.example')).toBe('/hem')
+    expect(sakerVidare('//ond.example')).toBe('/hem')
+    expect(sakerVidare('/\\ond.example')).toBe('/hem')
+    expect(sakerVidare('javascript:alert(1)')).toBe('/hem')
   })
 })
 
 describe('medVidare', () => {
   it('lägger bara till vidare när den skiljer sig från standard', () => {
-    expect(medVidare('/skapa-konto', '/turer')).toBe('/skapa-konto')
+    expect(medVidare('/skapa-konto', '/hem')).toBe('/skapa-konto')
     expect(medVidare('/skapa-konto', '/ga-med/KOD')).toBe('/skapa-konto?vidare=%2Fga-med%2FKOD')
   })
 })

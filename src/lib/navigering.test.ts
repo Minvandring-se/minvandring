@@ -12,6 +12,6 @@ describe('navigering', () => {
 
   it('visar inte sidomenyn på startsidan, kontosidorna eller integritetssidan', () => {
     for (const s of ['/', '/logga-in', '/skapa-konto', '/integritet', '/ga-med/abc', '/turerna']) expect(arAppsida(s), s).toBe(false)
-    for (const s of ['/turer', '/installningar', '/statistik', '/kom-ihag']) expect(arAppsida(s), s).toBe(true)
+    for (const s of ['/turer', '/installningar', '/statistik', '/kom-ihag', '/hem', '/hitta-vandring/']) expect(arAppsida(s), s).toBe(true)
   })
 })

@@ -8,8 +8,8 @@ import { cn } from '@/lib/utils'
 
 const fokus = 'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring'
 
-/** Höjdkurvor som bakgrund i den gröna rutan: svaga, lugna linjer och ett mjukt sken uppe till höger. */
-function Hojdkurvor() {
+/** Höjdkurvor som bakgrund i den gröna rutan: svaga, lugna linjer och ett mjukt sken uppe till höger. Också i bandet på Hem. */
+export function Hojdkurvor() {
   const id = useId()
   return (
     <svg viewBox="0 0 358 260" preserveAspectRatio="xMidYMid slice" aria-hidden className="absolute inset-0 size-full">
