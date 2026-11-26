@@ -6,8 +6,10 @@ import { SidRubrik } from '@/components/app/SidRubrik'
 import { TomtLage } from '@/components/app/TomtLage'
 import { EgenRattFormular } from '@/components/mat/EgenRattFormular'
 import { Matflikar } from '@/components/mat/Matflikar'
+import { MinvandringsRecept } from '@/components/mat/MinvandringsRecept'
 import { Button } from '@/components/ui/button'
 import { Panel } from '@/components/ui/panel'
+import { Sektion } from '@/components/ui/sektion'
 import { sparaRecept, taBortRecept, useRecept } from '@/hooks/useRecept'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { formateraVikt } from '@/lib/forrad'
@@ -28,8 +30,8 @@ function varorIRecepten(recept: readonly ReceptTyp[]) {
 }
 
 /**
- * Mina recept: rätter med ingredienser som sparas på kontot och kan läggas in i vilken tur som helst från Välj rätt.
- * Bara man själv ser dem. När ett recept läggs i en tur kopieras det, så att en ändring här inte ändrar turen.
+ * Recept: MinVandrings recept överst, och ens egna recept, rätter med ingredienser som sparas på kontot och kan läggas
+ * in i vilken tur som helst från Välj rätt. Bara man själv ser sina egna recept. När ett recept läggs i en tur kopieras det, så att en ändring här inte ändrar turen.
  */
 export function Recept() {
   useSidtitel('Recept')
@@ -39,10 +41,15 @@ export function Recept() {
   return (
     <div className="space-y-6">
       <Matflikar />
-      <SidRubrik
-        rubrik="Recept"
-        text="Dina recept, som du kan lägga in i vilken tur som helst. Bara du ser dem."
-        knappar={
+      <SidRubrik rubrik="Recept" text="MinVandrings recept och dina egna, som du kan lägga in i vilken tur som helst. Dina egna recept ser bara du." />
+
+      <Sektion rubrik="MinVandrings recept">
+        <MinvandringsRecept />
+      </Sektion>
+
+      <Sektion
+        rubrik="Dina recept"
+        atgard={
           Array.isArray(recept) &&
           recept.length > 0 && (
             <Button onClick={() => setVy({ typ: 'ny' })}>
@@ -51,55 +58,55 @@ export function Recept() {
             </Button>
           )
         }
-      />
-
-      {recept === null ? (
-        <Laddar text="Hämtar dina recept" className="space-y-3">
-          <Skelett className="h-16 rounded-lg" />
-          <Skelett className="h-16 rounded-lg" />
-        </Laddar>
-      ) : recept === 'fel' ? (
-        <Laddfel vad="dina recept" onForsokIgen={laddaOm} />
-      ) : recept.length === 0 ? (
-        <TomtLage
-          kompakt
-          rubrik="Du har inga recept än"
-          text="Skapa ett recept här. Du kan också spara en egen rätt från en tur: öppna Välj rätt, Egna rätter, ändra rätten och tryck på Spara som recept."
-          knapp={
-            <Button onClick={() => setVy({ typ: 'ny' })}>
-              <Plus className="size-4 text-hjortron-ikon" aria-hidden />
-              Nytt recept
-            </Button>
-          }
-        />
-      ) : (
-        <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
-          {recept.map((r) => {
-            const portion = naringForRader(receptTillRader(r))
-            return (
-              <li key={r.id}>
-                <button
-                  type="button"
-                  aria-haspopup="dialog"
-                  onClick={() => setVy({ typ: 'andra', recept: r })}
-                  className={cn(
-                    'flex min-h-16 w-full items-center gap-3 rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-muted',
-                    'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
-                  )}
-                >
-                  <span className="min-w-0 flex-1">
-                    <span className="block font-semibold break-words">{r.namn}</span>
-                    <span className="block text-sm text-muted-foreground tabular-nums">
-                      {formateraKcal(portion.kcal)} och {formateraVikt(portion.gram)} per portion, {r.rader.length === 1 ? '1 ingrediens' : `${r.rader.length} ingredienser`}
+      >
+        {recept === null ? (
+          <Laddar text="Hämtar dina recept" className="space-y-3">
+            <Skelett className="h-16 rounded-lg" />
+            <Skelett className="h-16 rounded-lg" />
+          </Laddar>
+        ) : recept === 'fel' ? (
+          <Laddfel vad="dina recept" onForsokIgen={laddaOm} />
+        ) : recept.length === 0 ? (
+          <TomtLage
+            kompakt
+            rubrik="Du har inga recept än"
+            text="Skapa ett recept här. Du kan också spara en egen rätt från en tur: öppna Välj rätt, Egna rätter, ändra rätten och tryck på Spara som recept."
+            knapp={
+              <Button onClick={() => setVy({ typ: 'ny' })}>
+                <Plus className="size-4 text-hjortron-ikon" aria-hidden />
+                Nytt recept
+              </Button>
+            }
+          />
+        ) : (
+          <ul className="grid gap-3 md:grid-cols-2 xl:grid-cols-3">
+            {recept.map((r) => {
+              const portion = naringForRader(receptTillRader(r))
+              return (
+                <li key={r.id}>
+                  <button
+                    type="button"
+                    aria-haspopup="dialog"
+                    onClick={() => setVy({ typ: 'andra', recept: r })}
+                    className={cn(
+                      'flex min-h-16 w-full items-center gap-3 rounded-lg border border-border bg-card p-4 text-left transition-colors hover:bg-muted',
+                      'focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring',
+                    )}
+                  >
+                    <span className="min-w-0 flex-1">
+                      <span className="block font-semibold break-words">{r.namn}</span>
+                      <span className="block text-sm text-muted-foreground tabular-nums">
+                        {formateraKcal(portion.kcal)} och {formateraVikt(portion.gram)} per portion, {r.rader.length === 1 ? '1 ingrediens' : `${r.rader.length} ingredienser`}
+                      </span>
                     </span>
-                  </span>
-                  <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
-                </button>
-              </li>
-            )
-          })}
-        </ul>
-      )}
+                    <ChevronRight className="size-5 shrink-0 text-muted-foreground" aria-hidden />
+                  </button>
+                </li>
+              )
+            })}
+          </ul>
+        )}
+      </Sektion>
 
       {vy && Array.isArray(recept) && (
           <EgenRattFormular

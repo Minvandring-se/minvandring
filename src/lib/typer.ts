@@ -353,3 +353,45 @@ export interface Livsmedel {
   /** EU:s 14 allergener för enkla råvaror. null: okänt. Tom: ingen av dem. */
   allergener: Allergen[] | null
 }
+
+/** Ett recept i MinVandrings receptkatalog. Fylls bara via migreringar från supabase/katalog/recept/. */
+export interface Receptkatalogrecept {
+  id: string
+  namn: string
+  maltid: 'frukost' | 'lunch' | 'middag' | 'mellanmal' | 'dryck'
+  /** Hur många portioner ingredienserna räcker till. */
+  portioner: number
+  kok_kravs: boolean
+  torkning_hemma: boolean
+  beskrivning: string
+  /** fran_kallan: källans mängder. egna: källan saknade mängder, så vi satte dem. */
+  mangder: 'fran_kallan' | 'egna'
+  inspirerat_av: string
+  inspirerat_av_url: string
+  /** otestat tills någon av grundarna har lagat rätten. */
+  status: 'otestat' | 'testat'
+}
+
+/** En ingrediens i ett recept i katalogen, för hela receptet (alla portioner). */
+export interface Receptkatalogingrediens {
+  recept_id: string
+  ordning: number
+  ingrediens: string
+  mangd: number | null
+  enhet: Enhet | null
+  /** hemma: i påsen hemma. separat: packas för sig. pa_plats: vatten, som inte köps eller bärs. */
+  packas: 'hemma' | 'separat' | 'pa_plats'
+  kommentar: string | null
+  /** Livsmedlet eller märkesvaran som ger allergener och näring. Utan koppling är ingrediensen okänd. */
+  livsmedel_nummer: number | null
+  varukatalog_id: string | null
+}
+
+/** Ett steg i ett recept i katalogen, hemma eller på turen. tid_min är minuter, till exempel 5 eller 5–10. */
+export interface Receptkatalogsteg {
+  recept_id: string
+  steg_nr: number
+  var: 'hemma' | 'turen'
+  steg: string
+  tid_min: string | null
+}

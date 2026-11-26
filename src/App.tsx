@@ -33,6 +33,7 @@ const Matkatalog = lazy(() => import('@/pages/Matkatalog').then((m) => ({ defaul
 const Skafferi = lazy(() => import('@/pages/Skafferi').then((m) => ({ default: m.Skafferi })))
 const Recept = lazy(() => import('@/pages/Recept').then((m) => ({ default: m.Recept })))
 const Mattips = lazy(() => import('@/pages/Mattips').then((m) => ({ default: m.Mattips })))
+const Receptsida = lazy(() => import('@/pages/Receptsida').then((m) => ({ default: m.Receptsida })))
 const Mattipsartikel = lazy(() => import('@/pages/Mattipsartikel').then((m) => ({ default: m.Mattipsartikel })))
 const PlaneradSida = lazy(() => import('@/pages/PlaneradSida').then((m) => ({ default: m.PlaneradSida })))
 
@@ -97,6 +98,7 @@ export default function App() {
           <Route path="/matplanering/katalog" element={<Matkatalog />} />
           <Route path="/matplanering/skafferi" element={<Skafferi />} />
           <Route path="/matplanering/recept" element={<Recept />} />
+          <Route path="/matplanering/recept/:id" element={<Receptsida />} />
           <Route path="/matplanering/tips" element={<Mattips />} />
           <Route path="/matplanering/tips/:nyckel" element={<Mattipsartikel />} />
           {PLANERADE.map((sida) => (
