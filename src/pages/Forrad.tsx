@@ -81,7 +81,7 @@ function antalText(antal: number) {
  * sortering och val mellan lista och rutnät. Saknas någon av de fyra tunga (ryggsäck, tält eller tarp, sovsäck,
  * liggunderlag) visas en tom ruta under dess kategori, och under listan knappar för kategorier man inte har fyllt på.
  * Bara man själv ser sitt förråd. På dator ligger listan till vänster och översikten till höger, där den ligger kvar
- * när man scrollar. I mobil kommer den mörka rutan direkt under rubriken.
+ * när man scrollar. I mobil kommer sökrutan direkt under rubriken och översikten, med hela förrådets vikt i ett vitt kort, under listan.
  */
 export function Forrad() {
   useSidtitel('Mitt förråd')
@@ -150,9 +150,6 @@ export function Forrad() {
   return (
     <div className="space-y-6">
       <SidRubrik rubrik="Mitt förråd" text="Allt du äger för vandring, samlat på ett ställe." knappar={laggTillKnapp} />
-
-      {/* I mobil ligger den mörka rutan direkt under rubriken, före filtren. På dator står den i översikten. */}
-      {saker && saker.length > 0 && <HelaForradet summa={summa} granskade={antalGranskade(alla)} className="lg:hidden" />}
 
       {saker && saker.length > 0 && <Sokdel val={val} onVal={setVal} saker={saker} />}
 
@@ -254,7 +251,9 @@ export function Forrad() {
 
           {/* På dator en egen kolumn till höger som stannar kvar när man scrollar. I mobil efter listan. */}
           <aside aria-label="Översikt" className="space-y-5 lg:sticky lg:top-6">
+            {/* På dator den mörkgröna rutan överst i översikten. I mobil, där sökrutan är sidans mörkgröna kort, ett vitt kort under listan. */}
             <HelaForradet summa={summa} granskade={antalGranskade(alla)} className="hidden lg:block" />
+            <HelaForradet summa={summa} granskade={antalGranskade(alla)} ljus className="lg:hidden" />
             <ViktPerKategori summa={summa} />
             <StorstaVinsten vinst={storstaVinsten(alla)} />
             <Onskelista />
