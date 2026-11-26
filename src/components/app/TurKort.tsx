@@ -5,8 +5,8 @@ import { Bricka } from '@/components/ui/bricka'
 import { Namnbrickor } from '@/components/app/Namnbricka'
 import { knappStil } from '@/components/ui/knappStil'
 import { Nyckeltal } from '@/components/ui/nyckeltal'
-import { Turbild } from '@/components/ui/turbild'
 import { arProfilbildHamtad, useProfilbilder } from '@/hooks/useProfilbilder'
+import { ARSTID_ETIKETT, arstidFor, arstidsbild, type Arstid } from '@/lib/arstid'
 import { avfardEtikett, dagarVarde, datumIntervall, datumrad, deltagareText } from '@/lib/turlista'
 import { cn } from '@/lib/utils'
 
@@ -26,7 +26,36 @@ export interface TurMedDeltagare {
 const FRAN_LISTA = { franLista: true }
 
 /**
- * Det stora kortet för nästa (eller pågående) tur, som turens huvud: text till vänster och den tecknade bildrutan
+ * Bilden för turens årstid. På dator till höger med en mjuk båge i kortets färg över bildens vänstra kant och
+ * årstiden som etikett nere till höger. I mobil överst, cirka 200 px hög, och tonar ut nedåt mot texten.
+ * Dekorativ, så alt är tomt. Bara det första kortet på sidan laddar bilden direkt.
+ */
+function Arstidsbild({ arstid, forst }: { arstid: Arstid; forst: boolean }) {
+  const { src, srcSet } = arstidsbild(arstid)
+  return (
+    <div className="relative h-[200px] md:order-2 md:h-full md:min-h-80">
+      <img
+        src={src}
+        srcSet={srcSet}
+        sizes="(min-width: 768px) 40vw, 100vw"
+        alt=""
+        loading={forst ? 'eager' : 'lazy'}
+        decoding="async"
+        className="absolute inset-0 size-full object-cover"
+      />
+      {/* Bågen: textdelen buktar ut över bildens vänstra kant. Samma färg som kortet (fill-card). */}
+      <svg aria-hidden viewBox="0 0 100 300" preserveAspectRatio="none" className="absolute inset-y-0 -left-px hidden h-full w-[5.5rem] fill-card md:block">
+        <path d="M0 0 H38 C 92 70, 92 230, 38 300 H0 Z" />
+      </svg>
+      {/* I mobil tonar bilden ut nedåt mot textdelen, i kortets färg. */}
+      <div aria-hidden className="absolute inset-x-0 bottom-0 h-2/5 bg-gradient-to-t from-card to-transparent md:hidden" />
+      <span className="absolute right-3.5 bottom-3 hidden rounded-full bg-yta-stark/75 px-2.5 py-1 text-xs font-semibold text-pa-bild md:block">{ARSTID_ETIKETT[arstid]}</span>
+    </div>
+  )
+}
+
+/**
+ * Det stora kortet för nästa (eller pågående) tur, som turens huvud: text till vänster och bilden för turens årstid
  * till höger på dator, bilden överst i mobil. Den rostfärgade etiketten säger hur långt det är kvar.
  */
 export function NastaTurKort({ tur, idag }: { tur: TurMedDeltagare; idag: string }) {
@@ -42,10 +71,10 @@ export function NastaTurKort({ tur, idag }: { tur: TurMedDeltagare; idag: string
   return (
     <article
       aria-labelledby={`nasta-${tur.id}`}
-      className="relative grid overflow-hidden rounded-[1.375rem] border border-border bg-card md:grid-cols-[minmax(0,1fr)_minmax(0,1fr)]"
+      className="lyft relative grid overflow-hidden rounded-[1.375rem] border border-border bg-card md:grid-cols-[minmax(0,3fr)_minmax(0,2fr)]"
     >
-      <Turbild turId={tur.id} className="h-44 w-full sm:h-56 md:order-2 md:h-full md:min-h-80" />
-      <div className="flex min-w-0 flex-col gap-3 p-5 sm:p-7 md:order-1">
+      <Arstidsbild arstid={arstidFor(tur.avresa)} forst />
+      <div className="flex min-w-0 flex-col gap-3 px-5 pt-1 pb-5 sm:px-7 sm:pb-7 md:order-1 md:pt-7">
         <div className="flex flex-wrap items-center gap-2">
           <span className="text-sm font-semibold text-muted-foreground">Nästa tur</span>
           {etikett && (
@@ -87,7 +116,7 @@ export function NastaTurKort({ tur, idag }: { tur: TurMedDeltagare; idag: string
   )
 }
 
-/** En tur i listan med fler turer: liten bildruta, namn, datum och destination. Hela raden är en länk. */
+/** En tur i listan med fler turer: liten bild för turens årstid, namn, datum och destination. Hela raden är en länk. */
 export function TurRadKort({ tur }: { tur: TurMedDeltagare }) {
   return (
     <Link
@@ -95,7 +124,13 @@ export function TurRadKort({ tur }: { tur: TurMedDeltagare }) {
       state={FRAN_LISTA}
       className="group flex h-full items-center gap-4 rounded-lg border border-border bg-card p-2 pr-3 transition-colors hover:bg-muted/60 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-ring"
     >
-      <Turbild turId={tur.id} className="h-16 w-16 shrink-0 rounded-md sm:h-20 sm:w-28" />
+      <img
+        src={arstidsbild(arstidFor(tur.avresa)).src}
+        alt=""
+        loading="lazy"
+        decoding="async"
+        className="h-16 w-16 shrink-0 rounded-md object-cover sm:h-20 sm:w-28"
+      />
       <div className="min-w-0 flex-1 space-y-1 py-1">
         <h3 className="text-base break-words sm:text-lg">{tur.namn}</h3>
         <p className="flex items-center gap-2 text-sm text-muted-foreground">
