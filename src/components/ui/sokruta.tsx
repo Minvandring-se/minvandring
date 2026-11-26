@@ -96,12 +96,12 @@ export function Sokruta({
   )
 }
 
-/** Knappen Filter med antalet aktiva filter. Öppnar filterpanelen. */
-export function Filterknapp({ antal, onOppna, className }: { antal: number; onOppna: () => void; className?: string }) {
+/** Knappen Filter med antalet aktiva filter. Öppnar filterpanelen. Kompakt: bara ikonen i mobil, ordet för skärmläsare. */
+export function Filterknapp({ antal, onOppna, kompakt = false, className }: { antal: number; onOppna: () => void; kompakt?: boolean; className?: string }) {
   return (
     <Button variant="outline" aria-haspopup="dialog" onClick={onOppna} className={cn('shrink-0 gap-2 px-3', className)}>
       <SlidersHorizontal className="size-4" aria-hidden />
-      Filter
+      <span className={cn(kompakt && 'max-sm:sr-only')}>Filter</span>
       {antal > 0 && (
         <>
           <FlikAntal antal={antal} />
@@ -112,13 +112,16 @@ export function Filterknapp({ antal, onOppna, className }: { antal: number; onOp
   )
 }
 
-/** Raden under sökrutan: flikarna för vad man söker i till vänster (om sidan har några) och Filter till höger. */
-export function Sokrad({ flikar, antalFilter, onFilter }: { flikar?: ReactNode; antalFilter: number; onFilter: () => void }) {
+/**
+ * Raden under sökrutan: flikarna för vad man söker i till vänster (om sidan har några) och Filter till höger. Utan
+ * onFilter visas ingen Filter-knapp. Kompakt: Filter är bara en ikon i mobil, så att fler flikar får plats.
+ */
+export function Sokrad({ flikar, antalFilter, onFilter, kompakt = false }: { flikar?: ReactNode; antalFilter: number; onFilter?: () => void; kompakt?: boolean }) {
   return (
     <div className="flex items-center gap-2">
       {/* overflow-hidden: en flikrad som går att svepa stannar till vänster om Filter. */}
       <div className="min-w-0 flex-1 overflow-hidden">{flikar}</div>
-      <Filterknapp antal={antalFilter} onOppna={onFilter} />
+      {onFilter && <Filterknapp antal={antalFilter} onOppna={onFilter} kompakt={kompakt} />}
     </div>
   )
 }

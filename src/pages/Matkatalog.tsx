@@ -12,6 +12,7 @@ import { Delval } from '@/components/ui/delval'
 import { AktivaFilter, Filterpanel, Sokrad, Sokruta, type AktivtFilter } from '@/components/ui/sokruta'
 import { LaggISkafferi } from '@/components/mat/LaggISkafferi'
 import { PasNamn } from '@/components/mat/PasNamn'
+import { TorkaSjalv } from '@/components/mat/TorkaSjalv'
 import { Panel } from '@/components/ui/panel'
 import { Select } from '@/components/ui/select'
 import { Specrutor } from '@/components/ui/specrutor'
@@ -60,6 +61,8 @@ const tal = (n: number) => n.toLocaleString('sv-SE')
 
 /** De aktiva filtren som etiketter: kostvalen, allergenerna och märket (bara för påsar). */
 function aktivaKostfilter(f: Katalogfilter, del: Katalogdel, andra: (a: Partial<Katalogfilter>) => void): AktivtFilter[] {
+  // Kostfiltret gäller inte Torka själv, där kost och allergener inte är kända.
+  if (del === 'torka') return []
   return [
     ...f.val.map((v) => ({ nyckel: `val-${v}`, text: kostvalsetikett(v), onTaBort: () => andra({ val: f.val.filter((x) => x !== v) }) })),
     ...f.utan.map((a) => ({ nyckel: `utan-${a}`, text: `Utan ${allergenetikett(a).toLowerCase()}`, onTaBort: () => andra({ utan: f.utan.filter((x) => x !== a) }) })),
@@ -69,7 +72,7 @@ function aktivaKostfilter(f: Katalogfilter, del: Katalogdel, andra: (a: Partial<
 const lankKlass = cn('inline-flex min-h-11 items-center gap-1.5 text-sm font-medium text-primary underline underline-offset-4', fokus)
 
 /**
- * Matkatalogen i tre delar: påsar, märkesvaror och livsmedel. Överst en mörkgrön ruta med sökfältet,
+ * Matkatalogen i fyra delar: påsar, märkesvaror, livsmedel och Torka själv (recept och råvaror att torka hemma). Överst en mörkgrön ruta med sökfältet,
  * sedan delarna, filtret och måltiderna eller grupperna som rutor. Listan är tom tills man har sökt eller valt en ruta.
  * Delen, måltiden, gruppen, filtret och sorteringen står i adressen.
  *
@@ -107,21 +110,21 @@ export function Matkatalog() {
         rad={antal && `${uppraknade([`${tal(antal.pasar)} påsar`, `${tal(antal.varor)} märkesvaror`, `${tal(antal.livsmedel)} livsmedel`])}.`}
         sok={sok}
         onSok={setSok}
-        placeholder="Till exempel viltgryta eller gröt"
+        placeholder={del === 'torka' ? 'Till exempel linschili eller äpple' : 'Till exempel viltgryta eller gröt'}
       />
 
       <Sokrad
         flikar={<Delval etikett="Sök bland" delar={KATALOGDELAR} vald={del} onValj={(d) => setParametrar(bytDel(d, parametrar), { replace: true })} />}
         antalFilter={aktivaFilter}
-        onFilter={() => setFilterOppet(true)}
+        onFilter={del === 'torka' ? undefined : () => setFilterOppet(true)}
+        kompakt
       />
       <AktivaFilter filter={aktivaKostfilter(filter, del, andraFilter)} onRensaAllt={() => andraFilter({ val: [], utan: [], marke: '' })} />
 
       {del === 'pasar' && <Pasdel sok={sok} filter={filter} andraFilter={andraFilter} filterOppet={filterOppet} onStangFilter={() => setFilterOppet(false)} />}
-      {del !== 'pasar' && (
-        <Naringsdel del={del} sok={sok} grupp={grupp} valjGrupp={valjGrupp} kost={kost} />
-      )}
-      {del !== 'pasar' && filterOppet && (
+      {(del === 'varor' || del === 'livsmedel') && <Naringsdel del={del} sok={sok} grupp={grupp} valjGrupp={valjGrupp} kost={kost} />}
+      {del === 'torka' && <TorkaSjalv sok={sok} />}
+      {(del === 'varor' || del === 'livsmedel') && filterOppet && (
         <Filterpanel visa={VISA[del]} onStang={() => setFilterOppet(false)} harFilter={aktivaFilter > 0} onRensaAllt={() => andraFilter({ val: [], utan: [], marke: '' })}>
           <Filterinnehall kost={kost} onKost={(f) => andraFilter({ val: [...f.val], utan: [...f.utan] })} />
         </Filterpanel>
@@ -147,7 +150,7 @@ function Filterinnehall({ kost, onKost, marke }: { kost: Kostfilter; onKost: (f:
 }
 
 /** Texten på Visa-knappen i filterpanelen. */
-const VISA: Record<Katalogdel, string> = { pasar: 'Visa påsarna', varor: 'Visa varorna', livsmedel: 'Visa livsmedlen' }
+const VISA: Record<Exclude<Katalogdel, 'torka'>, string> = { pasar: 'Visa påsarna', varor: 'Visa varorna', livsmedel: 'Visa livsmedlen' }
 
 /**
  * En ruta för en måltid eller grupp: bild, namn och antal. Vald när den är tryckt. Bilden är 5:3 med motivet i mitten
