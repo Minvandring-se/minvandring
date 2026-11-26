@@ -1,4 +1,5 @@
 import { useOutletContext } from 'react-router'
+import type { Notiser } from '@/hooks/useNotiser'
 
 /** Det som de inloggade sidorna får från ramen (AppSkal): användaren och namnet från profilen. */
 export interface AppKontext {
@@ -14,6 +15,8 @@ export interface AppKontext {
   bildUppdaterad: string | null
   /** Uppdaterar ramen efter att bilden har sparats eller tagits bort. */
   setBildUppdaterad: (bildUppdaterad: string | null) => void
+  /** Notiserna i klockan, så att en sida kan hämta om dem efter en ändring och följa när nya kommer. */
+  notiser: Notiser
 }
 
 export function useApp(): AppKontext {

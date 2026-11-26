@@ -1,7 +1,7 @@
 /** Notiserna i klockan uppe till höger. Texten och sidan en notis leder till skrivs av databasen. */
 
 /** Sorterna av notiser. Samma lista som checken på notiser.typ, och ett test kontrollerar att de stämmer överens. */
-export const NOTISTYPER = ['gick_med'] as const
+export const NOTISTYPER = ['gick_med', 'vanforfragan', 'van_godkand', 'van_via_lank'] as const
 
 export type Notistyp = (typeof NOTISTYPER)[number]
 
@@ -11,6 +11,8 @@ export interface Notis {
   text: string
   lank: string | null
   tur_id: string | null
+  /** Förfrågan som en notis av sorten vanforfragan gäller. */
+  vanforfragan_id: string | null
   last: string | null
   skapad: string
 }

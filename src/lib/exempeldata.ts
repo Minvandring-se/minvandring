@@ -156,12 +156,6 @@ export const DAGBOK = {
   ],
 }
 
-/** Vandringskompisar: personer ni har vandrat med. */
-export const KOMPISAR: { namn: string; turer: number; senast: string }[] = [
-  { namn: 'Anna', turer: 4, senast: 'Jämtlandstriangeln 2026' },
-  { namn: 'Erik', turer: 3, senast: 'Jämtlandstriangeln 2026' },
-]
-
 /**
  * Mitt förråd, enligt skissen Forrad-dator. Det som kräver databasen eller packlistorna visas som exempel med Kommer snart.
  * Ingen av sakerna här är en riktig sak i någons förråd.

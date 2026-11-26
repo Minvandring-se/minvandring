@@ -5,7 +5,7 @@ import { supabase } from '@/lib/supabase'
 /** null medan notiserna hämtas, 'fel' när de inte gick att hämta. */
 export type Notislage = Notis[] | null | 'fel'
 
-const KOLUMNER = 'id, typ, text, lank, tur_id, last, skapad'
+const KOLUMNER = 'id, typ, text, lank, tur_id, vanforfragan_id, last, skapad'
 
 async function hamta(): Promise<Notis[] | null> {
   if (!supabase) return null
@@ -20,6 +20,8 @@ export interface Notiser {
   olasta: number
   /** Markerar alla som lästa, när klockan öppnas. */
   markeraLasta: () => Promise<void>
+  /** Hämtar notiserna igen, till exempel när en förfrågan har besvarats och notisen om den är borta. */
+  laddaOm: () => Promise<void>
 }
 
 /**
@@ -56,6 +58,11 @@ export function useNotiser(anvandarId: string): Notiser {
     if (!error) setNotiser((n) => (Array.isArray(n) ? n.map((x) => (x.last ? x : { ...x, last: nu })) : n))
   }, [])
 
+  const laddaOm = useCallback(async () => {
+    const n = await hamta()
+    setNotiser(n ?? 'fel')
+  }, [])
+
   const olasta = Array.isArray(notiser) ? notiser.filter((n) => !n.last).length : 0
-  return { notiser, olasta, markeraLasta }
+  return { notiser, olasta, markeraLasta, laddaOm }
 }

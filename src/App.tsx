@@ -37,10 +37,12 @@ const Recept = lazy(() => import('@/pages/Recept').then((m) => ({ default: m.Rec
 const Mattips = lazy(() => import('@/pages/Mattips').then((m) => ({ default: m.Mattips })))
 const Receptsida = lazy(() => import('@/pages/Receptsida').then((m) => ({ default: m.Receptsida })))
 const Mattipsartikel = lazy(() => import('@/pages/Mattipsartikel').then((m) => ({ default: m.Mattipsartikel })))
+const Vanner = lazy(() => import('@/pages/Vanner').then((m) => ({ default: m.Vanner })))
+const VanLank = lazy(() => import('@/pages/VanLank').then((m) => ({ default: m.VanLank })))
 const PlaneradSida = lazy(() => import('@/pages/PlaneradSida').then((m) => ({ default: m.PlaneradSida })))
 
 /** Sidorna i menyn som inte är byggda än. De visar vad sidan blir, med "Kommer snart". */
-const PLANERADE = ['packlistor', 'dagbok', 'statistik', 'kompisar'] as const
+const PLANERADE = ['packlistor', 'dagbok', 'statistik'] as const
 const Utrustningskatalog = lazy(() => import('@/pages/Utrustningskatalog').then((m) => ({ default: m.Utrustningskatalog })))
 
 function Laddar({ text = 'Hämtar …' }: { text?: string }) {
@@ -76,6 +78,7 @@ export default function App() {
         <Route path="/nytt-losenord" element={<NyttLosenord />} />
         <Route path="/integritet" element={<Integritet />} />
         <Route path="/ga-med/:kod" element={<GaMed />} />
+        <Route path="/van/:kod" element={<VanLank />} />
         {/* De inloggade sidorna, i ramen med sidomeny och bottennavigation. */}
         <Route element={<Inloggad><AppSkal /></Inloggad>}>
           <Route path="/turer" element={<MinaTurer />} />
@@ -105,6 +108,9 @@ export default function App() {
           <Route path="/matplanering/recept/:id" element={<Receptsida />} />
           <Route path="/matplanering/tips" element={<Mattips />} />
           <Route path="/matplanering/tips/:nyckel" element={<Mattipsartikel />} />
+          <Route path="/vanner" element={<Vanner />} />
+          {/* Sidan hette Vandringskompisar och låg på /kompisar. */}
+          <Route path="/kompisar" element={<Navigate to="/vanner" replace />} />
           {PLANERADE.map((sida) => (
             <Route key={sida} path={`/${sida}`} element={<PlaneradSida key={sida} sida={sida} />} />
           ))}

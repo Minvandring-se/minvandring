@@ -147,6 +147,13 @@ describe('funktionerna i public', () => {
     'public.lardom_tur_namn()',
     'public.notis_gick_med()',
     'public.notiser_bort_med_deltagare()',
+    'public.stada_vanner()',
+    'public.las_vanpar(uuid, uuid)',
+    'public.skapa_vanskap(uuid, uuid)',
+    'public.profilnamn(uuid)',
+    'public.rakna_vanforfragan(uuid)',
+    'public.hantera_vanforfragan(uuid)',
+    'public.vanlank_agare(text)',
   ]
   const forInloggade = [
     'public.ar_medlem(uuid)',
@@ -162,6 +169,21 @@ describe('funktionerna i public', () => {
     'public.ta_ratt(uuid)',
     'public.slapp_ratt(uuid)',
     'public.ta_med_gemensam(uuid, boolean)',
+    'public.ar_van(uuid)',
+    'public.ser_profil(uuid)',
+    'public.skicka_vanforfragan(text)',
+    'public.skicka_vanforfragan_till(uuid)',
+    'public.svara_vanforfragan(uuid, boolean)',
+    'public.angra_vanforfragan(uuid)',
+    'public.min_vanlank()',
+    'public.ny_vanlank()',
+    'public.vanlank_info(text)',
+    'public.bli_van_via_lank(text)',
+    'public.ta_bort_van(uuid)',
+    'public.mina_vanner()',
+    'public.mina_forfragningar()',
+    'public.mina_skickade()',
+    'public.vandrat_ihop()',
   ]
 
   it('går inte att anropa utan inloggning', async () => {
@@ -4459,5 +4481,296 @@ describe('notiser', () => {
     expect((await notiser(OLA, t)).map((n) => n.fran_user_id)).toEqual([TIM])
     await db.query('delete from auth.users where id = $1', [OLA])
     expect((await db.query('select 1 from public.notiser where user_id = $1', [OLA])).rows).toHaveLength(0)
+  })
+})
+
+describe('vänner', () => {
+  // Egna användare, så att spärrarna här inte påverkas av de andra testerna.
+  const ANNA = '00000000-0000-0000-0000-0000000002a1'
+  const BO = '00000000-0000-0000-0000-0000000002a2'
+  const CIA = '00000000-0000-0000-0000-0000000002a3'
+  const DAN = '00000000-0000-0000-0000-0000000002a4'
+  const EVA = '00000000-0000-0000-0000-0000000002a5'
+  const FIA = '00000000-0000-0000-0000-0000000002a6'
+  const GUS = '00000000-0000-0000-0000-0000000002a7'
+  const HUGO = '00000000-0000-0000-0000-0000000002a8'
+  const IDA = '00000000-0000-0000-0000-0000000002a9'
+  const JON = '00000000-0000-0000-0000-0000000002aa'
+  const NAMN: Record<string, string> = { [ANNA]: 'Anna', [BO]: 'Bo', [CIA]: 'Cia', [DAN]: 'Dan', [EVA]: 'Eva', [FIA]: 'Fia', [GUS]: 'Gus', [HUGO]: 'Hugo', [IDA]: 'Ida', [JON]: 'Jon' }
+  const epost = (id: string) => `${NAMN[id].toLowerCase()}@vanner.se`
+
+  const fraga = <T extends Record<string, unknown>>(vem: string, sql: string, p: unknown[] = []) =>
+    som(vem, (tx) => tx.query<T>(sql, p)).then((r) => r.rows)
+  const skicka = (vem: string, adress: string) => fraga(vem, 'select public.skicka_vanforfragan($1)', [adress])
+  const skickaTill = (vem: string, person: string) => fraga(vem, 'select public.skicka_vanforfragan_till($1)', [person])
+  const skickade = (vem: string) => fraga<{ visas: string }>(vem, 'select visas from public.mina_skickade()').then((r) => r.map((x) => x.visas).sort())
+  const inkommande = (vem: string) => fraga<{ id: string; fran_user_id: string; namn: string }>(vem, 'select id, fran_user_id, namn from public.mina_forfragningar()')
+  const svara = (vem: string, id: string, ja: boolean) => fraga(vem, 'select public.svara_vanforfragan($1, $2)', [id, ja])
+  const vanner = (vem: string) => fraga<{ user_id: string }>(vem, 'select user_id from public.mina_vanner()').then((r) => r.map((x) => x.user_id))
+  const vannotiser = (vem: string) =>
+    db
+      .query<{ typ: string; text: string; fran_user_id: string }>(
+        `select typ, text, fran_user_id from public.notiser where user_id = $1 and typ <> 'gick_med' order by skapad, text`,
+        [vem],
+      )
+      .then((r) => r.rows)
+  const antalPar = (a: string, b: string) =>
+    db
+      .query('select 1 from public.vanskap where user_a = least($1::uuid, $2::uuid) and user_b = greatest($1::uuid, $2::uuid)', [a, b])
+      .then((r) => r.rows.length)
+  const lank = (vem: string, ny = false) =>
+    fraga<{ kod: string; giltig_till: string }>(vem, `select kod, giltig_till from public.${ny ? 'ny_vanlank' : 'min_vanlank'}()`).then((r) => r[0])
+  const lankInfo = (vem: string, kod: string) =>
+    fraga<{ i: { namn: string; egen: boolean; redan_van: boolean } | null }>(vem, 'select public.vanlank_info($1) as i', [kod]).then((r) => r[0].i)
+  const bliVan = (vem: string, kod: string) => fraga<{ a: string | null }>(vem, 'select public.bli_van_via_lank($1) as a', [kod]).then((r) => r[0].a)
+
+  beforeAll(async () => {
+    const alla = Object.keys(NAMN)
+    await db.query(`insert into auth.users (id, email) values ${alla.map((id) => `('${id}', '${epost(id)}')`).join(', ')}`)
+    for (const id of alla) await db.query('update public.profiler set namn = $2 where id = $1', [id, NAMN[id]])
+  })
+
+  it('tabellerna går inte att nå direkt, varken för inloggade eller anon', async () => {
+    for (const t of ['vanforfragningar', 'vanskap', 'vanlankar', 'vanforsok']) {
+      await forvantaFel(som(ANNA, (tx) => tx.query(`select 1 from public.${t}`)))
+      await forvantaFel(somAnon((tx) => tx.query(`select 1 from public.${t}`)))
+    }
+    await forvantaFel(som(ANNA, (tx) => tx.query('insert into public.vanskap (user_a, user_b) values ($1, $2)', [ANNA, BO])))
+    await forvantaFel(som(ANNA, (tx) => tx.query('insert into public.vanforfragningar (fran_user_id, till_user_id) values ($1, $2)', [ANNA, BO])))
+  })
+
+  it('en förfrågan via mejladress ger mottagaren en notis och syns som väntande hos den som skickade', async () => {
+    await skicka(ANNA, epost(BO))
+    expect(await skickade(ANNA)).toEqual([epost(BO)])
+    const [f] = await inkommande(BO)
+    expect(f).toMatchObject({ fran_user_id: ANNA, namn: 'Anna' })
+    expect(await vannotiser(BO)).toEqual([{ typ: 'vanforfragan', text: 'Anna vill bli din vän', fran_user_id: ANNA }])
+  })
+
+  it('adressen hittas oavsett stora och små bokstäver, och samma adress igen ger ingen ny rad eller notis', async () => {
+    await skicka(ANNA, '  BO@Vanner.SE ')
+    expect(await skickade(ANNA)).toEqual([epost(BO)])
+    expect(await vannotiser(BO)).toHaveLength(1)
+    // Bara exakt adress, ingen sökning på delar.
+    await skicka(ANNA, 'bo@vanner.s')
+    expect(await vannotiser(BO)).toHaveLength(1)
+  })
+
+  it('en adress utan konto, ens egen adress och en felaktig adress', async () => {
+    await skicka(ANNA, 'ingen@vanner.se')
+    await skicka(ANNA, epost(ANNA))
+    expect(await skickade(ANNA)).toEqual([epost(ANNA), 'bo@vanner.s', epost(BO), 'ingen@vanner.se'].sort())
+    expect(await vannotiser(ANNA)).toEqual([])
+    await forvantaFel(skicka(ANNA, 'inte en adress'))
+  })
+
+  it('den som skickar får bara adressen, tiden och id:t, aldrig om adressen har ett konto', async () => {
+    const r = await som(ANNA, (tx) => tx.query('select * from public.mina_skickade()'))
+    expect(r.fields.map((f) => f.name)).toEqual(['id', 'visas', 'skapad'])
+  })
+
+  it('bara mottagaren kan svara, och ett ja gör dem till vänner en gång', async () => {
+    const [f] = await inkommande(BO)
+    await forvantaFel(svara(ANNA, f.id, true))
+    await forvantaFel(svara(CIA, f.id, true))
+    expect(await antalPar(ANNA, BO)).toBe(0)
+    await svara(BO, f.id, true)
+    expect(await antalPar(ANNA, BO)).toBe(1)
+    expect(await vanner(ANNA)).toEqual([BO])
+    expect(await vanner(BO)).toEqual([ANNA])
+    expect(await vannotiser(ANNA)).toEqual([{ typ: 'van_godkand', text: 'Bo godkände din vänförfrågan', fran_user_id: BO }])
+    // Förfrågan och notisen om den är borta.
+    expect(await inkommande(BO)).toEqual([])
+    expect(await vannotiser(BO)).toEqual([])
+    expect(await skickade(ANNA)).not.toContain(epost(BO))
+    await forvantaFel(svara(BO, f.id, true))
+  })
+
+  it('en förfrågan till en vän ser ut som alla andra och ger ingen notis', async () => {
+    await skicka(ANNA, epost(BO))
+    expect(await skickade(ANNA)).toContain(epost(BO))
+    expect(await vannotiser(BO)).toEqual([])
+    expect(await antalPar(ANNA, BO)).toBe(1)
+  })
+
+  it('ett par kan bara finnas en gång, med det minsta id:t först', async () => {
+    await forvantaFel(db.query('insert into public.vanskap (user_a, user_b) values ($1, $2)', [BO, ANNA]))
+    await forvantaFel(db.query('insert into public.vanskap (user_a, user_b) values ($1, $2)', [ANNA, BO]))
+    await forvantaFel(db.query('insert into public.vanskap (user_a, user_b) values ($1, $1)', [ANNA]))
+  })
+
+  it('två som frågar varandra blir vänner en gång', async () => {
+    await skicka(EVA, epost(FIA))
+    await skicka(FIA, epost(EVA))
+    expect(await antalPar(EVA, FIA)).toBe(1)
+    expect(await inkommande(EVA)).toEqual([])
+    expect(await inkommande(FIA)).toEqual([])
+    expect(await vannotiser(EVA)).toEqual([{ typ: 'van_godkand', text: 'Du och Fia är nu vänner', fran_user_id: FIA }])
+  })
+
+  it('två som har frågat varandra samtidigt och båda svarar ja blir vänner en gång', async () => {
+    // Som när båda skickade i samma ögonblick och ingen såg den andras förfrågan.
+    const r = await db.query<{ id: string; fran_user_id: string }>(
+      'insert into public.vanforfragningar (fran_user_id, till_user_id) values ($1, $2), ($2, $1) returning id, fran_user_id',
+      [IDA, JON],
+    )
+    const tillJon = r.rows.find((x) => x.fran_user_id === IDA)!.id
+    const tillIda = r.rows.find((x) => x.fran_user_id === JON)!.id
+    await svara(JON, tillJon, true)
+    await forvantaFel(svara(IDA, tillIda, true))
+    expect(await antalPar(IDA, JON)).toBe(1)
+    expect(await inkommande(IDA)).toEqual([])
+  })
+
+  it('en nekad förfrågan syns fortfarande som väntande, och samma person ger ingen ny notis på 30 dagar', async () => {
+    await skicka(CIA, epost(DAN))
+    const [f] = await inkommande(DAN)
+    await svara(DAN, f.id, false)
+    expect(await inkommande(DAN)).toEqual([])
+    expect(await vannotiser(DAN)).toEqual([])
+    expect(await skickade(CIA)).toEqual([epost(DAN)])
+    expect(await vannotiser(CIA)).toEqual([])
+
+    // Ångra och skicka igen, via adressen och via en gemensam tur: ingen ny notis, men väntande hos Cia.
+    const id = (await fraga<{ id: string }>(CIA, 'select id from public.mina_skickade()'))[0].id
+    await fraga(CIA, 'select public.angra_vanforfragan($1)', [id])
+    expect(await skickade(CIA)).toEqual([])
+    await skicka(CIA, epost(DAN))
+    expect(await skickade(CIA)).toEqual([epost(DAN)])
+    const t = await skapaTur(CIA, 'Cias och Dans tur')
+    await kodFor(t).then((k) => som(DAN, (tx) => tx.query('select public.ga_med($1)', [k])))
+    await skickaTill(CIA, DAN)
+    expect(await skickade(CIA)).toEqual(['Dan', epost(DAN)])
+    expect(await inkommande(DAN)).toEqual([])
+    expect(await vannotiser(DAN)).toEqual([])
+
+    // Efter 30 dagar ger en ny förfrågan en notis igen.
+    await db.query(`update public.vanforfragningar set nekad = now() - interval '31 days', skapad = now() - interval '31 days' where fran_user_id = $1`, [CIA])
+    await skickaTill(CIA, DAN)
+    expect(await vannotiser(DAN)).toEqual([{ typ: 'vanforfragan', text: 'Cia vill bli din vän', fran_user_id: CIA }])
+  })
+
+  it('den som skickade kan ångra, och då försvinner notisen hos mottagaren', async () => {
+    const id = (await fraga<{ id: string; visas: string }>(CIA, 'select id, visas from public.mina_skickade()')).find((x) => x.visas === 'Dan')!.id
+    // Någon annan kan inte ångra den.
+    await fraga(DAN, 'select public.angra_vanforfragan($1)', [id])
+    expect(await vannotiser(DAN)).toHaveLength(1)
+    await fraga(CIA, 'select public.angra_vanforfragan($1)', [id])
+    expect(await vannotiser(DAN)).toEqual([])
+    expect(await inkommande(DAN)).toEqual([])
+  })
+
+  it('en förfrågan som ingen svarar på försvinner efter 30 dagar, med mejladressen', async () => {
+    await db.query(`update public.vanforfragningar set skapad = now() - interval '31 days' where fran_user_id = $1 and till_epost = 'ingen@vanner.se'`, [ANNA])
+    expect(await skickade(ANNA)).not.toContain('ingen@vanner.se')
+    expect((await db.query(`select 1 from public.vanforfragningar where till_epost = 'ingen@vanner.se'`)).rows).toHaveLength(0)
+  })
+
+  it('en förfrågan till någon man har vandrat med kräver en gemensam tur', async () => {
+    await forvantaFel(skickaTill(GUS, HUGO))
+    await forvantaFel(skickaTill(GUS, GUS))
+    const t = await skapaTur(GUS, 'Gus och Hugos tur')
+    await kodFor(t).then((k) => som(HUGO, (tx) => tx.query('select public.ga_med($1)', [k])))
+    const ihop = await fraga<{ user_id: string; namn: string; turer_ihop: number }>(GUS, 'select user_id, namn, turer_ihop from public.vandrat_ihop()')
+    expect(ihop).toEqual([{ user_id: HUGO, namn: 'Hugo', turer_ihop: 1 }])
+    await skickaTill(GUS, HUGO)
+    expect(await fraga(GUS, 'select * from public.vandrat_ihop()')).toEqual([])
+    expect(await skickade(GUS)).toEqual(['Hugo'])
+    expect(await vannotiser(HUGO)).toEqual([{ typ: 'vanforfragan', text: 'Gus vill bli din vän', fran_user_id: GUS }])
+    const [f] = await inkommande(HUGO)
+    await svara(HUGO, f.id, true)
+    const [v] = await fraga<{ user_id: string; namn: string; turer_ihop: number; senaste_tur: string }>(GUS, 'select * from public.mina_vanner()')
+    expect(v).toMatchObject({ user_id: HUGO, namn: 'Hugo', turer_ihop: 1, senaste_tur: 'Gus och Hugos tur' })
+  })
+
+  it('vänlänken är densamma tills den går ut, och då skapas en ny av sig själv', async () => {
+    const a = await lank(CIA)
+    expect(a.kod).toMatch(/^[0-9a-f]{32}$/)
+    expect((await lank(CIA)).kod).toBe(a.kod)
+    await db.query(`update public.vanlankar set giltig_till = now() - interval '1 minute' where user_id = $1`, [CIA])
+    const b = await lank(CIA)
+    expect(b.kod).not.toBe(a.kod)
+    expect(new Date(b.giltig_till).getTime()).toBeGreaterThan(Date.now() + 6 * 24 * 3600_000)
+    expect(await lankInfo(EVA, a.kod)).toBeNull()
+  })
+
+  it('den som trycker Bli vänner på en vänlänk blir vän direkt, och ägaren får en notis', async () => {
+    const { kod } = await lank(CIA)
+    expect(await lankInfo(EVA, kod)).toEqual({ namn: 'Cia', egen: false, redan_van: false })
+    expect(await lankInfo(CIA, kod)).toEqual({ namn: 'Cia', egen: true, redan_van: false })
+    await forvantaFel(bliVan(CIA, kod))
+    expect(await bliVan(EVA, ` ${kod.toUpperCase()} `)).toBe(CIA)
+    expect(await antalPar(CIA, EVA)).toBe(1)
+    expect(await vannotiser(CIA)).toEqual([{ typ: 'van_via_lank', text: 'Eva blev din vän via din vänlänk', fran_user_id: EVA }])
+    expect(await lankInfo(EVA, kod)).toEqual({ namn: 'Cia', egen: false, redan_van: true })
+    // En gång till: fortfarande ett par och ingen ny notis.
+    await bliVan(EVA, kod)
+    expect(await antalPar(CIA, EVA)).toBe(1)
+    expect(await vannotiser(CIA)).toHaveLength(1)
+  })
+
+  it('en ny vänlänk gör den gamla ogiltig', async () => {
+    const gammal = await lank(CIA)
+    const ny = await lank(CIA, true)
+    expect(ny.kod).not.toBe(gammal.kod)
+    expect(await lankInfo(FIA, gammal.kod)).toBeNull()
+    expect(await bliVan(FIA, gammal.kod)).toBeNull()
+    expect(await antalPar(CIA, FIA)).toBe(0)
+    expect(await lankInfo(FIA, ny.kod)).toMatchObject({ namn: 'Cia' })
+  })
+
+  it('ingen annan ser ens vänner, förfrågningar eller vänlänk', async () => {
+    expect(await vanner(DAN)).toEqual([])
+    expect(await inkommande(ANNA)).toEqual([])
+    expect(await skickade(DAN)).toEqual([])
+    expect(await fraga(DAN, 'select * from public.vandrat_ihop()')).toEqual([{ user_id: CIA, namn: 'Cia', bild_uppdaterad: null, turer_ihop: 1 }])
+  })
+
+  it('efter tio felaktiga vänlänkar på en timme stoppas det', async () => {
+    for (let i = 0; i < 10; i++) expect(await lankInfo(DAN, `fel${i}`)).toBeNull()
+    await forvantaFel(lankInfo(DAN, 'fel10'))
+    await forvantaFel(bliVan(DAN, (await lank(CIA)).kod))
+  })
+
+  it('högst 20 förfrågningar per dygn', async () => {
+    await db.query('delete from public.vanforsok where user_id = $1', [FIA])
+    for (let i = 0; i < 20; i++) await skicka(FIA, `person${i}@vanner.se`)
+    await forvantaFel(skicka(FIA, 'person20@vanner.se'))
+    await forvantaFel(skickaTill(FIA, EVA))
+  })
+
+  it('en vän ser ens profilbild men inte profilen, och efter att vänskapen tagits bort ser hen inte bilden', async () => {
+    const bild = `${ANNA}/bild`
+    await som(ANNA, (tx) => tx.query(`insert into storage.objects (bucket_id, name) values ('profilbilder', $1)`, [bild]))
+    const ser = (vem: string) =>
+      som(vem, (tx) => tx.query(`select 1 from storage.objects where bucket_id = 'profilbilder' and name = $1`, [bild])).then((r) => r.rows.length === 1)
+    expect(await ser(BO)).toBe(true)
+    expect(await ser(CIA)).toBe(false)
+    expect((await fraga(BO, 'select namn from public.profiler where id = $1', [ANNA]))).toEqual([])
+    await fraga(ANNA, 'select public.ta_bort_van($1)', [BO])
+    expect(await antalPar(ANNA, BO)).toBe(0)
+    expect(await vanner(ANNA)).toEqual([])
+    expect(await vanner(BO)).toEqual([])
+    expect(await ser(BO)).toBe(false)
+    // Förfrågningarna mellan dem är också borta.
+    expect(await skickade(ANNA)).not.toContain(epost(BO))
+  })
+
+  it('allt försvinner med kontot', async () => {
+    await lank(EVA)
+    await skicka(EVA, 'nagon@vanner.se')
+    await skicka(EVA, epost(GUS))
+    await db.query('delete from auth.users where id = $1', [EVA])
+    for (const [t, k] of [
+      ['vanskap', 'user_a'],
+      ['vanskap', 'user_b'],
+      ['vanforfragningar', 'fran_user_id'],
+      ['vanforfragningar', 'till_user_id'],
+      ['vanlankar', 'user_id'],
+      ['vanforsok', 'user_id'],
+    ])
+      expect((await db.query(`select 1 from public.${t} where ${k} = $1`, [EVA])).rows, `${t}.${k}`).toHaveLength(0)
+    expect((await vannotiser(GUS)).filter((n) => n.fran_user_id === EVA)).toEqual([])
+    expect(await vanner(FIA)).toEqual([])
   })
 })

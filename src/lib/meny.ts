@@ -12,7 +12,7 @@ export type Sida =
   | 'dagbok'
   | 'kom-ihag'
   | 'statistik'
-  | 'kompisar'
+  | 'vanner'
   | 'installningar'
   | 'profil'
 
@@ -84,14 +84,7 @@ export const SIDOR: Record<Sida, Menysida> = {
     beskrivning: 'Kilometer, nätter och utrustning',
     blir: 'Era turer och er utrustning över tid: kilometer, nätter ute och vad som faktiskt används.',
   },
-  kompisar: {
-    sida: 'kompisar',
-    namn: 'Vandringskompisar',
-    till: '/kompisar',
-    byggd: false,
-    beskrivning: 'Bjud in samma grupp igen',
-    blir: 'Personerna ni har vandrat med, så att det går snabbt att bjuda in samma grupp igen.',
-  },
+  vanner: { sida: 'vanner', namn: 'Vänner', till: '/vanner', byggd: true, beskrivning: 'Dem du vandrar med', blir: '' },
   installningar: {
     sida: 'installningar',
     namn: 'Inställningar',
@@ -121,7 +114,7 @@ export const UNDERSIDOR: Partial<Record<Sida, readonly Undersida[]>> = {
   ],
 }
 
-export type Gruppnyckel = 'planera' | 'utrustning' | 'minnen' | 'snart'
+export type Gruppnyckel = 'planera' | 'utrustning' | 'folk' | 'minnen' | 'snart'
 
 export interface Menygrupp {
   nyckel: Gruppnyckel
@@ -133,8 +126,9 @@ export interface Menygrupp {
 export const MENYGRUPPER: readonly Menygrupp[] = [
   { nyckel: 'planera', rubrik: 'Planera', sidor: ['turer', 'matplanering'] },
   { nyckel: 'utrustning', rubrik: 'Utrustning', sidor: ['forrad', 'utrustning'] },
+  { nyckel: 'folk', rubrik: 'Folk', sidor: ['vanner'] },
   { nyckel: 'minnen', rubrik: 'Minnen', sidor: ['kom-ihag'] },
-  { nyckel: 'snart', rubrik: 'Kommer snart', sidor: ['packlistor', 'dagbok', 'statistik', 'kompisar'] },
+  { nyckel: 'snart', rubrik: 'Kommer snart', sidor: ['packlistor', 'dagbok', 'statistik'] },
 ]
 
 /** Gruppen som en sida ligger i. null för Hem, Profil och Inställningar. */

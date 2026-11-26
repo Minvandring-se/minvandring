@@ -16,7 +16,7 @@ const MENYIKON: Record<Sida, IkonNamn | LucideIcon> = {
   dagbok: 'dagbok',
   'kom-ihag': NotebookPen,
   statistik: 'statistik',
-  kompisar: 'vandringskompisar',
+  vanner: 'vandringskompisar',
   installningar: Settings,
   profil: UserRound,
 }

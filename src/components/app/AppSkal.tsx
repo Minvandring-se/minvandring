@@ -53,7 +53,7 @@ export function AppSkal() {
       })
   }, [anvandarId])
 
-  const kontext: AppKontext = { anvandarId, epost: session?.user.email ?? '', namn, profilHamtad, setNamn, bildUppdaterad, setBildUppdaterad }
+  const kontext: AppKontext = { anvandarId, epost: session?.user.email ?? '', namn, profilHamtad, setNamn, bildUppdaterad, setBildUppdaterad, notiser }
 
   return (
     <div className="min-h-dvh lg:grid lg:grid-cols-[17.5rem_1fr] 3xl:grid-cols-[19.5rem_1fr] print:!block">
