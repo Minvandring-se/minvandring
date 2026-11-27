@@ -1,5 +1,5 @@
 -- Påminnelser och det dagliga jobbet. Steg 6 i planen för notiser, vänner, grupper och påminnelser
--- (Claude outputs/notiser/plan.md). Bygger på mejl (20261127160003).
+-- (Claude outputs/notiser/plan.md). Bygger på mejl (20261127170000).
 --
 -- Egna påminnelser: en text och ett datum, frivilligt för en tur man är med i. Personliga: bara ägaren når sina
 -- rader. På morgonen den valda dagen blir påminnelsen en notis (och ett mejl om man vill).
