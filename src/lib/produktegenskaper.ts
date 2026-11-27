@@ -306,7 +306,7 @@ const PANNLAMPA: Egenskap[] = [
 /** Powerbanks. Kapaciteten är den som tillverkaren anger, oftast vid 3,7 V. */
 const POWERBANK: Egenskap[] = [
   { nyckel: 'kapacitet_mah', etikett: 'Kapacitet', sort: 'heltal', min: 500, max: 50_000, enhet: 'mAh', forJamforelse: true, viktig: true },
-  { nyckel: 'max_effekt_w', etikett: 'Högsta effekt', sort: 'heltal', min: 5, max: 300, enhet: 'W', forJamforelse: true, viktig: true },
+  { nyckel: 'max_effekt_w', etikett: 'Högsta effekt', sort: 'decimal', min: 5, max: 300, enhet: 'W', forJamforelse: true, viktig: true },
   { nyckel: 'utgangar', etikett: 'Utgångar', sort: 'heltal', min: 1, max: 8, forJamforelse: true },
   { nyckel: 'laddport', etikett: 'Laddport', sort: 'val', val: LADDPORTAR },
   { nyckel: 'vattentalighet', etikett: 'Vattentålighet', sort: 'val', val: LAMPTALIGHET },
