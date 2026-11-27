@@ -314,6 +314,10 @@ export const MELLANLAGERMATERIAL = ['fleece', 'ull', 'syntet', 'blandat'] as con
 export const MELLANLAGERPLAGG = ['troja', 'jacka', 'vast'] as const
 export const UNDERSTALLSMATERIAL = ['ull', 'syntet', 'blandat'] as const
 export const UNDERSTALLSPLAGG = ['langarmad', 'kortarmad', 'byxor'] as const
+/** Blandat är till exempel G-1000, polyester och bomull. */
+export const BYXMATERIAL = ['syntet', 'blandat', 'ull'] as const
+/** Zipoff är byxor med avtagbara ben. */
+export const BYXPLAGG = ['byxor', 'zipoff', 'shorts', 'kjol'] as const
 
 /**
  * Gemensamt för kläder. Tillverkarna anger oftast en vikt för en storlek, och den står i viktstorlek, till exempel
@@ -368,8 +372,17 @@ const UNDERSTALL: Egenskap[] = [
   { nyckel: 'tyg', etikett: 'Tyg', sort: 'text' },
 ]
 
+/** Vandringsbyxor, byxor med avtagbara ben, shorts och kjolar. Regnbyxor hör till regnkläderna. */
+const BYXOR: Egenskap[] = [
+  ...PLAGG,
+  { nyckel: 'plagg', etikett: 'Plagg', sort: 'val', val: BYXPLAGG, forJamforelse: true, viktig: true },
+  { nyckel: 'material', etikett: 'Material', sort: 'val', val: BYXMATERIAL, forJamforelse: true, viktig: true },
+  // Fri text, till exempel "G-1000 Eco".
+  { nyckel: 'tyg', etikett: 'Tyg', sort: 'text' },
+]
+
 /** Underkategorier med kläder, där vikten gäller en viss storlek. */
-const KLADER: readonly string[] = ['understall', 'mellanlager', 'isolering', 'regnklader']
+const KLADER: readonly string[] = ['understall', 'mellanlager', 'isolering', 'regnklader', 'byxor']
 
 /** Är underkategorin kläder, där vikten gäller en viss storlek och kön? */
 export function arKlader(underkategori: string | null | undefined): boolean {
@@ -482,6 +495,7 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   mellanlager: MELLANLAGER,
   isolering: ISOLERING,
   regnklader: REGNKLADER,
+  byxor: BYXOR,
 }
 
 const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, unknown>) => string[]>> = {
@@ -595,6 +609,7 @@ const VALNAMN: Record<string, string> = {
   langarmad: 'Långärmad',
   kortarmad: 'Kortärmad',
   vast: 'Väst',
+  zipoff: 'Avtagbara ben',
   geodetiskt: 'Geodetiskt',
   stavtalt: 'Stavtält',
   halvt: 'Halvt',

@@ -154,7 +154,7 @@ describe('tolkaEgenskap', () => {
 
 describe('underkategorier utan egna egenskaper', () => {
   it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar, kök och kokkärl har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa', 'understall', 'mellanlager', 'isolering', 'regnklader'])
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa', 'understall', 'mellanlager', 'isolering', 'regnklader', 'byxor'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
@@ -901,6 +901,15 @@ describe('egenskaper för kläder', () => {
     expect(rader.find((r) => r.nyckel === 'plagg')?.varde).toBe('Tröja')
     expect(rader.find((r) => r.nyckel === 'tygvikt_gm2')?.varde).toBe('100 g/m²')
     expect(viktstorlekText('mellanlager', fleece)).toBe('Herr, vikt i storlek M')
+  })
+
+  it('godkänner vandringsbyxor och visar byxor med avtagbara ben på svenska', () => {
+    const byxor = { kon: 'herr', viktstorlek: '50', plagg: 'zipoff', material: 'blandat', tyg: 'G-1000 Eco' }
+    expect(valideraEgenskaper('byxor', byxor)).toEqual({ fel: [], varningar: [] })
+    expect(visaEgenskaper('byxor', byxor).find((r) => r.nyckel === 'plagg')?.varde).toBe('Avtagbara ben')
+    expect(viktstorlekText('byxor', byxor)).toBe('Herr, vikt i storlek 50')
+    expect(valideraEgenskaper('byxor', { ...byxor, plagg: 'jacka' }).fel.map((f) => f.split(':')[0])).toEqual(['plagg'])
+    expect(valideraEgenskaper('byxor', { ...byxor, material: 'fleece' }).fel.map((f) => f.split(':')[0])).toEqual(['material'])
   })
 
   it('ger fel när en regnjacka har ett plagg som bara finns för mellanlager', () => {
