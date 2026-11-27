@@ -5819,6 +5819,10 @@ describe('mejl', () => {
   it('kön hoppar över lästa, dolda och avregistrerade notiser och ger bara bekräftade adresser, och bara service_role når den', async () => {
     expect(await kanAnropa('authenticated', 'public.mejlko(integer)')).toBe(false)
     expect(await kanAnropa('authenticated', 'public.mejl_markera(uuid, boolean)')).toBe(false)
+    for (const f of ['public.mejlko(integer)', 'public.mejl_markera(uuid, boolean)']) {
+      const r = await db.query<{ ok: boolean }>("select has_function_privilege('service_role', $1, 'execute') as ok", [f])
+      expect(r.rows[0].ok, f).toBe(true)
+    }
     const last = await notis(ADA)
     await db.query('update public.notiser set last = now() where id = $1', [last.id])
     const dold = await notis(ADA, 'vanforfragan')
@@ -5832,23 +5836,78 @@ describe('mejl', () => {
     const ada = ko.rows.find((r) => r.epost === 'ada@exempel.se')!
     expect(ada.kod).toBe(await avregKod(ADA))
     expect((await db.query<{ mejl: string }>('select mejl from public.notiser where id = $1', [last.id])).rows[0].mejl).toBe('hoppas_over')
-    // Ett misslyckat mejl försöks igen, men inte efter tre försök.
-    const forsta = ko.rows[0].id
-    for (let i = 0; i < 3; i++) await db.query('select public.mejl_markera($1, false)', [forsta])
-    const igen = await db.query<{ id: string }>('select id from public.mejlko(50)')
-    expect(igen.rows.map((r) => r.id)).not.toContain(forsta)
-    const andra = ko.rows[1].id
-    await db.query('select public.mejl_markera($1, true)', [andra])
-    expect((await db.query<{ mejl: string }>('select mejl from public.notiser where id = $1', [andra])).rows[0].mejl).toBe('skickat')
+    // Raderna är lämnade: ett anrop till får dem inte igen.
+    expect((await db.query('select * from public.mejlko(50)')).rows).toEqual([])
+    expect((await db.query<{ mejl: string }>('select mejl from public.notiser where id = $1', [ada.id])).rows[0].mejl).toBe('skickas')
+    await db.query('select public.mejl_markera($1, true)', [ada.id])
+    expect((await db.query<{ mejl: string }>('select mejl from public.notiser where id = $1', [ada.id])).rows[0].mejl).toBe('skickat')
+    // Ett skickat mejl går inte att markera om.
+    await db.query('select public.mejl_markera($1, false)', [ada.id])
+    expect((await db.query<{ mejl: string }>('select mejl from public.notiser where id = $1', [ada.id])).rows[0].mejl).toBe('skickat')
+    for (const r of ko.rows.filter((x) => x.id !== ada.id)) await db.query('select public.mejl_markera($1, true)', [r.id])
   })
 
-  it('skickar högst tio mejl per dygn till samma person', async () => {
+  it('försöker ett misslyckat mejl igen högst tre gånger, och en lämnad notis som aldrig besvarades igen', async () => {
+    const n = await notis(ADA)
+    for (let i = 0; i < 3; i++) {
+      const ko = await db.query<{ id: string }>('select id from public.mejlko(50)')
+      expect(ko.rows.map((r) => r.id), `försök ${i + 1}`).toContain(n.id)
+      for (const r of ko.rows) await db.query('select public.mejl_markera($1, $2)', [r.id, r.id !== n.id])
+    }
+    expect((await db.query<{ id: string }>('select id from public.mejlko(50)')).rows.map((r) => r.id)).not.toContain(n.id)
+    expect((await db.query<{ mejl: string }>('select mejl from public.notiser where id = $1', [n.id])).rows[0].mejl).toBe('hoppas_over')
+    // Lämnad för elva minuter sedan utan svar: försöks igen.
+    const h = await notis(ADA)
+    expect((await db.query<{ id: string }>('select id from public.mejlko(50)')).rows.map((r) => r.id)).toContain(h.id)
+    await db.query(`update public.notiser set mejl_lamnad = now() - interval '11 minutes' where id = $1`, [h.id])
+    expect((await db.query<{ id: string }>('select id from public.mejlko(50)')).rows.map((r) => r.id)).toContain(h.id)
+    await db.query('select public.mejl_markera($1, true)', [h.id])
+  })
+
+  it('kontrollerar valen och adressen igen när mejlet ska skickas', async () => {
+    const n = await notis(ADA)
+    await som(ADA, (tx) => tx.query(`insert into public.notisinstallningar (user_id, mejl_tillagd_i_tur) values ('${ADA}', false) on conflict (user_id) do update set mejl_tillagd_i_tur = false`))
+    expect((await db.query<{ id: string }>('select id from public.mejlko(50)')).rows.map((r) => r.id)).not.toContain(n.id)
+    await som(ADA, (tx) => tx.query(`update public.notisinstallningar set mejl_tillagd_i_tur = true where user_id = '${ADA}'`))
+    const m = await notis(ADA)
+    await db.query(`update auth.users set email_confirmed_at = null where id = '${ADA}'`)
+    expect((await db.query<{ id: string }>('select id from public.mejlko(50)')).rows.map((r) => r.id)).not.toContain(m.id)
+    await db.query(`update auth.users set email_confirmed_at = now() where id = '${ADA}'`)
+  })
+
+  it('stoppar de spärrade kolumnerna också när raden skapas, och mejlkolumnerna på notiserna', async () => {
+    const DORA = '00000000-0000-0000-0000-0000000005a5'
+    await db.query(`insert into auth.users (id, email) values ($1, 'dora@exempel.se')`, [DORA])
+    await forvantaFel(som(DORA, (tx) => tx.query(`insert into public.notisinstallningar (user_id, avregistrerad) values ('${DORA}', now())`)))
+    await forvantaFel(som(DORA, (tx) => tx.query(`insert into public.notisinstallningar (user_id, avregistreringskod) values ('${DORA}', 'kand')`)))
+    await forvantaFel(som(DORA, (tx) => tx.query(`update public.notiser set mejl_forsok = 0 where user_id = '${DORA}'`)))
+    await forvantaFel(som(DORA, (tx) => tx.query(`update public.notiser set mejl_lamnad = null where user_id = '${DORA}'`)))
+    expect(await kanAnropa('authenticated', 'public.avregistrera(text)')).toBe(true)
+  })
+
+  it('byter koden när mejlen slås på igen, så att en gammal länk inte stänger av dem', async () => {
+    const FIA = '00000000-0000-0000-0000-0000000005a6'
+    await db.query(`insert into auth.users (id, email) values ($1, 'fia@exempel.se')`, [FIA])
+    const gammal = await avregKod(FIA)
+    await somAnon((tx) => tx.query('select public.avregistrera($1)', [gammal]))
+    await som(FIA, (tx) => tx.query('select public.mejl_pa_igen()'))
+    const ny = await avregKod(FIA)
+    expect(ny).not.toBe(gammal)
+    await somAnon((tx) => tx.query('select public.avregistrera($1)', [gammal]))
+    expect((await db.query(`select 1 from public.notisinstallningar where user_id = '${FIA}' and avregistrerad is not null`)).rows).toEqual([])
+  })
+
+  it('skickar högst tio mejl per dygn till samma person, misslyckade inräknade', async () => {
     const CILLA = '00000000-0000-0000-0000-0000000005a4'
     await db.query(`insert into auth.users (id, email) values ($1, 'cilla@exempel.se')`, [CILLA])
     const status: (string | null)[] = []
     for (let i = 0; i < 12; i++) status.push((await notis(CILLA)).mejl)
     expect(status.filter((s) => s === 'ska')).toHaveLength(10)
     expect(status.slice(10)).toEqual(['hoppas_over', 'hoppas_over'])
+    // Misslyckas alla tio räknas de ändå, så att nästa omgång inte ger tio till.
+    const ko = await db.query<{ id: string; epost: string }>('select id, epost from public.mejlko(50)')
+    for (const r of ko.rows) await db.query('select public.mejl_markera($1, $2)', [r.id, r.epost !== 'cilla@exempel.se'])
+    expect((await notis(CILLA)).mejl).toBe('hoppas_over')
   })
 
   it('jobbet schemaläggs och anropar funktionen bara när något väntar och Vault har adressen och hemligheten', async () => {
