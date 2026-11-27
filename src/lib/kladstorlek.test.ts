@@ -25,6 +25,10 @@ describe('kläders storlek', () => {
     expect(storlekarFor('48', 'Herr')).toEqual(['44', '46', '48', '50', '52', '54', '56', '58', '60'])
     expect(storlekarFor('38', 'Dam')[0]).toBe('32')
     expect(storlekarFor('10 (UK)', 'Dam')).toContain('12 (UK)')
+    expect(storlekarFor('42', 'Herr', 'kangor')).toEqual(['35', '36', '37', '38', '39', '40', '41', '42', '43', '44', '45', '46', '47', '48'])
+    expect(storlekarFor('42 2/3', 'Herr', 'kangor').slice(7, 10)).toEqual(['42', '42 2/3', '43'])
+    expect(storlekarFor('UK 8', 'Herr', 'kangor')).toContain('UK 8,5')
+    expect(storlekarFor(null, null, 'kangor')[0]).toBe('35')
   })
 
   it('säger om vikten gäller ens storlek', () => {

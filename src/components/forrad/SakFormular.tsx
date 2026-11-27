@@ -209,7 +209,7 @@ export function SakFormular({ sak, forval, onKlar, onAvbryt }: Props) {
           <Select id={`${id}-storlek`} value={storlek} aria-describedby={`${id}-storlekhjalp`} onChange={(e) => setStorlek(e.target.value)}>
             <option value="">Ingen storlek</option>
             {/* En storlek som sparats men inte finns i listan visas ändå, så att den inte försvinner. */}
-            {[...new Set([...storlekarFor(viktstorlek(plagg.egenskaper), konEtikett(plagg.egenskaper)), ...(sak?.storlek ? [sak.storlek] : [])])].map((s) => (
+            {[...new Set([...storlekarFor(viktstorlek(plagg.egenskaper), konEtikett(plagg.egenskaper), plagg.underkategori), ...(sak?.storlek ? [sak.storlek] : [])])].map((s) => (
               <option key={s} value={s}>
                 {s}
               </option>
