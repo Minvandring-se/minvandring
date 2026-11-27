@@ -154,7 +154,7 @@ describe('tolkaEgenskap', () => {
 
 describe('underkategorier utan egna egenskaper', () => {
   it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar, kök och kokkärl har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa', 'understall', 'mellanlager', 'isolering', 'regnklader'])
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa', 'understall', 'mellanlager', 'isolering', 'regnklader', 'byxor', 'kangor', 'powerbank', 'flaska', 'dricksystem'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
@@ -903,6 +903,25 @@ describe('egenskaper för kläder', () => {
     expect(viktstorlekText('mellanlager', fleece)).toBe('Herr, vikt i storlek M')
   })
 
+  it('godkänner vandringsbyxor och visar byxor med avtagbara ben på svenska', () => {
+    const byxor = { kon: 'herr', viktstorlek: '50', plagg: 'zipoff', material: 'blandat', tyg: 'G-1000 Eco' }
+    expect(valideraEgenskaper('byxor', byxor)).toEqual({ fel: [], varningar: [] })
+    expect(visaEgenskaper('byxor', byxor).find((r) => r.nyckel === 'plagg')?.varde).toBe('Avtagbara ben')
+    expect(viktstorlekText('byxor', byxor)).toBe('Herr, vikt i storlek 50')
+    expect(valideraEgenskaper('byxor', { ...byxor, plagg: 'jacka' }).fel.map((f) => f.split(':')[0])).toEqual(['plagg'])
+    expect(valideraEgenskaper('byxor', { ...byxor, material: 'fleece' }).fel.map((f) => f.split(':')[0])).toEqual(['material'])
+  })
+
+  it('godkänner en känga och visar typ och ovandel på svenska', () => {
+    const kanga = { kon: 'dam', viktstorlek: '38', typ: 'kanga', membran: 'GORE-TEX', material: 'lader', sula: 'Vibram' }
+    expect(valideraEgenskaper('kangor', kanga)).toEqual({ fel: [], varningar: [] })
+    const rader = visaEgenskaper('kangor', kanga)
+    expect(rader.find((r) => r.nyckel === 'typ')?.varde).toBe('Känga')
+    expect(rader.find((r) => r.nyckel === 'material')?.varde).toBe('Läder')
+    expect(viktstorlekText('kangor', kanga)).toBe('Dam, vikt i storlek 38')
+    expect(valideraEgenskaper('kangor', { ...kanga, typ: 'sandal' }).fel.map((f) => f.split(':')[0])).toEqual(['typ'])
+  })
+
   it('ger fel när en regnjacka har ett plagg som bara finns för mellanlager', () => {
     expect(valideraEgenskaper('regnklader', { ...regnjacka, plagg: 'vast' }).fel.map((f) => f.split(':')[0])).toEqual(['plagg'])
   })
@@ -930,5 +949,23 @@ describe('viktstorlekText', () => {
     expect(viktstorlekText('regnklader', { kon: 'unisex' })).toBe('Unisex, storleken för vikten anges inte')
     expect(viktstorlekText('isolering', null)).toBe('Storleken för vikten anges inte')
     expect(viktstorlekText('talt', { kon: 'herr', viktstorlek: 'M' })).toBeNull()
+  })
+})
+
+describe('egenskaper för powerbanks och flaskor', () => {
+  it('godkänner en powerbank och kontrollerar kapaciteten', () => {
+    const powerbank = { kapacitet_mah: 10000, max_effekt_w: 20, utgangar: 2, laddport: 'usb-c', vattentalighet: 'ipx4' }
+    expect(valideraEgenskaper('powerbank', powerbank)).toEqual({ fel: [], varningar: [] })
+    expect(visaEgenskaper('powerbank', powerbank).find((r) => r.nyckel === 'kapacitet_mah')?.varde).toBe('10000 mAh')
+    expect(valideraEgenskaper('powerbank', { ...powerbank, kapacitet_mah: 100 }).fel.map((f) => f.split(':')[0])).toEqual(['kapacitet_mah'])
+    expect(viktstorlekText('powerbank', powerbank)).toBeNull()
+  })
+
+  it('godkänner en mjuk flaska och en vattensäck och visar typen på svenska', () => {
+    const flaska = { typ: 'mjuk', volym_l: 0.6, material: 'plast' }
+    expect(valideraEgenskaper('flaska', flaska)).toEqual({ fel: [], varningar: [] })
+    expect(visaEgenskaper('flaska', flaska).find((r) => r.nyckel === 'typ')?.varde).toBe('Mjuk flaska')
+    expect(visaEgenskaper('dricksystem', { typ: 'vattensack', volym_l: 2 }).find((r) => r.nyckel === 'typ')?.varde).toBe('Vattensäck')
+    expect(valideraEgenskaper('flaska', { ...flaska, material: 'glas' }).fel.map((f) => f.split(':')[0])).toEqual(['material'])
   })
 })

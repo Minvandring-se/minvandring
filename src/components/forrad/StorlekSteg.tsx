@@ -39,7 +39,7 @@ export function StorlekSteg({
           Din storlek
         </legend>
         <div className="flex flex-wrap gap-2">
-          {storlekarFor(viktFor, kon).map((s) => (
+          {storlekarFor(viktFor, kon, produkt.underkategori).map((s) => (
             <button
               key={s}
               type="button"

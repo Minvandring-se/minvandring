@@ -303,6 +303,26 @@ const PANNLAMPA: Egenskap[] = [
   { nyckel: 'vattentalighet', etikett: 'Vattentålighet', sort: 'val', val: LAMPTALIGHET },
 ]
 
+/** Powerbanks. Kapaciteten är den som tillverkaren anger, oftast vid 3,7 V. */
+const POWERBANK: Egenskap[] = [
+  { nyckel: 'kapacitet_mah', etikett: 'Kapacitet', sort: 'heltal', min: 500, max: 50_000, enhet: 'mAh', forJamforelse: true, viktig: true },
+  { nyckel: 'max_effekt_w', etikett: 'Högsta effekt', sort: 'decimal', min: 5, max: 300, enhet: 'W', forJamforelse: true, viktig: true },
+  { nyckel: 'utgangar', etikett: 'Utgångar', sort: 'heltal', min: 1, max: 8, forJamforelse: true },
+  { nyckel: 'laddport', etikett: 'Laddport', sort: 'val', val: LADDPORTAR },
+  { nyckel: 'vattentalighet', etikett: 'Vattentålighet', sort: 'val', val: LAMPTALIGHET },
+]
+
+/** Mjuk är en flaska som går att vika ihop. Vattensäckar till dricksystem är vattensack. */
+export const FLASKTYPER = ['flaska', 'mjuk', 'termos', 'vattensack'] as const
+export const FLASKMATERIAL = ['plast', 'rostfritt', 'aluminium', 'titan'] as const
+
+/** Flaskor, termosar och vattensäckar. */
+const FLASKA: Egenskap[] = [
+  { nyckel: 'typ', etikett: 'Typ', sort: 'val', val: FLASKTYPER, forJamforelse: true, viktig: true },
+  { nyckel: 'volym_l', etikett: 'Volym', sort: 'decimal', min: 0.1, max: 10, enhet: 'l', forJamforelse: true, viktig: true },
+  { nyckel: 'material', etikett: 'Material', sort: 'val', val: FLASKMATERIAL, forJamforelse: true },
+]
+
 /** Vem plagget är skuret för. */
 export const PLAGGKON = ['herr', 'dam', 'unisex'] as const
 export const FYLLNINGAR = ['dun', 'syntet', 'blandat'] as const
@@ -314,6 +334,10 @@ export const MELLANLAGERMATERIAL = ['fleece', 'ull', 'syntet', 'blandat'] as con
 export const MELLANLAGERPLAGG = ['troja', 'jacka', 'vast'] as const
 export const UNDERSTALLSMATERIAL = ['ull', 'syntet', 'blandat'] as const
 export const UNDERSTALLSPLAGG = ['langarmad', 'kortarmad', 'byxor'] as const
+/** Blandat är till exempel G-1000, polyester och bomull. */
+export const BYXMATERIAL = ['syntet', 'blandat', 'ull'] as const
+/** Zipoff är byxor med avtagbara ben. */
+export const BYXPLAGG = ['byxor', 'zipoff', 'shorts', 'kjol'] as const
 
 /**
  * Gemensamt för kläder. Tillverkarna anger oftast en vikt för en storlek, och den står i viktstorlek, till exempel
@@ -368,8 +392,35 @@ const UNDERSTALL: Egenskap[] = [
   { nyckel: 'tyg', etikett: 'Tyg', sort: 'text' },
 ]
 
+/** Vandringsbyxor, byxor med avtagbara ben, shorts och kjolar. Regnbyxor hör till regnkläderna. */
+const BYXOR: Egenskap[] = [
+  ...PLAGG,
+  { nyckel: 'plagg', etikett: 'Plagg', sort: 'val', val: BYXPLAGG, forJamforelse: true, viktig: true },
+  { nyckel: 'material', etikett: 'Material', sort: 'val', val: BYXMATERIAL, forJamforelse: true, viktig: true },
+  // Fri text, till exempel "G-1000 Eco".
+  { nyckel: 'tyg', etikett: 'Tyg', sort: 'text' },
+]
+
+/** Känga är hög, vandringssko låg, och trailsko är en lätt löparsko för stigar. */
+export const SKOTYPER = ['kanga', 'vandringssko', 'trailsko'] as const
+export const SKOMATERIAL = ['lader', 'syntet', 'blandat'] as const
+
+/**
+ * Kängor och vandringsskor. Vikten i packvikt_g gäller ett par. Anger tillverkaren vikten för en sko dubblas
+ * den, och det står i kommentaren. Storleken vikten gäller står i viktstorlek, till exempel "42" eller "UK 8".
+ */
+const KANGOR: Egenskap[] = [
+  ...PLAGG,
+  { nyckel: 'typ', etikett: 'Typ', sort: 'val', val: SKOTYPER, forJamforelse: true, viktig: true },
+  // Fri text, till exempel "GORE-TEX". "Inget" när skon saknar membran.
+  { nyckel: 'membran', etikett: 'Membran', sort: 'text', forJamforelse: true, viktig: true },
+  { nyckel: 'material', etikett: 'Ovandel', sort: 'val', val: SKOMATERIAL, forJamforelse: true },
+  // Fri text, till exempel "Vibram Megagrip".
+  { nyckel: 'sula', etikett: 'Sula', sort: 'text' },
+]
+
 /** Underkategorier med kläder, där vikten gäller en viss storlek. */
-const KLADER: readonly string[] = ['understall', 'mellanlager', 'isolering', 'regnklader']
+const KLADER: readonly string[] = ['understall', 'mellanlager', 'isolering', 'regnklader', 'byxor', 'kangor']
 
 /** Är underkategorin kläder, där vikten gäller en viss storlek och kön? */
 export function arKlader(underkategori: string | null | undefined): boolean {
@@ -482,6 +533,11 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   mellanlager: MELLANLAGER,
   isolering: ISOLERING,
   regnklader: REGNKLADER,
+  byxor: BYXOR,
+  kangor: KANGOR,
+  powerbank: POWERBANK,
+  flaska: FLASKA,
+  dricksystem: FLASKA,
 }
 
 const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, unknown>) => string[]>> = {
@@ -595,6 +651,12 @@ const VALNAMN: Record<string, string> = {
   langarmad: 'Långärmad',
   kortarmad: 'Kortärmad',
   vast: 'Väst',
+  zipoff: 'Avtagbara ben',
+  kanga: 'Känga',
+  lader: 'Läder',
+  mjuk: 'Mjuk flaska',
+  vattensack: 'Vattensäck',
+  rostfritt: 'Rostfritt stål',
   geodetiskt: 'Geodetiskt',
   stavtalt: 'Stavtält',
   halvt: 'Halvt',
