@@ -41,6 +41,7 @@ const Mattips = lazy(() => import('@/pages/Mattips').then((m) => ({ default: m.M
 const Receptsida = lazy(() => import('@/pages/Receptsida').then((m) => ({ default: m.Receptsida })))
 const Mattipsartikel = lazy(() => import('@/pages/Mattipsartikel').then((m) => ({ default: m.Mattipsartikel })))
 const Vanner = lazy(() => import('@/pages/Vanner').then((m) => ({ default: m.Vanner })))
+const Avregistrera = lazy(() => import('@/pages/Avregistrera').then((m) => ({ default: m.Avregistrera })))
 const VanLank = lazy(() => import('@/pages/VanLank').then((m) => ({ default: m.VanLank })))
 const PlaneradSida = lazy(() => import('@/pages/PlaneradSida').then((m) => ({ default: m.PlaneradSida })))
 
@@ -85,6 +86,7 @@ export default function App() {
         <Route path="/integritet" element={<Integritet />} />
         <Route path="/ga-med/:kod" element={<GaMed />} />
         <Route path="/van/:kod" element={<VanLank />} />
+        <Route path="/avregistrera/:kod" element={<Avregistrera />} />
         {/* De inloggade sidorna, i ramen med sidomeny och bottennavigation. */}
         <Route element={<Inloggad><AppSkal /></Inloggad>}>
           <Route path="/turer" element={<MinaTurer />} />
