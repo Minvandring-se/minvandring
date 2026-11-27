@@ -98,7 +98,7 @@ export function Integritet() {
       <Avsnitt rubrik="Tjänster som hanterar uppgifterna åt oss">
         <ul className="list-disc space-y-1 pl-5">
           <li>Supabase sköter databasen och inloggningen. Uppgifterna ligger i deras datacenter i Stockholm.</li>
-          <li>Resend skickar mejlen, till exempel när du skapar konto eller väljer nytt lösenord. Mejlen skickas från Irland.</li>
+          <li>Resend skickar mejlen, till exempel när du skapar konto eller väljer nytt lösenord, och mejl om notiser som du har valt under Inställningar. Mejlen skickas från Irland.</li>
           <li>Vercel driver webbplatsen. När du besöker den behandlar Vercel tekniska uppgifter som behövs för att visa sidan, till exempel din IP-adress.</li>
         </ul>
       </Avsnitt>

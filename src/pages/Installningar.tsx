@@ -1,6 +1,8 @@
 import { LogOut, UserRound } from 'lucide-react'
 import { Link, useNavigate } from 'react-router'
 import { SidRubrik } from '@/components/app/SidRubrik'
+import { useApp } from '@/components/app/appKontext'
+import { Mejlval } from '@/components/profil/Mejlval'
 import { Utseende } from '@/components/profil/Utseende'
 import { Button } from '@/components/ui/button'
 import { knappStil } from '@/components/ui/knappStil'
@@ -8,9 +10,10 @@ import { Sektion } from '@/components/ui/sektion'
 import { useSidtitel } from '@/hooks/useSidtitel'
 import { supabase } from '@/lib/supabase'
 
-/** Inställningar: utseendet (ljust, mörkt eller som enheten) och kontot. Namn och bild ändras på Profil. */
+/** Inställningar: utseendet (ljust, mörkt eller som enheten), mejlen och kontot. Namn och bild ändras på Profil. */
 export function Installningar() {
   const navigate = useNavigate()
+  const { anvandarId } = useApp()
   useSidtitel('Inställningar')
 
   async function loggaUt() {
@@ -20,10 +23,13 @@ export function Installningar() {
 
   return (
     <div className="space-y-6">
-      <SidRubrik rubrik="Inställningar" text="Hur appen ser ut, och ditt konto." />
+      <SidRubrik rubrik="Inställningar" text="Hur appen ser ut, mejlen och ditt konto." />
       <div className="grid max-w-5xl grid-cols-1 gap-5 lg:grid-cols-2 lg:items-start">
         <Sektion rubrik="Utseende">
           <Utseende />
+        </Sektion>
+        <Sektion rubrik="Mejl">
+          <Mejlval anvandarId={anvandarId} />
         </Sektion>
         <Sektion rubrik="Konto">
           <p className="text-sm text-muted-foreground">Ändra ditt namn och din bild på Profil. Logga ut från MinVandring på den här enheten.</p>

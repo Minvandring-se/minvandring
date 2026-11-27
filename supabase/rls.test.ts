@@ -10,6 +10,7 @@ import { KATEGORIER } from '../src/lib/forrad'
 import { AVDELNINGAR, ENHETER } from '../src/lib/handla'
 import { ALLERGENER } from '../src/lib/kost'
 import { AMNEN } from '../src/lib/lardomar'
+import { MEJLVAL } from '../src/lib/mejl'
 import { NOTISTYPER } from '../src/lib/notiser'
 import { godkanda, importera } from '../src/lib/katalogimport'
 import { godkandaLivsmedel, importeraLivsmedel, LIVSMEDELSKOLUMNER, livsmedelSeedSql } from '../src/lib/livsmedelimport'
@@ -88,6 +89,19 @@ async function nyDatabas(migreringar: (fil: string) => boolean = () => true): Pr
     alter default privileges in schema public grant execute on functions to anon, authenticated;
     -- Supabase skapar rls_auto_enable själv (automatisk RLS). En kopia utan search_path, som i ett nytt projekt.
     create function public.rls_auto_enable() returns event_trigger language plpgsql security definer as $$ begin end $$;
+    -- Edge Functions anropar med service_role.
+    create role service_role nologin;
+    -- Enkla kopior av pg_cron, pg_net och Vault, så att migreringarna med schemalagda jobb går att köra här.
+    create schema cron;
+    create table cron.job (jobname text primary key, schedule text, command text);
+    create function cron.schedule(namn text, tid text, kommando text) returns bigint language sql as
+      $$ insert into cron.job values (namn, tid, kommando) on conflict (jobname) do update set schedule = excluded.schedule, command = excluded.command; select 1::bigint $$;
+    create schema net;
+    create table net.anrop (id bigserial primary key, url text, headers jsonb, body jsonb);
+    create function net.http_post(url text, headers jsonb default '{}', body jsonb default '{}') returns bigint language sql as
+      $$ insert into net.anrop (url, headers, body) values (url, headers, body) returning id $$;
+    create schema vault;
+    create table vault.decrypted_secrets (name text primary key, decrypted_secret text);
   `)
   await korMigreringar(ny, migreringar)
   return ny
@@ -163,6 +177,11 @@ describe('funktionerna i public', () => {
     'public.vanlank_agare(text)',
     'public.skydda_gruppmedlem()',
     'public.grupper_utan_vanskap()',
+    'public.notis_mejl()',
+    'public.avregistreringskod(uuid)',
+    'public.mejlko(integer)',
+    'public.mejl_markera(uuid, boolean)',
+    'public.kor_mejlko()',
   ]
   const forInloggade = [
     'public.ar_medlem(uuid)',
@@ -198,6 +217,7 @@ describe('funktionerna i public', () => {
     'public.spara_grupp(uuid, text, uuid[])',
     'public.spara_packmall(uuid, text)',
     'public.anvand_packmall(uuid, uuid)',
+    'public.mejl_pa_igen()',
   ]
 
   it('går inte att anropa utan inloggning', async () => {
@@ -5729,5 +5749,188 @@ describe('att göra i turen', () => {
     // En borttagning skickar bara id, eftersom Realtime skickar borttagningar till alla som lyssnar.
     const r = await db.query<{ r: string }>(`select relreplident as r from pg_class where oid = 'public.uppgifter'::regclass`)
     expect(r.rows[0].r).toBe('d')
+  })
+})
+
+describe('mejl', () => {
+  // Egna användare: Ada och Bo har bekräftade adresser, Obekräftad har det inte.
+  const ADA = '00000000-0000-0000-0000-0000000005a1'
+  const BO = '00000000-0000-0000-0000-0000000005a2'
+  const OBEKRAFTAD = '00000000-0000-0000-0000-0000000005a3'
+
+  beforeAll(async () => {
+    await db.exec(`
+      insert into auth.users (id, email) values ('${ADA}', 'ada@exempel.se'), ('${BO}', 'bo@exempel.se');
+      insert into auth.users (id, email, email_confirmed_at) values ('${OBEKRAFTAD}', 'ny@exempel.se', null);
+    `)
+  })
+
+  /** En notis som databasen skapar, som triggrarna gör. Ger mejlstatusen. */
+  async function notis(till: string, typ = 'tillagd_i_tur') {
+    const r = await db.query<{ id: string; mejl: string | null }>(`insert into public.notiser (user_id, typ, text) values ($1, $2, 'Oscar lade till dig i Sarek') returning id, mejl`, [till, typ])
+    return r.rows[0]
+  }
+
+  const avregKod = async (vem: string) => (await db.query<{ kod: string }>('select public.avregistreringskod($1) as kod', [vem])).rows[0].kod
+
+  it('ger notisen ska för en bekräftad adress, och hoppar över obekräftade och sorter som inte mejlas', async () => {
+    expect((await notis(ADA)).mejl).toBe('ska')
+    expect((await notis(OBEKRAFTAD)).mejl).toBe('hoppas_over')
+    expect((await notis(ADA, 'gick_med')).mejl).toBeNull()
+  })
+
+  it('följer inställningen per sort, och bara ägaren läser och ändrar sina inställningar', async () => {
+    await som(BO, (tx) => tx.query(`insert into public.notisinstallningar (user_id, mejl_tillagd_i_tur) values ('${BO}', false)`))
+    expect((await notis(BO)).mejl).toBe('hoppas_over')
+    expect((await notis(BO, 'vanforfragan')).mejl).toBe('ska')
+    expect((await som(ADA, (tx) => tx.query(`select * from public.notisinstallningar where user_id = '${BO}'`))).rows).toEqual([])
+    const andrade = await som(ADA, (tx) => tx.query(`update public.notisinstallningar set mejl_tillagd_i_tur = true where user_id = '${BO}'`))
+    expect(andrade.affectedRows).toBe(0)
+    await forvantaFel(som(ADA, (tx) => tx.query(`insert into public.notisinstallningar (user_id) values ('${OBEKRAFTAD}')`)))
+    // Avregistreringen och koden går inte att ändra direkt.
+    await forvantaFel(som(BO, (tx) => tx.query(`update public.notisinstallningar set avregistrerad = null where user_id = '${BO}'`)))
+    await forvantaFel(som(BO, (tx) => tx.query(`update public.notisinstallningar set avregistreringskod = 'x' where user_id = '${BO}'`)))
+    // Mejlstatusen på notiserna går inte heller att ändra.
+    await forvantaFel(som(BO, (tx) => tx.query(`update public.notiser set mejl = 'ska' where user_id = '${BO}'`)))
+  })
+
+  it('avregistrera fungerar utan inloggning, bara med rätt kod och bara för den personen', async () => {
+    const kod = await avregKod(ADA)
+    expect(kod).toMatch(/^[0-9a-f]{48}$/)
+    expect(await kanAnropa('anon', 'public.avregistrera(text)')).toBe(true)
+    const fel = kod.slice(0, -1) + (kod.endsWith('0') ? '1' : '0')
+    await somAnon((tx) => tx.query(`select public.avregistrera('fel')`))
+    await somAnon((tx) => tx.query('select public.avregistrera($1)', [fel]))
+    expect((await db.query(`select 1 from public.notisinstallningar where avregistrerad is not null and user_id = '${ADA}'`)).rows).toHaveLength(0)
+    await somAnon((tx) => tx.query('select public.avregistrera($1)', [kod]))
+    const r = await db.query<{ user_id: string }>(`select user_id from public.notisinstallningar where avregistrerad is not null and user_id in ('${ADA}', '${BO}')`)
+    expect(r.rows).toEqual([{ user_id: ADA }])
+    expect((await notis(ADA)).mejl).toBe('hoppas_over')
+    // anon når inget annat.
+    await forvantaFel(somAnon((tx) => tx.query('select * from public.notisinstallningar')))
+    await forvantaFel(somAnon((tx) => tx.query('select public.mejl_pa_igen()')))
+    // Slå på igen, bara för sig själv.
+    await som(BO, (tx) => tx.query('select public.mejl_pa_igen()'))
+    expect((await db.query(`select 1 from public.notisinstallningar where avregistrerad is not null and user_id = '${ADA}'`)).rows).toHaveLength(1)
+    await som(ADA, (tx) => tx.query('select public.mejl_pa_igen()'))
+    expect((await notis(ADA)).mejl).toBe('ska')
+  })
+
+  it('kön hoppar över lästa, dolda och avregistrerade notiser och ger bara bekräftade adresser, och bara service_role når den', async () => {
+    expect(await kanAnropa('authenticated', 'public.mejlko(integer)')).toBe(false)
+    expect(await kanAnropa('authenticated', 'public.mejl_markera(uuid, boolean)')).toBe(false)
+    for (const f of ['public.mejlko(integer)', 'public.mejl_markera(uuid, boolean)']) {
+      const r = await db.query<{ ok: boolean }>("select has_function_privilege('service_role', $1, 'execute') as ok", [f])
+      expect(r.rows[0].ok, f).toBe(true)
+    }
+    const last = await notis(ADA)
+    await db.query('update public.notiser set last = now() where id = $1', [last.id])
+    const dold = await notis(ADA, 'vanforfragan')
+    const ko = await db.query<{ id: string; epost: string; kod: string }>('select * from public.mejlko(50)')
+    const ids = ko.rows.map((r) => r.id)
+    expect(ids).not.toContain(last.id)
+    expect(ids).not.toContain(dold.id)
+    const adresser = ko.rows.map((r) => r.epost)
+    expect(adresser).toContain('ada@exempel.se')
+    expect(adresser).not.toContain('ny@exempel.se')
+    const ada = ko.rows.find((r) => r.epost === 'ada@exempel.se')!
+    expect(ada.kod).toBe(await avregKod(ADA))
+    expect((await db.query<{ mejl: string }>('select mejl from public.notiser where id = $1', [last.id])).rows[0].mejl).toBe('hoppas_over')
+    // Raderna är lämnade: ett anrop till får dem inte igen.
+    expect((await db.query('select * from public.mejlko(50)')).rows).toEqual([])
+    expect((await db.query<{ mejl: string }>('select mejl from public.notiser where id = $1', [ada.id])).rows[0].mejl).toBe('skickas')
+    await db.query('select public.mejl_markera($1, true)', [ada.id])
+    expect((await db.query<{ mejl: string }>('select mejl from public.notiser where id = $1', [ada.id])).rows[0].mejl).toBe('skickat')
+    // Ett skickat mejl går inte att markera om.
+    await db.query('select public.mejl_markera($1, false)', [ada.id])
+    expect((await db.query<{ mejl: string }>('select mejl from public.notiser where id = $1', [ada.id])).rows[0].mejl).toBe('skickat')
+    for (const r of ko.rows.filter((x) => x.id !== ada.id)) await db.query('select public.mejl_markera($1, true)', [r.id])
+  })
+
+  it('försöker ett misslyckat mejl igen högst tre gånger, och en lämnad notis som aldrig besvarades igen', async () => {
+    const n = await notis(ADA)
+    for (let i = 0; i < 3; i++) {
+      const ko = await db.query<{ id: string }>('select id from public.mejlko(50)')
+      expect(ko.rows.map((r) => r.id), `försök ${i + 1}`).toContain(n.id)
+      for (const r of ko.rows) await db.query('select public.mejl_markera($1, $2)', [r.id, r.id !== n.id])
+    }
+    expect((await db.query<{ id: string }>('select id from public.mejlko(50)')).rows.map((r) => r.id)).not.toContain(n.id)
+    expect((await db.query<{ mejl: string }>('select mejl from public.notiser where id = $1', [n.id])).rows[0].mejl).toBe('hoppas_over')
+    // Lämnad för elva minuter sedan utan svar: försöks igen.
+    const h = await notis(ADA)
+    expect((await db.query<{ id: string }>('select id from public.mejlko(50)')).rows.map((r) => r.id)).toContain(h.id)
+    await db.query(`update public.notiser set mejl_lamnad = now() - interval '11 minutes' where id = $1`, [h.id])
+    expect((await db.query<{ id: string }>('select id from public.mejlko(50)')).rows.map((r) => r.id)).toContain(h.id)
+    await db.query('select public.mejl_markera($1, true)', [h.id])
+  })
+
+  it('kontrollerar valen och adressen igen när mejlet ska skickas', async () => {
+    const n = await notis(ADA)
+    await som(ADA, (tx) => tx.query(`insert into public.notisinstallningar (user_id, mejl_tillagd_i_tur) values ('${ADA}', false) on conflict (user_id) do update set mejl_tillagd_i_tur = false`))
+    expect((await db.query<{ id: string }>('select id from public.mejlko(50)')).rows.map((r) => r.id)).not.toContain(n.id)
+    await som(ADA, (tx) => tx.query(`update public.notisinstallningar set mejl_tillagd_i_tur = true where user_id = '${ADA}'`))
+    const m = await notis(ADA)
+    await db.query(`update auth.users set email_confirmed_at = null where id = '${ADA}'`)
+    expect((await db.query<{ id: string }>('select id from public.mejlko(50)')).rows.map((r) => r.id)).not.toContain(m.id)
+    await db.query(`update auth.users set email_confirmed_at = now() where id = '${ADA}'`)
+  })
+
+  it('stoppar de spärrade kolumnerna också när raden skapas, och mejlkolumnerna på notiserna', async () => {
+    const DORA = '00000000-0000-0000-0000-0000000005a5'
+    await db.query(`insert into auth.users (id, email) values ($1, 'dora@exempel.se')`, [DORA])
+    await forvantaFel(som(DORA, (tx) => tx.query(`insert into public.notisinstallningar (user_id, avregistrerad) values ('${DORA}', now())`)))
+    await forvantaFel(som(DORA, (tx) => tx.query(`insert into public.notisinstallningar (user_id, avregistreringskod) values ('${DORA}', 'kand')`)))
+    await forvantaFel(som(DORA, (tx) => tx.query(`update public.notiser set mejl_forsok = 0 where user_id = '${DORA}'`)))
+    await forvantaFel(som(DORA, (tx) => tx.query(`update public.notiser set mejl_lamnad = null where user_id = '${DORA}'`)))
+    expect(await kanAnropa('authenticated', 'public.avregistrera(text)')).toBe(true)
+  })
+
+  it('byter koden när mejlen slås på igen, så att en gammal länk inte stänger av dem', async () => {
+    const FIA = '00000000-0000-0000-0000-0000000005a6'
+    await db.query(`insert into auth.users (id, email) values ($1, 'fia@exempel.se')`, [FIA])
+    const gammal = await avregKod(FIA)
+    await somAnon((tx) => tx.query('select public.avregistrera($1)', [gammal]))
+    await som(FIA, (tx) => tx.query('select public.mejl_pa_igen()'))
+    const ny = await avregKod(FIA)
+    expect(ny).not.toBe(gammal)
+    await somAnon((tx) => tx.query('select public.avregistrera($1)', [gammal]))
+    expect((await db.query(`select 1 from public.notisinstallningar where user_id = '${FIA}' and avregistrerad is not null`)).rows).toEqual([])
+  })
+
+  it('skickar högst tio mejl per dygn till samma person, misslyckade inräknade', async () => {
+    const CILLA = '00000000-0000-0000-0000-0000000005a4'
+    await db.query(`insert into auth.users (id, email) values ($1, 'cilla@exempel.se')`, [CILLA])
+    const status: (string | null)[] = []
+    for (let i = 0; i < 12; i++) status.push((await notis(CILLA)).mejl)
+    expect(status.filter((s) => s === 'ska')).toHaveLength(10)
+    expect(status.slice(10)).toEqual(['hoppas_over', 'hoppas_over'])
+    // Misslyckas alla tio räknas de ändå, så att nästa omgång inte ger tio till.
+    const ko = await db.query<{ id: string; epost: string }>('select id, epost from public.mejlko(50)')
+    for (const r of ko.rows) await db.query('select public.mejl_markera($1, $2)', [r.id, r.epost !== 'cilla@exempel.se'])
+    expect((await notis(CILLA)).mejl).toBe('hoppas_over')
+  })
+
+  it('jobbet schemaläggs och anropar funktionen bara när något väntar och Vault har adressen och hemligheten', async () => {
+    expect((await db.query<{ command: string }>(`select command from cron.job where jobname = 'skicka-mejl'`)).rows).toEqual([{ command: 'select public.kor_mejlko()' }])
+    await db.exec('delete from net.anrop')
+    await db.query('select public.kor_mejlko()')
+    expect((await db.query('select * from net.anrop')).rows).toHaveLength(0)
+    await db.exec(`insert into vault.decrypted_secrets values ('skicka_mejl_url', 'https://exempel.supabase.co/functions/v1/skicka-mejl'), ('cron_hemlighet', 'hemligt')`)
+    await db.query('select public.kor_mejlko()')
+    const anrop = await db.query<{ url: string; headers: { Authorization: string } }>('select url, headers from net.anrop')
+    expect(anrop.rows).toEqual([{ url: 'https://exempel.supabase.co/functions/v1/skicka-mejl', headers: expect.objectContaining({ Authorization: 'Bearer hemligt' }) }])
+    await db.exec(`update public.notiser set mejl = 'skickat' where mejl in ('ska', 'fel'); delete from net.anrop`)
+    await db.query('select public.kor_mejlko()')
+    expect((await db.query('select * from net.anrop')).rows).toHaveLength(0)
+  })
+
+  it('har en kolumn för varje mejlval i appen (MEJLVAL i src/lib/mejl.ts)', async () => {
+    const r = await db.query<{ k: string }>(`select column_name as k from information_schema.columns where table_schema = 'public' and table_name = 'notisinstallningar'`)
+    expect(r.rows.map((x) => x.k)).toEqual(expect.arrayContaining(MEJLVAL.map((m) => m.nyckel)))
+  })
+
+  it('inställningarna försvinner med kontot', async () => {
+    await db.query('delete from auth.users where id = $1', [BO])
+    expect((await db.query(`select 1 from public.notisinstallningar where user_id = '${BO}'`)).rows).toEqual([])
   })
 })
