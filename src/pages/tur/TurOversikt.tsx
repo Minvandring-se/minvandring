@@ -5,6 +5,7 @@ import { useApp } from '@/components/app/appKontext'
 import { glomTurlistan } from '@/components/app/turlistaMinne'
 import { Deltagarlista } from '@/components/tur/Deltagarlista'
 import { AttGoraITuren } from '@/components/tur/AttGoraITuren'
+import { MinaPaminnelser } from '@/components/tur/MinaPaminnelser'
 import { EtapperIOversikten } from '@/components/tur/EtapperIOversikten'
 import {
   DelaOchSpara,
@@ -86,6 +87,7 @@ export function TurOversikt() {
           kanAndra={kanAndra(minRoll)}
           className={BRED}
         />
+        <MinaPaminnelser turId={tur.id} className={BRED} />
         <ResanDitOchHem />
         <EtapperIOversikten tur={tur} kanAndra={kanAndra(minRoll)} className={BRED} />
         <DinVikt />

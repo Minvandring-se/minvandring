@@ -88,7 +88,7 @@ begin
   select * into val from public.notisinstallningar where user_id = new.user_id;
   select u.email_confirmed_at is not null into bekraftad from auth.users u where u.id = new.user_id;
   select count(*) into senaste_dygnet from public.notiser n
-   where n.user_id = new.user_id and n.mejl in ('ska', 'skickat') and n.skapad > now() - interval '1 day';
+   where n.user_id = new.user_id and n.mejl in ('ska', 'skickas', 'skickat', 'fel') and n.skapad > now() - interval '1 day';
   new.mejl := case
     when not coalesce(bekraftad, false) then 'hoppas_over'
     when val.avregistrerad is not null then 'hoppas_over'
