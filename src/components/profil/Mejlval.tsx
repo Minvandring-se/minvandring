@@ -21,12 +21,12 @@ export function Mejlval({ anvandarId }: { anvandarId: string | null }) {
     let aktuell = true
     supabase
       .from('notisinstallningar')
-      .select('mejl_tillagd_i_tur, mejl_vanforfragan, avregistrerad')
+      .select('mejl_tillagd_i_tur, mejl_vanforfragan, mejl_paminnelser, mejl_auto_paminnelser, avregistrerad')
       .eq('user_id', anvandarId)
       .maybeSingle()
       .then(({ data, error }) => {
         if (!aktuell) return
-        setVal(error ? 'fel' : ((data as Mejlinstallningar | null) ?? { mejl_tillagd_i_tur: true, mejl_vanforfragan: true, avregistrerad: null }))
+        setVal(error ? 'fel' : ((data as Mejlinstallningar | null) ?? { mejl_tillagd_i_tur: true, mejl_vanforfragan: true, mejl_paminnelser: true, mejl_auto_paminnelser: false, avregistrerad: null }))
       })
     return () => {
       aktuell = false

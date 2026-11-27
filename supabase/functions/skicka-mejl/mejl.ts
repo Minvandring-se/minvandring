@@ -35,6 +35,18 @@ const SORTER: Record<string, { amne: (text: string) => string; varfor: string; k
     knapp: 'Svara på förfrågan',
     standardlank: '/vanner',
   },
+  paminnelse: {
+    amne: (text) => text,
+    varfor: 'Du får det här mejlet eftersom du skrev en påminnelse i MinVandring till i dag.',
+    knapp: 'Öppna MinVandring',
+    standardlank: '/hem',
+  },
+  auto_paminnelse: {
+    amne: (text) => text,
+    varfor: 'Du får det här mejlet eftersom du har valt påminnelser inför turerna i MinVandring.',
+    knapp: 'Öppna turen',
+    standardlank: '/turer',
+  },
 }
 
 export const mejlbar = (typ: string) => typ in SORTER

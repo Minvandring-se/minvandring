@@ -1,7 +1,7 @@
 /** Notiserna i klockan uppe till höger. Texten och sidan en notis leder till skrivs av databasen. */
 
 /** Sorterna av notiser. Samma lista som checken på notiser.typ, och ett test kontrollerar att de stämmer överens. */
-export const NOTISTYPER = ['gick_med', 'vanforfragan', 'van_godkand', 'van_via_lank', 'tillagd_i_tur'] as const
+export const NOTISTYPER = ['gick_med', 'vanforfragan', 'van_godkand', 'van_via_lank', 'tillagd_i_tur', 'paminnelse', 'auto_paminnelse'] as const
 
 export type Notistyp = (typeof NOTISTYPER)[number]
 

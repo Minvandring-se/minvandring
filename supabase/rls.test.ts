@@ -182,6 +182,9 @@ describe('funktionerna i public', () => {
     'public.mejlko(integer)',
     'public.mejl_markera(uuid, boolean)',
     'public.kor_mejlko()',
+    'public.paminnelser_utan_tur()',
+    'public.paminnelse_nytt_datum()',
+    'public.dagliga_paminnelser()',
   ]
   const forInloggade = [
     'public.ar_medlem(uuid)',
@@ -5932,5 +5935,91 @@ describe('mejl', () => {
   it('inställningarna försvinner med kontot', async () => {
     await db.query('delete from auth.users where id = $1', [BO])
     expect((await db.query(`select 1 from public.notisinstallningar where user_id = '${BO}'`)).rows).toEqual([])
+  })
+})
+
+describe('påminnelser', () => {
+  // Pia äger turen och Per är med. Ulf är inte med.
+  const PIA = '00000000-0000-0000-0000-0000000006a1'
+  const PER = '00000000-0000-0000-0000-0000000006a2'
+  const ULF = '00000000-0000-0000-0000-0000000006a3'
+  let tur: string
+  let IDAG: string
+  let OM1: string
+  const idag = async () => (await db.query<{ d: string }>(`select to_char((now() at time zone 'Europe/Stockholm')::date, 'YYYY-MM-DD') as d`)).rows[0].d
+  const om = async (dagar: number) => (await db.query<{ d: string }>(`select to_char((now() at time zone 'Europe/Stockholm')::date + $1::int, 'YYYY-MM-DD') as d`, [dagar])).rows[0].d
+
+  beforeAll(async () => {
+    await db.exec(`insert into auth.users (id, email) values ('${PIA}', 'pia@exempel.se'), ('${PER}', 'per@exempel.se'), ('${ULF}', 'ulf@exempel.se')`)
+    tur = await skapaTur(PIA, 'Padjelanta')
+    const kod = await kodFor(tur)
+    await som(PER, (tx) => tx.query('select public.ga_med($1)', [kod]))
+    IDAG = await idag()
+    OM1 = await om(1)
+  })
+
+  const notiser = async (vem: string, typ: string) =>
+    (await db.query<{ text: string; lank: string; mejl: string | null }>('select text, lank, mejl from public.notiser where user_id = $1 and typ = $2 order by skapad', [vem, typ])).rows
+
+  it('är personliga: A ser inte B:s påminnelser och kan inte koppla en till en tur hen inte är med i', async () => {
+    await som(PER, (tx) => tx.query(`insert into public.paminnelser (tur_id, text, datum) values ($1, 'Boka tåget', $2)`, [tur, OM1]))
+    expect((await som(PIA, (tx) => tx.query('select * from public.paminnelser'))).rows).toEqual([])
+    expect((await som(PER, (tx) => tx.query('select text from public.paminnelser'))).rows).toEqual([{ text: 'Boka tåget' }])
+    await forvantaFel(som(ULF, (tx) => tx.query(`insert into public.paminnelser (tur_id, text, datum) values ($1, 'Smyg', $2)`, [tur, OM1])))
+    await forvantaFel(som(ULF, (tx) => tx.query(`insert into public.paminnelser (user_id, text, datum) values ('${PER}', 'Åt någon annan', $1)`, [OM1])))
+    const andrade = await som(PIA, (tx) => tx.query(`update public.paminnelser set text = 'Hackad' where user_id = '${PER}'`))
+    expect(andrade.affectedRows).toBe(0)
+    await forvantaFel(som(PER, (tx) => tx.query(`update public.paminnelser set skickad = now()`)))
+    await forvantaFel(somAnon((tx) => tx.query('select * from public.paminnelser')))
+  })
+
+  it('blir en notis den valda dagen, en gång, och jobbet går inte att anropa från appen', async () => {
+    expect(await kanAnropa('authenticated', 'public.dagliga_paminnelser()')).toBe(false)
+    await som(PIA, (tx) => tx.query(`insert into public.paminnelser (text, datum) values ('Köp gas', $1)`, [IDAG]))
+    await db.query('select public.dagliga_paminnelser()')
+    await db.query('select public.dagliga_paminnelser()')
+    const r = await notiser(PIA, 'paminnelse')
+    expect(r).toEqual([{ text: 'Påminnelse: Köp gas', lank: '/hem', mejl: 'ska' }])
+    // Pers påminnelse är till i morgon och har inte kommit än.
+    expect(await notiser(PER, 'paminnelse')).toEqual([])
+  })
+
+  it('påminner en vecka och en dag före avresan, en gång, och inte den som har lämnat turen', async () => {
+    await db.query('update public.turer set avresa = $1 where id = $2', [await om(7), tur])
+    await db.query('select public.dagliga_paminnelser()')
+    await db.query('select public.dagliga_paminnelser()')
+    for (const vem of [PIA, PER]) expect(await notiser(vem, 'auto_paminnelse'), vem).toEqual([{ text: 'Padjelanta börjar om en vecka.', lank: `/tur/${tur}`, mejl: 'hoppas_over' }])
+    expect(await notiser(ULF, 'auto_paminnelse')).toEqual([])
+    // Per lämnar. Hans påminnelse finns kvar utan turen, och han får inget när turen börjar i morgon.
+    await db.query('delete from public.deltagare where tur_id = $1 and user_id = $2', [tur, PER])
+    expect((await db.query<{ tur_id: string | null }>(`select tur_id from public.paminnelser where user_id = '${PER}'`)).rows).toEqual([{ tur_id: null }])
+    await db.query('update public.turer set avresa = $1 where id = $2', [await om(1), tur])
+    await db.query('select public.dagliga_paminnelser()')
+    expect((await notiser(PIA, 'auto_paminnelse')).map((n) => n.text)).toEqual(['Padjelanta börjar om en vecka.', 'I morgon börjar Padjelanta.'])
+    // Notiserna om turen försvann när han lämnade den, som för alla notiser om en tur.
+    expect(await notiser(PER, 'auto_paminnelse')).toEqual([])
+  })
+
+  it('mejlar automatiska påminnelser bara för den som har valt dem', async () => {
+    await som(PIA, (tx) => tx.query(`insert into public.notisinstallningar (user_id, mejl_auto_paminnelser) values ('${PIA}', true)`))
+    await db.query('update public.turer set avresa = $1 where id = $2', [await om(7), tur])
+    await db.query(`delete from public.notiser where user_id = '${PIA}' and typ = 'auto_paminnelse'`)
+    await db.query('select public.dagliga_paminnelser()')
+    expect((await notiser(PIA, 'auto_paminnelse')).map((n) => n.mejl)).toEqual(['ska'])
+  })
+
+  it('städar lästa notiser äldre än 90 dagar och dolda förfrågningar äldre än 30 dagar', async () => {
+    const gammal = await db.query<{ id: string }>(`insert into public.notiser (user_id, typ, text, last, skapad) values ('${PIA}', 'gick_med', 'Gammal', now() - interval '91 days', now() - interval '100 days') returning id`)
+    const oläst = await db.query<{ id: string }>(`insert into public.notiser (user_id, typ, text, skapad) values ('${PIA}', 'gick_med', 'Oläst', now() - interval '100 days') returning id`)
+    const dold = await db.query<{ id: string }>(`insert into public.notiser (user_id, typ, text, skapad) values ('${PIA}', 'vanforfragan', 'Dold', now() - interval '31 days') returning id`)
+    await db.query('select public.dagliga_paminnelser()')
+    const kvar = await db.query<{ id: string }>('select id from public.notiser where id = any($1)', [[gammal.rows[0].id, oläst.rows[0].id, dold.rows[0].id]])
+    expect(kvar.rows.map((r) => r.id)).toEqual([oläst.rows[0].id])
+  })
+
+  it('schemaläggs kl. 05.00 UTC, och påminnelserna försvinner med kontot', async () => {
+    expect((await db.query(`select schedule, command from cron.job where jobname = 'paminnelser'`)).rows).toEqual([{ schedule: '0 5 * * *', command: 'select public.dagliga_paminnelser()' }])
+    await db.query('delete from auth.users where id = $1', [PER])
+    expect((await db.query(`select 1 from public.paminnelser where user_id = '${PER}'`)).rows).toEqual([])
   })
 })
