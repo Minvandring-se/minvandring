@@ -124,7 +124,7 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
   return (
     <div className="space-y-5">
       {!kanAndra && (
-        <p className="text-muted-foreground">Du är läsare. Du kan bocka av det du packar, välja din egen modell, ta med gemensamma saker och spara listan som mall. Ägare och redigerare ändrar listan.</p>
+        <p className="text-muted-foreground">Du är läsare. Du kan bocka av det du packar, välja din egen modell, ta med gemensamma saker och spara listan som packlista. Ägare och redigerare ändrar listan.</p>
       )}
 
       {rader.length > 0 && <Packsummering personer={personvikter} mat={mat.lage.lage} />}
@@ -150,7 +150,7 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
             <div className="flex flex-wrap gap-2">
               <Button variant="outline" onClick={() => setPanel({ typ: 'fran-mall' })}>
                 <ClipboardList className="size-4" aria-hidden />
-                Från mall
+                Från packlista
               </Button>
               <Button onClick={() => setPanel({ typ: 'lagg-till' })}>
                 <Plus className="size-4 text-hjortron-ikon" aria-hidden />
@@ -218,7 +218,7 @@ function Packvy({ lista, laddaOm }: { lista: Packlista; laddaOm: () => Promise<v
           <div className="border-t border-border pt-3">
             <Button variant="ghost" className="-ml-3" onClick={() => setPanel({ typ: 'spara-mall' })}>
               <ClipboardList className="size-4" aria-hidden />
-              Spara som mall
+              Spara som packlista
             </Button>
           </div>
         )}

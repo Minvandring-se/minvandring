@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { ledigtMallnamn, mallPerKategori, sakerText, sammanfatta, tolkaMallnamn, visatNamn, type Packmallrad } from './packmallar'
+import { ledigtMallnamn, mallPerKategori, mallvem, mallvikter, nastaSortering, nyMallrad, sakerText, sammanfatta, tolkaMallnamn, vemKolumner, visatNamn, type Packmallrad } from './packmallar'
 
 const rad = (r: Partial<Packmallrad>): Packmallrad => ({
   id: r.namn ?? 'x',
@@ -20,7 +20,7 @@ const rad = (r: Partial<Packmallrad>): Packmallrad => ({
 describe('tolkaMallnamn', () => {
   it('tar bort mellanslag och stoppar tomma och för långa namn', () => {
     expect(tolkaMallnamn('  Fjällen ')).toEqual({ namn: 'Fjällen' })
-    expect(tolkaMallnamn('   ')).toEqual({ fel: 'Skriv ett namn på mallen.' })
+    expect(tolkaMallnamn('   ')).toEqual({ fel: 'Skriv ett namn på packlistan.' })
     expect(tolkaMallnamn('a'.repeat(81))).toHaveProperty('fel')
     expect(tolkaMallnamn('a'.repeat(80))).toEqual({ namn: 'a'.repeat(80) })
   })
@@ -85,4 +85,50 @@ it('sakerText', () => {
 it('visatNamn ger min modell när den finns', () => {
   expect(visatNamn(rad({ namn: 'Sovsäck', alla: true, egen_namn: 'Min dunsäck' }))).toBe('Min dunsäck')
   expect(visatNamn(rad({ namn: 'Sovsäck', alla: true }))).toBe('Sovsäck')
+})
+
+describe('mallvikter', () => {
+  it('delar upp i egen basvikt, gemensamt, förbrukning och på kroppen, med min modell och antal', () => {
+    const v = mallvikter([
+      rad({ namn: 'Ryggsäck', kategori: 'packning', vikt_g: 1200 }),
+      rad({ namn: 'Sovsäck', kategori: 'sova', alla: true, vikt_g: 1000, egen_namn: 'Dunsäck', egen_vikt_g: 800 }),
+      rad({ namn: 'Strumpor', kategori: 'klader', vikt_g: 60, antal: 2 }),
+      rad({ namn: 'Tält', kategori: 'talt', gemensam: true, vikt_g: 1800 }),
+      rad({ namn: 'Gas', kategori: 'kok', typ: 'forbrukas', gemensam: true, vikt_g: 350 }),
+      rad({ namn: 'Kängor', kategori: 'skor', typ: 'kropp', vikt_g: 900 }),
+      rad({ namn: 'Kniv', vikt_g: null }),
+    ])
+    expect(v).toEqual({
+      bas_g: 2120,
+      gemensamt_g: 1800,
+      forbrukas_g: 350,
+      kropp_g: 900,
+      perKategori: [
+        { kategori: 'packning', vikt: 1200 },
+        { kategori: 'sova', vikt: 800 },
+        { kategori: 'klader', vikt: 120 },
+      ],
+    })
+  })
+})
+
+describe('vem i mallen', () => {
+  it('läser vem från raden och tömmer den egna modellen när raden slutar vara alla', () => {
+    expect(mallvem(rad({ alla: true }))).toBe('alla')
+    expect(mallvem(rad({ gemensam: true }))).toBe('gemensam')
+    expect(mallvem(rad({}))).toBe('jag')
+    expect(vemKolumner('alla')).toEqual({ alla: true, gemensam: false })
+    expect(vemKolumner('gemensam')).toEqual({ alla: false, gemensam: true, egen_namn: null, egen_vikt_g: null, egen_produkt_id: null })
+  })
+})
+
+describe('nyMallrad och nastaSortering', () => {
+  it('gör en rad med vem, inom gränserna och sist i mallen', () => {
+    const r = nyMallrad('m1', { namn: 'a'.repeat(130), kategori: 'sova', underkategori: 'sovsack', antal: 1500, vikt_g: 900, typ: 'ryggsack' }, 'alla', 4)
+    expect(r).toMatchObject({ mall_id: 'm1', alla: true, gemensam: false, produkt_id: null, antal: 999, sortering: 4 })
+    expect(r.namn).toHaveLength(120)
+    expect(nastaSortering([{ sortering: 3 }, { sortering: 7 }])).toBe(8)
+    expect(nastaSortering([])).toBe(1)
+    expect(nastaSortering([{ sortering: 10000 }])).toBe(10000)
+  })
 })
