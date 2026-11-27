@@ -28,10 +28,25 @@ function steg(fran: number, till: number, efter = ''): string[] {
 }
 
 /**
- * Storlekarna man väljer bland, efter hur tillverkaren skriver storleken för vikten: byxstorlek (48),
- * brittisk damstorlek (10 (UK)) eller bokstäver. Utan uppgift blir det bokstäver.
+ * Skostorlekarna: europeiska 35 till 48, eller brittiska när tillverkaren skriver vikten så ("UK 8").
+ * Storleken vikten gäller finns alltid med, även en mellanstorlek som 42 2/3.
  */
-export function storlekarFor(viktstorlekVarde: string | null, kon: string | null): string[] {
+function skostorlekar(viktstorlekVarde: string | null): string[] {
+  const uk = !!viktstorlekVarde && /^UK\b/i.test(viktstorlekVarde)
+  const lista: string[] = []
+  if (uk) for (let n = 3; n <= 13; n += 0.5) lista.push(`UK ${String(n).replace('.', ',')}`)
+  else for (let n = 35; n <= 48; n++) lista.push(String(n))
+  if (!viktstorlekVarde || lista.some((s) => s.toLowerCase() === viktstorlekVarde.toLowerCase())) return lista
+  const tal = (s: string) => Number.parseFloat(s.replace(/^UK\s*/i, '').replace(',', '.'))
+  return [...lista, viktstorlekVarde].sort((a, b) => tal(a) - tal(b))
+}
+
+/**
+ * Storlekarna man väljer bland, efter hur tillverkaren skriver storleken för vikten: skostorlek för kängor,
+ * byxstorlek (48), brittisk damstorlek (10 (UK)) eller bokstäver. Utan uppgift blir det bokstäver.
+ */
+export function storlekarFor(viktstorlekVarde: string | null, kon: string | null, underkategori: string | null = null): string[] {
+  if (underkategori === 'kangor') return skostorlekar(viktstorlekVarde)
   if (viktstorlekVarde && /^\d+$/.test(viktstorlekVarde)) {
     if (kon === 'Herr') return steg(44, 60)
     if (kon === 'Dam') return steg(32, 48)

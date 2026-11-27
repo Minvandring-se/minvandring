@@ -30,6 +30,8 @@ Filerna här ligger medvetet utanför `supabase/katalog/`, så att `npm run kata
 | Pannlampor | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 | ✓ 2026-11-24 |
 | Kläder (fleece från Patagonia och Rab 2026-11-26, underställ från Devold och Icebreaker 2026-11-26) | ✓ 2026-11-25 (dunjackor, regnkläder), 2026-11-26 (fleece: Fjällräven, Tierra, Houdini; underställ: Fjällräven, Tierra, Houdini, Woolpower) | – | – | – | – |
 
+Powerbanks och flaskor har gåtts igenom direkt hos tillverkarna 2026-11-27: NITECORE och BioLite (powerbanks) och HydraPak (flaskor och vattensäckar).
+
 Kök har också gåtts igenom direkt hos tillverkarna: gaspatroner från Primus, MSR och Jetboil (2026-11-24) och Trangias kokkärl, stekpannor, kokset och kittlar från trangia.se (2026-11-25). Outnorths kastruller, kokset och stekpannor från andra märken gicks igenom samma dag.
 
 ## Kolumnerna i genomgangar.csv
@@ -42,7 +44,7 @@ Kök har också gåtts igenom direkt hos tillverkarna: gaspatroner från Primus,
 - `redan_fanns`: hur många som redan fanns från en tidigare genomgång
 - `utelamnade`: hur många som inte togs med, med skäl i `kommentar`
 - `kommentar`: vilka som utelämnades och varför
-- `genomgang`: genomgångens id, `ÅÅÅÅ-MM-DD-butik-kategori` med små bokstäver utan å, ä, ö, till exempel `2026-11-22-xxl-talt`. Kategorierna är `talt`, `sov`, `ligg`, `ryggsack`, `kok`, `vatten`, `stavar`, `pannlampa` och `klader`. Samma id står i kolumnen `genomgang` på varje rad i CSV:n som kom med genomgången. Det lagras bara i CSV:erna, inte i databasen.
+- `genomgang`: genomgångens id, `ÅÅÅÅ-MM-DD-butik-kategori` med små bokstäver utan å, ä, ö, till exempel `2026-11-22-xxl-talt`. Kategorierna är `talt`, `sov`, `ligg`, `ryggsack`, `kok`, `vatten`, `stavar`, `pannlampa`, `klader`, `powerbank` och `flaska`. Samma id står i kolumnen `genomgang` på varje rad i CSV:n som kom med genomgången. Det lagras bara i CSV:erna, inte i databasen.
 - `godkand`: datum då en av grundarna godkände genomgången efter stickprov. Tomt tills dess. Sätts av `--godkann`.
 
 ## Granskningsnivåer
