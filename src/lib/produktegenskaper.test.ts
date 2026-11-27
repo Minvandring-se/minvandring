@@ -154,14 +154,14 @@ describe('tolkaEgenskap', () => {
 
 describe('underkategorier utan egna egenskaper', () => {
   it('tält, tarp, vindsäck, sovsäck, quilt, liggunderlag, ryggsäckar, kök och kokkärl har egenskaper än så länge', () => {
-    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa', 'understall', 'mellanlager', 'isolering', 'regnklader', 'byxor', 'kangor', 'powerbank', 'flaska', 'dricksystem'])
+    expect(Object.keys(EGENSKAPER)).toEqual(['talt', 'tarp', 'vindsack', 'sovsack', 'quilt', 'liggunderlag', 'ryggsack', 'dagsryggsack', 'brannare', 'komplett_kok', 'kastrull', 'bransle', 'filter', 'rening', 'stavar', 'pannlampa', 'understall', 'mellanlager', 'isolering', 'regnklader', 'byxor', 'kangor', 'powerbank', 'flaska', 'dricksystem', 'kudde', 'sittunderlag'])
     expect(ALLA_EGENSKAPSNYCKLAR.has('golvyta_m2')).toBe(true)
     expect(ALLA_EGENSKAPSNYCKLAR.has('kommentar')).toBe(false)
   })
 
   it('godkänner tomma egenskaper och ger fel om något ändå anges', () => {
-    expect(valideraEgenskaper('kudde', {})).toEqual({ fel: [], varningar: [] })
-    expect(valideraEgenskaper('kudde', { r_varde: 4 }).fel).toHaveLength(1)
+    expect(valideraEgenskaper('lakan', {})).toEqual({ fel: [], varningar: [] })
+    expect(valideraEgenskaper('lakan', { r_varde: 4 }).fel).toHaveLength(1)
     // En hängmatta ligger i samma huvudkategori som tält men har inga egna egenskaper.
     expect(valideraEgenskaper('hangmatta', { personer: 2 }).fel).toHaveLength(1)
   })
@@ -967,5 +967,14 @@ describe('egenskaper för powerbanks och flaskor', () => {
     expect(visaEgenskaper('flaska', flaska).find((r) => r.nyckel === 'typ')?.varde).toBe('Mjuk flaska')
     expect(visaEgenskaper('dricksystem', { typ: 'vattensack', volym_l: 2 }).find((r) => r.nyckel === 'typ')?.varde).toBe('Vattensäck')
     expect(valideraEgenskaper('flaska', { ...flaska, material: 'glas' }).fel.map((f) => f.split(':')[0])).toEqual(['material'])
+  })
+})
+
+describe('egenskaper för kuddar och sittunderlag', () => {
+  it('visar typen på svenska och stoppar okända typer', () => {
+    expect(visaEgenskaper('kudde', { typ: 'fylld' })[0]?.varde).toBe('Uppblåsbar med fyllning')
+    expect(visaEgenskaper('sittunderlag', { typ: 'sjalvuppblasande' })[0]?.varde).toBe('Självuppblåsande')
+    expect(valideraEgenskaper('kudde', { typ: 'skum' })).toEqual({ fel: [], varningar: [] })
+    expect(valideraEgenskaper('sittunderlag', { typ: 'kudde' }).fel.map((f) => f.split(':')[0])).toEqual(['typ'])
   })
 })

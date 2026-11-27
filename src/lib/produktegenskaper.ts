@@ -303,6 +303,13 @@ const PANNLAMPA: Egenskap[] = [
   { nyckel: 'vattentalighet', etikett: 'Vattentålighet', sort: 'val', val: LAMPTALIGHET },
 ]
 
+/** Fylld är en uppblåsbar kudde med dun, syntetfyllning eller skum ovanpå luften. */
+export const KUDDTYPER = ['uppblasbar', 'fylld', 'skum'] as const
+const KUDDE: Egenskap[] = [{ nyckel: 'typ', etikett: 'Typ', sort: 'val', val: KUDDTYPER, forJamforelse: true, viktig: true }]
+
+export const SITTTYPER = ['skum', 'sjalvuppblasande', 'uppblasbar', 'stol'] as const
+const SITTUNDERLAG: Egenskap[] = [{ nyckel: 'typ', etikett: 'Typ', sort: 'val', val: SITTTYPER, forJamforelse: true, viktig: true }]
+
 /** Powerbanks. Kapaciteten är den som tillverkaren anger, oftast vid 3,7 V. */
 const POWERBANK: Egenskap[] = [
   { nyckel: 'kapacitet_mah', etikett: 'Kapacitet', sort: 'heltal', min: 500, max: 50_000, enhet: 'mAh', forJamforelse: true, viktig: true },
@@ -538,6 +545,8 @@ export const EGENSKAPER: Partial<Record<UnderkategoriNyckel, Egenskap[]>> = {
   powerbank: POWERBANK,
   flaska: FLASKA,
   dricksystem: FLASKA,
+  kudde: KUDDE,
+  sittunderlag: SITTUNDERLAG,
 }
 
 const REGLER: Partial<Record<UnderkategoriNyckel, (egenskaper: Record<string, unknown>) => string[]>> = {
@@ -652,6 +661,8 @@ const VALNAMN: Record<string, string> = {
   kortarmad: 'Kortärmad',
   vast: 'Väst',
   zipoff: 'Avtagbara ben',
+  uppblasbar: 'Uppblåsbar',
+  fylld: 'Uppblåsbar med fyllning',
   kanga: 'Känga',
   lader: 'Läder',
   mjuk: 'Mjuk flaska',
