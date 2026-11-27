@@ -37,14 +37,17 @@ create policy "ändrar sina egna" on public.notisinstallningar for update to aut
   using (user_id = auth.uid()) with check (user_id = auth.uid());
 
 -- ─── Mejlstatus på notiserna ─────────────────────────────────────────────────
--- ska: väntar på att mejlas. skickat: mejlat. hoppas_over: ska inte mejlas. fel: misslyckades, försöks igen högst
--- tre gånger. Tom: den sortens notis mejlas aldrig. Appen kan inte ändra kolumnerna (bara last är öppen).
-alter table public.notiser add column mejl text check (mejl in ('ska', 'skickat', 'hoppas_over', 'fel'));
+-- ska: väntar på att mejlas. skickas: lämnad till Edge Function, som svarar med mejl_markera. skickat: mejlat.
+-- hoppas_over: ska inte mejlas. fel: misslyckades, försöks igen högst tre gånger. Tom: den sortens notis mejlas
+-- aldrig. Appen kan inte ändra kolumnerna (bara last är öppen).
+alter table public.notiser add column mejl text check (mejl in ('ska', 'skickas', 'skickat', 'hoppas_over', 'fel'));
 alter table public.notiser add column mejl_forsok smallint not null default 0;
-create index notiser_mejlko on public.notiser (skapad) where mejl in ('ska', 'fel');
+-- När notisen lämnades till Edge Function. En notis som har stått som skickas i tio minuter räknas som misslyckad.
+alter table public.notiser add column mejl_lamnad timestamptz;
+create index notiser_mejlko on public.notiser (skapad) where mejl in ('ska', 'skickas', 'fel');
 
 -- Sätter mejl när notisen skapas. Bara notiser om att någon lade till en i en tur och om vänförfrågningar mejlas än.
--- Högst tio mejl per dygn till samma person; resten blir bara notiser i appen.
+-- Högst tio mejl per dygn till samma person, misslyckade inräknade; resten blir bara notiser i appen.
 create function public.notis_mejl() returns trigger
 language plpgsql security definer set search_path = '' as $$
 declare
@@ -59,7 +62,7 @@ begin
   select * into val from public.notisinstallningar where user_id = new.user_id;
   select u.email_confirmed_at is not null into bekraftad from auth.users u where u.id = new.user_id;
   select count(*) into senaste_dygnet from public.notiser n
-   where n.user_id = new.user_id and n.mejl in ('ska', 'skickat') and n.skapad > now() - interval '1 day';
+   where n.user_id = new.user_id and n.mejl in ('ska', 'skickas', 'skickat', 'fel') and n.skapad > now() - interval '1 day';
   new.mejl := case
     when not coalesce(bekraftad, false) then 'hoppas_over'
     when val.avregistrerad is not null then 'hoppas_over'
@@ -99,36 +102,58 @@ $$;
 revoke execute on function public.avregistrera(text) from public;
 grant execute on function public.avregistrera(text) to anon, authenticated;
 
--- Slår på mejlen igen för den inloggade efter en avregistrering.
+-- Slår på mejlen igen för den inloggade efter en avregistrering. Koden byts, så att en länk i ett gammalt mejl som
+-- någon annan har fått inte stänger av mejlen igen.
 create function public.mejl_pa_igen() returns void
 language sql security definer set search_path = '' as $$
-  update public.notisinstallningar set avregistrerad = null, andrad = now() where user_id = auth.uid();
+  update public.notisinstallningar
+     set avregistrerad = null, avregistreringskod = encode(extensions.gen_random_bytes(24), 'hex'), andrad = now()
+   where user_id = auth.uid() and avregistrerad is not null;
 $$;
 revoke execute on function public.mejl_pa_igen() from public, anon;
 grant execute on function public.mejl_pa_igen() to authenticated;
 
 -- ─── Kön för Edge Function skicka-mejl ───────────────────────────────────────
--- Notiserna som ska mejlas, äldst först, med den bekräftade adressen och koden för avregistrering. Lästa och dolda
--- notiser, avregistrerade personer och notiser som har misslyckats tre gånger hoppas över. Bara service_role (Edge
+-- Notiserna som ska mejlas, äldst först, med den bekräftade adressen och koden för avregistrering. Raderna markeras
+-- som skickas i samma sats (for update skip locked), så att två anrop aldrig får samma notis. Lästa och dolda notiser,
+-- sorter som personen har stängt av, avregistrerade personer och notiser som har misslyckats tre gånger hoppas över.
+-- En notis som har stått som skickas i tio minuter (funktionen avbröts) försöks igen. Bara service_role (Edge
 -- Function) anropar den.
 create function public.mejlko(antal integer default 20)
 returns table (id uuid, typ text, text text, lank text, epost text, kod text)
 language plpgsql security definer set search_path = '' as $$
 begin
+  update public.notiser n set mejl = 'fel', mejl_forsok = n.mejl_forsok + 1
+   where n.mejl = 'skickas' and n.mejl_lamnad <= now() - interval '10 minutes';
   update public.notiser n set mejl = 'hoppas_over'
    where n.mejl in ('ska', 'fel')
      and (n.last is not null
        or n.mejl_forsok >= 3
        or (n.typ = 'vanforfragan' and n.vanforfragan_id is null)
-       or exists (select 1 from public.notisinstallningar s where s.user_id = n.user_id and s.avregistrerad is not null)
-       or not exists (select 1 from auth.users u where u.id = n.user_id and u.email_confirmed_at is not null));
+       or not exists (select 1 from auth.users u where u.id = n.user_id and u.email_confirmed_at is not null)
+       or exists (
+         select 1 from public.notisinstallningar s
+          where s.user_id = n.user_id
+            and (s.avregistrerad is not null
+              or (n.typ = 'tillagd_i_tur' and not s.mejl_tillagd_i_tur)
+              or (n.typ = 'vanforfragan' and not s.mejl_vanforfragan)
+              or (n.typ = 'paminnelse' and not s.mejl_paminnelser)
+              or (n.typ = 'auto_paminnelse' and not s.mejl_auto_paminnelser))));
   return query
-    select n.id, n.typ, n.text, n.lank, u.email::text, public.avregistreringskod(n.user_id)
-      from public.notiser n
-      join auth.users u on u.id = n.user_id
-     where n.mejl in ('ska', 'fel')
-     order by n.skapad
-     limit greatest(1, least(antal, 50));
+    with valda as (
+      select v.id from public.notiser v
+       where v.mejl in ('ska', 'fel')
+       order by v.skapad
+       limit greatest(1, least(antal, 50))
+       for update skip locked
+    ), lamnade as (
+      update public.notiser n set mejl = 'skickas', mejl_lamnad = now()
+        from valda where n.id = valda.id
+      returning n.id, n.typ, n.text, n.lank, n.user_id, n.skapad
+    )
+    select l.id, l.typ, l.text, l.lank, u.email::text, public.avregistreringskod(l.user_id)
+      from lamnade l join auth.users u on u.id = l.user_id
+     order by l.skapad;
 end;
 $$;
 
@@ -138,7 +163,7 @@ language sql security definer set search_path = '' as $$
   update public.notiser
      set mejl = case when ok then 'skickat' else 'fel' end,
          mejl_forsok = mejl_forsok + case when ok then 0 else 1 end
-   where id = notis and mejl in ('ska', 'fel');
+   where id = notis and mejl = 'skickas';
 $$;
 
 revoke execute on function public.mejlko(integer) from public, anon, authenticated;
@@ -154,7 +179,7 @@ declare
   adress text;
   hemlighet text;
 begin
-  if not exists (select 1 from public.notiser where mejl in ('ska', 'fel')) then
+  if not exists (select 1 from public.notiser where mejl in ('ska', 'fel') or (mejl = 'skickas' and mejl_lamnad <= now() - interval '10 minutes')) then
     return;
   end if;
   select decrypted_secret into adress from vault.decrypted_secrets where name = 'skicka_mejl_url';
