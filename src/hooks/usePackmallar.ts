@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useState } from 'react'
-import type { Packmall } from '@/lib/packmallar'
+import { forvaldTyp } from '@/lib/forrad'
+import { nyMallrad, type NyMallrad, type Packmall, type Packmallrad } from '@/lib/packmallar'
+import type { Startmall } from '@/lib/startmallar'
 import { supabase } from '@/lib/supabase'
 
 export type Mallage = { lage: 'laddar' } | { lage: 'fel' } | { lage: 'klar'; mallar: Packmall[] }
@@ -65,4 +67,69 @@ export async function taBortPackmall(id: string): Promise<boolean> {
   if (!supabase) return false
   const { error, count } = await supabase.from('packmallar').delete({ count: 'exact' }).eq('id', id)
   return !error && count === 1
+}
+
+export type EnMall = { lage: 'laddar' } | { lage: 'fel' } | { lage: 'saknas' } | { lage: 'klar'; mall: Packmall }
+
+/** En av ens mallar med raderna. 'saknas' när den inte finns eller är någon annans. */
+export function usePackmall(id: string): { lage: EnMall; laddaOm: () => Promise<void> } {
+  const [lage, setLage] = useState<EnMall>({ lage: 'laddar' })
+
+  const hamtaEn = useCallback(async (): Promise<EnMall> => {
+    if (!supabase) return { lage: 'fel' }
+    const { data, error } = await supabase.from('packmallar').select(KOLUMNER).eq('id', id).maybeSingle()
+    if (error) return { lage: error.code === '22P02' ? 'saknas' : 'fel' }
+    return data ? { lage: 'klar', mall: data as Packmall } : { lage: 'saknas' }
+  }, [id])
+
+  const laddaOm = useCallback(async () => setLage(await hamtaEn()), [hamtaEn])
+
+  useEffect(() => {
+    let aktuell = true
+    hamtaEn().then((l) => aktuell && setLage(l))
+    return () => {
+      aktuell = false
+    }
+  }, [hamtaEn])
+
+  return { lage, laddaOm }
+}
+
+/** Skapar en tom mall. Ger id:t, eller felet. */
+export async function skapaMall(namn: string): Promise<{ id: string } | { fel: Mallfel }> {
+  if (!supabase) return { fel: 'annat' }
+  const { data, error } = await supabase.from('packmallar').insert({ namn }).select('id').single()
+  if (error || !data) return { fel: error?.code === '23505' ? 'namnet-finns' : 'annat' }
+  return { id: (data as { id: string }).id }
+}
+
+/** Lägger rader i en egen mall. Ger true när det gick. */
+export async function laggTillMallrader(rader: NyMallrad[]): Promise<boolean> {
+  if (!supabase || rader.length === 0) return false
+  const { error } = await supabase.from('packmallrader').insert(rader)
+  return !error
+}
+
+/** Ändrar en rad i en egen mall. Ger true när det gick. */
+export async function andraMallrad(id: string, andring: Partial<Omit<Packmallrad, 'id'>> & { egen_produkt_id?: null }): Promise<boolean> {
+  if (!supabase) return false
+  const { error, count } = await supabase.from('packmallrader').update(andring, { count: 'exact' }).eq('id', id)
+  return !error && count === 1
+}
+
+/** Tar bort en rad ur en egen mall. Ger true när det gick. */
+export async function taBortMallrad(id: string): Promise<boolean> {
+  if (!supabase) return false
+  const { error, count } = await supabase.from('packmallrader').delete({ count: 'exact' }).eq('id', id)
+  return !error && count === 1
+}
+
+/** Gör en egen mall av en startmall. Går raderna inte att spara tas den tomma mallen bort igen. */
+export async function kopieraStartmall(start: Startmall, namn: string): Promise<{ id: string } | { fel: Mallfel }> {
+  const ny = await skapaMall(namn)
+  if ('fel' in ny) return ny
+  const rader = start.rader.map((r, i) => nyMallrad(ny.id, { ...r, antal: r.antal ?? 1, vikt_g: null, typ: forvaldTyp(r.kategori, r.underkategori) }, r.vem, i + 1))
+  if (await laggTillMallrader(rader)) return ny
+  await taBortPackmall(ny.id)
+  return { fel: 'annat' }
 }

@@ -29,6 +29,8 @@ const TurPackning = lazy(() => import('@/pages/tur/TurPackning').then((m) => ({ 
 const TurInkopslista = lazy(() => import('@/pages/tur/TurInkopslista').then((m) => ({ default: m.TurInkopslista })))
 const TurAnteckningar = lazy(() => import('@/pages/tur/TurAnteckningar').then((m) => ({ default: m.TurAnteckningar })))
 const Packlistor = lazy(() => import('@/pages/Packlistor').then((m) => ({ default: m.Packlistor })))
+const Packlista = lazy(() => import('@/pages/Packlista').then((m) => ({ default: m.Packlista })))
+const Startmallsida = lazy(() => import('@/pages/Packlista').then((m) => ({ default: m.Startmallsida })))
 const KomIhag = lazy(() => import('@/pages/KomIhag').then((m) => ({ default: m.KomIhag })))
 const TurKommerSnart = lazy(() => import('@/pages/tur/TurKommerSnart').then((m) => ({ default: m.TurKommerSnart })))
 const Installningar = lazy(() => import('@/pages/Installningar').then((m) => ({ default: m.Installningar })))
@@ -104,6 +106,8 @@ export default function App() {
           </Route>
           <Route path="/forrad" element={<Forrad />} />
           <Route path="/packlistor" element={<Packlistor />} />
+          <Route path="/packlistor/minvandring/:id" element={<Startmallsida />} />
+          <Route path="/packlistor/:id" element={<Packlista />} />
           <Route path="/kom-ihag" element={<KomIhag />} />
           <Route path="/hem" element={<Hem />} />
           <Route path="/hitta-vandring" element={<HittaVandring />} />

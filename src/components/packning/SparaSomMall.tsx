@@ -25,16 +25,16 @@ export function SparaSomMall({ turId, forslag, onStang }: { turId: string; forsl
     setSparar(true)
     const resultat = await sparaPackmall(turId, t.namn)
     setSparar(false)
-    if (resultat === 'namnet-finns') setFel('Du har redan en mall med det namnet. Välj ett annat.')
+    if (resultat === 'namnet-finns') setFel('Du har redan en packlista med det namnet. Välj ett annat.')
     else if (resultat) setFel('Det gick inte att spara. Kontrollera uppkopplingen och försök igen.')
     else setSparad(t.namn)
   }
 
   return (
-    <Panel etikett="Spara som mall" mitten onStang={onStang} rubrik={<h2 className="text-2xl">Spara som mall</h2>}>
+    <Panel etikett="Spara som packlista" mitten onStang={onStang} rubrik={<h2 className="text-2xl">Spara som packlista</h2>}>
       {sparad ? (
         <div className="space-y-3" role="status">
-          <p>Mallen {sparad} är sparad. Du hittar den under Packlistor och kan lägga den i nästa tur.</p>
+          <p>Packlistan ”{sparad}” är sparad. Du hittar den under Packlistor och kan lägga den i nästa tur.</p>
           <div className="flex flex-wrap gap-3">
             <Link to="/packlistor" className={lank}>
               Till Packlistor
@@ -47,12 +47,12 @@ export function SparaSomMall({ turId, forslag, onStang }: { turId: string; forsl
       ) : (
         <form onSubmit={spara} className="space-y-4" noValidate>
           <p className="text-muted-foreground">
-            Mallen tar med det du bär själv, det gemensamma och det alla ska ha, med din egen modell. Det de andra bär själva följer inte med.
-            Bara du ser dina mallar.
+            Packlistan tar med det du bär själv, det gemensamma och det alla ska ha, med din egen modell. Det de andra bär själva följer inte med.
+            Bara du ser dina packlistor.
           </p>
           <div className="space-y-1.5">
             <label htmlFor={`${id}-namn`} className="text-sm font-medium">
-              Namn på mallen
+              Namn på packlistan
             </label>
             <Input
               id={`${id}-namn`}
@@ -70,7 +70,7 @@ export function SparaSomMall({ turId, forslag, onStang }: { turId: string; forsl
             </p>
           )}
           <Button type="submit" disabled={sparar}>
-            {sparar ? 'Sparar …' : 'Spara mallen'}
+            {sparar ? 'Sparar …' : 'Spara packlistan'}
           </Button>
         </form>
       )}

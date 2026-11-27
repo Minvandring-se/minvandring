@@ -47,7 +47,7 @@ export const SIDOR: Record<Sida, Menysida> = {
     namn: 'Packlistor',
     till: '/packlistor',
     byggd: true,
-    beskrivning: 'Dina mallar från tidigare turer',
+    beskrivning: 'Dina packlistor och färdiga listor',
     blir: '',
   },
   forrad: { sida: 'forrad', namn: 'Mitt förråd', till: '/forrad', byggd: true, beskrivning: 'Dina egna saker', blir: '' },

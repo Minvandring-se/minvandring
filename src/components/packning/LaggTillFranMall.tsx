@@ -41,24 +41,24 @@ export function LaggTillFranMall({ turId, sist, onTillagd, onStang }: { turId: s
   }
 
   return (
-    <Panel etikett="Lägg till från mall" mitten onStang={onStang} rubrik={<h2 className="text-2xl">Lägg till från mall</h2>}>
+    <Panel etikett="Lägg till från packlista" mitten onStang={onStang} rubrik={<h2 className="text-2xl">Lägg till från packlista</h2>}>
       <div className="space-y-3">
         <p className="text-muted-foreground">
           Sakerna läggs sist i packlistan. Det du bar själv bär du här också, och det gemensamma bär ingen förrän någon tar det. Saker som redan
           finns läggs till en gång till. För tält, kök och några andra sorter frågar appen om alla behövs.
         </p>
-        <h3 className="pt-1 font-sans text-base font-semibold">Dina mallar</h3>
+        <h3 className="pt-1 font-sans text-base font-semibold">Dina packlistor</h3>
         {lage.lage === 'laddar' && (
-          <Laddar text="Hämtar dina mallar" className="space-y-2">
+          <Laddar text="Hämtar dina packlistor" className="space-y-2">
             <Skelett className="h-16 rounded-lg" />
             <Skelett className="h-16 rounded-lg" />
           </Laddar>
         )}
-        {lage.lage === 'fel' && <Laddfel vad="dina mallar" onForsokIgen={laddaOm} />}
+        {lage.lage === 'fel' && <Laddfel vad="dina packlistor" onForsokIgen={laddaOm} />}
         {lage.lage === 'klar' && lage.mallar.length === 0 && (
           <TomtLage
             kompakt
-            text="Du har inga mallar än. Spara packlistan i en tur som mall, så kan du lägga den här nästa gång."
+            text="Du har inga egna packlistor än. Spara packlistan i en tur, eller gör en under Packlistor."
             knapp={
               <Link to="/packlistor" className={lank}>
                 Till Packlistor
@@ -111,7 +111,7 @@ export function LaggTillFranMall({ turId, sist, onTillagd, onStang }: { turId: s
         </ul>
         {fel && (
           <p role="alert" className="text-sm text-destructive">
-            Det gick inte att lägga till mallen. Kontrollera uppkopplingen och försök igen.
+            Det gick inte att lägga till packlistan. Kontrollera uppkopplingen och försök igen.
           </p>
         )}
       </div>
