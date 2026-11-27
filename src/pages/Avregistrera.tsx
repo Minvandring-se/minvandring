@@ -36,7 +36,7 @@ export function Avregistrera() {
   return (
     <Card className="mx-auto mt-10 max-w-md space-y-4">
       <h1 className="text-2xl">Sluta få mejl från MinVandring?</h1>
-      <p>Du får då inga mejl om att någon har lagt till dig i en tur eller skickat en vänförfrågan. Notiserna i appen finns kvar.</p>
+      <p>Du får då inga mejl om att någon har lagt till dig i en tur, om vänförfrågningar eller om påminnelser. Notiserna i appen finns kvar.</p>
       {lage === 'fel' && <p role="alert" className="text-sm text-destructive">Det gick inte just nu. Kontrollera uppkopplingen och försök igen.</p>}
       <Button onClick={avregistrera} disabled={lage === 'skickar'}>
         {lage === 'skickar' ? 'Avregistrerar …' : 'Sluta få mejl'}

@@ -4,6 +4,8 @@
 export const MEJLVAL = [
   { nyckel: 'mejl_tillagd_i_tur', etikett: 'någon lägger till mig i en tur' },
   { nyckel: 'mejl_vanforfragan', etikett: 'någon skickar en vänförfrågan till mig' },
+  { nyckel: 'mejl_paminnelser', etikett: 'det är dags för en av mina påminnelser' },
+  { nyckel: 'mejl_auto_paminnelser', etikett: 'en tur börjar om en vecka och dagen före' },
 ] as const
 
 export type Mejlval = (typeof MEJLVAL)[number]['nyckel']
